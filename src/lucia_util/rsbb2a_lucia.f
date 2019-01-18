@@ -108,6 +108,7 @@ C-jwk-cleanup      INTEGER I4_DIM(4),I4_SM(4)
 C-jwk-cleanup      DIMENSION IACAR(2),ITPAR(2)
       CALL QENTER('RS2A')
       Call Allocate_Work(ipSCR,MXPTSOB**4)
+        WRITE(6,*) ' RSBB2A speaking '
       NTESTL = 000
       NTEST = MAX(NTESTG,NTESTL)
       IF(NTEST.GE.1000) THEN

@@ -31,6 +31,7 @@
       DIMENSION KBIB(MAXK,*),XKBIB(MAXK,*)
       DIMENSION KBJB(MAXK,*),XKBJB(MAXK,*)
 *
+        WRITE(6,*) ' I am not ready for this '
       IF(IKORD.NE.0) THEN
         WRITE(6,*) ' ABTOR2 : IKORD .NE. 0 '
         WRITE(6,*) ' I am not ready for this '

@@ -699,7 +699,7 @@ c At this point all is ready to potentially dump MO integrals... just do it if r
      &               WORK(LFI),WORK(LD1A),WORK(LFA),IPR,lSquare,ExFac)
 
 
-        If ( IPRLEV.ge.DEBUG ) then
+!       If ( IPRLEV.ge.DEBUG ) then
          Write(LF,*)
          Write(LF,*) ' D1A in AO basis in RASSCF af TRACTL2 1'
          Write(LF,*) ' ---------------------'
@@ -726,7 +726,8 @@ c At this point all is ready to potentially dump MO integrals... just do it if r
          write(6,*) (WORK(LTUVX+ind),ind=0,NACPR2-1)
          Write(LF,*)
          Write(LF,*) ' ---------------------'
-        end if
+!        end if
+!       stop 'enough'
 
         If (.not.DoCholesky .or. ALGO.eq.1) Then
            Call GetMem('PUVX','Free','Real',LPUVX,NFINT)

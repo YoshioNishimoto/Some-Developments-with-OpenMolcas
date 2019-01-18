@@ -90,15 +90,17 @@
 * Call the appropriate routines according to Module
 *
       If (Module_(1:4) .eq. 'DIAG') Then
+        write(6,*) 'blubbbbbbhc diag'
          Call Diag_Master
       Else If (Module_(1:9) .eq. 'SIGMA_CVB') Then
 *        Int1 is the symmetry to be used.
+        write(6,*) 'blubbbbbbhc sigma'
          Call Sigma_Master_CVB(Int1)
       Else If (Module_(1:5) .eq. 'SIGMA') Then
-!        write(6,*) 'blubbbbbbhc'
+        write(6,*) 'blubbbbbbhc'
          Call Sigma_Master
       Else If (Module_(1:5) .eq. 'TRACI') Then
-!        write(6,*) 'blubbbbbbtraci'
+        write(6,*) 'blubbbbbbtraci'
 *        Int1 is the initial disk address (for read/write of JOBIPH)
 *        Int2 is the file unit for JOBIPH
 *        Array1 is the transformation matrix (not sorted as LUCIA needs it).

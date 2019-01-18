@@ -93,6 +93,7 @@ C     INTEGER IKBT(3,8),IKSMBT(2,8),JLBT(3,8),JLSMBT(2,8)
 *
 
       NTEST = 000
+        WRITE(6,*) ' GSBBD2A in action '
       IF(NTEST.GE.1000) THEN
         WRITE(6,*)
         WRITE(6,*) ' =================='

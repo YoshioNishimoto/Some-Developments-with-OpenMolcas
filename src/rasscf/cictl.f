@@ -368,6 +368,7 @@ c          If(n_unpaired_elec+n_paired_elec/2.eq.nac) n_Det=1
         end if
 #endif
       end if
+      CALL DUMP_INT(TUVX,NACPR2,WORK(LW1),NACPAR)
 *
       lw1_cvb=lw1
       If (IfVB.eq.2) GoTo 9000
@@ -986,3 +987,30 @@ C     the relative CISE root given in the input by the 'CIRF' keyword.
       Call qExit('CICTL')
       Return
       End
+
+      SUBROUTINE DUMP_INT(T2INT,NACPR2,T1INT,NACPAR)
+      Implicit Real* 8 (A-H,O-Z)
+      Dimension :: T2INT(*),T1INT(*)
+      INTEGER :: IOS,I
+      LU = 65
+      OPEN(LU,FILE="ONEINTAGP",STATUS="REPLACE",IOSTAT=IOS)
+      IF(IOS.EQ.0) THEN
+        WRITE(LU,*) NACPAR
+        DO I=1,NACPAR
+          WRITE(LU,*) T1INT(I)
+        END DO
+      ELSE
+        WRITE(LU,*) 'something is wrong'
+      END IF
+      CLOSE(LU)
+      OPEN(LU,FILE="TWOINTAGP",STATUS="REPLACE",IOSTAT=IOS)
+      IF(IOS.EQ.0) THEN
+        WRITE(LU,*) NACPR2
+        DO I=1,NACPR2
+          WRITE(LU,*) T2INT(I)
+        END DO
+      ELSE
+        WRITE(LU,*) 'something is wrong'
+      END IF
+      CLOSE(LU)
+      END SUBROUTINE DUMP_INT
