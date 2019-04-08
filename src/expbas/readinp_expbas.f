@@ -23,6 +23,7 @@ c Initial values
 c
       DoExpbas = .true.
       DoDesy   = .false.
+      DoSort   = .false.
       EB_FileOrb  = ' '
 c
       LuSpool=18
@@ -41,38 +42,32 @@ c
       If (Line(1:1).eq.'*' ) Goto 999
       If (Line.eq.Blank ) Goto 999
       Call UpCase(Line)
-      If (Line(1:4).eq.'NOEX') Goto 1000
-      If (Line(1:4).eq.'DESY') Goto 2000
-      If (Line(1:4).eq.'FILE') Goto 3000
+      If (Line(1:4).eq.'NOEX') then
+        DoExpbas = .false.
+        Go To 999
+      end if
+      If (Line(1:4).eq.'DESY') then
+        DoDesy   = .true.
+        Go To 999
+      end if
+      If (Line(1:4).eq.'SORT') then
+        DoSort   = .true.
+        Go To 999
+      end if
+      If (Line(1:4).eq.'FILE') then
+        Line=Get_Ln(LuSpool)
+        Call FileOrb(Line,EB_FileOrb)
+        Go To 999
+      end if
       If (Line(1:4).eq.'END ') Go To 99999
       Write (6,*) 'Unidentified key word  : '
       Call FindErrorLine
       Call Quit_OnUserError()
-
-*========= NOEX =============
- 1000 Continue
-      DoExpbas = .false.
-      Go To 999
-
-*========= DESY =============
- 2000 Continue
-      DoDesy   = .true.
-      Go To 999
-
-*========= FILE =============
- 3000 Continue
-      Line=Get_Ln(LuSpool)
-      Call FileOrb(Line,EB_FileOrb)
-      Go To 999
-
 c
 c END of Input
 c
-
-c9940  Continue
       WRITE(6,*)' READIN: Premature end of file when reading selected'
       CALL ABEND()
 
 99999 Continue
-
       End

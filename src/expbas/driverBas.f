@@ -17,6 +17,7 @@
       call Readinp_expbas()
       if(DoExpbas) Call expbas(ireturn)
       if(DoDesy)   Call desym(0)
+      if(DoSort)   Call orbsort(0)
 
       Return
       end

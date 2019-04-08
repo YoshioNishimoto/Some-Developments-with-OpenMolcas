@@ -10,3 +10,4 @@
 ***********************************************************************/
  (prgm) "$MOLCAS/bin/expbas.exe"  executable
 #include "orbitals.inc"
+#include "aoints.inc"
