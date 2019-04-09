@@ -141,8 +141,8 @@
       iOpt=6
       iComp=1
       iSyLbl=1
-      Label='Mltpl  0'
-      Call RdOne(iErr,iOpt,Label,iComp,Work(ipAOSmat),iSyLbl)
+*      Label='Mltpl  0'
+      Call RdOne(iErr,iOpt,'Mltpl  0',iComp,Work(ipAOSmat),iSyLbl)
       if(iErr.ne.0) then
         write(6,*) 'Sorry: Something wrong in reading AO overlap matrix'
         iRc=1
@@ -301,7 +301,7 @@
       Call GetMem('EOR2','FREE','REAL',ipEOrb2,nB)
       Call GetMem('IND2','FREE','INTE',ipIndt2,nB)
       Call GetMem('AOSM','FREE','REAL',ipAOSmat,nB*(nB+1)/2)
-999   Call ClsSew
+      Call ClsSew
 
       Return
       End
