@@ -202,19 +202,25 @@
             end do
           End if
 * W is rounded to nearest integer, as to serve for pure swapping.      *
-* It will be stored back as real in Work(lScra) as real                *
+* Cutoff threshold is 0.805 for now...                                   *
+* iWork(ipIntScr) will be stored back as real in Work(lScra) as real   *
+          cutoff = 0.805d0
           do i = 0, nB*nB - 1
-              iWork(ipIntScr+i) = nint(Work(lScra+i))
+            if(Work(lScra+i).gt.cutoff)  iWork(ipIntScr+i) =  1
+            if(Work(lScra+i).le.cutoff)  iWork(ipIntScr+i) =  0
+            if(Work(lScra+i).lt.-cutoff) iWork(ipIntScr+i) = -1
+*           ^ This last if statement accounts for sign change
+*              iWork(ipIntScr+i) = nint(Work(lScra+i))
               Work(lScra+i)     = real(iWork(ipIntScr+i))
           end do
-* Check for rowsums=0 or/and row-sums>1. If positive throw a WARNING   *
+* Check for rowsums=0 or/and row-sums>1. If .true. throw a WARNING     *
 * as it is simptomatic of large orbital mixing in C(tosort)            *
 * with respect to C(ref) CMOs.                                         *
           ioff = 0
           do i = 0, nB-1
             iSum = 0
             do j = 0, nB-1
-              iSum = iSum + iWork(ipIntScr+iOff+j)
+              iSum = iSum + abs(iWork(ipIntScr+iOff+j))
             end do
             if(isum.eq.0.or.isum.gt.1) then
               write(6,*) '*********************************************'
@@ -223,6 +229,8 @@
               write(6,*)
      &  'Orbitals differ too much!! Relative re-ordering not obvious!'
               write(6,*) 'Manual sorting is required! Sorry!'
+              write(6,*) 'If you know what to do you may try to change'
+              write(6,*) 'cutoff var in src/expbas/orbsort.f'
               write(6,*)
               Write(6,*) ' ** Swap-matrix Symmetry Block (int) **'
               ioff2=0
