@@ -193,6 +193,14 @@
      &                1.0d0,Work(ipOrb2),nB,
      &                Work(lScr1),nB,
      &                0.0d0,Work(lScra),nB)
+          If(Debug) then
+            Write(6,*) ' ** Print Swap-matrix Symmetry Block (real) **'
+            ioff=0
+            do i = 1, nB
+              write(6, '(68F5.2)') (Work(lScra+ioff+j-1),j=1,nB)
+             ioff = ioff + nB
+            end do
+          End if
 * W is rounded to nearest integer, as to serve for pure swapping.      *
 * It will be stored back as real in Work(lScra) as real                *
           do i = 0, nB*nB - 1
@@ -215,6 +223,13 @@
               write(6,*)
      &  'Orbitals differ too much!! Relative re-ordering not obvious!'
               write(6,*) 'Manual sorting is required! Sorry!'
+              write(6,*)
+              Write(6,*) ' ** Swap-matrix Symmetry Block (int) **'
+              ioff2=0
+              do ii = 1, nB
+                write(6, '(68I2)') ((iWork(ipIntScr+ioff2+j-1)),j=1,nB)
+                ioff2 = ioff2 + nB
+              end do
               Call Abend()
             end if
             ioff= ioff + nB
