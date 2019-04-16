@@ -19,6 +19,21 @@
 *          sorting not obvious, a WARNING is given and sorting won't be*
 *          performed.                                                  *
 *                                                                      *
+* Extra feature: The ARTORB keyword (what I call artificial orbitals): *
+*          If AO-like localized orbitals need to be sorted a Reference *
+*          INPORB1 file is not needed. Instead a dummy INPORB1 file is *
+*          created with CMOs with diagonal 1 entries. This file is then*
+*          used as the reference INPORB1 file and orbitals of INPORB2  *
+*          sorted accordingly. For now AO ordering means:              *
+*               Atom1(1s,2s,2px,2py,2pz...)Atom2(1s,2s,2px,2py,2pz...) *
+*          If space symmetry is used then AO are still in atom-first   *
+*          ordering, within each symmetry block.                       *
+*                                                                      *
+*          However, some users might wish to have a sorting like:      *
+*               1s(A)1s(B)1s(C).... 2s(A)2s(B)2s(C)... 2px(A)2px(B)... *
+*          where (A) (B) and (C) are different atoms.                  *
+*          This is not possible for the time being!                    *
+*                                                                      *
 *          In the future sorting will be possible by manual user input.*
 *                                                                      *
 *          G. Li Manni, Max-Planck Institute Stuttgart, April 2019.    *
@@ -38,6 +53,7 @@
 *   &EXPBAS                                                            *
 *    NoEx                                                              *
 *    Sort                                                              *
+*      ArtOrbitals                                                     *
 *   END                                                                *
 *                                                                      *
 ************************************************************************
@@ -47,7 +63,7 @@
       integer IndT(7,8)
       integer IndType(56)
       Logical AddFragments, Found, Debug
-      real Dummy
+      real Dummy, zero
       character vTitle*80
 #include "itmax.fh"
 #include "info.fh"
@@ -55,10 +71,11 @@
 #include "WrkSpc.fh"
 
       Debug=.false.
+      zero = 0.0d0
 *                                                                      *
 ************************************************************************
 *                                                                      *
-      write(6,*) 'Sorting option enabled.'
+      write(6,*)
       write(6,*) 'Attempting sorting of INPORB2 as INPORB1...'
 
       if(iUHF.eq.1) then
@@ -108,18 +125,6 @@
       end if
 *                                                                      *
 ************************************************************************
-*                   Read Reference CMOs from INPORB1 file              *
-*                                                                      *
-      Call RdVec('INPORB1',1,'C',nIrrep,nBas,nBas,
-     &           Work(ipCMO1),Dummy,Dummy,iDummy,vTitle,1,iErr)
-      if(iErr.ne.0) then
-        write(6,*) 'Sorry: Something went wrong when reading INPORB1'
-        iRc=1
-        return
-      end if
-      write(6,*) 'INPORB1 Title:', vTitle
-*                                                                      *
-************************************************************************
 *                   Read CMOs to be sorted from INPORB2 file           *
 *                                                                      *
 * In output Work(ipCMO2) is destroyed and replaced by the sorted  CMOs.*
@@ -133,6 +138,69 @@
         return
       end if
       write(6,*) 'INPORB2 Title:', vTitle
+*                                                                      *
+********************** Make typeindex information **********************
+*   Pretty lame typeindex loop. The type index should be read from     *
+*   INPORB2 and sorted according  to the swapping matrix.              *
+*   This feature is not supported by the WrVec yet.                    *
+      do i = 1, 7
+        do j = 1,8
+          IndT(i,j) = 0
+        end do
+      end do
+
+      j=ipIndt2-1
+      Do iSym=1,nIrrep
+        Do k=1,nBas(iSym-1)
+          kIndT = iWork(j+k)
+          IndT(kIndT,iSym)=IndT(kIndT,iSym)+1
+*          write(6,*) 'IndT =', IndT(kIndT,iSym)
+        End Do
+        j=j+nBas(iSym)
+      End Do
+
+      icount = 0
+      do i = 1,7
+        do j = 1,8
+          icount = icount +1
+          IndType(icount) = IndT(j,i)
+*          write(6,*) 'IndType =', IndType(icount)
+        end do
+      end do
+*                                                                      *
+************************************************************************
+* If ArtOrb keyword is .true., create the ArtOrb file and use it as ref*
+*                                                                      *
+      If(DoArtOrb) then
+* Use the already allocated CMO1 array to create the AO like CMOs      *
+        Call dCopy_(nB*nB,zero,0,Work(ipCMO1),1)
+        ioff = 0
+        do i=1,nB
+          Work(ipCMO1+ioff) = 1.0d0
+          ioff = ioff+nB+1
+        end do
+* For now OccNumb, OrbEnergy, spaceIndices are copied from the INPORB2.*
+* TO BE DONE: They should be swapped as for the orbitals!              *
+       VTitle = 'Artificial Orbitals: ARTORB'
+       Call WrVec('ARTORB',1,'COEI',nIrrep,nBas,nBas,Work(ipCMO1),
+     &            Work(iPOcc2),Work(ipEorb2),IndType,VTitle)
+* ArtOrb file is now created for any future usage. The Work(ipCMO1) is *
+* known and its CMOs will be used as reference for the sorting.        *
+      End If
+*                                                                      *
+************************************************************************
+*                   Read Reference CMOs from INPORB1 file              *
+*                                                                      *
+      If(.not.DoArtOrb) then
+        Call RdVec('INPORB1',1,'C',nIrrep,nBas,nBas,
+     &             Work(ipCMO1),Dummy,Dummy,iDummy,vTitle,1,iErr)
+        if(iErr.ne.0) then
+          write(6,*) 'Sorry: Something went wrong when reading INPORB1'
+          iRc=1
+          return
+        end if
+        write(6,*) 'INPORB1 Title:', vTitle
+      End If
 *                                                                      *
 ************************** Read AO Overlap Mat *************************
 *   Stored and read in Lower Triangular form                           *
@@ -171,7 +239,6 @@
       ipOrb1  = ipCMO1
       ipOrb2  = ipCMO2
       ipOvlp  = ipAOSmat
-      zero = 0.0d0
       Do iSym = 0,nIrrep-1
         nB = nBas(iSym)
         if(nB.gt.0) then
@@ -278,35 +345,6 @@
           ipOrb2 = ipOrb2 + nB**2
         end if
       End do
-*                                                                      *
-********************** Make typeindex information **********************
-*   Pretty lame typeindex loop. The type index should be read from     *
-*   INPORB2 and sorted according  to the swapping matrix.              *
-*   This feature is not supported by the WrVec yet.                    *
-      do i = 1, 7
-        do j = 1,8
-          IndT(i,j) = 0
-        end do
-      end do
-
-      j=ipIndt2-1
-      Do iSym=1,nIrrep
-        Do k=1,nBas(iSym-1)
-          kIndT = iWork(j+k)
-          IndT(kIndT,iSym)=IndT(kIndT,iSym)+1
-*          write(6,*) 'IndT =', IndT(kIndT,iSym)
-        End Do
-        j=j+nBas(iSym)
-      End Do
-
-      icount = 0
-      do i = 1,7
-        do j = 1,8
-          icount = icount +1
-          IndType(icount) = IndT(j,i)
-*          write(6,*) 'IndType =', IndType(icount)
-        end do
-      end do
 *                                                                      *
 ****************** Write Sorted CMOs into SortOrb file *****************
 *                                                                      *

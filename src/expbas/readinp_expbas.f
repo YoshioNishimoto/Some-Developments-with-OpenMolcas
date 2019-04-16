@@ -24,6 +24,7 @@ c
       DoExpbas = .true.
       DoDesy   = .false.
       DoSort   = .false.
+      DoArtOrb = .false.
       EB_FileOrb  = ' '
 c
       LuSpool=18
@@ -51,8 +52,24 @@ c
         Go To 999
       end if
       If (Line(1:4).eq.'SORT') then
+        write(6,*) ' SORTing option enabled. '
         DoSort   = .true.
         Go To 999
+      end if
+      If (Line(1:4).eq.'ARTO') then
+       if(DoSort) then
+         write(6,*) ' ARTOrb option enabled. '
+         DoArtOrb   = .true.
+         Go To 999
+       else
+        write(6,*) ' ARTOrb keyword found. It is a sub-keyword of the  '
+        write(6,*) ' SORTing keyword in cases where a reference INPORB1'
+        write(6,*) ' file is not available and one wishes to sort the  '
+        write(6,*) ' INPORB2 with respect to AO-like orbitals.         '
+        write(6,*) ' We are switching the SORT keyword on for you!     '
+        DoArtOrb   = .true.
+        DoSort     = .true.
+       end if
       end if
       If (Line(1:4).eq.'FILE') then
         Line=Get_Ln(LuSpool)

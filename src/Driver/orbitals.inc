@@ -13,6 +13,7 @@
  (file)  EXPORB  "$WorkDir/$Project$SubProject".ExpOrb        rws
  (file)  DESORB  "$WorkDir/$Project$SubProject".DeSymOrb      rws
  (file)  SORTORB "$WorkDir/$Project$SubProject".SortOrb       rwst
+ (file)  ARTORB  "$WorkDir/$Project$SubProject".ArtOrb        rwst
  (file)  GVORB   "$WorkDir/$Project$SubProject."GvOrb         rwst
  (file)  SCFORB  "$WorkDir/$Project$SubProject."ScfOrb        rwst
  (file)  UHFORB  "$WorkDir/$Project$SubProject."UhfOrb        rwst

@@ -8,7 +8,7 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
-      Logical DoExpbas, DoDesy, DoSort
+      Logical DoExpbas, DoDesy, DoSort, DoArtOrb
       Character EB_FileOrb*512
-      Common /Desy_log/ DoExpbas, DoDesy, DoSort
+      Common /Desy_log/ DoExpbas, DoDesy, DoSort, DoArtOrb
       Common /EB_files/ EB_FileOrb
