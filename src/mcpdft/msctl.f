@@ -73,7 +73,7 @@
       integer count_tmp1,count_tmp2
       integer  i_off1,i_off2,ifone
       integer isym,iorb,iash,iish,jsym
-      integer LUGS
+      integer LUGS,nAOs,offset
 c      iTrii(i,j) = Max(i,j)*(Max(i,j)-1)/2 + Min(i,j)
 
 
@@ -109,6 +109,46 @@ C Local print level (if any)
          Call QTrace
          Call Abend
       Endif
+!Write overlap matrix to file 'Overlap'
+      counter = 0
+      offset = 0
+      Open(unit=87,file='Overlap', action='write',iostat=ios)
+      do isym=1,nsym
+        iBas = nBas(iSym)
+        do i=1,iBas
+          do j=1,i
+            if(abs(Work(iTmp0+counter)).ge.1d-12) then
+              write(87,*) i+offset,j+offset,Work(iTmp0+counter)
+            end if
+            counter = counter + 1
+          end do
+        end do
+        offset = offset + iBas
+      end do
+      Close(87)
+
+      nAOs = 0
+      do isym=1,nsym
+        nAOs = nAOs + nBas(iSym)
+      end do
+
+      Open(unit=87,file='MO_coeff', action='write',iostat=ios)
+      counter = 0
+      offset = 0
+      do isym=1,nsym
+        iBas = nBas(iSym)
+        do i=1,iBas
+!          do j=1,nAOs
+          do j=1,iBas
+            write(87,*) i+offset,j+offset,CMO(1+counter)
+            counter = counter +1
+          end do
+        end do
+        offset = offset + iBas
+      end do
+      
+      Close(87)
+
       Call GetMem('Ovrlp','Free','Real',iTmp0,nTot1+4)
 
       Tot_El_Charge=Zero
@@ -865,10 +905,26 @@ cPS         call xflush(6)
         If ( IPRLEV.ge.DEBUG ) then
         write(6,*) 'FOCC_OCC'
         call wrtmat(Work(ipFocc),1,ntot1,1,ntot1)
-
+!This should be the generalized fock matrix for MC-PDFT in AO/SO
+!basis.  I can write it to file here?
 
       write(6,*) 'DONE WITH NEW FOCK OPERATOR'
         end if
+
+      Open(unit=87,file='Fock', action='write',iostat=ios)
+      counter = 0
+      offset = 0
+      do isym=1,nsym
+        iBas = nBas(iSym)
+        do i=1,iBas
+          do j=1,i
+            write(87,*) i+offset,j+offset,Work(ipFocc+counter)
+            counter = counter+1
+          end do
+        end do
+        offset = offset + iBas
+      end do
+      Close(87)
 
          CALL GETMEM('SXBM','Free','REAL',LBM,NSXS)
          CALL GETMEM('SXLQ','Free','REAL',LQ,NQ) ! q-matrix(1symmblock)
