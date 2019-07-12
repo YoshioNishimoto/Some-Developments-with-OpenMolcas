@@ -117,9 +117,9 @@ C Local print level (if any)
         iBas = nBas(iSym)
         do i=1,iBas
           do j=1,i
-            if(abs(Work(iTmp0+counter)).ge.1d-12) then
+!            if(abs(Work(iTmp0+counter)).ge.1d-12) then
               write(87,*) i+offset,j+offset,Work(iTmp0+counter)
-            end if
+!            end if
             counter = counter + 1
           end do
         end do
@@ -132,22 +132,21 @@ C Local print level (if any)
         nAOs = nAOs + nBas(iSym)
       end do
 
-      Open(unit=87,file='MO_coeff', action='write',iostat=ios)
-      counter = 0
-      offset = 0
-      do isym=1,nsym
-        iBas = nBas(iSym)
-        do i=1,iBas
-!          do j=1,nAOs
-          do j=1,iBas
-            write(87,*) i+offset,j+offset,CMO(1+counter)
-            counter = counter +1
-          end do
-        end do
-        offset = offset + iBas
-      end do
-      
-      Close(87)
+!      Open(unit=87,file='MO_coeff', action='write',iostat=ios)
+!      counter = 0
+!      offset = 0
+!      do isym=1,nsym
+!        iBas = nBas(iSym)
+!        do i=1,iBas
+!          do j=1,iBas
+!            write(87,*) i+offset,j+offset,CMO(1+counter)
+!            counter = counter +1
+!          end do
+!        end do
+!        offset = offset + iBas
+!      end do
+!      
+!      Close(87)
 
       Call GetMem('Ovrlp','Free','Real',iTmp0,nTot1+4)
 

@@ -90,6 +90,9 @@ c fock matrices added -- R L 921008.
 *
 *-----Construct the occupied part of the Fock matrix in SO/AO basis.
 *
+      Open(unit=87,file='Fock',action='write',iostat=ios)
+            counter = 0
+
       ISTFCK= 1! ipFock
       jFock = ipFocc
       iCMo  = 1
@@ -118,6 +121,14 @@ c fock matrices added -- R L 921008.
      &                  1.0d0,Work(ipScr1),nBas(iSym),
      &                  CMO(iCMo),nBas(iSym),
      &                  0.0d0,Work(ipScr2),nBas(iSym))
+            do iBas = 1,nBas(iSym)
+              do jBas = 1,nBas(iSym)
+                  kl = ipScr2-1 + nBas(iSym)*(jBas-1) + iBas
+                write(87,*) iBas,jBas,Work(kl)
+                counter = counter + 1
+              end do
+            end do
+
             ij = jFock
             Do iBas = 1, nBas(iSym)
                Do jBas = 1, iBas-1
