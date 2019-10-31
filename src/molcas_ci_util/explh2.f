@@ -167,6 +167,12 @@
         character(*), intent(in) :: path
         integer, intent(in) :: dec_places
 
+        interface
+          integer function isFreeUnit(x)
+            integer, intent(in) :: x
+          end function
+        end interface
+
         character(:), allocatable :: fmter
         integer :: i, j, file_id
 
