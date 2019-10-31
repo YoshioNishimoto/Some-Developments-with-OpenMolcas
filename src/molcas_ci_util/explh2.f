@@ -187,8 +187,6 @@
             write(file_id, *)
           end do
         close(file_id)
-      end subroutine
+      end subroutine write_matrix
 
-      end subroutine
-
-      END
+      end subroutine EXPLH2
