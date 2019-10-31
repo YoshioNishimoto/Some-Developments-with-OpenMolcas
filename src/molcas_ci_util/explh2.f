@@ -65,6 +65,7 @@
       DIMENSION EXPLE(*)
       DIMENSION EXPLV(*)
       DIMENSION ISEL(*)
+
 *
       CALL QENTER('EXPLH')
       Call Timing(Omega_1,Swatch,Swatch,Swatch)
@@ -105,6 +106,8 @@
      &            NSEL,NPCNF,DIAG,TUVX,IPRINT,ExFac,IWORK(IREOTS))
       IF ( IPRLEV.EQ.INSANE) then
         Call Square(Work(LEXHAM),EXPLV,1,NSEL,NSEL)
+        call write_matrix(reshape(EXPLV(:nSEL**2), [nSel, nSel]),
+     &                    'matrix_Ke.csv', 14)
         CALL RECPRT('Square Explicit Hamiltonian',' ',EXPLV,NSEL,NSEL)
       END IF
       CALL GETMEM('EXHSCR','FREE','REAL',LW2,MXXWS)
@@ -155,4 +158,31 @@
       CALL QEXIT('EXPLH')
 
       RETURN
+      contains
+
+      subroutine write_matrix(M, path, dec_places)
+        use fortran_strings, only: str
+        implicit none
+        real*8, intent(in) :: M(:, :)
+        character(*), intent(in) :: path
+        integer, intent(in) :: dec_places
+
+        character(:), allocatable :: fmter
+        integer :: i, j, file_id
+
+        fmter = '(E'//str(dec_places + 6)//'.'//str(dec_places)//', A2)'
+
+        file_id = isFreeUnit(39)
+        call molcas_open(file_id, path)
+          do i = 1, size(M, 1)
+            do j = 1, size(M, 2)
+              write(file_id, fmter, advance='no') M(i, j), ', '
+            end do
+            write(file_id, *)
+          end do
+        close(file_id)
+      end subroutine
+
+      end subroutine
+
       END
