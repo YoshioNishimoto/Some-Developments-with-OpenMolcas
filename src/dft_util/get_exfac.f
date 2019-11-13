@@ -17,8 +17,8 @@
 #include "real.fh"
 #include "hflda.fh"
       Real*8 Get_ExFac
-      Character*(*) KSDFT
-      Character*16  cTmp
+      character*(*) KSDFT
+      character*16  cTmp
       logical l_casdft
 *                                                                      *
 ************************************************************************
@@ -397,6 +397,14 @@ c      Get_ExFac=HFLDA
 *                                                                      *
       Else If (KSDFT(1:4).eq.'PBE0') Then
          Get_ExFac=0.25D0
+
+*
+************************************************************************
+*                                                                      *
+*     PBEx                                                             *
+*                                                                      *
+      Else If (KSDFT(1:4).eq.'PBEx') Then
+         Get_ExFac=HF_exc
 *                                                                      *
 ************************************************************************
 *                                                                      *
