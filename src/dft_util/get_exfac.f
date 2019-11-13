@@ -16,6 +16,7 @@
       Implicit Real*8 (a-h,o-z)
 #include "real.fh"
 #include "hflda.fh"
+#include "ksdft.fh"
       Real*8 Get_ExFac
       character*(*) KSDFT
       character*16  cTmp
@@ -401,9 +402,9 @@ c      Get_ExFac=HFLDA
 *
 ************************************************************************
 *                                                                      *
-*     PBEx                                                             *
+*     PBExxx                                                           *
 *                                                                      *
-      Else If (KSDFT(1:4).eq.'PBEx') Then
+      Else If (KSDFT(1:6).eq.'PBEXXX') Then
          Get_ExFac=HF_exc
 *                                                                      *
 ************************************************************************

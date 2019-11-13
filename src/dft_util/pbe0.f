@@ -34,13 +34,16 @@
       Real*8 Rho(nRho,mGrid),dF_dRho(ndF_dRho,mGrid),
      &       P2_ontop(nP2_ontop,mGrid), F_xc(mGrid),
      &       dF_dP2ontop(ndF_dP2ontop,mGrid)
-      real*8, parameter :: HF_exc = 0.25d0
+      real*8, parameter :: PBE0_HF_exc = 0.25d0
+      real*8 :: prev_HF_exc
 *                                                                      *
 ************************************************************************
 *                                                                      *
-      call PBEx(mGrid,Rho,nRho,P2_ontop,
-     &          nP2_ontop,iSpin,F_xc,
-     &          dF_dRho,ndF_dRho,dF_dP2ontop,ndF_dP2ontop,T_X, HF_exc)
+      HF_exc = PBE0_HF_exc
+        call PBExxx(mGrid,Rho,nRho,P2_ontop,
+     &              nP2_ontop,iSpin,F_xc,
+     &              dF_dRho,ndF_dRho,dF_dP2ontop,ndF_dP2ontop,T_X)
+
 *                                                                      *
 ************************************************************************
 *                                                                      *

@@ -14,7 +14,7 @@
       Implicit Real*8 (A-H,O-Z)
       External LSDA, BLYP, BPBE, B3LYP, B2PLYP, HFS, HFB, HFO,
      &  XAlpha, LSDA5, B3LYP5,TLYP,NLYP, OLYP, O3LYP, OPBE,
-     &  SSBSW, SSBD, PBE, PBESOL, PBE0, PBEx, M06L, M06, M062X, M06HF,
+     &  SSBSW, SSBD, PBE, PBESOL, PBE0, PBExxx, M06L, M06, M062X, M06HF,
      &  O2PLYP, HFG, GLYP, GPBE, HFB86, B86LYP, B86PBE, BWIG, KT3,
      & KT2, RGE2, PTCA
       Integer Functional_type
@@ -257,11 +257,11 @@
      &              Work(ip_F_xc1),Work(ip_F_xc2),
      &              Work(ip_F_xc3),Work(ip_F_xc4),
      &              Work(ip_dF_temp),Work(ip_Rho_temp))
-*---- PBEx
+*---- PBExxx
       Call Checker_(mGrid,Rho,nRho,P2_ontop,
      &              nP2_ontop,iSpin,F_xc,
      &              dF_dRho,ndF_dRho,dF_dP2ontop,ndF_dP2ontop,T_X,
-     &              PBEx,Functional_type,'PBEx',
+     &              PBExxx,Functional_type,'PBExxx',
      &              Work(ip_F_xc1),Work(ip_F_xc2),
      &              Work(ip_F_xc3),Work(ip_F_xc4),
      &              Work(ip_dF_temp),Work(ip_Rho_temp))

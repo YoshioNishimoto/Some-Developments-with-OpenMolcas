@@ -77,7 +77,7 @@
       External LSDA, Overlap, BLYP, B3LYP, HFS, HFB,
      &         XAlpha, LSDA5, B3LYP5,TLYP,NLYP,
      &         NucAtt, NEWF, NEWF1,
-     &         PBE, PBE0, PBEx, M06L, M06, M062X,
+     &         PBE, PBE0, PBExxx, M06L, M06, M062X,
      &         M06HF, Checker
 #include "real.fh"
 #include "WrkSpc.fh"
@@ -296,12 +296,12 @@
 *                                                                      *
 ************************************************************************
 *                                                                      *
-*     PBEx
+*     PBExxx
 *
-      Else If (KSDFT.eq.'PBEx') Then
+      Else If (KSDFT.eq.'PBExxx') Then
          ExFac=Get_ExFac(KSDFT)
          Functional_type=GGA_type
-         Call DrvNQ(PBEx  ,Work(ipF_DFT),nFckDim,Func,
+         Call DrvNQ(PBExxx ,Work(ipF_DFT),nFckDim,Func,
      &              Work(ip_D_DS),nh1,nD,
      &              Do_Grad,
      &              Grad,nGrad,

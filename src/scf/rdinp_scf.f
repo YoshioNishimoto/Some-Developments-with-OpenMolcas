@@ -34,6 +34,7 @@
 *                                                                      *
 ************************************************************************
       use OccSets
+      use fortran_strings, only: real
 *
       Implicit Real*8 (a-h,o-z)
       External Allocdisk
@@ -56,8 +57,6 @@
 *
 *---- Define local variables
       Character*180  Key, Line, BLIne
-      Character*180 Get_Ln
-      External Get_Ln
       Integer nLev,iArray(32)
       Logical lTtl, IfAufChg,OccSet,FermSet,CharSet,UHFSet,SpinSet
       Logical Cholesky,REORD,DECO,timings,DensityCheck
@@ -92,6 +91,12 @@
       Logical Do_SpinAV
       COMMON  / SPAVE_L  / Do_SpinAV
       Common /Sagit/isSagit
+
+      interface
+        character*180 function get_ln(lunit)
+          integer, intent(in) :: lunit
+        end function
+      end interface
 *
 *----------------------------------------------------------------------*
 *     Start                                                            *
@@ -157,6 +162,7 @@
 * KSDFT exch. and corr. scaling factors
       CoefX = 1.0D0
       CoefR = 1.0D0
+      HF_exc = -1.0d0
 * Delta_Tw correlation energy calculation
       Do_Tw=.false.
 * Read Cholesky info from runfile and save in infscf.fh
@@ -297,6 +303,7 @@
       Line = Key
       Call UpCase(Line)
       KeywNo=KeywNo+1
+
 *
       If (Line(1:4).eq.'TITL') Go To 1100
       If (Line(1:4).eq.'ITER') Go To 1200
@@ -349,6 +356,7 @@
       If (Line(1:4).eq.'CHAR') Go To 4400
       If (Line(1:4).eq.'NOTE') Go To 4500
       If (Line(1:4).eq.'KSDF') Go To 4600
+      If (Line(1:4).eq.'HFEX') Go To 4601
       If (Line(1:4).eq.'DFCF') Go To 4605
       If (Line(1:4).eq.'OFEM') Go To 4650
       If (Line(1:4).eq.'FTHA') Go To 4655
@@ -1060,6 +1068,14 @@ c      End If
       Call UpCase(Line)
       Call LeftAd(Line)
       KSDFT=Line(1:16)
+      GoTo 1000
+
+*>>>>>>>>>>>>> HFEX <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+ 4601 Continue
+      HF_exc = real(Get_Ln(LuSpool))
+      if (.not. (0.0d0 <= HF_exc .and. HF_exc <= 1.0d0)) then
+        call abort_('Hartree Fock exchange has to be in [0, 1]')
+      end if
       GoTo 1000
 *
 *>>>>>>>>>>>>> DFCF <<<< Factors to scale exch. and corr. <<
@@ -1783,4 +1799,11 @@ c         Write (6,*)
       Call QTrace
       Call Abend()
 *
+      contains
+          subroutine abort_(message)
+            character(*), intent(in) :: message
+            call WarningMessage(2, message)
+            call QTrace()
+            call Abend()
+          end subroutine
       End
