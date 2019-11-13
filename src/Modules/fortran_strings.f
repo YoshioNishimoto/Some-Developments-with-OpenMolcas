@@ -15,7 +15,7 @@
         implicit none
         save
         private
-        public :: str, to_lower, to_upper, operator(.in.)
+        public :: str, to_lower, to_upper, operator(.in.), int, real
 #include "molcastypes.fh"
 
 !>  @brief
@@ -30,6 +30,14 @@
 !>  @param[in] A fortran integer or real, or a C char* pointer.
         interface str
           module procedure I_to_str, R_to_str, Cptr_to_str
+        end interface
+
+        interface int
+          module procedure str_to_I
+        end interface
+
+        interface real
+          module procedure str_to_R
         end interface
 
         interface
@@ -125,5 +133,19 @@
 
           contains = index(string, substring) /= 0
         end function
+
+        pure function str_to_I(in_str) result(res)
+          character(*), intent(in) :: in_str
+          integer :: res
+
+          read(in_str, *) res
+        end function str_to_I
+
+        pure function str_to_R(in_str) result(res)
+          character(*), intent(in) :: in_str
+          real*8 :: res
+
+          read(in_str, *) res
+        end function str_to_R
 
       end module
