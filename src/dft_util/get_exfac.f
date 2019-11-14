@@ -397,15 +397,11 @@ c      Get_ExFac=HFLDA
 *     PBE0                                                             *
 *                                                                      *
       Else If (KSDFT(1:4).eq.'PBE0') Then
-         Get_ExFac=0.25D0
-
-*
-************************************************************************
-*                                                                      *
-*     PBExxx                                                           *
-*                                                                      *
-      Else If (KSDFT(1:6).eq.'PBEXXX') Then
-         Get_ExFac=HF_exc
+         if (hf_exc_given) then
+            Get_ExFac=hf_exc
+         else
+            Get_ExFac=0.25D0
+         end if
 *                                                                      *
 ************************************************************************
 *                                                                      *

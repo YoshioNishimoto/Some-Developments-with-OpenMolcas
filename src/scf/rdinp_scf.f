@@ -163,6 +163,7 @@
       CoefX = 1.0D0
       CoefR = 1.0D0
       HF_exc = -1.0d0
+      HF_exc_given = .false.
 * Delta_Tw correlation energy calculation
       Do_Tw=.false.
 * Read Cholesky info from runfile and save in infscf.fh
@@ -1073,6 +1074,7 @@ c      End If
 *>>>>>>>>>>>>> HFEX <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
  4601 Continue
       HF_exc = real(Get_Ln(LuSpool))
+      HF_exc_given = .true.
       if (.not. (0.0d0 <= HF_exc .and. HF_exc <= 1.0d0)) then
         call abort_('Hartree Fock exchange has to be in [0, 1]')
       end if

@@ -9,6 +9,7 @@
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
 * Copyright (C) 2005, Per Ake Malmqvist                                *
+*               2019, Oskar Weser                                      *
 ************************************************************************
       Subroutine PBE0(mGrid,Rho,nRho,P2_ontop,
      &                nP2_ontop,iSpin,F_xc,
@@ -16,8 +17,10 @@
 ************************************************************************
 *                                                                      *
 * Object: To compute the PBE0 density functional and its first         *
-* derivatives. This functional is defined as a hybrid functional       *
-* having 25% HF exchange, 75% PBE exchange, and 100% PBE correlation.  *
+* derivatives with varying HF exchange.                                *
+* This functional is defined as a hybrid functional                    *
+* having HF_exc% HF exchange, (100-HF_exc)% PBE exchange,              *
+*   and 100% PBE correlation.                                          *
 *   See   J.P. Perdew, M. Ernzerhof, and K. Burke,                     *
 *      J. Chem. Phys. 105, 9982 (1996).                                *
 *                                                                      *
@@ -34,16 +37,16 @@
       Real*8 Rho(nRho,mGrid),dF_dRho(ndF_dRho,mGrid),
      &       P2_ontop(nP2_ontop,mGrid), F_xc(mGrid),
      &       dF_dP2ontop(ndF_dP2ontop,mGrid)
-      real*8, parameter :: PBE0_HF_exc = 0.25d0
-      real*8 :: prev_HF_exc
 *                                                                      *
 ************************************************************************
 *                                                                      *
-      HF_exc = PBE0_HF_exc
-        call PBExxx(mGrid,Rho,nRho,P2_ontop,
-     &              nP2_ontop,iSpin,F_xc,
-     &              dF_dRho,ndF_dRho,dF_dP2ontop,ndF_dP2ontop,T_X)
+      CoeffA = 1.0d0 * CoefR
+      Call CPBE(Rho,nRho,mGrid,dF_dRho,ndF_dRho,
+     &          CoeffA,iSpin,F_xc,T_X)
 
+      CoeffB = (1.0d0 - get_exfac('PBE0')) * CoefX
+      Call XPBE(Rho,nRho,mGrid,dF_dRho,ndF_dRho,
+     &          CoeffB,iSpin,F_xc,T_X)
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -53,4 +56,4 @@ c Avoid unused argument warnings
          Call Unused_real_array(P2_ontop)
          Call Unused_real_array(dF_dP2ontop)
       End If
-      End
+      end subroutine PBE0
