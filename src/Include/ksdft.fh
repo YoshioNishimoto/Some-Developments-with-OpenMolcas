@@ -25,11 +25,8 @@
       common /HF_exc_specification/ HF_exc, HF_exc_given
 
       character(16), parameter ::
-     &  hybrid_KSDFT(16) = [
-     &    'NEWF0   ', 'NEWF1   ', 'B3LYP   ', 'O3LYP   ', 'B2PLYP  ',
-     &    'O2PLYP  ', 'B3LYP5  ', 'S12H    ', 'M06     ', 'M06-2X  ',
-     &    'M06-HF  ', 'PBE0    ', 'TLYP    ', 'NLYP    ', 'NEWF0   ',
-     &    'NEWF1   '],
+        hybrid_DFT_vary_HF_exc = [
+     &    'PBE0    ']
      &  MCPDFT_functionals(14) = [
      &    'TLSDA   ', 'TLSDA5  ', 'TBLYP   ', 'TSSBSW  ', 'TSSBD   ',
      &    'TS12G   ', 'TPBE    ', 'FTPBE   ', 'TOPBE   ', 'FTOPBE  ',

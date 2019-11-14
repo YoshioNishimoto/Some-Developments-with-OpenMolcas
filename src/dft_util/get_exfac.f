@@ -38,20 +38,7 @@ c      ExFac=HFLDA
 ************************************************************************
 * Global variable for MCPDFT                                           *
 
-       l_casdft = KSDFT(1:5).eq.'TLSDA'   .or.
-     &            KSDFT(1:6).eq.'TLSDA5'  .or.
-     &            KSDFT(1:5).eq.'TBLYP'   .or.
-     &            KSDFT(1:6).eq.'TSSBSW'  .or.
-     &            KSDFT(1:5).eq.'TSSBD'   .or.
-     &            KSDFT(1:5).eq.'TS12G'   .or.
-     &            KSDFT(1:4).eq.'TPBE'    .or.
-     &            KSDFT(1:5).eq.'FTPBE'   .or.
-     &            KSDFT(1:5).eq.'TOPBE'   .or.
-     &            KSDFT(1:6).eq.'FTOPBE'  .or.
-     &            KSDFT(1:7).eq.'TREVPBE' .or.
-     &            KSDFT(1:8).eq.'FTREVPBE'.or.
-     &            KSDFT(1:6).eq.'FTLSDA'  .or.
-     &            KSDFT(1:6).eq.'FTBLYP'
+       l_casdft = KSDFT .in. MCPDFT_functionals
 
 *                                                                      *
 ************************************************************************
@@ -395,14 +382,16 @@ c      ExFac=HFLDA
 *
 ************************************************************************
 *                                                                      *
-*     PBE0                                                             *
+*     Hybrid functionals with varying HF exchange                      *
 *                                                                      *
-      Else If (KSDFT(1:4).eq.'PBE0') Then
-         if (hf_exc_given) then
-            ExFac=hf_exc
-         else
-            ExFac=0.25D0
-         end if
+      else if (KSDFT .in. hybrid_DFT_vary_HF_exc) then
+        if (hf_exc_given) then
+          ExFac = hf_exc
+        else
+          if (KSDFT(1:4) == 'PBE0') then
+            ExFac = 0.25d0
+          end if
+        end if
 *                                                                      *
 ************************************************************************
 *                                                                      *

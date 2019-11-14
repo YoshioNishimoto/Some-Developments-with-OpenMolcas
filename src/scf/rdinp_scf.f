@@ -1754,6 +1754,12 @@ c         Write (6,*)
             write(6,*) ' dFMD = ',dFMD
          EndIf
       End If
+
+      if (.not. (KSDFT .in. hybrid_DFT_vary_HF_exc) .and. HF_exc_given) then
+        call abort_(
+     &      'Varying HF-exchange (HFEX keyword) not possible with '
+     &      //trim(KSDFT))
+      end if
 *
       Call Put_iScalar('SCF mode',iUHF)
 #ifdef _DEBUG_
