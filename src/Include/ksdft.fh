@@ -8,16 +8,37 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
-      Character*16 KSDFA
-      REAL*8            CoefR,CoefX
-      Common /KSDFT_GLM / KSDFA,funcaa,funcbb,funccc,
-     &                        ip_F_xca,ip_F_xcb,ip_tmpB,LuMC,LuMT,
-     &                        CoefR,CoefX
-      Logical           do_pdftpot
-      Integer ifiv,ifav
-      Common/KSDFT_AMS/ do_pdftpot,ifiv,ifav
+      character(16) :: KSDFA
+      real*8 :: CoefR, CoefX, FUNCAA, FUNCBB, FUNCCC,
+     &      IP_F_XCA, IP_F_XCB, IP_TMPB, LUMC, LUMT
+
+      common /KSDFT_GLM / KSDFA, funcaa, funcbb, funccc,
+     &      ip_F_xca, ip_F_xcb, ip_tmpB, LuMC,LuMT,
+     &      CoefR, CoefX
+      logical :: do_pdftpot
+      integer :: ifiv, ifav
+      common /KSDFT_AMS/ do_pdftpot, ifiv, ifav
 
 
       real*8 :: HF_exc
       logical :: HF_exc_given
       common /HF_exc_specification/ HF_exc, HF_exc_given
+
+      character(16), parameter ::
+     &  hybrid_KSDFT(16) = [
+     &    'NEWF0   ', 'NEWF1   ', 'B3LYP   ', 'O3LYP   ', 'B2PLYP  ',
+     &    'O2PLYP  ', 'B3LYP5  ', 'S12H    ', 'M06     ', 'M06-2X  ',
+     &    'M06-HF  ', 'PBE0    ', 'TLYP    ', 'NLYP    ', 'NEWF0   ',
+     &    'NEWF1   '],
+     &  MCPDFT_functionals(14) = [
+     &    'TLSDA   ', 'TLSDA5  ', 'TBLYP   ', 'TSSBSW  ', 'TSSBD   ',
+     &    'TS12G   ', 'TPBE    ', 'FTPBE   ', 'TOPBE   ', 'FTOPBE  ',
+     &    'TREVPBE ', 'FTREVPBE', 'FTLSDA  ', 'FTBLYP  '],
+     &  pure_DFT_exc(25) = [
+     &    'LSDA    ', 'LDA     ', 'SVWN    ', 'TST     ', 'LSDA5   ',
+     &    'LDA5    ', 'SVWN5   ', 'HFB     ', 'HFO     ', 'HFG     ',
+     &    'HFB86   ', 'HFS     ', 'XALPHA  ', 'Overlap ', 'BWIG    ',
+     &    'BLYP    ', 'OLYP    ', 'KT3     ', 'KT2     ', 'BPBE    ',
+     &    'GLYP    ', 'GPBE    ', 'B86LYP  ', 'B86PBE  ', 'OPBE    '],
+     &  pure_HF_exc(4) = [
+     &    'CASDFT  ', 'SCF     ', 'PAM     ', 'CS      ']
