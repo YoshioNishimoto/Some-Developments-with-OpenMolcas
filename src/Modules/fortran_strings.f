@@ -50,7 +50,7 @@
         end interface
 
         interface operator(.in.)
-          module procedure contains
+          module procedure contains, array_contains
         end interface
 
         character(*), parameter ::
@@ -132,6 +132,21 @@
           character(*), intent(in) :: string, substring
 
           contains = index(string, substring) /= 0
+        end function
+
+        logical pure function array_contains(string, array_of_string)
+          character(*), intent(in) :: string
+          character(*), intent(in) :: array_of_string(:)
+
+          integer :: i
+
+          array_contains = .false.
+          do i = lbound(array_of_string, 1), ubound(array_of_string, 1)
+            if (string == array_of_string(i)) then
+                array_contains = .true.
+                return
+            end if
+          end do
         end function
 
         pure function str_to_I(in_str) result(res)
