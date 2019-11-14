@@ -9,12 +9,12 @@
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
       character(16) :: KSDFA
-      real*8 :: CoefR, CoefX, FUNCAA, FUNCBB, FUNCCC,
-     &      IP_F_XCA, IP_F_XCB, IP_TMPB, LUMC, LUMT
-
+      real*8 :: CoefR, CoefX, FUNCAA, FUNCBB, FUNCCC, LUMC, LUMT
+      integer :: IP_F_XCA, IP_F_XCB, IP_TMPB
       common /KSDFT_GLM / KSDFA, funcaa, funcbb, funccc,
      &      ip_F_xca, ip_F_xcb, ip_tmpB, LuMC,LuMT,
      &      CoefR, CoefX
+
       logical :: do_pdftpot
       integer :: ifiv, ifav
       common /KSDFT_AMS/ do_pdftpot, ifiv, ifav
