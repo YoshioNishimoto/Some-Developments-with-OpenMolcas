@@ -9,8 +9,8 @@
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
       character(16) :: KSDFA
-      real*8 :: CoefR, CoefX, FUNCAA, FUNCBB, FUNCCC, LUMC, LUMT
-      integer :: IP_F_XCA, IP_F_XCB, IP_TMPB
+      real*8 :: CoefR, CoefX, FUNCAA, FUNCBB, FUNCCC
+      integer :: IP_F_XCA, IP_F_XCB, IP_TMPB, LUMC, LUMT
       common /KSDFT_GLM / KSDFA, funcaa, funcbb, funccc,
      &      ip_F_xca, ip_F_xcb, ip_tmpB, LuMC,LuMT,
      &      CoefR, CoefX
@@ -25,8 +25,8 @@
       common /HF_exc_specification/ HF_exc, HF_exc_given
 
       character(16), parameter ::
-        hybrid_DFT_vary_HF_exc = [
-     &    'PBE0    ']
+     &  hybrid_DFT_vary_HF_exc(1) = [
+     &    'PBE0    '],
      &  MCPDFT_functionals(14) = [
      &    'TLSDA   ', 'TLSDA5  ', 'TBLYP   ', 'TSSBSW  ', 'TSSBD   ',
      &    'TS12G   ', 'TPBE    ', 'FTPBE   ', 'TOPBE   ', 'FTOPBE  ',

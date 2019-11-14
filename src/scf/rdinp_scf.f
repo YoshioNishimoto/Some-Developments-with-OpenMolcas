@@ -34,7 +34,7 @@
 *                                                                      *
 ************************************************************************
       use OccSets
-      use fortran_strings, only: real
+      use fortran_strings, only: real, operator(.in.)
 *
       Implicit Real*8 (a-h,o-z)
       External Allocdisk
@@ -1755,7 +1755,8 @@ c         Write (6,*)
          EndIf
       End If
 
-      if (.not. (KSDFT .in. hybrid_DFT_vary_HF_exc) .and. HF_exc_given) then
+      if (.not. (KSDFT .in. hybrid_DFT_vary_HF_exc)
+     &    .and. HF_exc_given) then
         call abort_(
      &      'Varying HF-exchange (HFEX keyword) not possible with '
      &      //trim(KSDFT))

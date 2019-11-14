@@ -13,6 +13,7 @@
 *     Return the factor which determine how much "exact exchange" that *
 *     should be included.                                              *
 ************************************************************************
+      use fortran_strings, only: operator(.in.)
       implicit none
       character*(*), intent(in) :: KSDFT
       real*8 :: ExFac
