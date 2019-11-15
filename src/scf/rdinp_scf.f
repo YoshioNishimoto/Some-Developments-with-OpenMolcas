@@ -93,8 +93,8 @@
       Common /Sagit/isSagit
 
       interface
-        character*180 function get_ln(lunit)
-          integer, intent(in) :: lunit
+        character*180 function get_ln(unit_id)
+          integer, intent(in) :: unit_d
         end function
       end interface
 *
