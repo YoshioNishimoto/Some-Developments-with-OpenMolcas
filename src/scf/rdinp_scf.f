@@ -94,7 +94,7 @@
 
       interface
         character*180 function get_ln(unit_id)
-          integer, intent(in) :: unit_id
+          integer :: unit_id
         end function
       end interface
 *
