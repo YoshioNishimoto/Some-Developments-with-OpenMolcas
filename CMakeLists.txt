@@ -129,16 +129,16 @@ option (EXPERT "Show advanced CMake cache entries in GUI)." OFF)
 
 option (BIGOT "Do not allow any compiler warning (treat them as errors)." OFF)
 
-set (LINALG_OPTIONS "Choose linear algebra library, options: Internal (default), Runtime, MKL, OpenBLAS, ACML, Accelerate.")
+set (LINALG_OPTIONS "Choose linear algebra library, options: Internal (default), Runtime, MKL, OpenBLAS, ACML, Accelerate, NEC.")
 if (DEFINED LINALG)
         set (LINALG "${LINALG}" CACHE STRING "${LINALG_OPTIONS}")
-        if (NOT ";Internal;Runtime;MKL;OpenBLAS;ACML;Accelerate;" MATCHES ";${LINALG};")
+        if (NOT ";Internal;Runtime;MKL;OpenBLAS;ACML;Accelerate;NEC;" MATCHES ";${LINALG};")
                 message (FATAL_ERROR "Unsuported LINALG: ${LINALG}")
         endif ()
 else ()
         set (LINALG "Internal"  CACHE STRING "${LINALG_OPTIONS}")
 endif ()
-set_property (CACHE LINALG PROPERTY STRINGS Internal Runtime MKL OpenBLAS ACML Accelerate)
+set_property (CACHE LINALG PROPERTY STRINGS Internal Runtime MKL OpenBLAS ACML Accelerate NEC)
 
 option (CUBLAS "Enable CUDA BLAS library." OFF)
 option (NVBLAS "Enable NVidia BLAS library." OFF)
@@ -578,6 +578,11 @@ elseif (${CMAKE_SYSTEM_NAME} STREQUAL "CYGWIN")
         elseif (ADDRMODE EQUAL 64)
                 set (PLATFORM "WIN64")
         endif ()
+elseif (${CMAKE_SYSTEM_NAME} STREQUAL "Aurora-VE")
+        message ("NEC SX-Aurora detected...")
+        message ("Compiler ID:" ${CMAKE_Fortran_COMPILER_ID})
+        add_definitions (-D_LINUX_)
+        set (PLATFORM "LINUX64")
 endif ()
 
 if (NOT PLATFORM)
@@ -664,6 +669,48 @@ set (CXXFLAGS_GNU_BIGOT "-Wall -Wextra -Wpedantic -Werror")
 set (CFLAGS_GNU_BIGOT "-Wall -Wextra -Wpedantic -Werror")
 set (FFLAGS_GNU_BIGOT "-Wall -Werror")
 set (GNU_TRAP "-ffpe-trap=invalid,zero,overflow")
+
+#======================================#
+# NEC SX-Aurora  Compiler Collection (ncc)
+#======================================#
+# defines __NEC__
+# C++ compiler
+list (APPEND SUPPORTED_CXX_COMPILERS "NEC")
+set (CXXFLAGS_NEC_BASIC "")
+set (CXXFLAGS_NEC_OPENMP "-fopenmp")
+# build targets
+set (CXXFLAGS_NEC_DEBUG "-O0 -g -Wall")
+set (CXXFLAGS_NEC_GARBLE "-O2 -g -Wall")
+set (CXXFLAGS_NEC_RELWITHDEBINFO "-O2 -g -Wall")
+set (CXXFLAGS_NEC_RELEASE "-O2")
+set (CXXFLAGS_NEC_FAST "-O2")
+# C compiler
+list (APPEND SUPPORTED_C_COMPILERS "NEC")
+set (CFLAGS_NEC_BASIC "-std=gnu99")
+set (CFLAGS_NEC_OPENMP "-fopenmp")
+# build targets
+set (CFLAGS_NEC_DEBUG "-O0 -g -Wall")
+set (CFLAGS_NEC_GARBLE "-O2 -g -Wall")
+set (CFLAGS_NEC_RELWITHDEBINFO "-O2 -g -Wall")
+set (CFLAGS_NEC_RELEASE "-O2")
+set (CFLAGS_NEC_FAST "-O2")
+# Fortran compiler
+list (APPEND SUPPORTED_Fortran_COMPILERS "NEC")
+set (FFLAGS_NEC_BASIC "-fpp")
+set (FFLAGS_NEC_OPENMP "-fopenmp")
+set (FFLAGS_NEC_ILP64 "-fdefault-integer=8")
+# build targets
+set (FFLAGS_NEC_DEBUG "-O0 -g -Wall")
+set (FFLAGS_NEC_GARBLE "-O2 -g -Wall -finit-real=snan -finit-integer=730432726 -fno-unsafe-math-optimizations -frounding-math -fsignaling-nans")
+set (FFLAGS_NEC_RELWITHDEBINFO "-O2 -g -Wall")
+set (FFLAGS_NEC_RELEASE "-O2")
+set (FFLAGS_NEC_FAST "-O3")
+
+set (CXXFLAGS_NEC_BIGOT "-Wall -Wextra -Wpedantic -Werror")
+set (CFLAGS_NEC_BIGOT "-Wall -Wextra -Wpedantic -Werror")
+set (FFLAGS_NEC_BIGOT "-Wall -Werror")
+set (NEC_TRAP "-ffpe-trap=invalid,zero,overflow")
+
 
 #======================================#
 # LLVM C frontend (Clang)
@@ -1467,6 +1514,50 @@ if (LINALG STREQUAL "Accelerate")
         set (LINALG_LIBRARIES "-framework Accelerate")
 endif ()
 
+if (LINALG STREQUAL "NEC")
+        message ("-- Using NEC ASL Library")
+        mark_as_advanced(CLEAR ASLROOT)
+        if (ASLROOT STREQUAL "")
+                set (ASLROOT $ENV{ASL_HOME})
+        	message ("ASL ROOT set to: ${ASLROOT}")
+                if (NOT ASLROOT)
+                        message (FATAL_ERROR
+                                "You must set environment variable ASLROOT, "
+                                "or specify -DASLROOT=/path/to/asl_dir "
+                                "when running cmake."
+                                )
+                endif ()
+        endif ()
+
+        unset (LIBASL CACHE)
+
+        find_library (LIBASL_BLAS
+                NAMES blas_sequential
+                PATHS ${ASLROOT}
+                PATH_SUFFIXES lib
+                NO_DEFAULT_PATH)
+
+        find_library (LIBASL_LAPACK
+                NAMES lapack
+                PATHS ${ASLROOT}
+                PATH_SUFFIXES lib
+                NO_DEFAULT_PATH)
+
+
+        list (APPEND LIBASL ${LIBASL_LAPACK})
+        list (APPEND LIBASL ${LIBASL_BLAS})
+
+        if (NOT LIBASL)
+                message (FATAL_ERROR
+                        "ASL library not found, please check that "
+                        "the ASLROOT variable is set and points to "
+                        "a valid ASL installation directory."
+                        )
+        endif ()
+
+        set (LINALG_LIBRARIES ${LIBASL})
+endif ()
+
 # Internal LAPACK+BLAS libraries shipped with Molcas source
 if (LINALG STREQUAL "Internal")
         message ("-- Using Molcas' LAPACK+BLAS libraries (SLOW!)")
@@ -1510,7 +1601,7 @@ if (CUBLAS OR NVBLAS)
                 set (CUDA_INCLUDE_PATH "${CUDAROOT}/include")
                 set (CUDA_FORTRAN_WRAPPERS "${CUDAROOT}/src/fortran_thunking.c")
                 if (NOT EXISTS ${CUDA_FORTRAN_WRAPPERS})
-                        message (FATAL_ERROR "could not find CUDA fortran wrappers: ${CUDA_FORTRAN_WRAPPERS}")
+                        BAmessage (FATAL_ERROR "could not find CUDA fortran wrappers: ${CUDA_FORTRAN_WRAPPERS}")
                 endif ()
                 add_library (cublas_fortran OBJECT "${CUDA_FORTRAN_WRAPPERS}")
                 if (CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
