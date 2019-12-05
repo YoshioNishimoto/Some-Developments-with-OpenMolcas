@@ -97,7 +97,7 @@ C     Write (Lu,'(A)') Char
 C     Write (Lu,*) iOptC
       If (Char.eq.BLine) Go To 999
       If (Char(1:1).eq.'*') Go To 999
-      If (Char(1:4).eq.'AI  ') Go To 100
+      If (Char(1:4).eq.'KRIG') Go To 100
       If (Char(1:4).eq.'AIMD') Go To 101
       If (Char(1:4).eq.'AIL ') Go To 102
       If (Char(1:4).eq.'AINX') Go To 103
@@ -494,16 +494,12 @@ c        iOptH = iOr(2,iAnd(iOptH,32))
       MxItr=Min(iTmp,MxItr)
       Go To 999
 *                                                                      *
-****** AI   ************************************************************
+****** KRIG ************************************************************
 *                                                                      *
 *     Activate Kriging
 *
-100   Char=Get_Ln(LuRd)
-      If (Char.eq.'Kriging'.or.Char.eq.'kriging') then
-       Kriging = .True.
-      Else
-       Call WarningMessage(1,'Illegal AI method selected.')
-      EndIf
+100   Kriging = .True.
+      Line_Search = .False.
       Go To 999
 *                                                                      *
 ****** AIMD ************************************************************
@@ -590,7 +586,7 @@ c        iOptH = iOr(2,iAnd(iOptH,32))
 ****** AIAB ************************************************************
 *                                                                      *
 *     adding energy to the last energy value of the base line
-*     This option superseas any value assigned to blAI and mblAI
+*     This option superseeds any value assigned to blAI and mblAI
 *
 110   Char=Get_Ln(LuRd)
       Call Get_F1(1,blavAI)
@@ -602,6 +598,7 @@ c        iOptH = iOr(2,iAnd(iOptH,32))
 *     Change the l value of the GEK.
 *
 112   Char=Get_Ln(LuRd)
+      Set_l=.True.
       Call Get_F1(1,Value_l)
       Call Qpg_dScalar('Value_l',Found)
       If (.Not.Found) Call Put_dScalar('Value_l',Value_l)

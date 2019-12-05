@@ -57,15 +57,14 @@
      &      ,ThrEne
       Write (Lu,'(A)')
      &    ' Parameters for constrained optimization'
+      If (.NOT.Kriging) Then
       Write (Lu,'(A,E9.2)')
      &    ' Max step length (initial seed):          ',Beta
-      Write (Lu,'(A,F9.5,A)')
-     &    ' Max variance accepted:                   ',Beta_disp,' a.u.'
-      Write (Lu,'(A,F9.5,A)')
-     &    '                                          ',
-     &      Beta_disp*CONV_AU_TO_KJ_PER_MOLE_,
-     &    ' kcal/mol'
+      Else
+      Write (Lu,'(A,F9.5)')
+     &    ' Max variance accepted (fact. of g.norm): ',Beta_disp
       Write (Lu,*)
+      End If
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -90,16 +89,30 @@
 *      Write (Lu,*) '    being in the limit of "Inf" the Gaussian case.'
 *      Write (Lu,*)
        Call Get_dScalar('Value_l',Value_l)
-       Write (Lu,*) '  Characteristic length scale, l:            ',
+       If (set_l) Then
+          Write (Lu,*) '  Global characteristic length scale, l:     ',
      &              Value_l
+       Else
+          Write (Lu,*) '  Individual characteristic length scale set '
+     &          //'to repoduce diagonal of HMF hessian.'
+       End If
+*
        If (blaAI) then
-          write (6,*) '  Baseline is last energy plus: ',blavAI
+          write (6,'(A,F10.5,A,/,A,F10.5,A)')
+     &          '   Baseline is highest energy plus: ',blavAI,' a.u',
+     &          '                                 ',
+     &              blavAI * CONV_AU_TO_KJ_PER_MOLE_,
+     &              ' kcal/mol'
        Else
           if (mblAI) then
              write (6,*) '  Baseline set to maximum value of the energy'
           else if (blAI) then
-             write (6,*) '  Baseline (Trend Function) changed to value:'
-     &                   , sb
+             write (6,'(A,F9.5,A,/,A,F9.5,A)')
+     &              '  Baseline (Trend Function) changed to value:',
+     &              blvAI, 'a.u.',
+     &              '                                             ',
+     &              blvAI * CONV_AU_TO_KJ_PER_MOLE_,
+     &              ' kcal/mol'
           endif
        Endif
        Write (Lu,*)

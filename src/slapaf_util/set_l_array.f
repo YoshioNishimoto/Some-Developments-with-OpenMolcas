@@ -10,28 +10,25 @@
 *                                                                      *
 * Copyright (C) 2019, Roland Lindh                                     *
 ************************************************************************
-      Subroutine set_l_Array(Array_l,nInter)
+      Subroutine set_l_Array(Array_l,nInter,BaseLine,Hessian)
       Implicit Real*8 (a-h,o-z)
-#include "real.fh"
-#include "stdalloc.fh"
-      Real*8 Array_l(nInter)
-      Real*8, Allocatable:: Hessian(:,:)
+      Real*8 Array_l(nInter), Hessian(nInter,nInter)
 *
-      Call mma_Allocate(Hessian,nInter,nInter,Label='Hessian')
-      Call Mk_Hss_Q()
-      Call Get_dArray('Hss_Q',Hessian,nInter**2)
-*     Call RecPrt('Hessian',' ',Hessian,nInter,nInter)
-*                                                                      *
-      rmax=Zero
+*     Call RecPrt('set_l_Array: Hessian',' ',Hessian,nInter,nInter)
+*
+*     Gives a Kriging Hessian for a single point of Kriging with
+*     a diagonal which is identical to the diagonal values of
+*     the HMF ad hoc Hessian.
+*
       Do i = 1, nInter
-         Array_l(i)=One/Sqrt(Abs(Hessian(i,i)))
-         If (Array_l(i).gt.rmax) rmax=Array_l(i)
-      End Do
-*     Call RecPrt('Raw',' ',Array_l,1,nInter)
-      Call DScal_(nInter,One/rmax,Array_l,1)
-*     Call RecPrt('Scaled',' ',Array_l,1,nInter)
 *
-      Call mma_Deallocate(Hessian)
+*        Make sure that the characteristic length is not too long.
+*
+         Hss=Max(Abs(Hessian(i,i)),0.0050D0)
+         Array_l(i)=Sqrt((5.0D0*BaseLine)/(3.0D0*Hss))
+*
+      End Do
+*     Call RecPrt('Array_l',' ',Array_l,1,nInter)
 *
       Return
       End
