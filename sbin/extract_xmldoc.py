@@ -25,12 +25,14 @@ sys.dont_write_bytecode = True
 
 try:
   docdir = os.path.abspath(sys.argv[1])
+  print('docdir',docdir)
 except IndexError:
   print('Need doc directory location')
   sys.exit(1)
 
 try:
   datadir = os.path.abspath(sys.argv[2])
+  print('datadir',datadir)
 except IndexError:
   print('Need data directory location')
   sys.exit(1)
@@ -38,14 +40,20 @@ except IndexError:
 sys.path.append(os.path.join(docdir, 'extensions'))
 
 import xmldoc
+print('Library imported')
 
 xml_re = re.compile(r'(\s*)..\s+xmldoc::\s*')
+print ('xml_re',xml_re)
 
 # Find all ".. xmldoc::" blocks in the source files
 xmldocs = {}
 for root, subdirs, files in os.walk(os.path.join(docdir, 'source')):
   for fname in files:
     docs = []
+    print('root', root)
+    print('subdirs', subdirs)
+    print('files', files)
+    print('fname', fname)
     with open(os.path.join(root, fname), 'rb') as f:
       inxml = False
       lines = f.readlines()
@@ -87,7 +95,7 @@ with codecs.open(os.path.join(datadir, 'keyword.db'), 'w', 'utf-8') as keywordsf
 
 # Create XML file
 with codecs.open(os.path.join(datadir, 'keyword.xml'), 'w', 'utf-8') as keywordsfile:
-  keywordsfile.write('<!-- This file is generated automatically from the OpenMolcas documentation -->\n')
+  keywordsfile.write('<!-- This file is generated automatically from the OpenMolcas documentation test file -->\n')
   keywordsfile.write('<ROOT>\n')
   # Sort by filename
   for fname in sorted(xmldocs):

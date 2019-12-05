@@ -84,6 +84,7 @@
       Real*8 Restriction_Step, Restriction_Dispersion
 #include "real.fh"
 #include "WrkSpc.fh"
+#include "stdalloc.fh"
 #include "print.fh"
 #include "Molcas.fh"
       Real*8 qInt(nInter,MaxItr), Shift(nInter,MaxItr),
