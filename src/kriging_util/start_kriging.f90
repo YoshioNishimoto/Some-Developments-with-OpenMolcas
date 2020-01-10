@@ -25,9 +25,12 @@
         Call RecPrt('Start_Kriging: y',' ',y_,     1,nPoints)
         Call RecPrt('Start_Kriging: dy',' ',dy_,nInter,nPoints)
 #endif
+!
         Call mma_Allocate(x,nInter,nPoints,Label="x")
         Call mma_Allocate(dy,nInter*nPoints,Label="dy")
         Call mma_Allocate(y,nPoints,Label="y")
+!
+!$acc data copyin(x,dy,y,full_R)
 !
         Call Setup_Kriging(nPoints,nInter,x_,dy_,y_)
 !
@@ -42,7 +45,6 @@
         npx = 1
 !full_R correspond to the gradient of Psi (eq. (2) ref.)
         Call mma_Allocate(full_R,m_t,m_t,Label="full_R")
-        Call mma_Allocate(full_RInv,m_t,m_t,Label="full_RInv")
 !
         If (mblAI) sbmev = y(maxloc(y,dim=1))
 !rl and dl are temporary matrices for the contruction of Psi which is inside of

@@ -15,7 +15,7 @@
                         blavAI
         use kriging
         real*8, allocatable ::  &
-                rl(:,:,:), dl(:,:), full_Rinv(:,:), &
+                rl(:,:,:), dl(:,:), &
                 full_R(:,:), nx(:,:), Kv(:), &
                 cv(:,:,:,:), cvg(:,:,:),cvh(:,:,:,:), &
                 var(:), Rones(:), sigma(:), l(:), &
