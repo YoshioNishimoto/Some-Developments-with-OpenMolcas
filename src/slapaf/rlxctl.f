@@ -10,7 +10,7 @@
 ************************************************************************
       Subroutine RlxCtl(iStop)
       Use Chkpnt
-      Use AI, only: Kriging, nspAI
+      Use kriging_mod, only: Kriging, nspAI
       Implicit Real*8 (a-h,o-z)
 ************************************************************************
 *     Program for determination of the new molecular geometry          *
@@ -238,7 +238,7 @@
      &               Lbl,Work(ipGNrm),Work(ipEner),UpMeth,
      &               ed,Line_Search,Step_Trunc,nLambda,iRow_c,nsAtom,
      &               AtomLbl,nSym,iOper,mxdc,jStab,nStab,Work(ipB),
-     &               Smmtrc,nDimBC,Work(ipL),ipCx,GrdMax,
+     &               Smmtrc,nDimBC,Work(ipL),ipCx,Work(ipGx),GrdMax,
      &               StpMax,GrdLbl,StpLbl,iNeg,nLbl,
      &               Labels,nLabels,FindTS,TSConstraints,nRowH,
      &               nWndw,Mode,ipMF,
@@ -272,21 +272,21 @@
 *                                                                      *
 *-----Transform the new internal coordinates to Cartesians
 *
-      Call GetMem(' DCF  ', 'Allo','Real',ipDCF, 3*nsAtom)
+      Call GetMem(' DFC  ', 'Allo','Real',ipDFC, 3*nsAtom)
       Call GetMem(' dss  ', 'Allo','Real',ipdss, nQQ)
       Call GetMem(' qTemp', 'Allo','Real',ipTmp, nQQ)
       PrQ=.False.
       Call NewCar(Iter,nBVec,iRow,nsAtom,nDimBC,nQQ,Work(ipCoor),
      &            ipB,Work(ipCM),Lbl,Work(ipShf),ipqInt,
-     &            ipdqInt,Work(ipDCF),Work(ipdss),Work(ipTmp),
-     &            Stop,AtomLbl,iOper,nSym,iSym,Smmtrc,Degen,
+     &            ipdqInt,Work(ipDFC),Work(ipdss),Work(ipTmp),
+     &            AtomLbl,iOper,nSym,iSym,Smmtrc,Degen,
      &            Work(ipGx),Work(ipCx),mTtAtm,iWork(ipANr),iOptH,
      &            User_Def,nStab,jStab,Curvilinear,Numerical,
      &            DDV_Schlegel,HWRS,Analytic_Hessian,iOptC,PrQ,mxdc,
      &            iCoSet,rHidden,ipRef,Redundant,nqInt,MaxItr)
       Call GetMem(' qTemp', 'Free','Real',ipTmp, nQQ)
       Call GetMem(' dss  ', 'Free','Real',ipdss, nQQ)
-      Call GetMem(' DCF  ', 'Free','Real',ipDCF, 3*nsAtom)
+      Call GetMem(' DFC  ', 'Free','Real',ipDFC, 3*nsAtom)
 *                                                                      *
 ************************************************************************
 ************************************************************************
