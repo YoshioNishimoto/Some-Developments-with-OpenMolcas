@@ -1012,12 +1012,12 @@ C printing threshold
            IF(EDIFF.GT.0.0D0) THEN
             IJSS=JSS+NSS*(ISS-1)
 
-            DX2=(WORK(LDXR-1+IJSS)+g*WORK(LSXR-1+IJSS))**2
-     &         +(WORK(LDXI-1+IJSS)+g*WORK(LSXI-1+IJSS))**2
-            DY2=(WORK(LDYR-1+IJSS)+g*WORK(LSYR-1+IJSS))**2
-     &         +(WORK(LDYI-1+IJSS)+g*WORK(LSYI-1+IJSS))**2
-            DZ2=(WORK(LDZR-1+IJSS)+g*WORK(LSZR-1+IJSS))**2
-     &         +(WORK(LDZI-1+IJSS)+g*WORK(LSZI-1+IJSS))**2
+            DX2=(WORK(LDXI-1+IJSS)+g*WORK(LSXR-1+IJSS))**2
+     &         +(WORK(LDXR-1+IJSS)-g*WORK(LSXI-1+IJSS))**2
+            DY2=(WORK(LDYI-1+IJSS)+g*WORK(LSYR-1+IJSS))**2
+     &         +(WORK(LDYR-1+IJSS)-g*WORK(LSYI-1+IJSS))**2
+            DZ2=(WORK(LDZI-1+IJSS)+g*WORK(LSZR-1+IJSS))**2
+     &         +(WORK(LDZR-1+IJSS)-g*WORK(LSZI-1+IJSS))**2
 
             F = (DX2 + DY2 + DZ2)*EDIFF*ONEOVER6C2
 ! Add it to the total
@@ -1800,6 +1800,8 @@ C printing threshold
 
          ONEOVER9C2=1.0D0/(9.0D0*CONST_C_IN_AU_**2)
          g = FEGVAL*3.0D0/2.0D0 ! To remove the 2/3 factor in ONEOVER9C2
+         g = g*2.0d0 ! Seem to be needed to agree with the exact term,
+                     ! needs to be looked further into!
          DO ISS=1,IEND
           DO JSS=JSTART,NSS
            EDIFF=ENSOR(JSS)-ENSOR(ISS)
@@ -1810,43 +1812,45 @@ C printing threshold
 !
 ! Since the Spin-Magnetic-Quadrupole is made from the multiplication of two complex integrals we have
 ! M^s = (a+ib)(c+id) = ac-bd + i(ad+bc) hence the long expressions below
+! Also, since the magnetic quadrupole terms are real and the electric dipole are imaginary
+! we multiply the real components of MQ with the imaginary of the dipole term, and vice versa.
+! However, the spin y component is imaginary
 !
 !                  Magnetic-Quadrupole   Spin-Magnetic-Quadrupole
-            DYXDZ=((WORK(LDYXR-1+IJSS) + g*WORK(LSYXR-1+IJSS))
-     &           *WORK(LDZR-1+IJSS)) ! Electric-Dipole
-     &           +((WORK(LDYXI-1+IJSS) + g*WORK(LSYXI-1+IJSS))
-     &           *WORK(LDZI-1+IJSS))
-            DXYDZ=((WORK(LDXYR-1+IJSS) + g*WORK(LSXYR-1+IJSS))
+            DXYDZ=((-WORK(LDXYI-1+IJSS) + g*WORK(LSXYI-1+IJSS))
+     &           *WORK(LDZI-1+IJSS)) ! Electric-Dipole
+     &           +((WORK(LDXYR-1+IJSS) + g*WORK(LSXYR-1+IJSS))
      &           *WORK(LDZR-1+IJSS))
-     &           +((WORK(LDXYI-1+IJSS) + g*WORK(LSXYI-1+IJSS))
+            DYXDZ=-((WORK(LDYXI-1+IJSS) + g*WORK(LSYXR-1+IJSS))
      &           *WORK(LDZI-1+IJSS))
+     &           +((WORK(LDYXR-1+IJSS) + g*WORK(LSYXI-1+IJSS))
+     &           *WORK(LDZR-1+IJSS))
             FXY=ONEOVER9C2*EDIFF2*(DXYDZ)
             FYX=-ONEOVER9C2*EDIFF2*(DYXDZ)
 
-            DZXDY=((WORK(LDZXR-1+IJSS) + g*WORK(LSZXR-1+IJSS))
-     &           *WORK(LDYR-1+IJSS))
-     &           +((WORK(LDZXI-1+IJSS) + g*WORK(LSZXI-1+IJSS))
+            DZXDY=-((WORK(LDZXI-1+IJSS) + g*WORK(LSZXR-1+IJSS))
      &           *WORK(LDYI-1+IJSS))
-            DXZDY=((WORK(LDXZR-1+IJSS) + g*WORK(LSXZR-1+IJSS))
+     &           +((WORK(LDZXR-1+IJSS) + g*WORK(LSZXI-1+IJSS))
      &           *WORK(LDYR-1+IJSS))
-     &           +((WORK(LDXZI-1+IJSS) + g*WORK(LSXZI-1+IJSS))
+            DXZDY=-((WORK(LDXZI-1+IJSS) + g*WORK(LSXZR-1+IJSS))
      &           *WORK(LDYI-1+IJSS))
+     &           +((WORK(LDXZR-1+IJSS) + g*WORK(LSXZI-1+IJSS))
+     &           *WORK(LDYR-1+IJSS))
             FZX=ONEOVER9C2*EDIFF2*(DZXDY)
             FXZ=-ONEOVER9C2*EDIFF2*(DXZDY)
 
-            DYZDX=((WORK(LDYZR-1+IJSS) + g*WORK(LSYZR-1+IJSS))
-     &           *WORK(LDXR-1+IJSS))
-     &           +((WORK(LDYZI-1+IJSS) + g*WORK(LSYZI-1+IJSS))
+            DYZDX=-((WORK(LDYZI-1+IJSS) + g*WORK(LSYZR-1+IJSS))
      &           *WORK(LDXI-1+IJSS))
-            DZYDX=((WORK(LDZYR-1+IJSS) + g*WORK(LSZYR-1+IJSS))
+     &           +((WORK(LDYZR-1+IJSS) + g*WORK(LSYZI-1+IJSS))
      &           *WORK(LDXR-1+IJSS))
-     &           +((WORK(LDZYI-1+IJSS) + g*WORK(LSZYI-1+IJSS))
+            DZYDX=((-WORK(LDZYI-1+IJSS) + g*WORK(LSZYI-1+IJSS))
      &           *WORK(LDXI-1+IJSS))
+     &           +((WORK(LDZYR-1+IJSS) + g*WORK(LSZYR-1+IJSS))
+     &           *WORK(LDXR-1+IJSS))
             FYZ=ONEOVER9C2*EDIFF2*(DYZDX)
             FZY=-ONEOVER9C2*EDIFF2*(DZYDX)
 
             F =FYX+FXY+FZX+FXZ+FYZ+FZY
-            F = -F
 ! Add it to the total
             WORK(LTOT2K-1+IJSS) = WORK(LTOT2K-1+IJSS) + F
 
