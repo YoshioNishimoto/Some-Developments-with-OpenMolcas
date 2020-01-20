@@ -17,7 +17,7 @@ SUBROUTINE kriging_model(nPoints)
   External DDOt_
   Real*8 DDOt_
   real*8, Allocatable:: B(:), A(:,:)
-#define _PREDIAG_
+!#define _PREDIAG_
 #ifdef _PREDIAG_
   real*8, Allocatable:: U(:,:), HTri(:), UBIG(:,:), C(:,:), D(:)
   real*8 temp
@@ -108,7 +108,7 @@ SUBROUTINE kriging_model(nPoints)
   A(:,:) = full_r(:,:)
 #endif
 !
-#define _DPOSV_
+!#define _DPOSV_
 #ifdef _DPOSV_
   CALL DPOSV_('U',m_t,1,A,m_t,B,m_t,INFO )
 #else
@@ -183,13 +183,38 @@ SUBROUTINE kriging_model(nPoints)
 !
 !**********************************************************************
 !
+!----------------GEK or just Kriging
+#define _NOGEK_
+#ifdef _NOGEK_
+  B(1:nPoints) = [y-sb]
+  ! write (6,*) 'Begin NOGEK size B ', ' size B ', size(B), ' B ', B, ' nInter_save ', nInter_save, ' nPoints ', nPoints
+  ! write (6,*) ' size y ',size(y), 'y ', y
+  ! write (6,*) ' size x ',size(x), ' x ', x
+  ! write (6,*) ' size dy ',size(dy), ' dy ', dy
+  do i = 1, nInter_save
+    ! write (6,*) 'i ',i, ' x ', x(nPoints,i)
+    ! write (6,*) 'i ',i, ' r ', r(1,1:nPoints,i)
+    ! write (6,*) 'i ',i, ' l ', l(i)
+    B(nPoints*i+1:nPoints*(i+1)) = [y*r(1,1:nPoints,i)*l(i)]
+    ! write (6,*) 'i ',i, ' B ', B(nPoints*i+1:nPoints*(i+1))
+  enddo
+  ! write (6,*) 'NOGEK B ',B
+  ! write (6,*) 'y ',y
+#else
   B(:) = [y-sb,dy]
+  ! write (6,*) 'Begin GEK size B ', ' size B ', size(B), ' B ', B, ' nInter_save ', nInter_save, ' nPoints ', nPoints
+  ! write (6,*) ' size y ',size(y), 'y ', y
+  ! write (6,*) ' size x ',size(x), ' x ', x
+  ! write (6,*) ' size dy ',size(dy), ' dy ', dy
+#endif
+!---------------ENDNOGEK
 #ifdef _DEBUG_
   Write (6,*) 'sb,ln(det|PSI|)=',sb,detR
   Call RecPrt('[y-sb,dy]',' ',B,1,m_t)
 #endif
 !#undef _PREDIAG_
 #ifdef _PREDIAG_
+!---------------------------_PREDIAG_--------------------
 !
 ! Diagonalize the energy block of Psi
 !
@@ -260,6 +285,7 @@ SUBROUTINE kriging_model(nPoints)
   Call mma_deallocate(HTri)
   Call mma_deAllocate(C)
   Call mma_deallocate(U)
+!-----------------------END-_PREDIAG_--------------------
 #else
   Kv(:)=B
   A(:,:)=full_r

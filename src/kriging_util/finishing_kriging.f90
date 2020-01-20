@@ -28,14 +28,7 @@ Subroutine Finish_Kriging()
   Call mma_deallocate(pred)
   Call mma_deallocate(gpred)
   Call mma_deallocate(hpred)
-  Call mma_deallocate(var)
-  Call mma_deallocate(sigma)
-  Call mma_deallocate(l)
-  Call mma_deallocate(ll)
-  Call mma_deallocate(cv)
-  Call mma_deallocate(cvMatFder)
-  Call mma_deallocate(cvMatSder)
-  Call mma_deallocate(cvMatTder)
+  Call mma_deallocate(r)
 !
   return
 End Subroutine Finish_Kriging

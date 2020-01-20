@@ -25,7 +25,7 @@
 
       real*8, allocatable ::
      &        rl(:,:,:), dl(:,:), full_Rinv(:,:),
-     &        full_R(:,:), nx(:,:), Kv(:),
+     &        full_R(:,:), nx(:,:), Kv(:), r(:,:,:),
      &        cv(:,:,:,:), cvg(:,:,:),cvh(:,:,:,:),
      &        var(:), Rones(:), sigma(:), l(:),
      &        pred(:), gpred(:,:), hpred(:,:,:), ll(:),

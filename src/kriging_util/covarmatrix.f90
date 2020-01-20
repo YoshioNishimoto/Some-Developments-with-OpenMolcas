@@ -16,7 +16,7 @@ SUBROUTINE covarMatrix(nPoints,nInter)
 #include "stdalloc.fh"
   integer i,j,i0,i1,j0,j1,k,nPoints,nInter
   Real*8, Allocatable :: diffx_j(:,:), diffx_i(:,:), matFder(:,:),&
-                         matSder(:,:), r(:,:,:), d(:,:)
+                         matSder(:,:), d(:,:)
 !#define _DEBUG_
 !
   Call mma_Allocate(diffx_j,nPoints,nPoints,Label="diffx_j")
@@ -114,6 +114,6 @@ SUBROUTINE covarMatrix(nPoints,nInter)
   Call mma_deallocate(diffx_i)
   Call mma_deallocate(matFder)
   Call mma_deallocate(matSder)
-  Call mma_deallocate(r)
+  !Call mma_deallocate(r)
   Call mma_deallocate(d)
 END SUBROUTINE covarMatrix
