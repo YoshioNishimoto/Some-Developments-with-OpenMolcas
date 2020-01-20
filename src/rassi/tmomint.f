@@ -335,7 +335,11 @@
       OperC(:) = 0 ! Dummy
 *
       Call dcopy_(nComp,[Zero],0,Nuc,1)
-      Call OneEl(EMFInt,EMFMem,Label,ipList,OperI,nComp,
+*     Call OneEl(EMFInt,EMFMem,Label,ipList,OperI,nComp,
+*    &           CoorO,nOrdOp,Nuc,rHrmt,OperC,
+*    &           dum,1,dum,idum,0,0,
+*    &           dum,1,0)
+      Call OneEl(TwLInt,TwLMem,Label,ipList,OperI,nComp,
      &           CoorO,nOrdOp,Nuc,rHrmt,OperC,
      &           dum,1,dum,idum,0,0,
      &           dum,1,0)

@@ -11,7 +11,7 @@
 ! Copyright (C) 2019 Marjan Khamesian and Roland Lindh                 *
 !***********************************************************************
       SubRoutine TWLInt(Alpha,nAlpha,Beta, nBeta,Zeta,ZInv,rKappa,P,   &
-                       Final,nZeta,nIC,nComp,la,lb,A,RB,nRys,          &
+                       Final,nZeta,nIC,nComp,la,lb,A,RB,nHer,          &
                        Array,nArr,kVector,nOrdOp,lOper,iChO,           &
                        iStabM,nStabM,                                  &
                        PtChrg,nGrid,iAddPot)
@@ -21,6 +21,7 @@
 !         interaction between matter and light with orbital angular    *
 !         momentum.                                                    *
 !***********************************************************************
+      use Her_RW
       Implicit None
 !
 !     External Arrays and integers
@@ -29,27 +30,131 @@
               nStabM
       Real*8 Final(nZeta,(la+1)*(la+2)/2,(lb+1)*(lb+2)/2,nIC),         &
              Zeta(nZeta), ZInv(nZeta), Alpha(nAlpha), Beta(nBeta),     &
-             rKappa(nZeta), P(nZeta,3), A(3), RB(3), TC(3),         &
+             rKappa(nZeta), P(nZeta,3), A(3), RB(3),                   &
              Array(nZeta*nArr), kvector(3)
       Integer iStabM(0:nStabM-1), iDCRT(0:7),                          &
               iStabO(0:7), lOper(nComp), iChO(nComp)
-      Integer nRys, nGrid, iAddPot
+      Integer nHer, nGrid, iAddPot
       Real*8  PtChrg
+      Logical ABeq(3)
 !
 !     Local Arrays and integers
 !
       Integer iZeta, iAlpha, iBeta, i_x, i_y, i_z, j_x, j_y, j_z,      &
-              lAng
-      Real*8 Value
+              lAng, ixyz
+      Integer ipA, ipAOff, ipAxyz, ipB, ipBOff, ipBxyz, ipQxyz, ipRes, &
+              ipVxyz, nip
+      Real*8 Value, Zero
 !
+      Zero=0.0D0
       lAng= 1             ! Temporary set value
-
 !
 !     We need here a transformation of the Cartesian coordinates in which
 !     the k-vector coinsides with the z-vector direction.
 !     In particular, we will transform P to the new coordinate system.
 !
 !     ... more to come ...
+!
+      Call TWLInt_Internal(Array)
+!
+!**********************************************************************
+
+!      Now when all Cartesian components have been computed we
+!      transform back to the coordinate system of the molecule.
+
+!      ... more to come ...
+!
+      Return
+
+! Avoid unused argument warnings
+      If (.False.) Then
+         Call Unused_real(PtChrg)
+         Call Unused_integer(nGrid)
+         Call Unused_integer(iAddPot)
+      End If
+!**********************************************************************
+!**********************************************************************
+!
+!     This is to allow type punning without an explicit interface
+      Contains
+      SubRoutine TWLInt_Internal(Array)
+      Use Iso_C_Binding
+      Real*8, Target :: Array(*)
+      Complex*16, Pointer :: zAxyz(:),zBxyz(:),zQxyz(:),zVxyz(:)
+!
+      ABeq(1) = A(1).eq.RB(1)
+      ABeq(2) = A(2).eq.RB(2)
+      ABeq(3) = A(3).eq.RB(3)
+!
+      nip = 1
+      ipAxyz = nip
+      nip = nip + nZeta*3*nHer*(la+1+nOrdOp) * 2
+      ipBxyz = nip
+      nip = nip + nZeta*3*nHer*(lb+1+nOrdOp) * 2
+      ipQxyz = nip
+      nip = nip + nZeta*3*(la+1+nOrdOp)*(lb+1+nOrdOp) * 2
+      If (nOrdOp.eq.1) Then
+         ipVxyz = nip
+         nip = nip + nZeta*6*(la+1)*(lb+1) * 2
+         ipA = nip
+         nip = nip + nZeta
+         ipB = nip
+         nip = nip + nZeta
+         ipRes = nip
+         nip = nip + nZeta*nElem(la)*nElem(lb)*nComp
+      Else
+         ipVxyz = nip
+         ipA = nip
+         ipB = nip
+         ipRes = nip
+         nip = nip + nZeta*nElem(la)*nElem(lb)*nComp
+      End If
+      If (nip-1.gt.nArr*nZeta) Then
+         Call WarningMessage(2,'EMFInt: nip-1.gt.nArr*nZeta')
+         Write (6,*) ' nArr is Wrong! ', nip-1,' > ',nArr*nZeta
+         Write (6,*) ' Abend in EMFInt'
+         Call Abend()
+      End If
+!
+#ifdef _DEBUG_
+      Call RecPrt(' In EMFInt: A',' ',A,1,3)
+      Call RecPrt(' In EMFInt: RB',' ',RB,1,3)
+      Call RecPrt(' In EMFInt: KVector',' ',kvector,1,3)
+      Call RecPrt(' In EMFInt: P',' ',P,nZeta,3)
+      Write (6,*) ' In EMFInt: la,lb=',la,lb
+#endif
+!
+!**********************************************************************
+!    Computation of intermediate integrals
+!
+!    Compute all Cartesian components with the OAM free code. Then
+!    compute the z-component only in the OAM formalism replacing the
+!    OAM-free z-components.
+!
+      call dcopy_(nZeta*nElem(la)*nElem(lb)*nIC,[Zero],0,Final,1)
+!
+!     Compute the cartesian values of the basis functions angular part
+!     Note that these arrays are complex.
+!
+      Call C_F_Pointer(C_Loc(Array(ipAxyz)),zAxyz,[nZeta*3*nHer*(la+nOrdOp+1)])
+      Call CCrtCmp(Zeta,P,nZeta,A,zAxyz,la+nOrdOp,HerR(iHerR(nHer)),nHer,ABeq,kvector)
+      Call C_F_Pointer(C_Loc(Array(ipBxyz)),zBxyz,[nZeta*3*nHer*(lb+nOrdOp+1)])
+      Call CCrtCmp(Zeta,P,nZeta,RB,zBxyz,lb+nOrdOp,HerR(iHerR(nHer)),nHer,ABeq,kvector)
+      Nullify(zAxyz,zBxyz)
+!
+!     Compute the cartesian components for the multipole moment
+!     integrals. The integrals are factorized into components.
+!
+      Call C_F_Pointer(C_Loc(Array(ipAxyz)),zAxyz,[nZeta*3*nHer*(la+nOrdOp+1)])
+      Call C_F_Pointer(C_Loc(Array(ipQxyz)),zQxyz,[nZeta*3*(la+nOrdOp+1)*(lb+nOrdOp+1)])
+      Call C_F_Pointer(C_Loc(Array(ipBxyz)),zBxyz,[nZeta*3*nHer*(lb+nOrdOp+1)])
+      Call CAssmbl(zQxyz,                                             &
+                   zAxyz,la+nOrdOp,                                   &
+                   zBxyz,lb+nOrdOp,                                   &
+                   nZeta,HerW(iHerW(nHer)),nHer)
+      Nullify(zAxyz,zBxyz,zQxyz)
+!
+!     Now compute the OAM z-component.
 !
 !     The integration over the z-subspace is done using the normal code
 !     for the exponetial operator.
@@ -88,164 +193,57 @@
                End Do    ! i_y
             End Do    ! i_x
 
-!           Now when all Cartesian components have been computed we
-!           transform back to the coordinate system of the molecule.
-
-!           ... more to come ...
-
          End Do ! iAlpha
       End Do    ! iBeta
+!**********************************************************************
 !
-      Return
+!     Do not forget to merge the z-component into the right place.
+!
+!**********************************************************************
+!
+!     Compute the cartesian components for the velocity integrals.
+!     The velocity components are linear combinations of overlap
+!     components.
+!
+      If (nOrdOp.eq.1) Then
+         ipAOff = ipA
+         Do iBeta = 1, nBeta
+            call dcopy_(nAlpha,Alpha,1,Array(ipAOff),1)
+            ipAOff = ipAOff + nAlpha
+         End Do
 
-! Avoid unused argument warnings
-      If (.False.) Then
-         Call Unused_integer(nRys)
-         Call Unused_real(PtChrg)
-         Call Unused_integer(nGrid)
-         Call Unused_integer(iAddPot)
+         ipBOff = ipB
+         Do iAlpha = 1, nAlpha
+            call dcopy_(nBeta,Beta,1,Array(ipBOff),nAlpha)
+            ipBOff = ipBOff + 1
+         End Do
+!
+         Call C_F_Pointer(C_Loc(Array(ipVxyz)),zVxyz,[nZeta*3*(la+1)*(lb+1)])
+         Call C_F_Pointer(C_Loc(Array(ipQxyz)),zQxyz,[nZeta*3*(la+1)*(lb+1)])
+         Call CVelInt(zVxyz,zQxyz,la,lb,Array(ipA),Array(ipB),nZeta)
+         Nullify(zVxyz,zQxyz)
+!
+!     Combine the cartesian components to the full one electron
+!     integral.
+!
+         Call C_F_Pointer(C_Loc(Array(ipQxyz)),zQxyz,[nZeta*3*(la+1)*(lb+1)])
+         Call C_F_Pointer(C_Loc(Array(ipVxyz)),zVxyz,[nZeta*3*(la+1)*(lb+1)*2])
+         Call CCmbnVe(zQxyz,nZeta,la,lb,Zeta,rKappa,Array(ipRes),nComp,zVxyz,kvector)
+         Nullify(zQxyz,zVxyz)
+      Else
+         Call C_F_Pointer(C_Loc(Array(ipQxyz)),zQxyz,[nZeta*3*(la+1)*(lb+1)*(nOrdOp+1)])
+         Call CCmbnMP(zQxyz,nZeta,la,lb,nOrdOp,Zeta,rKappa,Array(ipRes),nComp,kvector)
+         Nullify(zQxyz)
       End If
-
+!
+      End SubRoutine TWLInt_Internal
+      Integer Function nElem(ixyz)
+      Integer ixyz
+!
+      nElem = (ixyz+1)*(ixyz+2)/2
+!
+      End Function nElem
+!**********************************************************************
+!**********************************************************************
+!
       End Subroutine twlint
-!
-      Subroutine twlprm(Zeta,P_x,P_y,Alpha,Beta,i_x,i_y,j_x,j_y,l,intg)
-      Implicit None
-!
-!
-!     Local Arrays and integers
-!
-  Integer :: n, m, k, q, i_x, i_y, j_x, j_y, p, t
-  Integer :: a, b, v, w, c, d, g, f, l
-  Real*8 :: Lambda, Theta, Omega, Gamma, Zeta, intg
-  Real*8 :: a1, a2, b1, b2, c1, c2, d1, d2, e1, e2, f1, f2
-  Real*8 :: g1, g2, h1, h2, k1, k2, l1, l2, l3
-  Real*8 :: A_x, A_y, B_x, B_y, Alpha, Beta, P_x, P_y  ! parameters
-  Real*8, parameter :: pi = atan(1.0)*4.d0
-  Complex*16 cx, Kappa, i
-
-  i=DCmplx(0.0D0,1.0D0)
-
-  intg = 0.0D0
-
-  !- Lambda -----
-
-  Do n = 0, i_x
-     a1 = choose(i_x,n)
-     a2 = (P_x - A_x)**n
-     Do m = 0, j_x
-        b1 = choose(j_x, m)
-        b2 = (P_x - B_x)**m
-
-        a = i_x + j_x - n - m
-        Do k = 0, i_y
-
-           c1 = choose(i_y, k)
-           c2 = (P_y - A_y)**n
-           Do q = 0, j_y
-
-              d1 = choose(j_y, q)
-              d2 = (P_y - B_y)**n
-
-              b = i_y + j_y - k - q
-
-              Lambda = (a1*a2*b1*b2*c1*c2*d1*d2* &
-                   exp((-(Alpha*Beta)/Zeta)*(A_x-B_x)**2+(A_y - B_y)**2))
-
-              !- Theta ------
-
-              Do v = 0, a
-                 e1 = choose(a,v)
-                 e2 = (P_x)**v
-                 Do w = 0, b
-                    f1 = choose(b,w)
-                    f2 = (P_y)**w
-
-                    Theta = ( e1 * e2 * f1 * f2 )
-
-                    ! - Omega ------
-
-                    f = a-v+b-w+1
-
-                    Do c = 0, a-v
-                       g1 = choose(a-v, c)
-                       g2 = (1/2)**(a-v)
-                       Do d = 0, b-w
-                          h1 = choose(b-w, d)
-                          h2 = (1/(2*i))**(b-w)
-
-                          g = a+b+l-v-w-(2*c)-(2*d)
-
-                          cx = (i*g) / ( 2*Zeta*P_y )
-                          Kappa = ( exp(-Zeta * P_y**2.0) * (exp(2*pi*i*g) - 1) ) / (2.0*Zeta*P_y)
-
-                          Omega = Kappa *(g1*g2*h1*h2)
-
-                          !- Gamma --------
-
-                          Do t = 0, f
-                             Do p = 0, t-1
-
-                                k1 = choose(f,t)
-                                k2 = choose(t-1,p)
-                                l1 = (-cx)**(f-t) * (cx + P_x)**(t-1-p) * (-1/2)**p *(1/(2*sqrt(2*pi)))
-                                l2 = integral_gauss(Zeta,p)
-                                Gamma = ( k1 * k2 * l1 * l2 )
-
-                                intg = intg + Lambda * Theta * Omega * Gamma
-
-                             End Do ! p
-                          End Do    ! t
-
-                       End Do ! d
-                    End Do    ! c
-
-                 End Do ! w
-              End Do    ! v
-
-           End Do ! q
-        End Do    ! k
-
-     End Do !m
-  End Do    !n
-
-!------------------------------------------------------------------
-contains
-
-
-  function factorial (n) result (res)
-
-    implicit none
-    integer, intent (in) :: n
-    integer :: res
-    integer :: i
-
-    res = product ((/(i, i = 1, n)/))
-
-  end function factorial
-!!!!!!!!!!!!!!!!!!!!
-  function choose (n, k) result (res)
-
-    implicit none
-    integer, intent (in) :: n
-    integer, intent (in) :: k
-    integer :: res
-
-    res = factorial (n) / (factorial (k) * factorial (n - k))
-
-  end function choose
-
-!!!!!!!!!!!!!!!!!!!!
-  function integral_gauss (Zeta,p) result (res)
-
-    implicit none
-    integer, intent (in) :: p
-    real*8, intent (in) :: Zeta
-    real*8 :: res
-    !    real, intent (out) :: res
-
-    res = (0.5) * (-0.5)**p * Zeta**(0.5-p)
-
-
-  end function integral_gauss
-
-End Subroutine twlprm
