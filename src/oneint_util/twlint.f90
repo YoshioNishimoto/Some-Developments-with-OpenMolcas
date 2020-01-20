@@ -44,7 +44,9 @@
               lAng, ixyz
       Integer ipA, ipAOff, ipAxyz, ipB, ipBOff, ipBxyz, ipQxyz, ipRes, &
               ipVxyz, nip
-      Real*8 Value, Zero
+      Real*8 Value, Zero, Rxy, Fi1, Rxyz, Fi2
+      Real*8 TransM(3,3)
+      Real*8 kVector_local(3)
 !
       Zero=0.0D0
       lAng= 1             ! Temporary set value
@@ -53,6 +55,31 @@
 !     the k-vector coinsides with the z-vector direction.
 !     In particular, we will transform P to the new coordinate system.
 !
+!     Use Euler angles (z-x-z). We skip the last rotation.
+!     Rotate around the z-axis so that the x-component becomes zero.
+      Rxy=Sqrt(kvector(1)**2 + kvector(2)**2)
+      Fi1= - ATAN2(kvector(2),kvector(1))
+      kVector_Local(1)=Rxy
+      kVector_Local(2)=Zero
+      kVector_Local(3)=kVector(3)
+!
+!     Rotate around the x-axis so that the y-componen becomes zero.
+      Rxyz=Sqrt(kVector_Local(1)**2 + kVector_Local(3)**2)
+      Fi2 = - ATAN2(kVector_Local(3),kVector_Local(1))
+      kVector_Local(1)=Zero
+      kVector_Local(2)=Zero
+      kVector_Local(3)=Rxyz
+!
+      TransM(1,1)= Cos(Fi1)
+      TransM(2,1)= Sin(Fi1)
+      TransM(3,1)= Zero
+      TransM(1,2)=-Sin(Fi1)*Cos(Fi2)
+      TransM(2,2)= Cos(Fi1)*Cos(Fi2)
+      TransM(2,2)=          Sin(Fi2)
+      TransM(1,3)= Sin(Fi1)*Sin(Fi2)
+      TransM(2,3)=-Cos(Fi1)*Sin(Fi2)
+      TransM(3,3)=          Cos(Fi2)
+
 !     ... more to come ...
 !
       Call TWLInt_Internal(Array)
