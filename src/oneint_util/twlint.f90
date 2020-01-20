@@ -85,6 +85,7 @@
                End Do ! j_y
             End Do    ! j_x
 
+               End Do    ! i_y
             End Do    ! i_x
 
 !           Now when all Cartesian components have been computed we
