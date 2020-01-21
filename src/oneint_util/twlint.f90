@@ -117,9 +117,9 @@
 !
  111  Continue
       If (lAng.eq.0) Then
-         Call TWLInt_Internal(Array,P)
+         Call TWLInt_Internal(Array,A,RB,P)
       Else
-         Call TWLInt_Internal(Array,Array(ipP))
+         Call TWLInt_Internal(Array,A_Local,RB_Local,Array(ipP))
       End If
 !
 !**********************************************************************
@@ -163,10 +163,10 @@ Return
 !
 !     This is to allow type punning without an explicit interface
       Contains
-      SubRoutine TWLInt_Internal(Array,P)
+      SubRoutine TWLInt_Internal(Array,A,RB,P)
       Use Iso_C_Binding
       Real*8, Target :: Array(*)
-      Real*8 P(nZeta,3)
+      Real*8 A(3), RB(3), P(nZeta,3)
       Complex*16, Pointer :: zAxyz(:),zBxyz(:),zQxyz(:),zVxyz(:)
 !
       ABeq(1) = A(1).eq.RB(1)
