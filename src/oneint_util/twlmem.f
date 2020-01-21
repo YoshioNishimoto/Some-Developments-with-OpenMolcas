@@ -24,7 +24,7 @@
          MemVe = MemVe
      &         + nElem(la)*nElem(lb)*nElem(lr)*2
       End If
-      MemVe=MemVe+1
+      MemVe=MemVe+3
 *
       Return
 c Avoid unused argument warnings

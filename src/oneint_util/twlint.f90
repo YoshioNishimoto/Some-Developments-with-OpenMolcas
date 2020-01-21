@@ -23,6 +23,7 @@
 !***********************************************************************
       use Her_RW
       Implicit None
+      External NrOpr
 !
 !     External Arrays and integers
 !
@@ -34,7 +35,7 @@
              Array(nZeta*nArr), kvector(3)
       Integer iStabM(0:nStabM-1), iDCRT(0:7),                          &
               iStabO(0:7), lOper(nComp), iChO(nComp)
-      Integer nHer, nGrid, iAddPot
+      Integer nHer, nGrid, iAddPot, NrOpr
       Real*8  PtChrg
       Logical ABeq(3)
 !
@@ -43,29 +44,45 @@
       Integer iZeta, iAlpha, iBeta, i_x, i_y, i_z, j_x, j_y, j_z,      &
               lAng, ixyz
       Integer ipA, ipAOff, ipAxyz, ipB, ipBOff, ipBxyz, ipQxyz, ipRes, &
-              ipVxyz, nip
-      Real*8 Value, Zero, Rxy, Fi1, Rxyz, Fi2
+              ipVxyz, nip, icomp, iOper, lDCRT, llOper, LmbdT, nDCRT,  &
+              nIrrep, nOp, nStabO, ipP
+      Real*8 Value, Zero, One, Rxy, Fi1, Rxyz, Fi2
       Real*8 TransM(3,3)
       Real*8 kVector_local(3)
+      Real*8 A_Local(3), RB_Local(3)
 !
       Zero=0.0D0
+      One =1.0D0
       lAng= 1             ! Temporary set value
+      nip = 1
+!
+      If (lAng.ne.0 .and. nOrdOp.eq.0) Then
+         Write (6,*) "lAng.ne.0 .and. nOrdOp.eq.0"
+         Call Abend()
+      End If
 !
 !     We need here a transformation of the Cartesian coordinates in which
 !     the k-vector coinsides with the z-vector direction.
 !     In particular, we will transform P to the new coordinate system.
 !
+      If (lAng.eq.0) Then
+         kVector_Local(1)=kVector(1)
+         kVector_Local(2)=kVector(2)
+         kVector_Local(3)=kVector(3)
+         Go To 111
+      End If
+!
 !     Use Euler angles (z-x-z). We skip the last rotation.
 !     Rotate around the z-axis so that the x-component becomes zero.
       Rxy=Sqrt(kvector(1)**2 + kvector(2)**2)
-      Fi1= - ATAN2(kvector(2),kvector(1))
+      Fi1= ATAN2(kvector(2),kvector(1))
       kVector_Local(1)=Rxy
       kVector_Local(2)=Zero
       kVector_Local(3)=kVector(3)
 !
-!     Rotate around the x-axis so that the y-componen becomes zero.
+!     Rotate around the x-axis so that the y-component becomes zero.
       Rxyz=Sqrt(kVector_Local(1)**2 + kVector_Local(3)**2)
-      Fi2 = - ATAN2(kVector_Local(3),kVector_Local(1))
+      Fi2 = ATAN2(kVector_Local(3),kVector_Local(1))
       kVector_Local(1)=Zero
       kVector_Local(2)=Zero
       kVector_Local(3)=Rxyz
@@ -79,19 +96,61 @@
       TransM(1,3)= Sin(Fi1)*Sin(Fi2)
       TransM(2,3)=-Cos(Fi1)*Sin(Fi2)
       TransM(3,3)=          Cos(Fi2)
+!
+!     Transform A, RB, and P
+!
+      ipP=nip
+      nip=nip+nZeta*3
+!
+      Call DGEMM_('N','N',3,1,3,                                        &
+                   1.0D0,TransM,3,                                      &
+                         A,3,                                           &
+                   0.0D0,A_Local,3)
+      Call DGEMM_('N','N',3,1,3,                                        &
+                   1.0D0,TransM,3,                                      &
+                         RB,3,                                          &
+                   0.0D0,RB_Local,3)
+      Call DGEMM_('N','T',3,3,nZeta,                                    &
+                   1.0D0,P,nZeta,                                       &
+                         TransM,3,                                      &
+                   0.0D0,Array(ipP),3)
+!
+ 111  Continue
+      If (lAng.eq.0) Then
+         Call TWLInt_Internal(Array,P)
+      Else
+         Call TWLInt_Internal(Array,Array(ipP))
+      End If
+!
+!**********************************************************************
+!
+      If (lAng.eq.0) Go To 222
+!     Now when all Cartesian components have been computed we
+!     transform back to the coordinate system of the molecule.
 
 !     ... more to come ...
 !
-      Call TWLInt_Internal(Array)
+ 222  Continue
 !
-!**********************************************************************
-
-!      Now when all Cartesian components have been computed we
-!      transform back to the coordinate system of the molecule.
-
-!      ... more to come ...
+      llOper=lOper(1)
+      Do iComp = 2, nComp
+         llOper = iOr(llOper,lOper(iComp))
+      End Do
+      Call SOS(iStabO,nStabO,llOper)
+      Call DCR(LmbdT,iOper,nIrrep,iStabM,nStabM,iStabO,nStabO,          &
+               iDCRT,nDCRT)
 !
-      Return
+      Do lDCRT = 0, nDCRT-1
+!
+!--------Accumulate contributions
+!
+         nOp = NrOpr(iDCRT(lDCRT),iOper,nIrrep)
+         Call SymAdO(Array(ipRes),nZeta,la,lb,nComp,Final,nIC,          &
+                     nOp,lOper,iChO,One)
+!
+      End Do
+!
+Return
 
 ! Avoid unused argument warnings
       If (.False.) Then
@@ -104,16 +163,16 @@
 !
 !     This is to allow type punning without an explicit interface
       Contains
-      SubRoutine TWLInt_Internal(Array)
+      SubRoutine TWLInt_Internal(Array,P)
       Use Iso_C_Binding
       Real*8, Target :: Array(*)
+      Real*8 P(nZeta,3)
       Complex*16, Pointer :: zAxyz(:),zBxyz(:),zQxyz(:),zVxyz(:)
 !
       ABeq(1) = A(1).eq.RB(1)
       ABeq(2) = A(2).eq.RB(2)
       ABeq(3) = A(3).eq.RB(3)
 !
-      nip = 1
       ipAxyz = nip
       nip = nip + nZeta*3*nHer*(la+1+nOrdOp) * 2
       ipBxyz = nip
@@ -146,7 +205,7 @@
 #ifdef _DEBUG_
       Call RecPrt(' In EMFInt: A',' ',A,1,3)
       Call RecPrt(' In EMFInt: RB',' ',RB,1,3)
-      Call RecPrt(' In EMFInt: KVector',' ',kvector,1,3)
+      Call RecPrt(' In EMFInt: KVector',' ',kvector_Local,1,3)
       Call RecPrt(' In EMFInt: P',' ',P,nZeta,3)
       Write (6,*) ' In EMFInt: la,lb=',la,lb
 #endif
@@ -164,9 +223,9 @@
 !     Note that these arrays are complex.
 !
       Call C_F_Pointer(C_Loc(Array(ipAxyz)),zAxyz,[nZeta*3*nHer*(la+nOrdOp+1)])
-      Call CCrtCmp(Zeta,P,nZeta,A,zAxyz,la+nOrdOp,HerR(iHerR(nHer)),nHer,ABeq,kvector)
+      Call CCrtCmp(Zeta,P,nZeta,A,zAxyz,la+nOrdOp,HerR(iHerR(nHer)),nHer,ABeq,kvector_Local)
       Call C_F_Pointer(C_Loc(Array(ipBxyz)),zBxyz,[nZeta*3*nHer*(lb+nOrdOp+1)])
-      Call CCrtCmp(Zeta,P,nZeta,RB,zBxyz,lb+nOrdOp,HerR(iHerR(nHer)),nHer,ABeq,kvector)
+      Call CCrtCmp(Zeta,P,nZeta,RB,zBxyz,lb+nOrdOp,HerR(iHerR(nHer)),nHer,ABeq,kvector_Local)
       Nullify(zAxyz,zBxyz)
 !
 !     Compute the cartesian components for the multipole moment
@@ -180,6 +239,8 @@
                    zBxyz,lb+nOrdOp,                                   &
                    nZeta,HerW(iHerW(nHer)),nHer)
       Nullify(zAxyz,zBxyz,zQxyz)
+!
+      If (lAng.eq.0) Go To 333
 !
 !     Now compute the OAM z-component.
 !
@@ -222,9 +283,10 @@
 
          End Do ! iAlpha
       End Do    ! iBeta
+ 333  Continue
 !**********************************************************************
 !
-!     Do not forget to merge the z-component into the right place.
+!     Do not forget to merge the z-component into the right place!
 !
 !**********************************************************************
 !
@@ -255,11 +317,11 @@
 !
          Call C_F_Pointer(C_Loc(Array(ipQxyz)),zQxyz,[nZeta*3*(la+1)*(lb+1)])
          Call C_F_Pointer(C_Loc(Array(ipVxyz)),zVxyz,[nZeta*3*(la+1)*(lb+1)*2])
-         Call CCmbnVe(zQxyz,nZeta,la,lb,Zeta,rKappa,Array(ipRes),nComp,zVxyz,kvector)
+         Call CCmbnVe(zQxyz,nZeta,la,lb,Zeta,rKappa,Array(ipRes),nComp,zVxyz,kvector_Local)
          Nullify(zQxyz,zVxyz)
       Else
          Call C_F_Pointer(C_Loc(Array(ipQxyz)),zQxyz,[nZeta*3*(la+1)*(lb+1)*(nOrdOp+1)])
-         Call CCmbnMP(zQxyz,nZeta,la,lb,nOrdOp,Zeta,rKappa,Array(ipRes),nComp,kvector)
+         Call CCmbnMP(zQxyz,nZeta,la,lb,nOrdOp,Zeta,rKappa,Array(ipRes),nComp,kvector_Local)
          Nullify(zQxyz)
       End If
 !
