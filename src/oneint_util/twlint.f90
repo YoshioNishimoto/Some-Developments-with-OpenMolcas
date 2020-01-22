@@ -46,13 +46,16 @@
       Integer ipA, ipAOff, ipAxyz, ipB, ipBOff, ipBxyz, ipQxyz, ipRes, &
               ipVxyz, nip, icomp, iOper, lDCRT, llOper, LmbdT, nDCRT,  &
               nIrrep, nOp, nStabO, ipP
-      Real*8 Value, Zero, One, Rxy, Fi1, Rxyz, Fi2
+      Real*8 Zero, One, Two, Rxy, Fi1, Rxyz, Fi2
+      Complex*16 Value1111, Value2111, Value0111, Value1211, Value1011,&
+                 Value1121, Value1101, Value1112, Value1110
       Real*8 TransM(3,3)
       Real*8 kVector_local(3)
       Real*8 A_Local(3), RB_Local(3)
 !
       Zero=0.0D0
       One =1.0D0
+      Two =2.0D0
       lAng= 1             ! Temporary set value
       nip = 1
 !
@@ -168,6 +171,7 @@ Return
       Real*8, Target :: Array(*)
       Real*8 A(3), RB(3), P(nZeta,3)
       Complex*16, Pointer :: zAxyz(:),zBxyz(:),zQxyz(:),zVxyz(:)
+      Real*8 Alpha_, Beta_
 !
       ABeq(1) = A(1).eq.RB(1)
       ABeq(2) = A(2).eq.RB(2)
@@ -211,15 +215,16 @@ Return
 #endif
 !
 !**********************************************************************
+!**********************************************************************
 !    Computation of intermediate integrals
 !
 !    Compute all Cartesian components with the OAM free code. Then
-!    compute the z-component only in the OAM formalism replacing the
-!    OAM-free z-components.
+!    compute the x and y components in the OAM formalism replacing the
+!    OAM-free x and y components.
 !
       call dcopy_(nZeta*nElem(la)*nElem(lb)*nIC,[Zero],0,Final,1)
 !
-!     Compute the cartesian values of the basis functions angular part
+!     Compute the Cartesian values of the basis functions angular part
 !     Note that these arrays are complex.
 !
       Call C_F_Pointer(C_Loc(Array(ipAxyz)),zAxyz,[nZeta*3*nHer*(la+nOrdOp+1)])
@@ -228,7 +233,7 @@ Return
       Call CCrtCmp(Zeta,P,nZeta,RB,zBxyz,lb+nOrdOp,HerR(iHerR(nHer)),nHer,ABeq,kvector_Local)
       Nullify(zAxyz,zBxyz)
 !
-!     Compute the cartesian components for the multipole moment
+!     Compute the Cartesian components for the multipole moment
 !     integrals. The integrals are factorized into components.
 !
       Call C_F_Pointer(C_Loc(Array(ipAxyz)),zAxyz,[nZeta*3*nHer*(la+nOrdOp+1)])
@@ -239,56 +244,6 @@ Return
                    zBxyz,lb+nOrdOp,                                   &
                    nZeta,HerW(iHerW(nHer)),nHer)
       Nullify(zAxyz,zBxyz,zQxyz)
-!
-      If (lAng.eq.0) Go To 333
-!
-!     Now compute the OAM z-component.
-!
-!     The integration over the z-subspace is done using the normal code
-!     for the exponetial operator.
-!
-      Do iBeta = 1, nBeta
-         Do iAlpha = 1, nAlpha
-            iZeta = nAlpha*(iBeta-1) + iAlpha
-!
-            Do i_x =  0, la
-               Do i_y = 0, la-i_x
-                  i_z = la - i_x - i_y
-
-            Do j_x =  0, lb
-               Do j_y = 0, lb-j_x
-                  j_z = lb - j_x - j_y
-
-!                 Compute the x-y part of the integral
-
-                  Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
-                              Alpha(iAlpha), Beta(iBeta),              &
-                              i_x,i_y,                                 &
-                              j_x,j_y, lAng, Value)
-
-!                 Compute the z part of the integral
-
-!                 ... more to come ...
-
-!                 Assemble to the complete integral
-
-!                 ... more to come ...
-
-
-               End Do ! j_y
-            End Do    ! j_x
-
-               End Do    ! i_y
-            End Do    ! i_x
-
-         End Do ! iAlpha
-      End Do    ! iBeta
- 333  Continue
-!**********************************************************************
-!
-!     Do not forget to merge the z-component into the right place!
-!
-!**********************************************************************
 !
 !     Compute the cartesian components for the velocity integrals.
 !     The velocity components are linear combinations of overlap
@@ -311,10 +266,122 @@ Return
          Call C_F_Pointer(C_Loc(Array(ipQxyz)),zQxyz,[nZeta*3*(la+1)*(lb+1)])
          Call CVelInt(zVxyz,zQxyz,la,lb,Array(ipA),Array(ipB),nZeta)
          Nullify(zVxyz,zQxyz)
+      End If
+!**********************************************************************
+!**********************************************************************
+!
+      If (lAng.ne.0) Then
+!
+!     Now compute the OAM x and y component.
+!
+!     The integration over the z-subspace is done using the normal code
+!     for the exponetial operator.
+!
+      Do iBeta = 1, nBeta
+         Do iAlpha = 1, nAlpha
+            iZeta = nAlpha*(iBeta-1) + iAlpha
+!
+            Do i_x =  0, la
+               Do i_y = 0, la-i_x
+                  i_z = la - i_x - i_y
+
+            Do j_x =  0, lb
+               Do j_y = 0, lb-j_x
+                  j_z = lb - j_x - j_y
+
+!                 Compute the x-y part of the integral
+
+                  Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
+                              Alpha(iAlpha), Beta(iBeta),              &
+                              i_x,  i_y,                               &
+                              j_x,  j_y, lAng, Value1111)
+!
+                  If (nOrdOp.eq.1) Then
+                     Alpha_=Array(ipBOff-1+iZeta)
+                     Beta_ =Array(ipBOff-1+iZeta)
+
+                     Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
+                                 Alpha(iAlpha), Beta(iBeta),              &
+                                 i_x+1,i_y,                               &
+                                 j_x,  j_y, lAng, Value2111)
+
+                     Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
+                                 Alpha(iAlpha), Beta(iBeta),              &
+                                 i_x-1,i_y,                               &
+                                 j_x,  j_y, lAng, Value0111)
+
+                     Value2111 = DBLE(i_x)*Value0111 - Two*Alpha_*Value2111
+
+                     Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
+                                 Alpha(iAlpha), Beta(iBeta),              &
+                                 i_x,  i_y,                               &
+                                 j_x+1,j_y, lAng, Value1211)
+
+                     Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
+                                 Alpha(iAlpha), Beta(iBeta),              &
+                                 i_x  ,i_y,                               &
+                                 j_x-1,j_y, lAng, Value1011)
+
+                     Value1211 = DBLE(j_x)*Value1011 - Two*Beta_ *Value1211
+
+                     Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
+                                 Alpha(iAlpha), Beta(iBeta),              &
+                                 i_x,  i_y+1,                             &
+                                 j_x,  j_y, lAng, Value1121)
+
+                     Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
+                                 Alpha(iAlpha), Beta(iBeta),              &
+                                 i_x  ,i_y-1,                             &
+                                 j_x,  j_y, lAng, Value1101)
+
+                     Value1121 = DBLE(i_y)*Value1101 - Two*Alpha_*Value1121
+
+                     Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
+                                 Alpha(iAlpha), Beta(iBeta),              &
+                                 i_x,  i_y,                               &
+                                 j_x,  j_y+1, lAng, Value1112)
+
+                     Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
+                                 Alpha(iAlpha), Beta(iBeta),              &
+                                 i_x,  i_y,                               &
+                                 j_x,  j_y-1, lAng, Value1110)
+
+                     Value1112 = DBLE(j_y)*Value1110 - Two*Beta_ *Value1112
+
+!                 ... more to come ...
+                  Else
+!                 ... more to come ...
+                  End If
+!
+!                 Pick up the z component from above
+!
+!                 temp=Array(izeta,i_z,j_z)
+
+!                 Assemble to the complete integral
+!                 ipa=(i_x,i_y,i_z)
+!                 ipb=(j_x,j_y,j_z)
+!                 Final(iZeta,ipa,ipb)=temp*Value
+
+!                 ... more to come ...
+
+
+               End Do ! j_y
+            End Do    ! j_x
+
+               End Do    ! i_y
+            End Do    ! i_x
+
+         End Do ! iAlpha
+      End Do    ! iBeta
+!
+!**********************************************************************
+      Else ! OAM-free case
+!**********************************************************************
 !
 !     Combine the cartesian components to the full one electron
 !     integral.
 !
+      If (nOrdOp.eq.1) Then
          Call C_F_Pointer(C_Loc(Array(ipQxyz)),zQxyz,[nZeta*3*(la+1)*(lb+1)])
          Call C_F_Pointer(C_Loc(Array(ipVxyz)),zVxyz,[nZeta*3*(la+1)*(lb+1)*2])
          Call CCmbnVe(zQxyz,nZeta,la,lb,Zeta,rKappa,Array(ipRes),nComp,zVxyz,kvector_Local)
@@ -324,6 +391,9 @@ Return
          Call CCmbnMP(zQxyz,nZeta,la,lb,nOrdOp,Zeta,rKappa,Array(ipRes),nComp,kvector_Local)
          Nullify(zQxyz)
       End If
+!**********************************************************************
+      End If
+!**********************************************************************
 !
       End SubRoutine TWLInt_Internal
       Integer Function nElem(ixyz)

@@ -18,16 +18,19 @@
 !
   Integer :: n, m, k, q, i_x, i_y, j_x, j_y, p, t
   Integer :: a, b, v, w, c, d, g, f, l
-  Real*8 :: Lambda, Theta, Omega, Gamma, Zeta, intg
+  Complex*16 intg
+  Real*8 :: Lambda, Theta, Zeta
   Real*8 :: a1, a2, b1, b2, c1, c2, d1, d2, e1, e2, f1, f2
-  Real*8 :: g1, g2, h1, h2, k1, k2, l1, l2, l3
+  Real*8 :: g1, g2, h1, h2, k1, k2, l2, l3
   Real*8 :: A_x, A_y, B_x, B_y, Alpha, Beta, P_x, P_y  ! parameters
   Real*8, parameter :: pi = atan(1.0)*4.d0
-  Complex*16 cx, Kappa, i
+  Complex*16 cx, Kappa, i, Omega, l1, Gamma
+
+  intg = DCmplx(0.0D0,0.0D0)
+
+  If (i_x.lt.0 .or. i_y.lt.0 .or. j_x.lt.0 .or. j_y.lt.0) Return
 
   i=DCmplx(0.0D0,1.0D0)
-
-  intg = 0.0D0
 
   !- Lambda -----
 
