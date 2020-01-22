@@ -46,16 +46,18 @@
       Integer ipA, ipAOff, ipAxyz, ipB, ipBOff, ipBxyz, ipQxyz, ipRes, &
               ipVxyz, nip, icomp, iOper, lDCRT, llOper, LmbdT, nDCRT,  &
               nIrrep, nOp, nStabO, ipP
-      Real*8 Zero, One, Two, Rxy, Fi1, Rxyz, Fi2
+      Real*8 Zero, One, Two, Three, Four, Rxy, Fi1, Rxyz, Fi2
       Complex*16 Value1111, Value2111, Value0111, Value1211, Value1011,&
                  Value1121, Value1101, Value1112, Value1110
       Real*8 TransM(3,3)
-      Real*8 kVector_local(3)
+      Real*8 kVector_local(3), Fact, rTemp
       Real*8 A_Local(3), RB_Local(3)
 !
-      Zero=0.0D0
-      One =1.0D0
-      Two =2.0D0
+      Zero =0.0D0
+      One  =1.0D0
+      Two  =2.0D0
+      Three=3.0D0
+      Four =4.0D0
       lAng= 1             ! Temporary set value
       nip = 1
 !
@@ -288,6 +290,11 @@ Return
             Do j_x =  0, lb
                Do j_y = 0, lb-j_x
                   j_z = lb - j_x - j_y
+!
+                   rTemp=KVector(1)**2 + kVector(2)**2 + kVector(3)**2
+                   rTemp=rTemp/(Four*Zeta(iZeta))
+                   Fact = rKappa(iZeta) * Zeta(iZeta)**(-Three/Two) * Exp(-rTemp)
+
 
 !                 Compute the x-y part of the integral
 
