@@ -8,7 +8,8 @@
 ! For more details see the full text of the license in the file        *
 ! LICENSE or in <http://www.gnu.org/licenses/>.                        *
 !                                                                      *
-! Copyright (C) 2019 Marjan Khamesian and Roland Lindh                 *
+! Copyright (C) 2019, Marjan Khamesian                                 *
+!               2019, Roland Lindh                                     *
 !***********************************************************************
       SubRoutine TWLInt(Alpha,nAlpha,Beta, nBeta,Zeta,ZInv,rKappa,P,   &
                        Final,nZeta,nIC,nComp,la,lb,A,RB,nHer,          &
