@@ -87,8 +87,8 @@
       kVector_Local(3)=kVector(3)
 !
 !     Rotate around the x-axis so that the y-component becomes zero.
-      Rxyz=Sqrt(kVector_Local(1)**2 + kVector_Local(3)**2)
-      Fi2 = ATAN2(kVector_Local(3),kVector_Local(1))
+      Rxyz=Sqrt(kVector_Local(2)**2 + kVector_Local(3)**2)
+      Fi2 = ATAN2(kVector_Local(3),kVector_Local(2))
       kVector_Local(1)=Zero
       kVector_Local(2)=Zero
       kVector_Local(3)=Rxyz
@@ -305,8 +305,8 @@ Return
                               j_x,  j_y, lAng, Value1111)
 !
                   If (nOrdOp.eq.1) Then
-                     Alpha_=Array(ipBOff-1+iZeta)
-                     Beta_ =Array(ipBOff-1+iZeta)
+                     Alpha_=Array(ipA-1+iZeta)
+                     Beta_ =Array(ipB-1+iZeta)
 
                      Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
                                  Alpha(iAlpha), Beta(iBeta),              &
