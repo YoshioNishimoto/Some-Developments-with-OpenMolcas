@@ -184,7 +184,7 @@ SUBROUTINE kriging_model(nPoints)
 !**********************************************************************
 !
 !----------------GEK or just Kriging
-#define _NOGEK_
+!#define _NOGEK_
 #ifdef _NOGEK_
   B(1:nPoints) = [y-sb]
   ! write (6,*) 'Begin NOGEK size B ', ' size B ', size(B), ' B ', B, ' nInter_save ', nInter_save, ' nPoints ', nPoints
@@ -195,7 +195,7 @@ SUBROUTINE kriging_model(nPoints)
     ! write (6,*) 'i ',i, ' x ', x(nPoints,i)
     ! write (6,*) 'i ',i, ' r ', r(1,1:nPoints,i)
     ! write (6,*) 'i ',i, ' l ', l(i)
-    B(nPoints*i+1:nPoints*(i+1)) = [y*r(1,1:nPoints,i)*l(i)]
+    B(nPoints*i+1:nPoints*(i+1)) = [(y-sb)*r(1,1:nPoints,i)*l(i)]
     ! write (6,*) 'i ',i, ' B ', B(nPoints*i+1:nPoints*(i+1))
   enddo
   ! write (6,*) 'NOGEK B ',B
@@ -310,11 +310,24 @@ SUBROUTINE kriging_model(nPoints)
               1.0D0,UBIG,m_t,         &
                     D,m_t,            &
               0.0D0,Kv,m_t)
-!           Call RecPrt('Kv',' ',Kv,1,m_t)
   Call mma_deallocate(D)
   Call mma_deAllocate(UBIG)
 #endif
 !
+!
+#define _NOGEK2_
+#ifdef _NOGEK2_
+  Write (6,*) 'in the kv vector the first ',nPoints, &
+  ' correspond to the Ws coefficient, and the rest ',m_t-nPoints, &
+  ' to the Vs coefficients.'
+  do i = 1, nInter_save
+    kv(nPoints*i+1:nPoints*(i+1)) = [kv(1:nPoints)*r(1,1:nPoints,i)*l(i)]
+    Write (6,*) 'r_ij',r(1,1:nPoints,i)*l(i)
+  enddo
+#endif
+  Call RecPrt('Kv',' ',Kv,1,m_t)
+!
+
 !Likelihood function
   variance = dot_product(B,Kv)/dble(m_t)
   lh = variance*exp(detR/dble(m_t))
