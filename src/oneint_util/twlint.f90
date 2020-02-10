@@ -74,7 +74,7 @@
          kVector_Local(1)=kVector(1)
          kVector_Local(2)=kVector(2)
          kVector_Local(3)=kVector(3)
-         Go To 109
+         Go To 110
       End If
 !
 !     Use Euler angles (z-x-z). We skip the last rotation.
@@ -120,7 +120,7 @@
                          TransM,3,                                      &
                    0.0D0,Array(ipP),3)
 !
- 109  Continue
+ 110  Continue
       If (lAng.eq.0) Then
          Call TWLInt_Internal(Array,A,RB,P)
       Else
@@ -129,13 +129,13 @@
 !
 !**********************************************************************
 !
-      If (lAng.eq.0) Go To 220
+      If (lAng.eq.0) Go To 222
 !     Now when all Cartesian components have been computed we
 !     transform back to the coordinate system of the molecule.
 
 !     ... more to come ...
 !
- 220  Continue
+ 222  Continue
 !
       llOper=lOper(1)
       Do iComp = 2, nComp
@@ -329,7 +329,7 @@ Return
       Real*8 Fact, rTemp
       Complex*16 Temp1, Temp2, Temp
       Complex*16, Pointer :: zQxyz(:),zVxyz(:)
-      Integer nZeta, la, lb, nComp, nOrdOp
+      Integer nZeta, la, lb, nComp, nOrdOp, Ind
 
 !     Statement function for Cartesian index
 !
