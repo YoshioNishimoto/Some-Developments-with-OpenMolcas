@@ -47,12 +47,13 @@
       Integer ipA, ipAOff, ipAxyz, ipB, ipBOff, ipBxyz, ipQxyz, ipRes, &
               ipVxyz, nip, icomp, iOper, lDCRT, llOper, LmbdT, nDCRT,  &
               nIrrep, nOp, nStabO, ipP, lAng
-      Real*8 Zero, One, Two, Three, Four, Rxy, Fi1, Rxyz, Fi2
+      Real*8 Zero, Half, One, Two, Three, Four, Rxy, Fi1, Rxyz, Fi2
       Real*8 TransM(3,3)
       Real*8 kVector_local(3)
       Real*8 A_Local(3), RB_Local(3)
 !
       Zero =0.0D0
+      Half =0.5D0
       One  =1.0D0
       Two  =2.0D0
       Three=3.0D0
@@ -275,8 +276,12 @@ Return
 !===========================================
 !     Now compute the OAM x and y component.
 !
-         Call C_F_Pointer(C_Loc(Array(ipVxyz)),zVxyz,[nZeta*3*(la+1)*(lb+1)])
          Call C_F_Pointer(C_Loc(Array(ipQxyz)),zQxyz,[nZeta*3*(la+1)*(lb+1)])
+         If (nOrdOp.eq.1) Then
+         Call C_F_Pointer(C_Loc(Array(ipVxyz)),zVxyz,[nZeta*3*(la+1)*(lb+1)])
+         Else
+            zVxyz=zQxyz
+         End If
          call OAM_xy(zVxyz,zQxyz,nZeta,la,lb,nOrdOp,Array(ipAOff),Array(ipBOff),       &
                      Array(ipRes),nComp)
          Nullify(zVxyz,zQxyz)
@@ -285,6 +290,7 @@ Return
 !    Combine the cartesian components to the full one electron integral.
 !
       Else ! OAM-free case
+
          If (nOrdOp.eq.1) Then
             Call C_F_Pointer(C_Loc(Array(ipQxyz)),zQxyz,[nZeta*3*(la+1)*(lb+1)])
             Call C_F_Pointer(C_Loc(Array(ipVxyz)),zVxyz,[nZeta*3*(la+1)*(lb+1)*2])
@@ -295,6 +301,7 @@ Return
             Call CCmbnMP(zQxyz,nZeta,la,lb,nOrdOp,Zeta,rKappa,Array(ipRes),nComp,kvector_Local)
             Nullify(zQxyz)
          End If
+
 !**********************************************************************
       End If
 !
@@ -314,12 +321,19 @@ Return
       Complex*16 Sxyz(nZeta,3,0:la+nOrdOp,0:lb+nOrdOp)
       Real*8 Alpha(nZeta), Beta(nZeta)
       Integer iZeta, i_x, i_y, i_z, j_x, j_y, j_z
+      Integer ix, iz, ixyz, ipa, ipb
       Complex*16 Value1111, Value2111, Value0111, Value1211, Value1011, &
                  Value1121, Value1101, Value1112, Value1110
       complex*16 Value1111_xA, Value1111_xB,                            &
                  Value1111_yA, Value1111_yB
       Real*8 Fact, rTemp
+      Complex*16 Temp1, Temp2
       Complex*16, Pointer :: zQxyz(:),zVxyz(:)
+
+!     Statement function for Cartesian index
+!
+      Ind(ixyz,ix,iz) = (ixyz-ix)*(ixyz-ix+1)/2 + iz + 1
+
 !
 !======================================================================
 !     The integration over the z-subspace is done using the normal code
@@ -332,23 +346,26 @@ Return
             Do i_x =  0, la
                Do i_y = 0, la-i_x
                   i_z = la - i_x - i_y
+                  ipa=Ind(la,i_x,i_z)
 
                   Do j_x =  0, lb
                      Do j_y = 0, lb-j_x
                         j_z = lb - j_x - j_y
+                        ipb=Ind(lb,j_x,j_z)
 !
                         rTemp=KVector(1)**2 + kVector(2)**2 + kVector(3)**2
                         rTemp=rTemp/(Four*Zeta(iZeta))
-                        Fact = rKappa(iZeta) * Zeta(iZeta)**(-Three/Two) * Exp(-rTemp)
 
 !=========================================
 !      Compute the x-y part of the integral
+
                         Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
                                     Alpha(iZeta), Beta(iZeta),              &
                                     i_x, i_y,                                &
                                     j_x, j_y, lAng, Value1111)
 
                         If (nOrdOp.eq.1) Then
+                           Fact = rKappa(iZeta) * Zeta(iZeta)**(-Three/Two) * Exp(-rTemp)
 
                            Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
                                        Alpha(iZeta), Beta(iZeta),              &
@@ -420,21 +437,39 @@ Return
                            Value1111_yB=
                                        - Two* Beta(iZeta) * Value1211
                            End If
-
+!
+                           Temp1 = Fact *                                       &
+                                   Value1111_xA * Sxzy(iZeta,3,i_z,j_z)
+                           Temp2 = Fact *                                       &
+                                   Value1111_xB * Sxzy(iZeta,3,i_z,j_z)
+                           Final(iZeta,ipa,ipb,1) = DBLE((Temp1+Temp2)*Half)
+                           Final(iZeta,ipa,ipb,4) = DBLE((Temp1-Temp2)*Half)
+                           Final(iZeta,ipa,ipb,7) = DIMAG((Temp1+Temp2)*Half)
+                           Final(iZeta,ipa,ipb,10)= DIMAG((Temp1-Temp2)*Half)
+                           Temp1 = Fact *                                       &
+                                   Value1111_yA * Sxzy(iZeta,3,i_z,j_z)
+                           Temp2 = Fact *                                       &
+                                   Value1111_yB * Sxzy(iZeta,3,i_z,j_z)
+                           Final(iZeta,ipa,ipb,2) = DBLE((Temp1+Temp2)*Half)
+                           Final(iZeta,ipa,ipb,5) = DBLE((Temp1-Temp2)*Half)
+                           Final(iZeta,ipa,ipb,8) = DIMAG((Temp1+Temp2)*Half)
+                           Final(iZeta,ipa,ipb,11)= DIMAG((Temp1-Temp2)*Half)
+                           Temp1 = Fact *                                       &
+                                   Value1111    * Vxzy(iZeta,3,i_z,j_z,1)
+                           Temp2 = Fact *                                       &
+                                   Value1111    * Vxzy(iZeta,3,i_z,j_z,2)
+                           Final(iZeta,ipa,ipb,3) = DBLE((Temp1+Temp2)*Half)
+                           Final(iZeta,ipa,ipb,6 )= DBLE((Temp1-Temp2)*Half)
+                           Final(iZeta,ipa,ipb,9 )= DIMAG((Temp1+Temp2)*Half)
+                           Final(iZeta,ipa,ipb,12)= DIMAG((Temp1-Temp2)*Half)
                         Else
-!                 ... more to come ...
+                           Fact = rKappa(iZeta) * (1.0D0/Sqrt(Zeta(iZeta)**3))  &
+                                * Exp(-rTemp)
+                           Temp1 = Fact *                                       &
+                                   Value1111    * Sxzy(iZeta,3,i_z,j_z)
+                           Final(iZeta,ipa,ipb,1) = DBLE(Temp)
+                           Final(iZeta,ipa,ipb,2) = DIMAG(Temp)
                         End If
-!
-!                 Pick up the z component from above
-!
-!                 temp=Array(izeta,i_z,j_z)
-
-!                 Assemble to the complete integral
-!                 ipa=(i_x,i_y,i_z)
-!                 ipb=(j_x,j_y,j_z)
-!                 Final(iZeta,ipa,ipb)=temp*Value
-
-!                 ... more to come ...
                      End Do  ! j_y
                   End Do     ! j_x
                End Do  ! i_y
