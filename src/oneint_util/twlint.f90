@@ -327,8 +327,9 @@ Return
       complex*16 Value1111_xA, Value1111_xB,                            &
                  Value1111_yA, Value1111_yB
       Real*8 Fact, rTemp
-      Complex*16 Temp1, Temp2
+      Complex*16 Temp1, Temp2, Temp
       Complex*16, Pointer :: zQxyz(:),zVxyz(:)
+      Integer nZeta, la, lb, nComp, nOrdOp
 
 !     Statement function for Cartesian index
 !
@@ -360,7 +361,7 @@ Return
 !      Compute the x-y part of the integral
 
                         Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
-                                    Alpha(iZeta), Beta(iZeta),              &
+                                    Alpha(iZeta), Beta(iZeta),               &
                                     i_x, i_y,                                &
                                     j_x, j_y, lAng, Value1111)
 
@@ -368,42 +369,42 @@ Return
                            Fact = rKappa(iZeta) * Zeta(iZeta)**(-Three/Two) * Exp(-rTemp)
 
                            Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
-                                       Alpha(iZeta), Beta(iZeta),              &
+                                       Alpha(iZeta), Beta(iZeta),               &
                                        i_x+1, i_y,                              &
                                        j_x, j_y, lAng, Value2111)
 
                            Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
-                                       Alpha(iZeta), Beta(iZeta),              &
+                                       Alpha(iZeta), Beta(iZeta),               &
                                        i_x-1, i_y,                              &
                                        j_x, j_y, lAng, Value0111)
 
 
                            Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
-                                       Alpha(iZeta), Beta(iZeta),              &
+                                       Alpha(iZeta), Beta(iZeta),               &
                                        i_x, i_y,                                &
                                        j_x+1,j_y, lAng, Value1211)
 
                            Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
-                                       Alpha(iZeta), Beta(iZeta),              &
+                                       Alpha(iZeta), Beta(iZeta),               &
                                        i_x, i_y,                                &
                                        j_x-1, j_y, lAng, Value1011)
 
                            Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
-                                       Alpha(iZeta), Beta(iZeta),              &
+                                       Alpha(iZeta), Beta(iZeta),               &
                                        i_x, i_y+1,                              &
                                        j_x, j_y, lAng, Value1121)
                            Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
-                                       Alpha(iZeta), Beta(iZeta),              &
+                                       Alpha(iZeta), Beta(iZeta),               &
                                        i_x ,i_y-1,                              &
                                        j_x, j_y, lAng, Value1101)
 
                            Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
-                                       Alpha(iZeta), Beta(iZeta),              &
+                                       Alpha(iZeta), Beta(iZeta),               &
                                        i_x, i_y,                                &
                                        j_x, j_y+1, lAng, Value1112)
 
                            Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
-                                       Alpha(iZeta), Beta(iZeta),              &
+                                       Alpha(iZeta), Beta(iZeta),               &
                                        i_x, i_y,                                &
                                        j_x, j_y-1, lAng, Value1110)
 
@@ -413,51 +414,50 @@ Return
                            Value1111_xA=DBLE(i_x) * Value0111                   &
                                        - Two*Alpha(iZeta) * Value2111
                            Else
-                           Value1111_xA=
-                                       - Two*Alpha(iZeta) * Value2111
+                           Value1111_xA= - Two*Alpha(iZeta) * Value2111
                            End If
                            If (j_x.ne.0) Then
                            Value1111_xB=DBLE(j_x) * Value1011                   &
                                        - Two* Beta(iZeta) * Value1211
                            Else
-                           Value1111_xB=
-                                       - Two* Beta(iZeta) * Value1211
+                           Value1111_xB= - Two* Beta(iZeta) * Value1211
+
                            End If
                            If (i_y.ne.0) Then
                            Value1111_yA=DBLE(i_y) * Value0111                   &
                                        - Two*Alpha(iZeta) * Value2111
                            Else
-                           Value1111_yA=
-                                       - Two*Alpha(iZeta) * Value2111
+                           Value1111_yA= - Two*Alpha(iZeta) * Value2111
+
                            End If
                            If (j_y.ne.0) Then
                            Value1111_yB=DBLE(j_y) * Value1011                   &
                                        - Two* Beta(iZeta) * Value1211
                            Else
-                           Value1111_yB=
-                                       - Two* Beta(iZeta) * Value1211
+                           Value1111_yB= - Two* Beta(iZeta) * Value1211
+
                            End If
 !
                            Temp1 = Fact *                                       &
-                                   Value1111_xA * Sxzy(iZeta,3,i_z,j_z)
+                                   Value1111_xA * Sxyz(iZeta,3,i_z,j_z)
                            Temp2 = Fact *                                       &
-                                   Value1111_xB * Sxzy(iZeta,3,i_z,j_z)
+                                   Value1111_xB * Sxyz(iZeta,3,i_z,j_z)
                            Final(iZeta,ipa,ipb,1) = DBLE((Temp1+Temp2)*Half)
                            Final(iZeta,ipa,ipb,4) = DBLE((Temp1-Temp2)*Half)
                            Final(iZeta,ipa,ipb,7) = DIMAG((Temp1+Temp2)*Half)
                            Final(iZeta,ipa,ipb,10)= DIMAG((Temp1-Temp2)*Half)
                            Temp1 = Fact *                                       &
-                                   Value1111_yA * Sxzy(iZeta,3,i_z,j_z)
+                                   Value1111_yA * Sxyz(iZeta,3,i_z,j_z)
                            Temp2 = Fact *                                       &
-                                   Value1111_yB * Sxzy(iZeta,3,i_z,j_z)
+                                   Value1111_yB * Sxyz(iZeta,3,i_z,j_z)
                            Final(iZeta,ipa,ipb,2) = DBLE((Temp1+Temp2)*Half)
                            Final(iZeta,ipa,ipb,5) = DBLE((Temp1-Temp2)*Half)
                            Final(iZeta,ipa,ipb,8) = DIMAG((Temp1+Temp2)*Half)
                            Final(iZeta,ipa,ipb,11)= DIMAG((Temp1-Temp2)*Half)
                            Temp1 = Fact *                                       &
-                                   Value1111    * Vxzy(iZeta,3,i_z,j_z,1)
+                                   Value1111    * Vxyz(iZeta,3,i_z,j_z,1)
                            Temp2 = Fact *                                       &
-                                   Value1111    * Vxzy(iZeta,3,i_z,j_z,2)
+                                   Value1111    * Vxyz(iZeta,3,i_z,j_z,2)
                            Final(iZeta,ipa,ipb,3) = DBLE((Temp1+Temp2)*Half)
                            Final(iZeta,ipa,ipb,6 )= DBLE((Temp1-Temp2)*Half)
                            Final(iZeta,ipa,ipb,9 )= DIMAG((Temp1+Temp2)*Half)
@@ -466,7 +466,7 @@ Return
                            Fact = rKappa(iZeta) * (1.0D0/Sqrt(Zeta(iZeta)**3))  &
                                 * Exp(-rTemp)
                            Temp1 = Fact *                                       &
-                                   Value1111    * Sxzy(iZeta,3,i_z,j_z)
+                                   Value1111    * Sxyz(iZeta,3,i_z,j_z)
                            Final(iZeta,ipa,ipb,1) = DBLE(Temp)
                            Final(iZeta,ipa,ipb,2) = DIMAG(Temp)
                         End If
