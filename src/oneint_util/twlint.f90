@@ -11,12 +11,11 @@
 ! Copyright (C) 2019, Marjan Khamesian                                 *
 !               2019, Roland Lindh                                     *
 !***********************************************************************
-      SubRoutine TWLInt(Alpha,nAlpha,Beta,nBeta,Zeta,P,                &
+      SubRoutine TWLInt(Alpha,nAlpha,Beta,nBeta,Zeta,ZInv,rKappa,P,    &
                        Final,nZeta,nIC,nComp,la,lb,A,RB,nHer,          &
                        Array,nArr,kVector,nOrdOp,lOper,iChO,           &
                        iStabM,nStabM,                                  &
                        PtChrg,nGrid,iAddPot)
-! ZInv,rKappa
 !***********************************************************************
 !                                                                      *
 ! Object: kernel routine for the computation of integrals for the      *
@@ -33,6 +32,7 @@
               nStabM
       Real*8 Final(nZeta,(la+1)*(la+2)/2,(lb+1)*(lb+2)/2,nIC),         &
              Zeta(nZeta), Alpha(nAlpha), Beta(nBeta),                  &
+             ZInv(nZeta), rKappa(nZeta),                               &
              P(nZeta,3), A(3), RB(3),                                  &
              Array(nZeta*nArr), kvector(3)
       Integer iStabM(0:nStabM-1), iDCRT(0:7),                          &
@@ -165,7 +165,8 @@ Return
 !**********************************************************************
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-!**********************************************************************                                                                 ! This is to allow type punning without an explicit interface
+!**********************************************************************
+! This is to allow type punning without an explicit interface
   Contains
 !======================================================================
     SubRoutine TWLInt_Internal(Array,A,RB,P)
@@ -274,7 +275,7 @@ Return
 !===========================================
 !     Now compute the OAM x and y component.
 !
-         call OAM_xy(Array,Alpha,Beta,P)
+         call OAM_xy(zQxyz,nZeta,la,lb,nOrdOp,Array(ipAOff),Array(ipBOff))
 !
 !=======================================================================
 !    Combine the cartesian components to the full one electron integral.
@@ -302,14 +303,14 @@ Return
     End Function nElem
 !
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    SubRoutine OAM_xy(Array,Alpha,Beta,rKappa)
+    SubRoutine OAM_xy(Sxyz,nZeta,la,lb,nOrdOp,Alpha,Beta)
 
-      Real*8 rKappa(nZeta), ZInv(nZeta), Alpha(nAlpha), Beta(nBeta)
+      Complex*16 Sxyz(nZeta,3,0:la+nOrdOp,0:lb+nOrdOp)
+      Real*8 Alpha(nZeta), Beta(nZeta)
       Integer iZeta, i_x, i_y, i_z, j_x, j_y, j_z
       Complex*16 Value1111, Value2111, Value0111, Value1211, Value1011, &
                  Value1121, Value1101, Value1112, Value1110
-      Real*8 Fact, rTemp, Array(*)
-      Real*8 Alpha_, Beta_
+      Real*8 Fact, rTemp
       Complex*16, Pointer :: zQxyz(:),zVxyz(:)
 !
 !======================================================================
@@ -335,62 +336,83 @@ Return
 !=========================================
 !      Compute the x-y part of the integral
                         Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
-                                    Alpha(iAlpha), Beta(iBeta),              &
+                                    Alpha(iZeta), Beta(iZeta),              &
                                     i_x, i_y,                                &
                                     j_x, j_y, lAng, Value1111)
 
                         If (nOrdOp.eq.1) Then
-                           Alpha_=Array(ipBOff-1+iZeta)
-                           Beta_ =Array(ipBOff-1+iZeta)
 
                            Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
-                                       Alpha(iAlpha), Beta(iBeta),              &
+                                       Alpha(iZeta), Beta(iZeta),              &
                                        i_x+1, i_y,                              &
                                        j_x, j_y, lAng, Value2111)
 
                            Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
-                                       Alpha(iAlpha), Beta(iBeta),              &
+                                       Alpha(iZeta), Beta(iZeta),              &
                                        i_x-1, i_y,                              &
                                        j_x, j_y, lAng, Value0111)
 
-                           Value2111 = DBLE(i_x)*Value0111 - Two*Alpha_*Value2111
 
                            Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
-                                       Alpha(iAlpha), Beta(iBeta),              &
+                                       Alpha(iZeta), Beta(iZeta),              &
                                        i_x, i_y,                                &
                                        j_x+1,j_y, lAng, Value1211)
 
                            Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
-                                       Alpha(iAlpha), Beta(iBeta),              &
+                                       Alpha(iZeta), Beta(iZeta),              &
                                        i_x, i_y,                                &
                                        j_x-1, j_y, lAng, Value1011)
 
-                           Value1211 = DBLE(j_x)*Value1011 - Two*Beta_ *Value1211
-
                            Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
-                                       Alpha(iAlpha), Beta(iBeta),              &
+                                       Alpha(iZeta), Beta(iZeta),              &
                                        i_x, i_y+1,                              &
                                        j_x, j_y, lAng, Value1121)
                            Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
-                                       Alpha(iAlpha), Beta(iBeta),              &
+                                       Alpha(iZeta), Beta(iZeta),              &
                                        i_x ,i_y-1,                              &
                                        j_x, j_y, lAng, Value1101)
 
-                           Value1121 = DBLE(i_y)*Value1101 - Two*Alpha_*Value1121
-
                            Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
-                                       Alpha(iAlpha), Beta(iBeta),              &
+                                       Alpha(iZeta), Beta(iZeta),              &
                                        i_x, i_y,                                &
                                        j_x, j_y+1, lAng, Value1112)
 
                            Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
-                                       Alpha(iAlpha), Beta(iBeta),              &
+                                       Alpha(iZeta), Beta(iZeta),              &
                                        i_x, i_y,                                &
                                        j_x, j_y-1, lAng, Value1110)
 
-                           Value1112 = DBLE(j_y)*Value1110 - Two*Beta_ *Value1112
+!                          Let us form the Cartesian intermediate intergral
 
-!                 ... more to come ...
+                           If (i_x.ne.0) Then
+                           Value1111_xA=DBLE(i_x) * Value0111                   &
+                                       - Two*Alpha(iZeta) * Value2111
+                           Else
+                           Value1111_xA=
+                                       - Two*Alpha(iZeta) * Value2111
+                           End If
+                           If (j_x.ne.0) Then
+                           Value1111_xB=DBLE(j_x) * Value1011                   &
+                                       - Two* Beta(iZeta) * Value1211
+                           Else
+                           Value1111_xB=
+                                       - Two* Beta(iZeta) * Value1211
+                           End If
+                           If (i_y.ne.0) Then
+                           Value1111_yA=DBLE(i_y) * Value0111                   &
+                                       - Two*Alpha(iZeta) * Value2111
+                           Else
+                           Value1111_yA=
+                                       - Two*Alpha(iZeta) * Value2111
+                           End If
+                           If (j_y.ne.0) Then
+                           Value1111_yB=DBLE(j_y) * Value1011                   &
+                                       - Two* Beta(iZeta) * Value1211
+                           Else
+                           Value1111_yB=
+                                       - Two* Beta(iZeta) * Value1211
+                           End If
+
                         Else
 !                 ... more to come ...
                         End If
