@@ -128,13 +128,13 @@
 !
 !**********************************************************************
 !
-      If (lAng.eq.0) Go To 221
+      If (lAng.eq.0) Go To 220
 !     Now when all Cartesian components have been computed we
 !     transform back to the coordinate system of the molecule.
 
 !     ... more to come ...
 !
- 221  Continue
+ 220  Continue
 !
       llOper=lOper(1)
       Do iComp = 2, nComp
