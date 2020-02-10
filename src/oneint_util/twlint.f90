@@ -275,11 +275,16 @@ Return
 !===========================================
 !     Now compute the OAM x and y component.
 !
-         call OAM_xy(zQxyz,nZeta,la,lb,nOrdOp,Array(ipAOff),Array(ipBOff))
+         Call C_F_Pointer(C_Loc(Array(ipVxyz)),zVxyz,[nZeta*3*(la+1)*(lb+1)])
+         Call C_F_Pointer(C_Loc(Array(ipQxyz)),zQxyz,[nZeta*3*(la+1)*(lb+1)])
+         call OAM_xy(zVxyz,zQxyz,nZeta,la,lb,nOrdOp,Array(ipAOff),Array(ipBOff),       &
+                     Array(ipRes),nComp)
+         Nullify(zVxyz,zQxyz)
 !
 !=======================================================================
 !    Combine the cartesian components to the full one electron integral.
 !
+      Else ! OAM-free case
          If (nOrdOp.eq.1) Then
             Call C_F_Pointer(C_Loc(Array(ipQxyz)),zQxyz,[nZeta*3*(la+1)*(lb+1)])
             Call C_F_Pointer(C_Loc(Array(ipVxyz)),zVxyz,[nZeta*3*(la+1)*(lb+1)*2])
@@ -291,7 +296,6 @@ Return
             Nullify(zQxyz)
          End If
 !**********************************************************************
-      Else ! OAM-free case
       End If
 !
     End SubRoutine TWLInt_Internal
@@ -303,13 +307,17 @@ Return
     End Function nElem
 !
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    SubRoutine OAM_xy(Sxyz,nZeta,la,lb,nOrdOp,Alpha,Beta)
+    SubRoutine OAM_xy(Vxyz,Sxyz,nZeta,la,lb,nOrdOp,Alpha,Beta,Final,nComp)
 
+      Real*8 Final(nZeta,(la+1)*(la+2)/2,(lb+1)*(lb+2)/2,nComp)
+      Complex*16 Vxyz(nZeta,3,0:la,0:lb,2)
       Complex*16 Sxyz(nZeta,3,0:la+nOrdOp,0:lb+nOrdOp)
       Real*8 Alpha(nZeta), Beta(nZeta)
       Integer iZeta, i_x, i_y, i_z, j_x, j_y, j_z
       Complex*16 Value1111, Value2111, Value0111, Value1211, Value1011, &
                  Value1121, Value1101, Value1112, Value1110
+      complex*16 Value1111_xA, Value1111_xB,                            &
+                 Value1111_yA, Value1111_yB
       Real*8 Fact, rTemp
       Complex*16, Pointer :: zQxyz(:),zVxyz(:)
 !
