@@ -155,8 +155,8 @@
 !
       End Do
 !
-Return
-
+      Return
+!
 ! Avoid unused argument warnings
       If (.False.) Then
          Call Unused_real(PtChrg)
@@ -165,10 +165,9 @@ Return
       End If
 !**********************************************************************
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-!%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 !**********************************************************************
 ! This is to allow type punning without an explicit interface
-  Contains
+    Contains
 !======================================================================
     SubRoutine TWLInt_Internal(Array,A,RB,P)
       Use Iso_C_Binding
@@ -225,7 +224,7 @@ Return
 !    compute the x and y components in the OAM formalism replacing the
 !    OAM-free x and y components.
 !
-      call dcopy_(nZeta*nElem(la)*nElem(lb)*nIC,[Zero],0,Final,1)
+      Call dcopy_(nZeta*nElem(la)*nElem(lb)*nIC,[Zero],0,Final,1)
 !
 !=====================================================================
 !     Compute the Cartesian values of the basis functions angular part
@@ -259,7 +258,7 @@ Return
             call dcopy_(nAlpha,Alpha,1,Array(ipAOff),1)
             ipAOff = ipAOff + nAlpha
          End Do
-
+!
          ipBOff = ipB
          Do iAlpha = 1, nAlpha
             call dcopy_(nBeta,Beta,1,Array(ipBOff),nAlpha)
@@ -278,7 +277,7 @@ Return
 !
          Call C_F_Pointer(C_Loc(Array(ipQxyz)),zQxyz,[nZeta*3*(la+1)*(lb+1)])
          If (nOrdOp.eq.1) Then
-         Call C_F_Pointer(C_Loc(Array(ipVxyz)),zVxyz,[nZeta*3*(la+1)*(lb+1)])
+            Call C_F_Pointer(C_Loc(Array(ipVxyz)),zVxyz,[nZeta*3*(la+1)*(lb+1)])
          Else
             zVxyz=zQxyz
          End If
@@ -324,7 +323,7 @@ Return
       Integer ix, iz, ixyz, ipa, ipb
       Complex*16 Value1111, Value2111, Value0111, Value1211, Value1011, &
                  Value1121, Value1101, Value1112, Value1110
-      complex*16 Value1111_xA, Value1111_xB,                            &
+      Complex*16 Value1111_xA, Value1111_xB,                            &
                  Value1111_yA, Value1111_yB
       Real*8 Fact, rTemp
       Complex*16 Temp1, Temp2, Temp
@@ -348,7 +347,7 @@ Return
                Do i_y = 0, la-i_x
                   i_z = la - i_x - i_y
                   ipa=Ind(la,i_x,i_z)
-
+!
                   Do j_x =  0, lb
                      Do j_y = 0, lb-j_x
                         j_z = lb - j_x - j_y
@@ -356,8 +355,8 @@ Return
 !
                         rTemp=KVector(1)**2 + kVector(2)**2 + kVector(3)**2
                         rTemp=rTemp/(Four*Zeta(iZeta))
-
-!=========================================
+!
+!==========================================
 !      Compute the x-y part of the integral
 
                         Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
