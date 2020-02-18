@@ -350,7 +350,6 @@ C Finally:
 CC VK/GG 2020 CC
             rdetcoeff(idet)=CISD(KFSB-1+IPOS)
             write(rdetocc(idet),'(99A)') (OCC(IORB),IORB=1,NORB)
-            ocsp=max(9,NORB)
             call mma_deallocate(occ)
 CC
 

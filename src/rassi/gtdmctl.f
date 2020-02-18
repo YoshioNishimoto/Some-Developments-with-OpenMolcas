@@ -63,7 +63,7 @@ CC VK2020 CC
       character*99, allocatable :: detocc1(:), detocc2(:)
       character*38 :: fomt
       integer :: ndt1, ndt2, ocsp, norb, icnftab1(10), icnftab2(10)
-CC CC/
+CC CC
 CC    NTO section
       Logical DoNTO
 CC    NTO section
@@ -661,9 +661,9 @@ C         Transform to bion basis, Split-Guga format
 CC VK/GG 2020 CC
         call mma_allocate(detcoeff1,ndt1)
         call mma_allocate(detocc1,ndt1)
-        call dcopy_(ndt1,rdetcoeff,0,detcoeff1,1)
-        call dcopy_(ndt1,rdetocc,0,detocc1,1)
-        if (IPGLOB>=DEBUG) then
+        call dcopy_(ndt1,rdetcoeff,1,detcoeff1,1)
+        detocc1(:) = rdetocc(1:ndt1)
+        if (PRCI) then
           write(6,*) ' ******* TRANSFORMED CI COEFFICIENTS *******'
           write(6,*) ' READCI called for state ',ISTATE
           write(6,*) ' This is on JobIph nr.',JOB1
@@ -671,10 +671,10 @@ CC VK/GG 2020 CC
           write(6,*) ' Its length NDET=',NDT1
           if (ndt1>1) then
             ocsp=MAX(9,NORB)
-  C          WRITE(6,'(A,I18)')'OCSP = ',ocsp
+C          WRITE(6,'(A,I18)')'OCSP = ',ocsp
             WRITE(fomt,'(A,I2,A)')'(I7,A16,A',ocsp,
      &                 ',A5,G17.10,A5,G17.10)'
-            WRITE(6,*)' Occupation of active orbitals, and spin coupling'
+            WRITE(6,*)' Occupation of active orbitals, and spin'
             WRITE(6,*)' of open shells. (u,d: Spin up or down).'
             WRITE(6,'(A,A,A)')'    Det  ','                       ',
      &              '       Coef       Weight'
@@ -751,9 +751,9 @@ C         Transform to bion basis, Split-Guga format
 CC VK/GG 2020 CC
           call mma_allocate(detcoeff2,ndt2)
           call mma_allocate(detocc2,ndt2)
-          call dcopy_(ndt2,rdetcoeff,0,detcoeff2,1)
-          call dcopy_(ndt2,rdetocc,0,detocc2,1)
-          if (IPGLOB>=DEBUG) then
+          call dcopy_(ndt2,rdetcoeff,1,detcoeff2,1)
+          detocc2(:) = rdetocc(1:ndt2)
+          if (PRCI) then
             write(6,*) ' ******* TRANSFORMED CI COEFFICIENTS *******'
             write(6,*) ' READCI called for state ',JSTATE
             write(6,*) ' This is on JobIph nr.',JOB2
@@ -762,21 +762,21 @@ CC VK/GG 2020 CC
             if (ndt2>1) then
               ocsp=MAX(9,NORB)
               WRITE(fomt,'(A,I2,A)')'(I7,A16,A',ocsp,
-        &                 ',A5,G17.10,A5,G17.10)'
-              WRITE(6,*)' Occupation of active orbitals, and spin coupling'
+     &                 ',A5,G17.10,A5,G17.10)'
+              WRITE(6,*)' Occupation of active orbitals, and spin'
               WRITE(6,*)' of open shells. (u,d: Spin up or down).'
               WRITE(6,'(A,A,A)')'    Det  ','                       ',
-        &              '       Coef       Weight'
+     &              '       Coef       Weight'
               do i=1,ndt2
-                write(6,fomt)i,'                 ',
-        &          TRIM(DETOCC2(i)),
-        &          '     ',DETCOEFF2(i),'     ',DETCOEFF2(i)**2
+                write(6,fomt) i,'                 ',
+     &          trim(detocc2(i)),
+     &          '     ',detcoeff2(i),'     ',detcoeff2(i)**2
               enddo
               write(6,*)('*',i=1,80)
             endif
           endif
-          call mma_deallocate(detcoeff1)
-          call mma_deallocate(detocc1)
+          call mma_deallocate(detcoeff2)
+          call mma_deallocate(detocc2)
 CC CC
 
 
