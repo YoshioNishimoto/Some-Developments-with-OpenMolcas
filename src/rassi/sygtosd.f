@@ -8,7 +8,8 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
-      SUBROUTINE SYGTOSD(ICNFTAB,ISPNTAB,ISSTAB,IFSBTAB,CISYG,CISD)
+      SUBROUTINE SYGTOSD(ICNFTAB,ISPNTAB,ISSTAB,IFSBTAB,CISYG,CISD,
+     &                   rdetcoeff,rdetocc,ndet,norbback)
       IMPLICIT NONE
       REAL*8 CISYG(*),CISD(*)
       INTEGER ICNFTAB(*),ISPNTAB(*),ISSTAB(*),IFSBTAB(*)
@@ -19,6 +20,7 @@ C     INTEGER KFSB,IBLK,ISPD,I,IPOS,IORB,ISYM
       INTEGER KFSB,IBLK,ISPD,I,IPOS,IORB
       INTEGER ISPN,NO,IOSTA,IOEND,IMORS,ISBSTR
 #include "WrkSpc.fh"
+#include "stdalloc.fh"
       INTEGER ICNF,IEL,IEL1,IEL2,IFORM,IFSB,IOCC
       INTEGER IPART,IREST
 C     INTEGER ISTARR,LDIM,LOCARR,LORBARR,LSBSET,LSSARR,LSTARR
@@ -32,6 +34,12 @@ C     INTEGER IERR,ICPL,KSBSMRS,JMORS,NFSB
       INTEGER IERR,     KSBSMRS,      NFSB
       INTEGER OCC2MRS
       EXTERNAL OCC2MRS
+CC VK/GG 2020 CC add an occupation array in the usual 0,u,d,2 format
+      character*1, allocatable :: occ(:)
+      character*99 :: rdetocc(10000000)
+      real*8 :: rdetcoeff(10000000)
+      integer :: idet, ndet, norbback
+CC CC
 
 C Unbutton the configuration table:
       NACTEL=ICNFTAB(3)
@@ -46,6 +54,7 @@ C Unbutton the configuration table:
       KGSORB =NHEAD+1
       KGSLIM =KGSORB+(NSYM+1)*(NAPART+1)
       KCNFINF =KGSLIM+2*NAPART
+      norbback = NORB
 CTEST      write(*,*)' Table at KGSORB:'
 CTEST      do ipart=0,napart
 CTEST       write(*,'(1x,10i5)')(icnftab(kgsorb+isym+(nsym+1)*ipart)
@@ -72,6 +81,7 @@ C Unbutton the Fock Sector Block table:
 
 C MXBLK=Largest individual SYG block of determinants:
       MXBLK=0
+      idet=0
       DO NOPEN=MINOP,MAXOP
         NCNF=ICNFTAB(KCNFINF+3*(LSYM-1+NSYM*(NOPEN-MINOP)))
         NCPL=ISPNTAB(KSPNINF+6*(NOPEN-MINOP)+2)
@@ -184,6 +194,8 @@ C Loop over spin determinants
           DO ISPD=1,NSPD
 CTEST      write(*,'(1x,a,20i3)')'Spin determinant:',
 CTEST     &                    (ISPNTAB(KSPN-1+I+NOPEN*(ISPD-1)),I=1,nopen)
+CC VK/GG 2020 CC count the determinants
+            idet=idet+1
             IBLK=IBLK+1
 C Construct occupation number array:
             CALL ICOPY(2*NORB,[0],0,IWORK(LOCARR),1)
@@ -204,6 +216,25 @@ C Loop over active partitions. Subdivide as needed into subpartitions.
 CTEST      write(*,*)' Identify substrings.'
 CTEST      write(*,'(1x,a,10i5)')'Occupation array:',
 CTEST     &                          (iwork(locarr-1+isorb),isorb=1,2*norb)
+CC VK/GG 2020 CC construct occupation array in 0,u,d,2 format
+            call mma_allocate(occ,norb)
+            do IORB=1,2*norb-1,2
+              if ((IWORK(LOCARR-1+IORB)==1)
+     &         .AND.(IWORK(LOCARR+IORB)==1)) then
+                occ((IORB+1)/2)='2'
+              elseif ((IWORK(LOCARR-1+IORB)==1)
+     &         .AND.(IWORK(LOCARR+IORB)==0))THEN
+                occ((IORB+1)/2)='u'
+              elseif ((IWORK(LOCARR-1+IORB)==0)
+     &         .AND.(IWORK(LOCARR+IORB)==1))THEN
+                occ((IORB+1)/2)='d'
+              elseif( (IWORK(LOCARR-1+IORB)==0)
+     &         .AND.(IWORK(LOCARR+IORB)==0))THEN
+                occ((IORB+1)/2)='0'
+              endif
+
+            enddo
+CC
             IOEND=0
             ISPEND=0
 CTEST      write(*,'(1x,a,10i5)')'NAPART:',NAPART
@@ -315,6 +346,14 @@ C the correct FS block.
             END IF
 C Finally:
             CISD(KFSB-1+IPOS)=WORK(LBLK-1+IBLK)
+
+CC VK/GG 2020 CC
+            rdetcoeff(idet)=CISD(KFSB-1+IPOS)
+            write(rdetocc(idet),'(99A)') (OCC(IORB),IORB=1,NORB)
+            ocsp=max(9,NORB)
+            call mma_deallocate(occ)
+CC
+
 C End of spin-determinant loop
           END DO
 C End of loop over configurations
@@ -322,6 +361,7 @@ C End of loop over configurations
 C End of loop over nr of open shells
  100    CONTINUE
       END DO
+      ndet=idet
       CALL GETMEM('TmpArr','Free','Real',LBLK,MXBLK)
       CALL GETMEM('OrbArr','Free','Inte',LORBARR,NACTEL)
       CALL GETMEM('OccArr','Free','Inte',LOCARR,NORB)

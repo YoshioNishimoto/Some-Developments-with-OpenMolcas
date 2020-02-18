@@ -122,27 +122,19 @@ Basic Keywords:
   Specifies the name of the HDF5 file used for reading and writing
   (e.g. :file:`$Project.scf.h5`, :file:`$Project.rasscf.h5`, :file:`$Project.rassi.h5`).
   You either have to use this option or rename the file of
-  interest to :file:`WFAH5`.
+  interest to WFAH5.
 
-  .. xmldoc:: <KEYWORD MODULE="WFA" NAME="H5FILE" APPEAR="HDF5 file" KIND="STRING" LEVEL="BASIC">
-              %%Keyword:H5FIle <basic>
-              <HELP>
+  .. xmldoc:: %%Keyword:H5FIle <basic>
               Specifies the name of the HDF5 file used for reading and writing
               (e.g. $Project.scf.h5, $Project.rasscf.h5, $Project.rassi.h5).
               You either have to use this option or rename the file of
               interest to WFAH5.
-              </HELP>
-              </KEYWORD>
 
 :kword:`WFALevel`
   Select how much output is produced (0-4, default: 3).
 
-  .. xmldoc:: <KEYWORD MODULE="WFA" NAME="WFALEVEL" APPEAR="Print level" KIND="CHOICE" LIST="0,1,2,3,4" LEVEL="BASIC" DEFAULT_VALUE="3">
-              %%Keyword:WFALevel <basic>
-              <HELP>
+  .. xmldoc:: %%Keyword:WFALevel <basic>
               Select how much output is produced (0-4, default: 3).
-              </HELP>
-              </KEYWORD>
 
 :kword:`CTNUmmode`
   Specifies what properties are computed in a `TheoDORE <http://theodore-qc.sourceforge.net/>`_-style fragment-based analysis (0-3, default: 1).
@@ -160,12 +152,8 @@ Basic Keywords:
   `here <https://sourceforge.net/p/theodore-qc/wiki/Transition%20density%20matrix%20analysis/attachment/Om_desc.pdf>`_.
   For a more fine-grained input use :kword:`PROPlist`.
 
-  .. xmldoc:: <KEYWORD MODULE="WFA" NAME="CTNUMMODE" APPEAR="Computed properties" KIND="CHOICE" LIST="0: None,1: Basic,2: Extended,3: Metal complexes" LEVEL="BASIC" DEFAULT_VALUE="1" REQUIRE="ATLISTS">
-              %%Keyword:CTNUmmode <basic>
-              <HELP>
+  .. xmldoc:: %%Keyword:CTNUmmode <basic>
               Define what properties are computed in a TheoDORE-style analysis. (0-3, default: 1).
-              </HELP>
-              </KEYWORD>
 
 :kword:`ATLIsts`
   Define the fragments in a `TheoDORE <http://theodore-qc.sourceforge.net/>`_-style analysis.
@@ -179,22 +167,14 @@ Basic Keywords:
     1 2 4 *
     3 *
 
-  .. xmldoc:: <KEYWORD MODULE="WFA" NAME="ATLISTS" APPEAR="Fragment definition" KIND="CUSTOM" LEVEL="BASIC">
-              %%Keyword:ATLIsts <basic>
-              <HELP>
-              Define the fragments in a TheoDORE-style analysis.
-              </HELP>
-              </KEYWORD>
+  .. xmldoc:: %%Keyword:ATLIsts <basic>
+            Define the fragments in a TheoDORE-style analysis.
 
 :kword:`REFState`
   Index of the reference state for 1TDM and 1DDM analysis (default: 1).
 
-  .. xmldoc:: <KEYWORD MODULE="WFA" NAME="REFSTATE" APPEAR="Reference state" KIND="INT" LEVEL="BASIC" DEFAULT_VALUE="1">
-            : %%Keyword:REFState <basic>
-              <HELP>
+  .. xmldoc:: %%Keyword:REFState <basic>
               Index of the reference state for 1TDM and 1DDM analysis.
-              </HELP>
-              </KEYWORD>
 
 Advanced keywords for fine grain output options and debug information:
 
@@ -203,78 +183,49 @@ Advanced keywords for fine grain output options and debug information:
 :kword:`MULLiken`
   Activate Mulliken population analysis (also for CT numbers).
 
-  .. xmldoc:: <KEYWORD MODULE="WFA" NAME="MULLIKEN" APPEAR="Mulliken population analysis" KIND="SINGLE" LEVEL="ADVANCED">
-              %%Keyword:MULLiken <advanced>
-              <HELP>
+  .. xmldoc:: %%Keyword:MULLiken <advanced>
               Activate Mulliken population analysis.
-              </HELP>
-              </KEYWORD>
 
 :kword:`LOWDin`
   Activate Löwdin population analysis (also for CT numbers).
 
-  .. xmldoc:: <KEYWORD MODULE="WFA" NAME="LOWDIN" APPEAR="Lowdin population analysis" KIND="SINGLE" LEVEL="ADVANCED">
-              %%Keyword:LOWDin <advanced>
-              <HELP>
+  .. xmldoc:: %%Keyword:LOWDin <advanced>
               Activate Lowdin population analysis.
-              </HELP>
-              </KEYWORD>
 
 :kword:`NXO`
   Activate NO, NTO, and NDO analysis.
 
-  .. xmldoc:: <KEYWORD MODULE="WFA" NAME="NXO" APPEAR="NXO analysis" KIND="SINGLE" LEVEL="ADVANCED">
-              %%Keyword:NXO <advanced>
-              <HELP>
+  .. xmldoc:: %%Keyword:NXO <advanced>
               Activate NO, NTO, and NDO analysis.
-              </HELP>
-              </KEYWORD>
 
 :kword:`EXCIton`
   Activate exciton and multipole analysis.
 
-  .. xmldoc:: <KEYWORD MODULE="WFA" NAME="EXCITON" APPEAR="Exciton analysis" KIND="SINGLE" LEVEL="ADVANCED">
-              %%Keyword:EXCIton <advanced>
-              <HELP>
+  .. xmldoc:: %%Keyword:EXCIton <advanced>
               Activate exciton and multipole analysis.
-              </HELP>
-              </KEYWORD>
 
 :kword:`DOCTnumbers`
   Activate charge transfer number analysis and creation of :file:`*.om` files.
 
-  .. xmldoc:: <KEYWORD MODULE="WFA" NAME="DOCTNUMBERS" APPEAR="Charge transfer numbers" KIND="SINGLE" LEVEL="ADVANCED">
-              %%Keyword:DOCTnumbers <advanced>
-              <HELP>
-              Activate charge transfer number analysis and creation of \*.om files.
-              </HELP>
-              </KEYWORD>
+  .. xmldoc:: %%Keyword:DOCTnumbers <advanced>
+              Activate charge transfer number analysis and creation of *.om files.
 
 :kword:`H5ORbitals`
   Print the NOs, NTOs, and/or NDOs to the HDF file.
 
-  .. xmldoc:: <KEYWORD MODULE="WFA" NAME="H5ORBITALS" APPEAR="Save orbitals in HDF5" KIND="SINGLE" LEVEL="ADVANCED">
-              %%Keyword:H5ORbitals <advanced>
-              <HELP>
+  .. xmldoc:: %%Keyword:H5ORbitals <advanced>
               Print the NOs, NTOs, and/or NDOs to the HDF file.
-              </HELP>
-              </KEYWORD>
 
 :kword:`PROPlist`
   Manual input of properties to be printed out in a `TheoDORE <http://theodore-qc.sourceforge.net/>`_-style fragment based analysis.
   Use only if :kword:`CTNUMMODE` does not provide what you want.
 
-  .. xmldoc:: <KEYWORD MODULE="WFA" NAME="PROPLIST" APPEAR="Property list" KIND="CUSTOM" LEVEL="ADVANCED">
-              %%Keyword:PROPlist <advanced>
-              <HELP>
-              Manual input of properties to be printed out in a TheoDORE-style analysis.
-              </HELP>
-              </KEYWORD>
+  .. xmldoc:: %%Keyword:PROPlist <advanced>
+            Manual input of properties to be printed out in a TheoDORE-style analysis.
 
   Enter as a list followed by a \*, e.g. ::
 
-    PROPLIST
-    Om POS PR CT COH CTnt *
+    PROPLIST Om POS PR CT COH CTnt *
 
   The full list of descriptors is provided
   `here <https://sourceforge.net/p/theodore-qc/wiki/Transition%20density%20matrix%20analysis/attachment/Om_desc.pdf>`_.
@@ -282,22 +233,14 @@ Advanced keywords for fine grain output options and debug information:
 :kword:`DEBUg`
   Print debug information.
 
-  .. xmldoc:: <KEYWORD MODULE="WFA" NAME="DEBUG" APPEAR="Print debug information" KIND="SINGLE" LEVEL="ADVANCED">
-              %%Keyword:DEBUg <advanced>
-              <HELP>
+  .. xmldoc:: %%Keyword:DEBUg <advanced>
               Print debug information.
-              </HELP>
-              </KEYWORD>
 
 :kword:`ADDInfo`
   Add info for verification runs with :command:`molcas verify`.
 
-  .. xmldoc:: <KEYWORD MODULE="WFA" NAME="ADDINFO" APPEAR="Add info" KIND="SINGLE" LEVEL="ADVANCED">
-              %%Keyword:ADDInfo <advanced>
-              <HELP>
+  .. xmldoc:: %%Keyword:ADDInfo <advanced>
               Add info for verifications runs with molcas verify.
-              </HELP>
-              </KEYWORD>
 
 Input example
 .............
@@ -387,7 +330,6 @@ Output listing                         Explanation
 ``Nr of entangled states (Z_HE)``      :math:`Z_{HE}=2^{S_{H|E}}`
 ``Renormalized S_HE/Z_HE``             Replace :math:`\lambda_i\rightarrow \lambda_i/\Omega`
 ``omega``                              Norm of the 1TDM :math:`\Omega`, single-exc. character
-``<Phe>``                              Exp. value of the particle-hole permutation operator, measuring de-excitations :cite:`Kimber2020`
 ``<r_h> [Ang]``                        Mean position of hole :math:`\langle\vec{x}_h\rangle_{\text{exc}}` :cite:`Plasser2015`
 ``<r_e> [Ang]``                        Mean position of electron :math:`\langle\vec{x}_e\rangle_{\text{exc}}`
 ``|<r_e - r_h>| [Ang]``                Linear e/h distance :math:`\vec{d}_{h\rightarrow e} = \langle\vec{x}_e - \vec{x}_h\rangle_{\text{exc}}`
@@ -396,8 +338,7 @@ Output listing                         Explanation
 ``RMS electron-hole separation [Ang]`` :math:`d_{\text{exc}} = (\langle \left|\vec{x}_e - \vec{x}_h\right|^2\rangle_{\text{exc}})^{1/2}` :cite:`Bappler2014`
 ``Covariance(r_h, r_e) [Ang^2]``       :math:`\text{COV}\left(\vec{x}_h,\vec{x}_e\right) = \langle\vec{x}_h\cdot\vec{x}_e\rangle_{\text{exc}} -
                                        \langle\vec{x}_h\rangle_{\text{exc}}\cdot\langle\vec{x}_e\rangle_{\text{exc}}`
-``Correlation coefficient``            :math:`R_{eh} = \text{COV}\left(\vec{x}_h,\vec{x}_e\right)/\sigma_h\cdot\sigma_e` :cite:`Plasser2015`
-``Center-of-mass size``                :math:`(\langle \left|\vec{x}_e + \vec{x}_h\right|^2\rangle_{\text{exc}}-\langle \vec{x}_e + \vec{x}_h\rangle_{\text{exc}}^2)^{1/2}`
+``Correlation coefficient``            :math:`R_{eh} = \text{COV}\left(\vec{x}_h,\vec{x}_e\right)/\sigma_h\cdot\sigma_e`
 ====================================== =============================================================================================================================
 
 .. xmldoc:: </MODULE>

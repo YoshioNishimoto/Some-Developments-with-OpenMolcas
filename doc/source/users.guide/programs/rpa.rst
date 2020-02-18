@@ -9,12 +9,7 @@
      :local:
      :backlinks: none
 
-.. xmldoc:: <MODULE NAME="RPA">
-            %%Description:
-            <HELP>
+.. xmldoc:: %%Description:
             This module is still undocumented
-            </HELP>
 
 This module is still undocumented.
-
-.. xmldoc:: </MODULE>

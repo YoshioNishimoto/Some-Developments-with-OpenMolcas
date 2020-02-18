@@ -45,8 +45,7 @@ Input
   basis=6-31G*
   group=nosym
 
-  >> EXPORT MOLCAS_MAXITER=400
-  >> DOWHILE
+  >> FOREACH A in (1..400)
 
   &Seward
 
@@ -125,7 +124,7 @@ General keywords
 :kword:`DMTX`
   This keyword must be used after the :kword:`TULLY` keyword. With this keyword you can start your calculation with an initial :math:`\mat{A}` matrix (population density matrix). It is a complex matrix. In the first line after the keyword you must specify its dimension :math:`N`. Then :math:`N` lines (:math:`N` values each line) with the real part of the matrix followed by :math:`N` more lines with the imaginary part.
 
-  .. xmldoc:: <KEYWORD MODULE="SURFACEHOP" NAME="DMTX" APPEAR="Initial population density matrix" KIND="UNKNOWN" LEVEL="ADVANCED" REQUIRE="TULLY">
+  .. xmldoc:: <KEYWORD MODULE="SURFACEHOP" NAME="DMTX" APPEAR="Initial population density matrix" KIND="STRINGS" LEVEL="ADVANCED" REQUIRE="TULLY">
               %%Keyword: DMTX <advanced>
               This keyword must be used after the TULLY keyword.
               <HELP>
@@ -205,12 +204,11 @@ Within the :program:`Surfacehop` module The keyword :kword:`TULLY` enables the T
    BASIS= 3-21G
    GROUP= nosym
 
-  >> EXPORT MOLCAS_MAXITER=1000
-  >> DOWHILE
+  >> FOREACH ITER in (1 .. 1000)
 
   &SEWARD
 
-  >> IF ( ITER = 1 )
+  >> IF ( $ITER = 1 )
 
   &RASSCF
     LUMORB

@@ -56,6 +56,14 @@
       Real*8 Energies(1:20)
       Integer IAD,LUIPHn,lThetaM,LUCITH
       Real*8 Norm_fac
+CC VK2020 CC
+      real*8 :: rdetcoeff(10000000)
+      real*8, allocatable :: detcoeff1(:), detcoeff2(:)
+      character*99 :: rdetocc(10000000)
+      character*99, allocatable :: detocc1(:), detocc2(:)
+      character*38 :: fomt
+      integer :: ndt1, ndt2, ocsp, norb, icnftab1(10), icnftab2(10)
+CC CC/
 CC    NTO section
       Logical DoNTO
 CC    NTO section
@@ -648,7 +656,39 @@ C         Transform to bion basis, Split-Guga format
           CALL PREPSD(WFTP1,ISGSTR1,ICISTR1,LSYM1,
      &                IWORK(LCNFTAB1),IWORK(LSPNTAB1),
      &                IWORK(LSSTAB),IWORK(LFSBTAB1),NCONF1,WORK(LCI1),
-     &                WORK(LDET1))
+     &                WORK(LDET1),rdetcoeff,rdetocc,ndt1,norb)
+
+CC VK/GG 2020 CC
+        call mma_allocate(detcoeff1,ndt1)
+        call mma_allocate(detocc1,ndt1)
+        call dcopy_(ndt1,rdetcoeff,0,detcoeff1,1)
+        call dcopy_(ndt1,rdetocc,0,detocc1,1)
+        if (IPGLOB>=DEBUG) then
+          write(6,*) ' ******* TRANSFORMED CI COEFFICIENTS *******'
+          write(6,*) ' READCI called for state ',ISTATE
+          write(6,*) ' This is on JobIph nr.',JOB1
+          write(6,*) ' Its length NCI=',NCONF1
+          write(6,*) ' Its length NDET=',NDT1
+          if (ndt1>1) then
+            ocsp=MAX(9,NORB)
+  C          WRITE(6,'(A,I18)')'OCSP = ',ocsp
+            WRITE(fomt,'(A,I2,A)')'(I7,A16,A',ocsp,
+     &                 ',A5,G17.10,A5,G17.10)'
+            WRITE(6,*)' Occupation of active orbitals, and spin coupling'
+            WRITE(6,*)' of open shells. (u,d: Spin up or down).'
+            WRITE(6,'(A,A,A)')'    Det  ','                       ',
+     &              '       Coef       Weight'
+            do i=1,ndt1
+              write(6,fomt)i,'                 ',
+     &          TRIM(DETOCC1(i)),
+     &          '     ',DETCOEFF1(i),'     ',DETCOEFF1(i)**2
+            enddo
+            write(6,*)('*',i=1,80)
+          endif
+        endif
+        call mma_deallocate(detcoeff1)
+        call mma_deallocate(detocc1)
+CC CC
 
 C Write out the determinant expansion to disk.
           IDDET1(ISTATE)=IDWSCR
@@ -706,7 +746,39 @@ C         Transform to bion basis, Split-Guga format
           CALL PREPSD(WFTP2,ISGSTR2,ICISTR2,LSYM2,
      &                IWORK(LCNFTAB2),IWORK(LSPNTAB2),
      &                IWORK(LSSTAB),IWORK(LFSBTAB2),NCONF2,WORK(LCI2),
-     &                WORK(LDET2))
+     &                WORK(LDET2),rdetcoeff,rdetocc,ndt2,norb)
+
+CC VK/GG 2020 CC
+          call mma_allocate(detcoeff2,ndt2)
+          call mma_allocate(detocc2,ndt2)
+          call dcopy_(ndt2,rdetcoeff,0,detcoeff2,1)
+          call dcopy_(ndt2,rdetocc,0,detocc2,1)
+          if (IPGLOB>=DEBUG) then
+            write(6,*) ' ******* TRANSFORMED CI COEFFICIENTS *******'
+            write(6,*) ' READCI called for state ',JSTATE
+            write(6,*) ' This is on JobIph nr.',JOB2
+            write(6,*) ' Its length NCI=',NCONF2
+            write(6,*) ' Its length NDET=',NDT2
+            if (ndt2>1) then
+              ocsp=MAX(9,NORB)
+              WRITE(fomt,'(A,I2,A)')'(I7,A16,A',ocsp,
+        &                 ',A5,G17.10,A5,G17.10)'
+              WRITE(6,*)' Occupation of active orbitals, and spin coupling'
+              WRITE(6,*)' of open shells. (u,d: Spin up or down).'
+              WRITE(6,'(A,A,A)')'    Det  ','                       ',
+        &              '       Coef       Weight'
+              do i=1,ndt2
+                write(6,fomt)i,'                 ',
+        &          TRIM(DETOCC2(i)),
+        &          '     ',DETCOEFF2(i),'     ',DETCOEFF2(i)**2
+              enddo
+              write(6,*)('*',i=1,80)
+            endif
+          endif
+          call mma_deallocate(detcoeff1)
+          call mma_deallocate(detocc1)
+CC CC
+
 
         else
 #ifdef _DMRG_

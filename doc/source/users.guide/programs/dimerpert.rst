@@ -5,7 +5,7 @@
 
 .. warning::
 
-   This program is not available in |openmolcas|
+   This program is not available in OpenMolcas
 
 .. only:: html
 

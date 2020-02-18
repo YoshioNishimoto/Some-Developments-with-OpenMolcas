@@ -18,12 +18,9 @@
 Description
 -----------
 
-.. xmldoc:: <MODULE NAME="MPPROP">
-            %%Description:
-            <HELP>
+.. xmldoc:: %%Description:
             The MpProp program generates a distributed multipole expansion of the charge density
             of a molecule and atom distributed polarizabilities.
-            </HELP>
 
 The :program:`MPPROP` is a general distributed multipole expansion, and a first order polarizabilty analysis program.
 It will use the one electron integrals to generate the distribution. The order of the distributed multipole expansion is defined by
@@ -123,26 +120,18 @@ Optional general keywords
   recognized by the Nemo package. And you are requested to use
   this Keyword. It is defined in the program as a Character*80.
 
-  .. xmldoc:: <KEYWORD MODULE="MPPROP" NAME="TITLE" APPEAR="Title" KIND="STRING" LEVEL="BASIC">
-              %%Keyword: TITLe <basic>
-              <HELP>
+  .. xmldoc:: %%Keyword: TITLe <basic>
               This Keyword specifies the title of the molecule. This will be
               recognized by the Nemo package. And you are requested to use
               this Keyword. It is defined in the program as a Character*80
-              </HELP>
-              </KEYWORD>
 
 :kword:`LUMOrb`
   This Keyword tells :program:`MPPROP` to use an INPORB file for
   the one electron densities.
 
-  .. xmldoc:: <KEYWORD MODULE="MPPROP" NAME="LUMORB" APPEAR="Use INPORB" KIND="SINGLE" LEVEL="BASIC">
-              %%Keyword: LUMOrb <basic>
-              <HELP>
+  .. xmldoc:: %%Keyword: LUMOrb <basic>
               This Keyword tells MPPROP to use an INPORB file for
               the one electron densities.
-              </HELP>
-              </KEYWORD>
 
 :kword:`TYPE`
   This is to specify the typen of the atom.
@@ -177,39 +166,27 @@ Optional general keywords
 
     .. 2 !not implemented! the polarizability according to the new distribution
 
-  .. xmldoc:: <KEYWORD MODULE="MPPROP" NAME="POLARIZABILITY" APPEAR="Polarizability" KIND="CHOICE" LIST="0: No polarizability,1: Compute polarizability" LEVEL="BASIC" DEFAULT_VALUE="1">
-              %%Keyword: POLArizability <basic>
-              <HELP>
+  .. xmldoc:: %%Keyword: POLArizability <basic>
               This specifies if the polarizability should be calculated or not.
               0 Means no polarizability should be calculated.
               1 (Default) Means polarizability should be calculated.
-              </HELP>
-              </KEYWORD>
 
 :kword:`NONEarestAtom`
   The program is written in the way that multipoles should be moved
   to the nearest atom if the nearest atom is closer than any of the
-  bonding atoms. Note that the move will be to atoms and not nearest bond.
+  bonding atoms.Note that the move will be to atoms and not nearest bond.
 
-  .. xmldoc:: <KEYWORD MODULE="MPPROP" NAME="NONEARESTATOM" APPEAR="Do not move to nearest atom" KIND="SINGLE" LEVEL="BASIC">
-              %%Keyword: NONEarestAtom <basic>
-              <HELP>
+  .. xmldoc:: %%Keyword: NONEarestAtom <basic>
               The program is written in the way that multipoles should be moved
               to the nearest atom if the nearest atom is closer than any of the
               bonding atoms. Note that the move will be to atoms and not nearest bond.
               This can be implemented if requested
-              </HELP>
-              </KEYWORD>
 
 :kword:`ALLCenter`
   This Keyword means that all centers are considered for the distributed multipole expansion.
 
-  .. xmldoc:: <KEYWORD MODULE="MPPROP" NAME="ALLCENTER" APPEAR="Consider all centers" KIND="SINGLE" LEVEL="BASIC">
-              %%Keyword: ALLCenter <basic>
-              <HELP>
+  .. xmldoc:: %%Keyword: ALLCenter <basic>
               This Keyword means that all centers are considered for the distributed multipole expansion.
-              </HELP>
-              </KEYWORD>
 
 Limitations
 ...........
@@ -277,5 +254,3 @@ a few of the keywords. The system is formic-acid. ::
   4 1
   5 2
   End
-
-.. xmldoc:: </MODULE>

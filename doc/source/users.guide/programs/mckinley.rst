@@ -88,7 +88,7 @@ Input files
 
 :program:`MCKINLEY` will use the following input
 files: :file:`RYSRW`, :file:`ABDATA`, :file:`RUNFILE`
-(for more information see :numref:`UG:sec:files_list`).
+(for more information see :ref:`UG:sec:files_list`).
 
 Output files
 ............
@@ -143,15 +143,11 @@ Optional keywords
 :kword:`SHOWHessian`
   The Hessian contributions will be printed.
 
-  .. xmldoc:: <KEYWORD MODULE="MCKINLEY" NAME="SHOWHESSIAN" APPEAR="Show Hessian" KIND="SINGLE" LEVEL="BASIC">
-              %%Keyword: ShowHessian <basic>
-              <HELP>
+  .. xmldoc:: %%Keyword: ShowHessian <basic>
               The Hessian contributions will be printed.
-              </HELP>
-              </KEYWORD>
 
 :kword:`PERTurbation`
-  This keyword takes one of the arguments HESSian or GEOMetry on the following line.
+  This key word takes one of the arguments HESSian or GEOMetry on the following line.
   HESSian makes :program:`MCKINLEY` compute the full geometrical Hessian, which is
   required for a subsequent calculation of the vibronic frequencies with the :program:`MCLR` program.
   GEOMetry calculates only those parts of the geometrical Hessian that correspond to symmetry
@@ -160,32 +156,19 @@ Optional keywords
   Note that in the case of numerical differentiation only symmetry allowed displacements
   will be computed regardless of this keyword.
 
-  .. xmldoc:: <GROUP MODULE="MCKINLEY" NAME="PERTURBATION" APPEAR="Perturbation" KIND="RADIO" LEVEL="BASIC">
-              %%Keyword: Perturbation <basic>
-              This keyword takes one of the arguments HESSian or GEOMetry on the following line.
-              <HELP>
+  .. xmldoc:: %%Keyword: Perturbation <basic>
+              This key word takes one of the arguments HESSian or GEOMetry on the following line.
               Hessian makes MCKINLEY compute the full geometrical Hessian, which is
               required for a subsequent calculation of the vibronic frequencies with the MCLR program.
               GEOMetry calculates only those parts of the geometrical Hessian that correspond to symmetry
               allowed displacements (Could be used in a second order geometry optimization).
               The default is to compute the Hessian for vibrational frequency calculations.
-              </HELP>
-
-  .. xmldoc:: <KEYWORD MODULE="MCKINLEY" NAME="HESSIAN" APPEAR="Hessian" KIND="SINGLE" LEVEL="BASIC" />
-
-  .. xmldoc:: <KEYWORD MODULE="MCKINLEY" NAME="GEOMETRY" APPEAR="Geometry" KIND="SINGLE" LEVEL="BASIC" />
-
-  .. xmldoc:: </GROUP>
 
 :kword:`NOMClr`
   Request that this calculation is not followed by the execution of the MCLR module.
 
-  .. xmldoc:: <KEYWORD MODULE="MCKINLEY" NAME="NOMCLR" APPEAR="No MCLR" KIND="SINGLE" LEVEL="BASIC">
-              %%Keyword: NoMCLR <basic>
-              <HELP>
+  .. xmldoc:: %%Keyword: NoMCLR <basic>
               Request that this calculation is not followed by the execution of the MCLR module.
-              </HELP>
-              </KEYWORD>
 
 :kword:`VERBose`
   The output will be a bit more verbose.

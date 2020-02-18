@@ -1,4 +1,4 @@
-o. index::
+.. index::
    single: Program; Extf
    single: Extf
 
@@ -34,7 +34,7 @@ General keywords
 :kword:`LINEAR`
   This keyword works by specifying 4 parameters, each one in its own line after the keyword itself. First parameter (Integer) is the first atom number following the numeration of the geometry. Second parameter (Integer) is the second atom number. Third parameter is the force (Float) in nanonewton applied along the vector between the two atoms. Fourth parameter is 0 or 1 (Bool), where 0 indicates a repulsive force, and 1 is for an attractive force.
 
-  .. xmldoc:: <KEYWORD MODULE="EXTF" NAME="LINEAR" APPEAR="Linear external force" KIND="CUSTOM" LEVEL="BASIC">
+  .. xmldoc:: <KEYWORD MODULE="EXTF" NAME="LINEAR" APPEAR="Linear external force" KIND="STRINGS" LEVEL="BASIC">
               %%Keyword: LINEar <basic>
               This keyword enables the linear external force between two atoms.
               <HELP>
@@ -52,8 +52,7 @@ The following input example is a semiclassical molecular dynamics with tully sur
   basis=6-31G*
   group=nosym
 
-  >> EXPORT MOLCAS_MAXITER=400
-  >> DOWHILE
+  >> FOREACH A in (1..400)
 
   &Seward
 
@@ -109,12 +108,11 @@ Within the :program:`Extf` module the keyword :kword:`LINEAR` is used. Note :pro
    BASIS= 3-21G
    GROUP= nosym
 
-  >> EXPORT MOLCAS_MAXITER=1000
-  >> DOWHILE
+  >> FOREACH ITER in (1 .. 1000)
 
   &SEWARD
 
-  >> IF ( ITER = 1 )
+  >> IF ( $ITER = 1 )
 
   &RASSCF
     LUMORB
