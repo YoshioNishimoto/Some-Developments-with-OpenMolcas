@@ -145,6 +145,21 @@
      $        'where NBAST is the sum of NBAS(I)**2 for I=1,NSYM.'//
      $        'Only contributing symmetry blocks are stored')
 
+** VK/GG **
+      wfn_detcoeff = mh5_create_dset_real(wfn_fileid,
+     $        'DETCOEFF', 2, [ndets,nstate])
+      call mh5_init_attr(wfn_detcoeff,'description',
+     $         'CI coefficients in basis of Slater determinants')
+      wfn_detocc = mh5_create_dset_str(wfn_fileid,
+     $        'DETOCC', 1, [ndets])
+      call mh5_init_attr(wfn_detocc,'description',
+     $         'Occupations of Slater determinants')
+      wfn_cmo = mh5_create_dset_real(wfn_fileid,
+     $        'CMO_TRANSFORMED', 3, [nbasf,ns,nsym])
+      call mh5_init_attr(wfn_detocc,'description',
+     $         'Molecular orbital coefficients in biorthonormal basis')
+** **
+
       if (do_tmom) then
 *     SFS intermediate transition vectors
       nIJ=NSTATE*(NSTATE-1)/2
