@@ -261,7 +261,11 @@
       Write (6,*) ' In EMFInt: la,lb=',la,lb
 #endif
 !
+<<<<<<< HEAD
 !**********************************************************************
+=======
+!=====================================================================
+>>>>>>> 0982c1956add74d1045c3703ea09fd1dd1c323cf
 !    Computation of intermediate integrals
 !
 !    Compute all Cartesian components with the OAM free code. Then
@@ -269,8 +273,12 @@
 !    OAM-free x and y components.
 !
       Call dcopy_(nZeta*nElem(la)*nElem(lb)*nIC,[Zero],0,Final,1)
+<<<<<<< HEAD
 !
+=======
+>>>>>>> 0982c1956add74d1045c3703ea09fd1dd1c323cf
 !
+!=====================================================================
 !     Compute the Cartesian values of the basis functions angular part
 !     Note that these arrays are complex.
 !
@@ -279,7 +287,7 @@
       Call C_F_Pointer(C_Loc(Array(ipBxyz)),zBxyz,[nZeta*3*nHer*(lb+nOrdOp+1)])
       Call CCrtCmp(Zeta,P,nZeta,RB,zBxyz,lb+nOrdOp,HerR(iHerR(nHer)),nHer,ABeq,kvector_Local)
       Nullify(zAxyz,zBxyz)
-!
+!==============================================================
 !     Compute the Cartesian components for the multipole moment
 !     integrals. The integrals are factorized into components.
 !
@@ -291,8 +299,12 @@
                    zBxyz,lb+nOrdOp,                                   &
                    nZeta,HerW(iHerW(nHer)),nHer)
       Nullify(zAxyz,zBxyz,zQxyz)
+<<<<<<< HEAD
 !
 !
+=======
+!=================================================================
+>>>>>>> 0982c1956add74d1045c3703ea09fd1dd1c323cf
 !     Compute the cartesian components for the velocity integrals.
 !     The velocity components are linear combinations of overlap
 !     components.
@@ -315,12 +327,78 @@
          Call CVelInt(zVxyz,zQxyz,la,lb,Array(ipA),Array(ipB),nZeta)
          Nullify(zVxyz,zQxyz)
       End If
+<<<<<<< HEAD
 !
 !***********************************************************************
       If (lAng.ne.0) Then
-!
+=======
+!*******************************************
+      If (lAng.ne.0) Then
+!===========================================
 !     Now compute the OAM x and y component.
 !
+         Call C_F_Pointer(C_Loc(Array(ipQxyz)),zQxyz,[nZeta*3*(la+1)*(lb+1)])
+         If (nOrdOp.eq.1) Then
+            Call C_F_Pointer(C_Loc(Array(ipVxyz)),zVxyz,[nZeta*3*(la+1)*(lb+1)])
+         Else
+            zVxyz=zQxyz
+         End If
+         call OAM_xy(zVxyz,zQxyz,nZeta,la,lb,nOrdOp,Array(ipAOff),Array(ipBOff),       &
+                     Array(ipRes),nComp)
+         Nullify(zVxyz,zQxyz)
+!
+!=======================================================================
+!    Combine the cartesian components to the full one electron integral.
+!
+      Else ! OAM-free case
+
+         If (nOrdOp.eq.1) Then
+            Call C_F_Pointer(C_Loc(Array(ipQxyz)),zQxyz,[nZeta*3*(la+1)*(lb+1)])
+            Call C_F_Pointer(C_Loc(Array(ipVxyz)),zVxyz,[nZeta*3*(la+1)*(lb+1)*2])
+            Call CCmbnVe(zQxyz,nZeta,la,lb,Zeta,rKappa,Array(ipRes),nComp,zVxyz,kvector_Local)
+            Nullify(zQxyz,zVxyz)
+         Else
+            Call C_F_Pointer(C_Loc(Array(ipQxyz)),zQxyz,[nZeta*3*(la+1)*(lb+1)*(nOrdOp+1)])
+            Call CCmbnMP(zQxyz,nZeta,la,lb,nOrdOp,Zeta,rKappa,Array(ipRes),nComp,kvector_Local)
+            Nullify(zQxyz)
+         End If
+
+!**********************************************************************
+      End If
+!
+    End SubRoutine TWLInt_Internal
+!%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+>>>>>>> 0982c1956add74d1045c3703ea09fd1dd1c323cf
+!
+    Integer Function nElem(ixyz)
+      Integer ixyz
+      nElem = (ixyz+1)*(ixyz+2)/2
+    End Function nElem
+!
+!%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    SubRoutine OAM_xy(Vxyz,Sxyz,nZeta,la,lb,nOrdOp,Alpha,Beta,Final,nComp)
+
+      Real*8 Final(nZeta,(la+1)*(la+2)/2,(lb+1)*(lb+2)/2,nComp)
+      Complex*16 Vxyz(nZeta,3,0:la,0:lb,2)
+      Complex*16 Sxyz(nZeta,3,0:la+nOrdOp,0:lb+nOrdOp)
+      Real*8 Alpha(nZeta), Beta(nZeta)
+      Integer iZeta, i_x, i_y, i_z, j_x, j_y, j_z
+      Integer ix, iz, ixyz, ipa, ipb
+      Complex*16 Value1111, Value2111, Value0111, Value1211, Value1011, &
+                 Value1121, Value1101, Value1112, Value1110
+      Complex*16 Value1111_xA, Value1111_xB,                            &
+                 Value1111_yA, Value1111_yB
+      Real*8 Fact, rTemp
+      Complex*16 Temp1, Temp2, Temp
+      Complex*16, Pointer :: zQxyz(:),zVxyz(:)
+      Integer nZeta, la, lb, nComp, nOrdOp, Ind
+
+!     Statement function for Cartesian index
+!
+      Ind(ixyz,ix,iz) = (ixyz-ix)*(ixyz-ix+1)/2 + iz + 1
+
+!
+<<<<<<< HEAD
          Call C_F_Pointer(C_Loc(Array(ipQxyz)),zQxyz,[nZeta*3*(la+1)*(lb+1)])
          If (nOrdOp.eq.1) Then
             Call C_F_Pointer(C_Loc(Array(ipVxyz)),zVxyz,[nZeta*3*(la+1)*(lb+1)])
@@ -381,6 +459,9 @@
       Ind(ixyz,ix,iz) = (ixyz-ix)*(ixyz-ix+1)/2 + iz + 1
 !
 !
+=======
+!======================================================================
+>>>>>>> 0982c1956add74d1045c3703ea09fd1dd1c323cf
 !     The integration over the z-subspace is done using the normal code
 !     for the exponetial operator.
 !
@@ -401,6 +482,7 @@
                         rTemp=KVector(1)**2 + kVector(2)**2 + kVector(3)**2
                         rTemp=rTemp/(Four*Zeta(iZeta))
 !
+<<<<<<< HEAD
 !
 !      Compute the x-y part of the integral
 !
@@ -578,3 +660,130 @@ End SubRoutine sqr_invers
 !======================================================
 !
 End SubRoutine TWLInt
+=======
+!==========================================
+!      Compute the x-y part of the integral
+
+                        Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
+                                    Alpha(iZeta), Beta(iZeta),               &
+                                    i_x, i_y,                                &
+                                    j_x, j_y, lAng, Value1111)
+
+                        If (nOrdOp.eq.1) Then
+                           Fact = rKappa(iZeta) * Zeta(iZeta)**(-Three/Two) * Exp(-rTemp)
+
+                           Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
+                                       Alpha(iZeta), Beta(iZeta),               &
+                                       i_x+1, i_y,                              &
+                                       j_x, j_y, lAng, Value2111)
+
+                           Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
+                                       Alpha(iZeta), Beta(iZeta),               &
+                                       i_x-1, i_y,                              &
+                                       j_x, j_y, lAng, Value0111)
+
+
+                           Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
+                                       Alpha(iZeta), Beta(iZeta),               &
+                                       i_x, i_y,                                &
+                                       j_x+1,j_y, lAng, Value1211)
+
+                           Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
+                                       Alpha(iZeta), Beta(iZeta),               &
+                                       i_x, i_y,                                &
+                                       j_x-1, j_y, lAng, Value1011)
+
+                           Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
+                                       Alpha(iZeta), Beta(iZeta),               &
+                                       i_x, i_y+1,                              &
+                                       j_x, j_y, lAng, Value1121)
+                           Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
+                                       Alpha(iZeta), Beta(iZeta),               &
+                                       i_x ,i_y-1,                              &
+                                       j_x, j_y, lAng, Value1101)
+
+                           Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
+                                       Alpha(iZeta), Beta(iZeta),               &
+                                       i_x, i_y,                                &
+                                       j_x, j_y+1, lAng, Value1112)
+
+                           Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
+                                       Alpha(iZeta), Beta(iZeta),               &
+                                       i_x, i_y,                                &
+                                       j_x, j_y-1, lAng, Value1110)
+
+!                          Let us form the Cartesian intermediate intergral
+
+                           If (i_x.ne.0) Then
+                           Value1111_xA=DBLE(i_x) * Value0111                   &
+                                       - Two*Alpha(iZeta) * Value2111
+                           Else
+                           Value1111_xA= - Two*Alpha(iZeta) * Value2111
+                           End If
+                           If (j_x.ne.0) Then
+                           Value1111_xB=DBLE(j_x) * Value1011                   &
+                                       - Two* Beta(iZeta) * Value1211
+                           Else
+                           Value1111_xB= - Two* Beta(iZeta) * Value1211
+
+                           End If
+                           If (i_y.ne.0) Then
+                           Value1111_yA=DBLE(i_y) * Value0111                   &
+                                       - Two*Alpha(iZeta) * Value2111
+                           Else
+                           Value1111_yA= - Two*Alpha(iZeta) * Value2111
+
+                           End If
+                           If (j_y.ne.0) Then
+                           Value1111_yB=DBLE(j_y) * Value1011                   &
+                                       - Two* Beta(iZeta) * Value1211
+                           Else
+                           Value1111_yB= - Two* Beta(iZeta) * Value1211
+
+                           End If
+!
+                           Temp1 = Fact *                                       &
+                                   Value1111_xA * Sxyz(iZeta,3,i_z,j_z)
+                           Temp2 = Fact *                                       &
+                                   Value1111_xB * Sxyz(iZeta,3,i_z,j_z)
+                           Final(iZeta,ipa,ipb,1) = DBLE((Temp1+Temp2)*Half)
+                           Final(iZeta,ipa,ipb,4) = DBLE((Temp1-Temp2)*Half)
+                           Final(iZeta,ipa,ipb,7) = DIMAG((Temp1+Temp2)*Half)
+                           Final(iZeta,ipa,ipb,10)= DIMAG((Temp1-Temp2)*Half)
+                           Temp1 = Fact *                                       &
+                                   Value1111_yA * Sxyz(iZeta,3,i_z,j_z)
+                           Temp2 = Fact *                                       &
+                                   Value1111_yB * Sxyz(iZeta,3,i_z,j_z)
+                           Final(iZeta,ipa,ipb,2) = DBLE((Temp1+Temp2)*Half)
+                           Final(iZeta,ipa,ipb,5) = DBLE((Temp1-Temp2)*Half)
+                           Final(iZeta,ipa,ipb,8) = DIMAG((Temp1+Temp2)*Half)
+                           Final(iZeta,ipa,ipb,11)= DIMAG((Temp1-Temp2)*Half)
+                           Temp1 = Fact *                                       &
+                                   Value1111    * Vxyz(iZeta,3,i_z,j_z,1)
+                           Temp2 = Fact *                                       &
+                                   Value1111    * Vxyz(iZeta,3,i_z,j_z,2)
+                           Final(iZeta,ipa,ipb,3) = DBLE((Temp1+Temp2)*Half)
+                           Final(iZeta,ipa,ipb,6 )= DBLE((Temp1-Temp2)*Half)
+                           Final(iZeta,ipa,ipb,9 )= DIMAG((Temp1+Temp2)*Half)
+                           Final(iZeta,ipa,ipb,12)= DIMAG((Temp1-Temp2)*Half)
+                        Else
+                           Fact = rKappa(iZeta) * (1.0D0/Sqrt(Zeta(iZeta)**3))  &
+                                * Exp(-rTemp)
+                           Temp1 = Fact *                                       &
+                                   Value1111    * Sxyz(iZeta,3,i_z,j_z)
+                           Final(iZeta,ipa,ipb,1) = DBLE(Temp)
+                           Final(iZeta,ipa,ipb,2) = DIMAG(Temp)
+                        End If
+                     End Do  ! j_y
+                  End Do     ! j_x
+               End Do  ! i_y
+            End Do     ! i_x
+         End Do  ! iAlpha
+      End Do     ! iBeta
+!
+!**********************************************************************
+!**********************************************************************
+    End SubRoutine OAM_xy
+!======================================================================
+  End SubRoutine TWLInt
+>>>>>>> 0982c1956add74d1045c3703ea09fd1dd1c323cf
