@@ -51,6 +51,10 @@
       Real*8 TransM(3,3)
       Real*8 kVector_local(3)
       Real*8 A_Local(3), RB_Local(3)
+
+      Integer, parameter :: dim = 3
+      Real(kind=8), dimension(dim,dim) :: a_mtrx, inv_mtrx, iTransM
+      Integer :: i, im, jm
 !
       Zero =0.0D0
       Half =0.5D0
@@ -67,7 +71,7 @@
       End If
 !
 !     We need here a transformation of the Cartesian coordinates in which
-!     the k-vector coinsides with the z-vector direction.
+!     the k-vector coincides with the z-vector direction.
 !     In particular, we will transform P to the new coordinate system.
 !
       If (lAng.eq.0) Then
@@ -97,7 +101,7 @@
       TransM(3,1)= Zero
       TransM(1,2)=-Sin(Fi1)*Cos(Fi2)
       TransM(2,2)= Cos(Fi1)*Cos(Fi2)
-      TransM(2,2)=          Sin(Fi2)
+      TransM(3,2)=          Sin(Fi2)
       TransM(1,3)= Sin(Fi1)*Sin(Fi2)
       TransM(2,3)=-Cos(Fi1)*Sin(Fi2)
       TransM(3,3)=          Cos(Fi2)
@@ -127,15 +131,55 @@
          Call TWLInt_Internal(Array,A_Local,RB_Local,Array(ipP))
       End If
 !
-!**********************************************************************
+!********************************************************************
 !
-      If (lAng.eq.0) Go To 222
+      If (lAng.eq.0) Go To 221
 !     Now when all Cartesian components have been computed we
 !     transform back to the coordinate system of the molecule.
 
 !     ... more to come ...
 !
- 222  Continue
+!%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+!====================================================================
+!  Computing Inverse matrix
+!====================================================================
+!
+      Do im = 1,3
+         Do jm = 1,3
+            a_mtrx(im, jm) = TransM(im, jm)
+         End Do
+      End Do
+
+      Call sqr_invers(dim, a_mtrx, inv_mtrx)
+
+      Do im = 1,3
+         Do jm = 1,3
+            iTransM(im, jm) = inv_mtrx (im, jm)
+         End Do
+      End Do
+!====================================================================
+!     Transform A, RB, and P
+!
+      ipP=nip
+      nip=nip+nZeta*3
+!
+      Call DGEMM_('N','N',3,1,3,                                        &
+                   1.0D0,iTransM,3,                                     &
+                         A,3,                                           &
+                   0.0D0,A_Local,3)
+      Call DGEMM_('N','N',3,1,3,                                        &
+                   1.0D0,iTransM,3,                                     &
+                         RB,3,                                          &
+                   0.0D0,RB_Local,3)
+      Call DGEMM_('N','T',3,3,nZeta,                                    &
+                   1.0D0,P,nZeta,                                       &
+                         iTransM,3,                                     &
+                   0.0D0,Array(ipP),3)
+!
+!=====================================================================
+!%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+!
+ 221  Continue
 !
       llOper=lOper(1)
       Do iComp = 2, nComp
@@ -217,7 +261,7 @@
       Write (6,*) ' In EMFInt: la,lb=',la,lb
 #endif
 !
-!=====================================================================
+!**********************************************************************
 !    Computation of intermediate integrals
 !
 !    Compute all Cartesian components with the OAM free code. Then
@@ -226,7 +270,7 @@
 !
       Call dcopy_(nZeta*nElem(la)*nElem(lb)*nIC,[Zero],0,Final,1)
 !
-!=====================================================================
+!
 !     Compute the Cartesian values of the basis functions angular part
 !     Note that these arrays are complex.
 !
@@ -235,7 +279,7 @@
       Call C_F_Pointer(C_Loc(Array(ipBxyz)),zBxyz,[nZeta*3*nHer*(lb+nOrdOp+1)])
       Call CCrtCmp(Zeta,P,nZeta,RB,zBxyz,lb+nOrdOp,HerR(iHerR(nHer)),nHer,ABeq,kvector_Local)
       Nullify(zAxyz,zBxyz)
-!==============================================================
+!
 !     Compute the Cartesian components for the multipole moment
 !     integrals. The integrals are factorized into components.
 !
@@ -247,7 +291,8 @@
                    zBxyz,lb+nOrdOp,                                   &
                    nZeta,HerW(iHerW(nHer)),nHer)
       Nullify(zAxyz,zBxyz,zQxyz)
-!=================================================================
+!
+!
 !     Compute the cartesian components for the velocity integrals.
 !     The velocity components are linear combinations of overlap
 !     components.
@@ -270,9 +315,10 @@
          Call CVelInt(zVxyz,zQxyz,la,lb,Array(ipA),Array(ipB),nZeta)
          Nullify(zVxyz,zQxyz)
       End If
-!*******************************************
+!
+!***********************************************************************
       If (lAng.ne.0) Then
-!===========================================
+!
 !     Now compute the OAM x and y component.
 !
          Call C_F_Pointer(C_Loc(Array(ipQxyz)),zQxyz,[nZeta*3*(la+1)*(lb+1)])
@@ -285,7 +331,7 @@
                      Array(ipRes),nComp)
          Nullify(zVxyz,zQxyz)
 !
-!=======================================================================
+!
 !    Combine the cartesian components to the full one electron integral.
 !
       Else ! OAM-free case
@@ -300,19 +346,19 @@
             Call CCmbnMP(zQxyz,nZeta,la,lb,nOrdOp,Zeta,rKappa,Array(ipRes),nComp,kvector_Local)
             Nullify(zQxyz)
          End If
-
-!**********************************************************************
+!
+!************************************************************************
       End If
 !
     End SubRoutine TWLInt_Internal
-!%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+!=========================================================================
 !
     Integer Function nElem(ixyz)
       Integer ixyz
       nElem = (ixyz+1)*(ixyz+2)/2
     End Function nElem
 !
-!%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+!=========================================================================
     SubRoutine OAM_xy(Vxyz,Sxyz,nZeta,la,lb,nOrdOp,Alpha,Beta,Final,nComp)
 
       Real*8 Final(nZeta,(la+1)*(la+2)/2,(lb+1)*(lb+2)/2,nComp)
@@ -333,9 +379,8 @@
 !     Statement function for Cartesian index
 !
       Ind(ixyz,ix,iz) = (ixyz-ix)*(ixyz-ix+1)/2 + iz + 1
-
 !
-!======================================================================
+!
 !     The integration over the z-subspace is done using the normal code
 !     for the exponetial operator.
 !
@@ -356,9 +401,9 @@
                         rTemp=KVector(1)**2 + kVector(2)**2 + kVector(3)**2
                         rTemp=rTemp/(Four*Zeta(iZeta))
 !
-!==========================================
+!
 !      Compute the x-y part of the integral
-
+!
                         Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
                                     Alpha(iZeta), Beta(iZeta),               &
                                     i_x, i_y,                                &
@@ -480,4 +525,56 @@
 !**********************************************************************
     End SubRoutine OAM_xy
 !======================================================================
-  End SubRoutine TWLInt
+!
+SubRoutine sqr_invers(n, a_mtrx, inv_mtrx)
+
+  Implicit None
+
+  Integer, intent(in) :: n
+  Integer :: info, lda, lwork, nb
+  Integer, dimension(n) :: ipiv
+  Real(kind=8), intent(in), dimension(n,n) :: a_mtrx
+  Real(kind=8), intent(out), dimension(n,n) :: inv_mtrx
+  Real(kind=8), allocatable, dimension(:) :: work
+  Integer :: ilaenv
+!
+  lda = n !- leading dimension of array
+  nb = ILAENV_(1, 'DGETRI', '', n, n, -1, -1)
+  lwork = n * nb
+  !print *, "lwork is :", lwork
+  allocate(work(lwork))
+  !- ipiv(output) integer array, dimension(min(m,n))
+  !- the pivot indicies; for 1 <= i <= min(m,n), row
+  !- i of the matrix was interchanged with row ipiv(i).
+  inv_mtrx = a_mtrx
+  !===================
+  !- LU factorization
+  !===================
+  call dgetrf_(n, n, inv_mtrx, lda, ipiv, info)
+!
+  if (info > 0 ) then
+!!     print *, "factor is singular :-("
+  elseif (info < 0) then
+!!     print *, "the ", info, &
+!!          "th argument had an illegal value :-("
+  end if
+  !===================
+  !- matrix inversion
+  !===================
+  call dgetri_(n, inv_mtrx, lda, ipiv, work, lwork, info)
+!
+  if (info > 0 ) then
+!!     print *, "the U(i,i), i =  ", info, &
+!!          "is zero, singular matrix :-("
+  elseif (info < 0) then
+!!     print *, "the ", info, &
+!!          "th argument had an illegal value :-("
+  end if
+
+  !print *, "for optimal performance Lwork = ", work(1)
+
+  deallocate(work)
+End SubRoutine sqr_invers
+!======================================================
+!
+End SubRoutine TWLInt
