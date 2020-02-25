@@ -78,7 +78,7 @@
          kVector_Local(1)=kVector(1)
          kVector_Local(2)=kVector(2)
          kVector_Local(3)=kVector(3)
-         Go To 110
+         Go To 114
       End If
 !
 !     Use Euler angles (z-x-z). We skip the last rotation.
@@ -124,16 +124,17 @@
                          TransM,3,                                      &
                    0.0D0,Array(ipP),3)
 !
- 110  Continue
+ 114  Continue
       If (lAng.eq.0) Then
          Call TWLInt_Internal(Array,A,RB,P)
       Else
          Call TWLInt_Internal(Array,A_Local,RB_Local,Array(ipP))
       End If
 !
-!********************************************************************
+!%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+!====================================================================
 !
-      If (lAng.eq.0) Go To 221
+      If (lAng.eq.0) Go To 263
 !     Now when all Cartesian components have been computed we
 !     transform back to the coordinate system of the molecule.
 !
@@ -176,7 +177,7 @@
 !=====================================================================
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 !
- 221  Continue
+ 263  Continue
 !
       llOper=lOper(1)
       Do iComp = 2, nComp
@@ -533,8 +534,8 @@ SubRoutine sqr_invers(n, a_mtrx, inv_mtrx)
   Real(kind=8), intent(in), dimension(n,n) :: a_mtrx
   Real(kind=8), intent(out), dimension(n,n) :: inv_mtrx
   Real(kind=8), allocatable, dimension(:) :: work
-  Integer :: ilaenv
-!
+  Integer :: ilaenv_
+
   lda = n !- leading dimension of array
   nb = ILAENV_(1, 'DGETRI', '', n, n, -1, -1)
   lwork = n * nb
@@ -548,12 +549,12 @@ SubRoutine sqr_invers(n, a_mtrx, inv_mtrx)
   !- LU factorization
   !===================
   call dgetrf_(n, n, inv_mtrx, lda, ipiv, info)
-!
+
   if (info > 0 ) then
-!!     print *, "factor is singular :-("
+!     print *, "factor is singular :-("
   elseif (info < 0) then
-!!     print *, "the ", info, &
-!!          "th argument had an illegal value :-("
+!     print *, "the ", info, &
+!          "th argument had an illegal value :-("
   end if
   !===================
   !- matrix inversion
@@ -561,16 +562,17 @@ SubRoutine sqr_invers(n, a_mtrx, inv_mtrx)
   call dgetri_(n, inv_mtrx, lda, ipiv, work, lwork, info)
 !
   if (info > 0 ) then
-!!     print *, "the U(i,i), i =  ", info, &
-!!          "is zero, singular matrix :-("
+!     print *, "the U(i,i), i =  ", info, &
+!          "is zero, singular matrix :-("
   elseif (info < 0) then
-!!     print *, "the ", info, &
-!!          "th argument had an illegal value :-("
+!     print *, "the ", info, &
+!          "th argument had an illegal value :-("
   end if
 
   !print *, "for optimal performance Lwork = ", work(1)
 
   deallocate(work)
+!
 End SubRoutine sqr_invers
 !======================================================
 !
