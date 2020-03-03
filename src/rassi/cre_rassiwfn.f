@@ -149,7 +149,7 @@
       wfn_detcoeff = mh5_create_dset_real(wfn_fileid,
      $        'DETCOEFF', 2, [1000,nstate])
       call mh5_init_attr(wfn_detcoeff,'description',
-     $         'transformed CI coefficients in basis of Slater determinants')
+     $         'transformed CI in basis of Slater determinants')
       wfn_detocc = mh5_create_dset_str(wfn_fileid,
      $        'DETOCC', 1, [1000])
       call mh5_init_attr(wfn_detocc,'description',
