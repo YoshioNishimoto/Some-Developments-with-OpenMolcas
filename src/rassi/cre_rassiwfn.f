@@ -145,17 +145,17 @@
      $        'where NBAST is the sum of NBAS(I)**2 for I=1,NSYM.'//
      $        'Only contributing symmetry blocks are stored')
 
-** VK/GG **
+** VK/GG 2020**
       wfn_detcoeff = mh5_create_dset_real(wfn_fileid,
-     $        'DETCOEFF', 2, [ndets,nstate])
+     $        'DETCOEFF', 2, [1000,nstate])
       call mh5_init_attr(wfn_detcoeff,'description',
-     $         'CI coefficients in basis of Slater determinants')
+     $         'transformed CI coefficients in basis of Slater determinants')
       wfn_detocc = mh5_create_dset_str(wfn_fileid,
-     $        'DETOCC', 1, [ndets])
+     $        'DETOCC', 1, [1000])
       call mh5_init_attr(wfn_detocc,'description',
      $         'Occupations of Slater determinants')
       wfn_cmo = mh5_create_dset_real(wfn_fileid,
-     $        'CMO_TRANSFORMED', 3, [nbasf,ns,nsym])
+     $        'CMO_TRANSFORMED', 3, [nbast,nbast,nsym])
       call mh5_init_attr(wfn_detocc,'description',
      $         'Molecular orbital coefficients in biorthonormal basis')
 ** **

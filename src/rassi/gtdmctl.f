@@ -663,6 +663,7 @@ CC VK/GG 2020 CC
         call mma_allocate(detocc1,ndt1)
         call dcopy_(ndt1,rdetcoeff,1,detcoeff1,1)
         detocc1(:) = rdetocc(1:ndt1)
+        call mh5_put_dset_array_real(wfn_detcoeff,detcoeff1,)
         if (PRCI) then
           write(6,*) ' ******* TRANSFORMED CI COEFFICIENTS *******'
           write(6,*) ' READCI called for state ',ISTATE
@@ -671,12 +672,12 @@ CC VK/GG 2020 CC
           write(6,*) ' Its length NDET=',NDT1
           if (ndt1>1) then
             ocsp=MAX(9,NORB)
-C          WRITE(6,'(A,I18)')'OCSP = ',ocsp
-            WRITE(fomt,'(A,I2,A)')'(I7,A16,A',ocsp,
+C          write(6,'(A,I18)')'OCSP = ',ocsp
+            write(fomt,'(A,I2,A)')'(I7,A16,A',ocsp,
      &                 ',A5,G17.10,A5,G17.10)'
-            WRITE(6,*)' Occupation of active orbitals, and spin'
-            WRITE(6,*)' of open shells. (u,d: Spin up or down).'
-            WRITE(6,'(A,A,A)')'    Det  ','                       ',
+            write(6,*)' Occupation of active orbitals, and spin'
+            write(6,*)' of open shells. (u,d: Spin up or down).'
+            write(6,'(A,A,A)')'    Det  ','                       ',
      &              '       Coef       Weight'
             do i=1,ndt1
               write(6,fomt)i,'                 ',
