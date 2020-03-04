@@ -673,7 +673,7 @@ CC VK/GG 2020 CC
         call dcopy_(ndt1,rdetcoeff,1,detcoeff1,1)
         detocc1(:) = rdetocc(1:ndt1)
 C        call mh5_put_dset_array_real(wfn_detcoeff,detcoeff1,)
-        if (PRCI) then
+        if (PRCI .and. JOB1/=JOB2) then
           write(6,*) ' ******* TRANSFORMED CI COEFFICIENTS *******'
           write(6,*) ' READCI called for state ',ISTATE
           write(6,*) ' This is on JobIph nr.',JOB1
@@ -763,7 +763,7 @@ CC VK/GG 2020 CC
           call mma_allocate(detocc2,ndt2)
           call dcopy_(ndt2,rdetcoeff,1,detcoeff2,1)
           detocc2(:) = rdetocc(1:ndt2)
-          if (PRCI) then
+          if (PRCI .and. JOB1/=JOB2) then
             write(6,*) ' ******* TRANSFORMED CI COEFFICIENTS *******'
             write(6,*) ' READCI called for state ',JSTATE
             write(6,*) ' This is on JobIph nr.',JOB2
@@ -817,6 +817,7 @@ CC CC
      &                )
 #endif
         end if
+      enddo
 
 C-----------------------------------------------------------------------
 
@@ -842,7 +843,11 @@ C VK/GG 2020 C double loop (jstate,istate>=jstate) -> a set of indices (itask)
           iWork(ltaski+iTask-1)=ist
         enddo
       enddo
-      if (iTask/=nTasks) write(6,*) "Error in number of nTasks"
+      if (iTask/=nTasks) then
+        write(6,*) "Error in number of nTasks"
+      else
+        write(6,*)"Index table was successfully set up, nproc ",nProcs
+      endif
 
 C-----------------------------------------------------------------------
 C
@@ -851,11 +856,11 @@ C
 #ifdef _MOLCAS_MPP_
       call Init_Tsk(ID,nTasks)
       If (nProcs>1) then
-C        write(*,*) "to avoid double counting"
+C to avoid double counting
         OVLP=OVLP/dble(nProcs)
         PROP=PROP/dble(nProcs)
         HAM=HAM/dble(nProcs)
-        SFDYS=SFDYS/dble(nProcs)
+        if (DYSO) SFDYS=SFDYS/dble(nProcs)
         DYSAMPS=DYSAMPS/dble(nProcs)
       EndIf
  400  if (.not. Rsv_Tsk(ID,iTask)) goto 401
@@ -1189,7 +1194,7 @@ C     task.
       call GAdSUM(PROP,nstate*nstate*nprop)
       call GAdSUM(OVLP,nstate*nstate)
       call GAdSUM(HAM,nstate*nstate)
-      call GAdSUM(SFDYS,nz*nstate*nstate)
+      if (DYSO) call GAdSUM(SFDYS,nz*nstate*nstate)
       call GAdSUM(DYSAMPS,nstate*nstate)
 #else
         END DO job1_loop

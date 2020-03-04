@@ -52,7 +52,7 @@ C RAS state interaction.
      &                      USOI(:,:), OVLP(:,:), DYSAMPS(:,:),
      &                      ENERGY(:), DMAT(:), TDMZZ(:),
      &                      VNAT(:),OCC(:), SOENE(:)
-      Integer, Allocatable:: IDDET1(:)
+      Integer, Allocatable:: IDDET1(:), IDDET2(:)
 *                                                                      *
 ************************************************************************
 *                                                                      *
