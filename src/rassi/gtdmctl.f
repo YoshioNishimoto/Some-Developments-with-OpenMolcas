@@ -8,7 +8,8 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
-      SUBROUTINE GTDMCTL(PROP,JOB1,JOB2,OVLP,DYSAMPS,NZ,IDDET1,IDISK)
+      SUBROUTINE GTDMCTL(PROP,JOB1,JOB2,OVLP,DYSAMPS,NZ,IDDET1,
+     &                   IDDET2,IDISK)
 
 #ifdef _DMRG_
       use rassi_global_arrays, only: HAM, SFDYS, LROOT
@@ -39,6 +40,7 @@
 #include "Struct.fh"
 #include "rassiwfn.fh"
 #include "stdalloc.fh"
+#include "para_info.fh"
       DIMENSION ISGSTR1(NSGSIZE), ISGSTR2(NSGSIZE)
       DIMENSION ICISTR1(NCISIZE), ICISTR2(NCISIZE)
       DIMENSION IXSTR1(NXSIZE), IXSTR2(NXSIZE)
@@ -47,7 +49,7 @@
       DIMENSION NASHES(8)
       DIMENSION OVLP(NSTATE,NSTATE)
       DIMENSION DYSAMPS(NSTATE,NSTATE)
-      DIMENSION IDDET1(NSTATE)
+      DIMENSION IDDET1(NSTATE), IDDET2(NSTATE)
       LOGICAL IF00, IF10,IF01,IF20,IF11,IF02,IF21,IF12,IF22
       LOGICAL IFTWO,TRORB
       CHARACTER*8 WFTP1,WFTP2
@@ -57,6 +59,10 @@
       Integer IAD,LUIPHn,lThetaM,LUCITH
       Real*8 Norm_fac
 CC VK2020 CC
+C     parallelization
+      logical :: Rsv_Tsk
+      integer :: itask, ltask, ltaski, ltaskj, ntasks, ID
+C     determinant basis
       real*8 :: rdetcoeff(10000000)
       real*8, allocatable :: detcoeff1(:), detcoeff2(:)
       character*99 :: rdetocc(10000000)
@@ -635,10 +641,13 @@ C At present, we will only annihilate. This limits the possible MAXOP:
 C-------------------------------------------------------------
       CALL GETMEM('GTDMDET1','ALLO','REAL',LDET1,NDET1)
       CALL GETMEM('GTDMDET2','ALLO','REAL',LDET2,NDET2)
+CC VK/GG 2020 CC
+      call GetMem('TOTDET1','ALLO','REAL',LDETTOT1,NDET1*NSTAT(JOB1))
+      call GetMem('TOTDET2','ALLO','REAL',LDETTOT2,NDET2*NSTAT(JOB2))
 
 C Loop over the states of JOBIPH nr JOB1
-C Disk address for writing to scratch file is IDWSCR.
-      IDWSCR=0
+C LWDET pointer to write WORK(LDET) to WORK(LDETTOT)
+      LWDET=LDETTOT1
       DO IST=1,NSTAT(JOB1)
         ISTATE=ISTAT(JOB1)-1+IST
 
@@ -663,7 +672,7 @@ CC VK/GG 2020 CC
         call mma_allocate(detocc1,ndt1)
         call dcopy_(ndt1,rdetcoeff,1,detcoeff1,1)
         detocc1(:) = rdetocc(1:ndt1)
-        call mh5_put_dset_array_real(wfn_detcoeff,detcoeff1,)
+C        call mh5_put_dset_array_real(wfn_detcoeff,detcoeff1,)
         if (PRCI) then
           write(6,*) ' ******* TRANSFORMED CI COEFFICIENTS *******'
           write(6,*) ' READCI called for state ',ISTATE
@@ -691,9 +700,10 @@ C          write(6,'(A,I18)')'OCSP = ',ocsp
         call mma_deallocate(detocc1)
 CC CC
 
-C Write out the determinant expansion to disk.
-          IDDET1(ISTATE)=IDWSCR
-          CALL  DDAFILE(LUSCR,1,WORK(LDET1),NDET1,IDWSCR)
+C Write out the determinant expansion to LDETTOT1
+          IDDET1(ISTATE)=LWDET
+          call DCOPY_(NDET1,WORK(LDET1),1,WORK(LWDET),1)
+          LWDET=LWDET+NDET1
         else
 #ifdef _DMRG_
           call prepMPS(
@@ -726,10 +736,9 @@ C Write out the determinant expansion to disk.
 C-------------------------------------------------------------
 
 C Loop over the states of JOBIPH nr JOB2
-      job2_loop: DO JST=1,NSTAT(JOB2)
-
+      LWDET=LDETTOT2
+      DO JST=1,NSTAT(JOB2)
         JSTATE=ISTAT(JOB2)-1+JST
-
         if(.not.doDMRG)then
 C Read JSTATE wave function
           IF(WFTP2.EQ.'GENERAL ') THEN
@@ -778,6 +787,11 @@ CC VK/GG 2020 CC
           endif
           call mma_deallocate(detcoeff2)
           call mma_deallocate(detocc2)
+
+C Write out the determinant expansion to LDETTOT1
+          IDDET2(JSTATE)=LWDET
+          call DCOPY_(NDET2,WORK(LDET2),1,WORK(LWDET),1)
+          LWDET=LWDET+NDET2
 CC CC
 
 
@@ -804,22 +818,76 @@ CC CC
 #endif
         end if
 
+C-----------------------------------------------------------------------
+
+C VK/GG 2020 C setup index table for calculation in parallel
+C VK/GG 2020 C double loop (jstate,istate>=jstate) -> a set of indices (itask)
+      if (JOB1==JOB2) then
+        nTasks=nstat(JOB1)*(nstat(JOB1)+1)/2
+      else
+        nTasks=nstat(JOB1)*nstat(JOB2)
+      endif
+      call GetMem('Tasks','ALLO','INTE',lTask,2*nTasks)
+      ltaskj  =lTask
+      ltaski  =lTask+nTasks
+
+      iTask=0
+      do jst=1,nstat(JOB2)
+        jstate=istat(JOB2)-1+jst
+        do ist=1,nstat(JOB1)
+          istate=istat(JOB1)-1+ist
+          if (istate<jstate) cycle
+          iTask=iTask+1
+          iWork(ltaskj+iTask-1)=jst
+          iWork(ltaski+iTask-1)=ist
+        enddo
+      enddo
+      if (iTask/=nTasks) write(6,*) "Error in number of nTasks"
+
+C-----------------------------------------------------------------------
+C
+C Loop over the states of JOBIPHs nr JOB2, JOB1
+C
+#ifdef _MOLCAS_MPP_
+      call Init_Tsk(ID,nTasks)
+      If (nProcs>1) then
+C        write(*,*) "to avoid double counting"
+        OVLP=OVLP/dble(nProcs)
+        PROP=PROP/dble(nProcs)
+        HAM=HAM/dble(nProcs)
+        SFDYS=SFDYS/dble(nProcs)
+        DYSAMPS=DYSAMPS/dble(nProcs)
+      EndIf
+ 400  if (.not. Rsv_Tsk(ID,iTask)) goto 401
+C recovers (jstate,istate) indicies as in serial calc
+      jst=iWork(ltaskj+iTask-1)
+      ist=iWork(ltaski+iTask-1)
+      jstate=istat(JOB2)-1+jst
+      istate=istat(JOB1)-1+ist
+#else
+C Loop over the states of JOBIPH nr JOB2
+      job2_loop: DO JST=1,NSTAT(JOB2)
+        JSTATE=ISTAT(JOB2)-1+JST
 C Loop over the states of JOBIPH nr JOB1
         job1_loop: DO IST=1,NSTAT(JOB1)
           ISTATE=ISTAT(JOB1)-1+IST
-        IF(ISTATE.LT.JSTATE) cycle
+        IF (ISTATE<JSTATE) cycle
+#endif
+
 C Entry into monitor: Status line
         WRITE(STLNE1,'(A6)') 'RASSI:'
         WRITE(STLNE2,'(A33,I5,A5,I5)')
      &      'Trans. dens. matrices for states ',ISTATE,' and ',JSTATE
         Call StatusLine(STLNE1,STLNE2)
 
-C Read ISTATE wave function from disk
+C Read ISTATE wave function from TOTDET1 and JSTATE WF from TOTDET2
 #ifdef _DMRG_
       if(.not.doDMRG)then
 #endif
-      IDRSCR=IDDET1(ISTATE)
-      CALL  DDAFILE(LUSCR,2,WORK(LDET1),NDET1,IDRSCR)
+      LRDET=IDDET1(ISTATE)
+      CALL DCOPY_(NDET1,WORK(LRDET),1,WORK(LDET1),1)
+      LRDET=IDDET2(JSTATE)
+      CALL DCOPY_(NDET2,WORK(LRDET),1,WORK(LDET2),1)
 #ifdef _DMRG_
       end if
 #endif
@@ -1106,10 +1174,27 @@ C             Write density 1-matrices in AO basis to disk.
               WRITE(6,'(1x,a,f16.8)')' HIJ  =',HIJ
             END IF
           END IF
-
+#ifdef _MOLCAS_MPP_
+CSVC: The master node now continues to only handle task scheduling,
+C     needed to achieve better load balancing. So it exits from the task
+C     list.  It has to do it here since each process gets at least one
+C     task.
+#if defined (_MOLCAS_MPP_) && !defined (_GA_)
+      if (IS_REAL_PAR().and.KING().and.(NPROCS>1)) goto 401
+#endif
+      goto 400
+ 401  continue
+      call Free_Tsk(ID)
+      call GetMem('Tasks','FREE','INTE',lTask,2*nTasks)
+      call GAdSUM(PROP,nstate*nstate*nprop)
+      call GAdSUM(OVLP,nstate*nstate)
+      call GAdSUM(HAM,nstate*nstate)
+      call GAdSUM(SFDYS,nz*nstate*nstate)
+      call GAdSUM(DYSAMPS,nstate*nstate)
+#else
         END DO job1_loop
-
       END DO job2_loop
+#endif
 
       IF(DoGSOR) then
         if(job1.ne.job2) then
@@ -1279,6 +1364,9 @@ C             Write density 1-matrices in AO basis to disk.
       END IF
       CALL GETMEM('GTDMDET1','FREE','REAL',LDET1,NDET1)
       CALL GETMEM('GTDMDET2','FREE','REAL',LDET2,NDET2)
+C VK/GG 2020 C
+      call GetMem('TOTDET1','FREE','REAL',LDETTOT1,NDET1*NSTAT(JOB1))
+      call GetMem('TOTDET2','FREE','REAL',LDETTOT2,NDET2*NSTAT(JOB2))
       CALL GETMEM('GTDMCI2','FREE','REAL',LCI2,NCONF2)
       If (DoGSOR) CALL GETMEM('GTDMCI2_o','FREE','REAL',LCI2_o,NCONF2)
       IF (.NOT.NONA) CALL GETMEM('GTDMCI1','FREE','REAL',LCI1,NCONF1)
