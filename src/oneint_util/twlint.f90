@@ -23,6 +23,7 @@
 !         momentum.                                                    *
 !***********************************************************************
       use Her_RW
+      use Real_Spherical
       Implicit None
       External NrOpr
 !
@@ -46,7 +47,7 @@
       Integer iAlpha, iBeta, ixyz
       Integer ipA, ipAOff, ipAxyz, ipB, ipBOff, ipBxyz, ipQxyz, ipRes, &
               ipVxyz, nip, icomp, iOper, lDCRT, llOper, LmbdT, nDCRT,  &
-              nIrrep, nOp, nStabO, ipP, lAng
+              nIrrep, nOp, nStabO, ipP, lAng, ipScr
       Real*8 Zero, Half, One, Two, Three, Four, Rxy, Fi1, Rxyz, Fi2
       Real*8 TransM(3,3)
       Real*8 kVector_local(3)
@@ -156,23 +157,38 @@
          End Do
       End Do
 !====================================================================
-!     Transform A, RB, and P
+!     Backtransform the integrals to the original coordinate system
 !
-      ipP=nip
-      nip=nip+nZeta*3
+      ipScr=nip
+      nip = nip - nZeta*((la+1)*(la+2)/2)*((lb+1)*(lb+2)/2)
 !
-      Call DGEMM_('N','N',3,1,3,                                        &
-                   1.0D0,iTransM,3,                                     &
-                         A,3,                                           &
-                   0.0D0,A_Local,3)
-      Call DGEMM_('N','N',3,1,3,                                        &
-                   1.0D0,iTransM,3,                                     &
-                         RB,3,                                          &
-                   0.0D0,RB_Local,3)
-      Call DGEMM_('N','T',3,3,nZeta,                                    &
-                   1.0D0,P,nZeta,                                       &
-                         iTransM,3,                                     &
-                   0.0D0,Array(ipP),3)
+!     1) transform the integrals to spherical harmonics (with the contaminant).
+!        ij,a,b  ->  B,ij,a
+      Call DGEMM_('T','T',                                                &
+                  (lb+1)*(lb+2)/2,nZeta*((la+1)*(la+2)/2),(lb+1)*(lb+2)/2 &
+                  1.0D0,RSph(ipSph(lb)),(lb+1)*(lb+2)/2,                  &
+                        Array(ipRes),nZeta*((la+1)*(la+2)/2),             &
+                  0.0D0,Array(ipScr),(lb+1)*(lb+2)/2)                     &
+!        B,ij,a  ->  A,B,ij
+      Call DGEMM_('T','T',                                                &
+                  (la+1)*(la+2)/2,((lb+1)*(lb+2)/2)*nZeta,(la+1)*(la+2)/2 &
+                  1.0D0,RSph(ipSph(la)),(la+1)*(la+2)/2,                  &
+                        Array(ipScr),((lb+1)*(lb+2)/2)*nZeta,             &
+                  0.0D0,Array(ipRes),(la+1)*(la+2)/2)                     &
+
+!     2) backtransform the spherical harmonics to the original coordinate system
+!        A,B,ij -> B,ij,C  (one set of sphericals at the time)
+         Do i = la,0,-2
+         End Do
+!        B,ij,C -> ij,C,D
+         Do i = lb,0,-2
+         End Do
+
+!     3) transform the spherical harmonics to the Cartesians.
+!        ij,C,D -> d,ij,C
+!        d,ij,C -> c,d,ij
+!     4) transpose to the correct order
+!        c,d,ij -> ij,c,d  make sure that it is in Array(ipRes)
 !
 !=====================================================================
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -347,6 +363,9 @@
 !
 !************************************************************************
       End If
+!
+!     At this point the integrals are store in Array starting at the position
+!     ipRes. The size of the block is nZeta,(la+1)*(la+2)/2,(lb+1)*(lb+2)/2
 !
     End SubRoutine TWLInt_Internal
 !=========================================================================

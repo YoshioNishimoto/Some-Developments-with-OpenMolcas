@@ -25,6 +25,7 @@
      &         + nElem(la)*nElem(lb)*nElem(lr)*2
       End If
       MemVe=MemVe+3
+      MemVe=MemVe+ nElem(la)*nElem(lb)*nElem(lr)*2
 *
       Return
 c Avoid unused argument warnings
