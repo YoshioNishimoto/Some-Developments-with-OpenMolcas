@@ -32,9 +32,10 @@
       integer :: ISTATE, NSS
       integer :: nData, nIJ
       integer, allocatable :: state_irreps(:), state_mult(:)
-      integer :: nbast
+      integer :: nbast, njobpairs
 
       nbast = sum(nbasf(1:nsym)**2)
+      njobpairs = njob*(njob-1)/2
 
 *     create a new wavefunction file!
       wfn_fileid = mh5_create_file('RASSIWFN')
@@ -146,18 +147,22 @@
      $        'Only contributing symmetry blocks are stored')
 
 ** VK/GG 2020**
-*      wfn_detcoeff = mh5_create_dset_real(wfn_fileid,
-*     $        'DETCOEFF', 2, [1000,nstate])
-*      call mh5_init_attr(wfn_detcoeff,'description',
-*     $         'transformed CI in basis of Slater determinants')
-*      wfn_detocc = mh5_create_dset_str(wfn_fileid,
-*     $        'DETOCC', 1, [1000],30)
-*      call mh5_init_attr(wfn_detocc,'description',
-*     $         'Occupations of Slater determinants')
-*      wfn_cmo = mh5_create_dset_real(wfn_fileid,
-*     $        'CMO_TRANSFORMED', 3, [nbast,nbast,nsym])
-*      call mh5_init_attr(wfn_detocc,'description',
-*     $         'Molecular orbital coefficients in biorthonormal basis')
+      wfn_detcoeff = mh5_create_dset_real(wfn_fileid,
+     $        'DETCOEFF', 3, [1000,nstate,njob])
+      call mh5_init_attr(wfn_detcoeff,'description',
+     $         'transformed CI in basis of Slater determinants')
+      wfn_detocc = mh5_create_dset_str(wfn_fileid,
+     $        'DETOCC', 2, [1000,njob],NASHT)
+      call mh5_init_attr(wfn_detocc,'description',
+     $         'Occupations of Slater determinants')
+      wfn_cmo = mh5_create_dset_real(wfn_fileid,
+     $        'MO_TRANSFORMED', 3, [ncmo,2,njobpairs])
+      call mh5_init_attr(wfn_cmo,'description',
+     $         'Molecular orbital coefficients in biorthonormal basis')
+      wfn_cmo_or = mh5_create_dset_real(wfn_fileid,
+     $        'MO_ORIGINAL', 2, [ncmo,njob])
+      call mh5_init_attr(wfn_cmo_or,'description',
+     $         'Molecular orbital coefficients in original basis')
 ** **
 
       if (do_tmom) then

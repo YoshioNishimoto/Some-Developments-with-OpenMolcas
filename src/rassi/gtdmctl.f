@@ -62,10 +62,10 @@ CC VK2020 CC
 C     parallelization
       logical :: Rsv_Tsk
       integer :: itask, ltask, ltaski, ltaskj, ntasks, ID
-C     determinant basis
-      real*8 :: rdetcoeff(10000000)
+C     transformed CI expansion in determinant basis
+      real*8 :: rdetcoeff(1000)
       real*8, allocatable :: detcoeff1(:), detcoeff2(:)
-      character*99 :: rdetocc(10000000)
+      character*99 :: rdetocc(1000)
       character*99, allocatable :: detocc1(:), detocc2(:)
       character*38 :: fomt
       integer :: ndt1, ndt2, ocsp, norb, icnftab1(10), icnftab2(10)
@@ -259,8 +259,20 @@ C Transform to biorthonormal orbital system
         Call mma_allocate(TRA1,nTRA,Label='TRA1')
         Call mma_allocate(TRA2,nTRA,Label='TRA2')
         CALL FINDT(CMO1,CMO2,TRA1,TRA2)
+CC VK/GG 2020 CC
+C put the pair of transformed orbitals to hdf5 file
+        call mh5_put_dset_array_real(wfn_cmo,CMO1,
+     &                               [nCMO,1,1],[0,JOB1-1,0])
+        call mh5_put_dset_array_real(wfn_cmo,CMO2,
+     &                               [nCMO,1,1],[0,JOB2-1,0])
+CC CC
         TRORB = .true.
       else
+CC VK/GG 2020 CC
+C put original orbitals to hdf5 file
+        call mh5_put_dset_array_real(wfn_cmo_or,CMO1,
+     &                               [nCMO,1],[0,JOB1-1])
+CC CC
         TRORB = .false.
       end if
 
@@ -672,13 +684,12 @@ CC VK/GG 2020 CC
         call mma_allocate(detocc1,ndt1)
         call dcopy_(ndt1,rdetcoeff,1,detcoeff1,1)
         detocc1(:) = rdetocc(1:ndt1)
-C        call mh5_put_dset_array_real(wfn_detcoeff,detcoeff1,)
         if (PRCI .and. JOB1/=JOB2) then
           write(6,*) ' ******* TRANSFORMED CI COEFFICIENTS *******'
-          write(6,*) ' READCI called for state ',ISTATE
-          write(6,*) ' This is on JobIph nr.',JOB1
-          write(6,*) ' Its length NCI=',NCONF1
-          write(6,*) ' Its length NDET=',NDT1
+          write(6,*) ' READCI called for state ', ISTATE
+          write(6,*) ' This is on JobIph nr.', JOB1
+          write(6,*) ' Its length NCI=', NCONF1
+          write(6,*) ' Its length NDET=', ndt1
           if (ndt1>1) then
             ocsp=MAX(9,NORB)
 C          write(6,'(A,I18)')'OCSP = ',ocsp
@@ -690,12 +701,20 @@ C          write(6,'(A,I18)')'OCSP = ',ocsp
      &              '       Coef       Weight'
             do i=1,ndt1
               write(6,fomt)i,'                 ',
-     &          TRIM(DETOCC1(i)),
-     &          '     ',DETCOEFF1(i),'     ',DETCOEFF1(i)**2
+     &          TRIM(detocc1(i)),
+     &          '     ',detcoeff1(i),'     ',detcoeff1(i)**2
             enddo
             write(6,*)('*',i=1,80)
           endif
+C put them to hdf5
+          call mh5_put_dset_array_real(wfn_detcoeff,detcoeff1,
+     &                               [ndt1,1,1],[0,istate-1,JOB1-1])
+          do i=1,ndt1
+            call mh5_put_dset_array_str(wfn_detocc,
+     &           trim(detocc1(i)),[1,1],[i-1,JOB1-1])
+          enddo
         endif
+
         call mma_deallocate(detcoeff1)
         call mma_deallocate(detocc1)
 CC CC
@@ -768,7 +787,7 @@ CC VK/GG 2020 CC
             write(6,*) ' READCI called for state ',JSTATE
             write(6,*) ' This is on JobIph nr.',JOB2
             write(6,*) ' Its length NCI=',NCONF2
-            write(6,*) ' Its length NDET=',NDT2
+            write(6,*) ' Its length NDET=', ndt2
             if (ndt2>1) then
               ocsp=MAX(9,NORB)
               WRITE(fomt,'(A,I2,A)')'(I7,A16,A',ocsp,
@@ -784,6 +803,13 @@ CC VK/GG 2020 CC
               enddo
               write(6,*)('*',i=1,80)
             endif
+C put them to hdf5
+            call mh5_put_dset_array_real(wfn_detcoeff,detcoeff2,
+     &                               [ndt2,1,1],[0,jstate-1,JOB2-1])
+            do i=1,ndt2
+              call mh5_put_dset_array_str(wfn_detocc,
+     &             trim(detocc2(i)),[1,1],[i-1,JOB2-1])
+            enddo
           endif
           call mma_deallocate(detcoeff2)
           call mma_deallocate(detocc2)

@@ -24,7 +24,7 @@
      &       wfn_sos_hsor, wfn_sos_hsoi,
      &       wfn_sfs_wetdm, wfn_sos_edipmomr,
      &       wfn_sos_edipmomi, wfn_detcoeff,
-     &       wfn_detocc, wfn_cmo
+     &       wfn_detocc, wfn_cmo, wfn_cmo_or
 
       common /rassiwfn_handles/ wfn_fileid,
      &       wfn_sfs_energy, wfn_sos_energy,
@@ -38,4 +38,4 @@
      &       wfn_sos_hsor, wfn_sos_hsoi,
      &       wfn_sfs_wetdm, wfn_sos_edipmomr,
      &       wfn_sos_edipmomi, wfn_detcoeff,
-     &       wfn_detocc, wfn_cmo
+     &       wfn_detocc, wfn_cmo, wfn_cmo_or

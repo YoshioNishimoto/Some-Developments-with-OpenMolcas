@@ -22,17 +22,6 @@
       IMPLICIT REAL*8 (A-H,O-Z)
       DIMENSION CMO1(NCMO),CMO2(NCMO)
       DIMENSION TRA1(NTRA),TRA2(NTRA)
-CC VK/GG CC
-C      character(8) :: fmt1, fmt2
-C      character(132) :: line, blank
-C      dimension nslct(8)
-C      logical :: PrOcc, PrEne
-C      character(3):: lIrrep(8)
-C      dimension nvsh(8)
-C      character*(LENIN4) NAME
-C      common/intaux/ name(mxOrb)
-C      common/general/ nbas(mxsym)
-CC CC
 #include "rasdim.fh"
 #include "cntrl.fh"
 #include "symmul.fh"
@@ -77,6 +66,17 @@ C CALL TRAORB(NSYM,NOSH,NBASF,NCXA,CXA,NCMO,CMO)
       CALL MKCXA(NSYM,NOSH,NCYB,TRA2,WORK(LCYB))
       CALL TRAORB(NSYM,NOSH,NBASF,NCYB,WORK(LCYB),NCMO,CMO2)
       CALL GETMEM('      ','FREE','REAL',LCYB,NCYB)
+CC VK/GG 2020 CC
+C print transformed MOs (as in rdcmo routine)
+      IF (PRORB) THEN
+        WRITE(6,*)
+        CALL WRMAT('TRANSFORMED MO COEFFICIENTS FOR STATE ONE (CMO1):',
+     &               1,NBASF,NOSH,NCMO,CMO1)
+        WRITE(6,*)
+        CALL WRMAT('TRANSFORMED MO COEFFICIENTS FOR STATE TWO (CMO2):',
+     &               1,NBASF,NOSH,NCMO,CMO2)
+      END IF
+CC CC
 
       Call qExit('FINDT')
       RETURN
