@@ -164,9 +164,9 @@
 !
 !     1) transform the integrals to spherical harmonics (with the contaminant).
 !        ij,a,b  ->  B,ij,a
-!        B,b * b,(ij,a) -> B,(ij,a)
-!        B,b * b*(ij,a) -> (B,ij),a
-!        (b,B)^T ( (ij,a),b )^T
+!        (B,b) * b,(ij,a) -> B,(ij,a)
+!        (B,b) * b,(ij,a) -> (B,ij),a
+!        (b,B)^T * ( (ij,a),b )^T
 !
       Call DGEMM_('T','T',                                                 &
                   (lb+1)*(lb+2)/2,nZeta*((la+1)*(la+2)/2),(lb+1)*(lb+2)/2, &
@@ -175,8 +175,10 @@
                   0.0D0,Array(ipScr),(lb+1)*(lb+2)/2 )
 !
 !        B,ij,a  ->  A,B,ij
+!        (A,a) * a,(B,ij) -> A,(B,ij)
+!        (A,a) * a,(B,ij) -> (A,B),ij
 !        (a,A)^T * ( (B,ij),a )^T
-!        (A,a) * a,(B,ij) -> A,B,ij
+!
       Call DGEMM_('T','T',                                                 &
                   (la+1)*(la+2)/2,((lb+1)*(lb+2)/2)*nZeta,(la+1)*(la+2)/2, &
                   1.0D0,RSph(ipSph(la)),(la+1)*(la+2)/2,                   &
@@ -190,8 +192,8 @@
       Do i = la,0,-2
 !        Generating contributions to the transformation matrix (-Fi1, -Fi2):
 !        Here I am using iTransM  = TransM(-Fi1, -Fi2), which is calculated before.
-!        - So, replacing 'RSph' with 'iTransM' in the subroutine below - ????
-!
+!        - So, replacing 'RSph' with 'iTransM' in the subroutines below - ????
+
          Call DGEMM_('T','T',                                                 &
                      (lb+1)*(lb+2)/2,nZeta*((la+1)*(la+2)/2),(lb+1)*(lb+2)/2, &
                      1.0D0,RSph(ipSph(lb)),nZeta*((lb+1)*(lb+2)/2),           &
@@ -200,17 +202,34 @@
       End Do
 !
 !        B,ij,C -> ij,C,D
-!         Do i = lb,0,-2
+      Do i = lb,0,-2
 !        generate contributions to the transformation matrix (-Fi1, -Fi2)
-!         End Do
+!
+         Call DGEMM_('T','T',                                                &
+                    (lc+1)*(lc+2)/2,nZeta*((lb+1)*(lb+2)/2),(lc+1)*(lc+2)/2, &
+                    1.0D0,RSph(ipSph(lc)),((lc+1)*(lc+2)/2)*nZeta,           &
+                    Array(ipRes),((lb+1)*(lb+2)/2)*nZeta,              &
+                    0.0D0,Array(ipScr),(lc+1)*(lc+2)/2 )
+      End Do
 !
 !     3) transform the spherical harmonics to the Cartesians.
+!
 !        Find inverse for RSph(ipSph(ld))
 !        ij,C,D -> d,ij,C
-!        Call DGEMM_
+        Call DGEMM_('T','T',                                                &
+                   (ld+1)*(ld+2)/2,nZeta*((lc+1)*(lc+2)/2),(ld+1)*(ld+2)/2, &
+                   1.0D0,RSph(ipSph(ld)),((ld+1)*(ld+2)/2),                 &
+                   Array(ipRes),nZeta*((lc+1)*(lc+2)/2),                    &
+                   0.0D0,Array(ipScr),(ld+1)*(ld+2)/2 )
+
 !        Find inverse for RSph(ipSph(lc))
 !        d,ij,C -> c,d,ij
-!        Call DGEMM_
+        Call DGEMM_('T','T',                                                &
+                   (lc+1)*(lc+2)/2,nZeta*((ld+1)*(ld+2)/2),(lc+1)*(lc+2)/2, &
+                   1.0D0,RSph(ipSph(lc)),((lc+1)*(lc+2)/2),                 &
+                   Array(ipRes),((ld+1)*(ld+2)/2)*nZeta,                    &
+                   0.0D0,Array(ipScr),(lc+1)*(lc+2)/2 )
+!
 !     4) transpose to the correct order
 !        c,d,ij -> ij,c,d  make sure that it is in Array(ipRes)
 !
