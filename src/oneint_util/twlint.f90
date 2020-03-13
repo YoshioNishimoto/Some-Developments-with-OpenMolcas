@@ -30,7 +30,7 @@
 !     External Arrays and integers
 !
       Integer nZeta, la, lb, nIC, nAlpha, nBeta, nArr, nComp, nOrdOp,  &
-              nStabM
+              nStabM, lc, ld
       Real*8 Final(nZeta,(la+1)*(la+2)/2,(lb+1)*(lb+2)/2,nIC),         &
              Zeta(nZeta), Alpha(nAlpha), Beta(nBeta),                  &
              ZInv(nZeta), rKappa(nZeta),                               &
@@ -55,6 +55,7 @@
 
       Integer, parameter :: dim = 3
       Real(kind=8), dimension(dim,dim) :: a_mtrx, inv_mtrx, iTransM
+
       Integer :: i, im, jm
 !
       Zero =0.0D0
@@ -143,19 +144,19 @@
 !  Computing Inverse matrix
 !====================================================================
 !
-      Do im = 1,3
-         Do jm = 1,3
-            a_mtrx(im, jm) = TransM(im, jm)
-         End Do
-      End Do
-
-      Call sqr_invers(dim, a_mtrx, inv_mtrx)
-
-      Do im = 1,3
-         Do jm = 1,3
-            iTransM(im, jm) = inv_mtrx (im, jm)
-         End Do
-      End Do
+!      Do im = 1,3
+!         Do jm = 1,3
+!            a_mtrx(im, jm) = TransM(im, jm)
+!         End Do
+!      End Do
+!
+!      Call sqr_invers(dim, a_mtrx, inv_mtrx)
+!
+!      Do im = 1,3
+!         Do jm = 1,3
+!            iTransM(im, jm) = inv_mtrx (im, jm)
+!         End Do
+!      End Do
 !====================================================================
 !     Backtransform the integrals to the original coordinate system
 !
@@ -191,10 +192,24 @@
 !
       Do i = la,0,-2
 !        Generating contributions to the transformation matrix (-Fi1, -Fi2):
-!        Here I am using iTransM  = TransM(-Fi1, -Fi2), which is calculated before.
-!        - So, replacing 'RSph' with 'iTransM' in the subroutines below - ????
+!        Here I am using iTransM  = TransM(-Fi1, -Fi2)
+!==============================================================================
+!  Computing Inverse matrix
+      Do im = 1,3
+         Do jm = 1,3
+            a_mtrx(im, jm) = TransM(im, jm)
+         End Do
+      End Do
+!
+      Call sqr_invers(dim, a_mtrx, inv_mtrx)
 
-         Call DGEMM_('T','T',                                                 &
+      Do im = 1,3
+         Do jm = 1,3
+            iTransM(im, jm) = inv_mtrx (im, jm)
+         End Do
+      End Do
+!==============================================================================
+      Call DGEMM_('T','T',                                                    &
                      (lb+1)*(lb+2)/2,nZeta*((la+1)*(la+2)/2),(lb+1)*(lb+2)/2, &
                      1.0D0,RSph(ipSph(lb)),nZeta*((lb+1)*(lb+2)/2),           &
                            Array(ipRes),((la+1)*(la+2)/2)*((lb+1)*(lb+2)/2),  &
@@ -215,15 +230,18 @@
 !     3) transform the spherical harmonics to the Cartesians.
 !
 !        Find inverse for RSph(ipSph(ld))
-!        ij,C,D -> d,ij,C
+!============================================
+!  Computing Inverse matrix - more to come ..
+!============================================
+!       ij,C,D -> d,ij,C
         Call DGEMM_('T','T',                                                &
                    (ld+1)*(ld+2)/2,nZeta*((lc+1)*(lc+2)/2),(ld+1)*(ld+2)/2, &
                    1.0D0,RSph(ipSph(ld)),((ld+1)*(ld+2)/2),                 &
                    Array(ipRes),nZeta*((lc+1)*(lc+2)/2),                    &
                    0.0D0,Array(ipScr),(ld+1)*(ld+2)/2 )
 
-!        Find inverse for RSph(ipSph(lc))
-!        d,ij,C -> c,d,ij
+!       Find inverse for RSph(ipSph(lc))
+!       d,ij,C -> c,d,ij
         Call DGEMM_('T','T',                                                &
                    (lc+1)*(lc+2)/2,nZeta*((ld+1)*(ld+2)/2),(lc+1)*(lc+2)/2, &
                    1.0D0,RSph(ipSph(lc)),((lc+1)*(lc+2)/2),                 &
