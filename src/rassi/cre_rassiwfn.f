@@ -148,11 +148,11 @@
 
 ** VK/GG 2020**
       wfn_detcoeff = mh5_create_dset_real(wfn_fileid,
-     $        'DETCOEFF', 3, [1000,nstate,njob])
+     $        'DETCOEFF', 3, [100000,nstate,njob])
       call mh5_init_attr(wfn_detcoeff,'description',
      $         'transformed CI in basis of Slater determinants')
       wfn_detocc = mh5_create_dset_str(wfn_fileid,
-     $        'DETOCC', 2, [1000,njob],NASHT)
+     $        'DETOCC', 2, [100000,njob],NASHT)
       call mh5_init_attr(wfn_detocc,'description',
      $         'Occupations of Slater determinants')
       wfn_cmo = mh5_create_dset_real(wfn_fileid,

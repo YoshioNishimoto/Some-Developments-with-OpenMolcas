@@ -35,9 +35,9 @@ C     INTEGER IERR,ICPL,KSBSMRS,JMORS,NFSB
       INTEGER OCC2MRS
       EXTERNAL OCC2MRS
 CC VK/GG 2020 CC add an occupation array in the usual 0,u,d,2 format
-      character*1, allocatable :: occ(:)
-      character*99 :: rdetocc(10000000)
-      real*8 :: rdetcoeff(10000000)
+      character(1), allocatable :: occ(:)
+      character(99) :: rdetocc(10000000)
+      real(8) :: rdetcoeff(10000000)
       integer :: idet, ndet, norbback
 CC CC
 
@@ -196,6 +196,7 @@ CTEST      write(*,'(1x,a,20i3)')'Spin determinant:',
 CTEST     &                    (ISPNTAB(KSPN-1+I+NOPEN*(ISPD-1)),I=1,nopen)
 CC VK/GG 2020 CC count the determinants
             idet=idet+1
+CC            write(*,*) 'idet =', idet
             IBLK=IBLK+1
 C Construct occupation number array:
             CALL ICOPY(2*NORB,[0],0,IWORK(LOCARR),1)
@@ -214,27 +215,27 @@ C Spin of each electron is coded as 1 for alpha, 0 for beta.
 C Identify substrings:
 C Loop over active partitions. Subdivide as needed into subpartitions.
 CTEST      write(*,*)' Identify substrings.'
-CTEST      write(*,'(1x,a,10i5)')'Occupation array:',
+CTEST      write(*,'(1x,a,28i5)')'Occupation array:',
 CTEST     &                          (iwork(locarr-1+isorb),isorb=1,2*norb)
 CC VK/GG 2020 CC construct occupation array in 0,u,d,2 format
             call mma_allocate(occ,norb)
             do IORB=1,2*norb-1,2
               if ((IWORK(LOCARR-1+IORB)==1)
-     &         .AND.(IWORK(LOCARR+IORB)==1)) then
+     &         .and.(IWORK(LOCARR+IORB)==1)) then
                 occ((IORB+1)/2)='2'
               elseif ((IWORK(LOCARR-1+IORB)==1)
-     &         .AND.(IWORK(LOCARR+IORB)==0))THEN
+     &         .and.(IWORK(LOCARR+IORB)==0)) then
                 occ((IORB+1)/2)='u'
               elseif ((IWORK(LOCARR-1+IORB)==0)
-     &         .AND.(IWORK(LOCARR+IORB)==1))THEN
+     &         .and.(IWORK(LOCARR+IORB)==1)) then
                 occ((IORB+1)/2)='d'
               elseif( (IWORK(LOCARR-1+IORB)==0)
-     &         .AND.(IWORK(LOCARR+IORB)==0))THEN
+     &         .and.(IWORK(LOCARR+IORB)==0)) then
                 occ((IORB+1)/2)='0'
               endif
-
             enddo
-CC
+CTEST            write(*,*) 'occ = ', occ
+CC  CC
             IOEND=0
             ISPEND=0
 CTEST      write(*,'(1x,a,10i5)')'NAPART:',NAPART
@@ -349,7 +350,7 @@ C Finally:
 
 CC VK/GG 2020 CC
             rdetcoeff(idet)=CISD(KFSB-1+IPOS)
-            write(rdetocc(idet),'(99A)') (OCC(IORB),IORB=1,NORB)
+            write(rdetocc(idet),*) occ
             call mma_deallocate(occ)
 CC
 

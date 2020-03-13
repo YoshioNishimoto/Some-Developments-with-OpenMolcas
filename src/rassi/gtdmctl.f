@@ -63,9 +63,9 @@ C     parallelization
       logical :: Rsv_Tsk
       integer :: itask, ltask, ltaski, ltaskj, ntasks, ID
 C     transformed CI expansion in determinant basis
-      real*8 :: rdetcoeff(1000)
+      real*8 :: rdetcoeff(10000000)
       real*8, allocatable :: detcoeff1(:), detcoeff2(:)
-      character*99 :: rdetocc(1000)
+      character*99 :: rdetocc(10000000)
       character*99, allocatable :: detocc1(:), detocc2(:)
       character*38 :: fomt
       integer :: ndt1, ndt2, ocsp, norb, icnftab1(10), icnftab2(10)
@@ -261,16 +261,18 @@ C Transform to biorthonormal orbital system
         CALL FINDT(CMO1,CMO2,TRA1,TRA2)
 CC VK/GG 2020 CC
 C put the pair of transformed orbitals to hdf5 file
+        if (PRCI) then
         call mh5_put_dset_array_real(wfn_cmo,CMO1,
      &                               [nCMO,1,1],[0,JOB1-1,0])
         call mh5_put_dset_array_real(wfn_cmo,CMO2,
      &                               [nCMO,1,1],[0,JOB2-1,0])
+        endif
 CC CC
         TRORB = .true.
       else
 CC VK/GG 2020 CC
 C put original orbitals to hdf5 file
-        call mh5_put_dset_array_real(wfn_cmo_or,CMO1,
+        if (PRCI) call mh5_put_dset_array_real(wfn_cmo_or,CMO1,
      &                               [nCMO,1],[0,JOB1-1])
 CC CC
         TRORB = .false.
@@ -674,10 +676,14 @@ C Read ISTATE wave function
 C         Transform to bion basis, Split-Guga format
           If (TrOrb) CALL CITRA (WFTP1,ISGSTR1,ICISTR1,IXSTR1,LSYM1,
      &                           TRA1,NCONF1,Work(LCI1))
+          write(6,*) "PREPSD called for JOB1 = ", JOB1
+          write(6,*) "NDET1 = ", NDET1
+          write(6,*) "NDET2 = ", NDET2
           CALL PREPSD(WFTP1,ISGSTR1,ICISTR1,LSYM1,
      &                IWORK(LCNFTAB1),IWORK(LSPNTAB1),
      &                IWORK(LSSTAB),IWORK(LFSBTAB1),NCONF1,WORK(LCI1),
      &                WORK(LDET1),rdetcoeff,rdetocc,ndt1,norb)
+          write(6,*) "PREPSD passed for JOB1 = ", JOB1, "ndt1=", ndt1
 
 CC VK/GG 2020 CC
         call mma_allocate(detcoeff1,ndt1)
@@ -723,7 +729,7 @@ C Write out the determinant expansion to LDETTOT1
           IDDET1(ISTATE)=LWDET
           call DCOPY_(NDET1,WORK(LDET1),1,WORK(LWDET),1)
           LWDET=LWDET+NDET1
-        else
+        else ! doDMRG
 #ifdef _DMRG_
           call prepMPS(
      &                 TRORB,
@@ -849,6 +855,7 @@ C-----------------------------------------------------------------------
 
 C VK/GG 2020 C setup index table for calculation in parallel
 C VK/GG 2020 C double loop (jstate,istate>=jstate) -> a set of indices (itask)
+      write(6,*) "Setting up index table"
       if (JOB1==JOB2) then
         nTasks=nstat(JOB1)*(nstat(JOB1)+1)/2
       else
