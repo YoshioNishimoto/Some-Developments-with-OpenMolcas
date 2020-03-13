@@ -26,6 +26,7 @@
       use Real_Spherical
       Implicit None
       External NrOpr
+#include "stdalloc.fh"
 !
 !     External Arrays and integers
 !
@@ -49,7 +50,7 @@
               ipVxyz, nip, icomp, iOper, lDCRT, llOper, LmbdT, nDCRT,  &
               nIrrep, nOp, nStabO, ipP, lAng, ipScr
       Real*8 Zero, Half, One, Two, Three, Four, Rxy, Fi1, Rxyz, Fi2
-      Real*8 TransM(3,3)
+      Real*8, Allocatable:: TransM(:,:)
       Real*8 kVector_local(3)
       Real*8 A_Local(3), RB_Local(3)
 
@@ -98,6 +99,7 @@
       kVector_Local(2)=Zero
       kVector_Local(3)=Rxyz
 !
+      Call mma_Allocate(TransM,3,3,Label="TransM")
       TransM(1,1)= Cos(Fi1)
       TransM(2,1)= Sin(Fi1)
       TransM(3,1)= Zero
@@ -125,6 +127,7 @@
                    1.0D0,P,nZeta,                                       &
                          TransM,3,                                      &
                    0.0D0,Array(ipP),3)
+      Call mma_deallocate(TransM)
 !
  114  Continue
       If (lAng.eq.0) Then
@@ -140,23 +143,6 @@
 !     Now when all Cartesian components have been computed we
 !     transform back to the coordinate system of the molecule.
 !
-!====================================================================
-!  Computing Inverse matrix
-!====================================================================
-!
-!      Do im = 1,3
-!         Do jm = 1,3
-!            a_mtrx(im, jm) = TransM(im, jm)
-!         End Do
-!      End Do
-!
-!      Call sqr_invers(dim, a_mtrx, inv_mtrx)
-!
-!      Do im = 1,3
-!         Do jm = 1,3
-!            iTransM(im, jm) = inv_mtrx (im, jm)
-!         End Do
-!      End Do
 !====================================================================
 !     Backtransform the integrals to the original coordinate system
 !
@@ -188,44 +174,36 @@
 !
 !     2) backtransform the spherical harmonics to the original coordinate system
 !
-!        A,B,ij -> B,ij,C  (one set of sphericals at the time)
+!        A(new),B,ij -> B,ij,A(orig)  (one set of sphericals at the time)
 !
+      Call mma_Allocate(TransM,(la+1)*(la+2)/2,(la+1)*(la+2)/2,Label="TransM")
       Do i = la,0,-2
-!        Generating contributions to the transformation matrix (-Fi1, -Fi2):
-!        Here I am using iTransM  = TransM(-Fi1, -Fi2)
 !==============================================================================
-!  Computing Inverse matrix
-      Do im = 1,3
-         Do jm = 1,3
-            a_mtrx(im, jm) = TransM(im, jm)
-         End Do
-      End Do
-!
-      Call sqr_invers(dim, a_mtrx, inv_mtrx)
-
-      Do im = 1,3
-         Do jm = 1,3
-            iTransM(im, jm) = inv_mtrx (im, jm)
-         End Do
-      End Do
+!        Generate the blocks of the transformation matrix and put them into
+!        TransM
 !==============================================================================
-      Call DGEMM_('T','T',                                                    &
-                     (lb+1)*(lb+2)/2,nZeta*((la+1)*(la+2)/2),(lb+1)*(lb+2)/2, &
-                     1.0D0,RSph(ipSph(lb)),nZeta*((lb+1)*(lb+2)/2),           &
-                           Array(ipRes),((la+1)*(la+2)/2)*((lb+1)*(lb+2)/2),  &
-                     0.0D0,Array(ipScr),(lb+1)*(lb+2)/2 )
       End Do
+      Call DGEMM_(
+                  bla,bla,
+                 1.0D0,TransM,
+                       Array(ipRes),
+                 0.0D0,Array(ipScr),
+      Call mma_deallocate(TransM)
 !
-!        B,ij,C -> ij,C,D
+!        B(new),ij,A(orig) -> ij,A(orig),B(orig)
+      Call mma_Allocate(TransM,(lb+1)*(lb+2)/2,(lb+1)*(lb+2)/2,Label="TransM")
       Do i = lb,0,-2
-!        generate contributions to the transformation matrix (-Fi1, -Fi2)
-!
-         Call DGEMM_('T','T',                                                &
-                    (lc+1)*(lc+2)/2,nZeta*((lb+1)*(lb+2)/2),(lc+1)*(lc+2)/2, &
-                    1.0D0,RSph(ipSph(lc)),((lc+1)*(lc+2)/2)*nZeta,           &
-                    Array(ipRes),((lb+1)*(lb+2)/2)*nZeta,              &
-                    0.0D0,Array(ipScr),(lc+1)*(lc+2)/2 )
+!==============================================================================
+!        Generate the blocks of the transformation matrix and put them into
+!        TransM
+!==============================================================================
       End Do
+      Call DGEMM_(
+                  bla,bla,
+                 1.0D0,TransM,
+                       Array(ipScr),
+                    0.0D0,Array(ipRes),
+      Call mma_deallocate(TransM)
 !
 !     3) transform the spherical harmonics to the Cartesians.
 !
@@ -233,20 +211,20 @@
 !============================================
 !  Computing Inverse matrix - more to come ..
 !============================================
-!       ij,C,D -> d,ij,C
+!       ij,A,B -> b,ij,A
         Call DGEMM_('T','T',                                                &
-                   (ld+1)*(ld+2)/2,nZeta*((lc+1)*(lc+2)/2),(ld+1)*(ld+2)/2, &
-                   1.0D0,RSph(ipSph(ld)),((ld+1)*(ld+2)/2),                 &
-                   Array(ipRes),nZeta*((lc+1)*(lc+2)/2),                    &
-                   0.0D0,Array(ipScr),(ld+1)*(ld+2)/2 )
+                   (ld+1)*(ld+2)/2,nZeta*((la+1)*(la+2)/2),(lb+1)*(lb+2)/2, &
+                   1.0D0,RSph(ipSph(lb)),((lb+1)*(lb+2)/2),                 &
+                         Array(ipRes),nZeta*((la+1)*(la+2)/2),                    &
+                   0.0D0,Array(ipScr),(lb+1)*(lb+2)/2 )
 
 !       Find inverse for RSph(ipSph(lc))
-!       d,ij,C -> c,d,ij
+!       b,ij,A -> a,b,ij
         Call DGEMM_('T','T',                                                &
                    (lc+1)*(lc+2)/2,nZeta*((ld+1)*(ld+2)/2),(lc+1)*(lc+2)/2, &
                    1.0D0,RSph(ipSph(lc)),((lc+1)*(lc+2)/2),                 &
-                   Array(ipRes),((ld+1)*(ld+2)/2)*nZeta,                    &
-                   0.0D0,Array(ipScr),(lc+1)*(lc+2)/2 )
+                         Array(ipScr),((ld+1)*(ld+2)/2)*nZeta,                    &
+                   0.0D0,Array(ipRes),(lc+1)*(lc+2)/2 )
 !
 !     4) transpose to the correct order
 !        c,d,ij -> ij,c,d  make sure that it is in Array(ipRes)
