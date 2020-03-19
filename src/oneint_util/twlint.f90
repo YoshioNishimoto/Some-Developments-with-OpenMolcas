@@ -54,7 +54,8 @@
       Real*8 kVector_local(3)
       Real*8 A_Local(3), RB_Local(3)
 
-      Integer :: i
+      Integer :: i, l
+      Real*8 :: dmm
 !
       Zero =0.0D0
       Half =0.5D0
@@ -177,7 +178,7 @@
 !==============================================================================
       End Do
       Call DGEMM_(
-                  bla,bla,
+!                  bla,bla,
                  1.0D0,TransM,
                        Array(ipRes),
                  0.0D0,Array(ipScr),
@@ -192,7 +193,7 @@
 !==============================================================================
       End Do
       Call DGEMM_(
-                  bla,bla,
+!                  bla,bla,
                  1.0D0,TransM,
                        Array(ipScr),
                     0.0D0,Array(ipRes),
@@ -208,7 +209,7 @@
         Call DGEMM_('T','T',                                                &
                    (ld+1)*(ld+2)/2,nZeta*((la+1)*(la+2)/2),(lb+1)*(lb+2)/2, &
                    1.0D0,RSph(ipSph(lb)),((lb+1)*(lb+2)/2),                 &
-                         Array(ipRes),nZeta*((la+1)*(la+2)/2),                    &
+                         Array(ipRes),nZeta*((la+1)*(la+2)/2),              &
                    0.0D0,Array(ipScr),(lb+1)*(lb+2)/2 )
 
 !       Find inverse for RSph(ipSph(lc))
@@ -216,7 +217,7 @@
         Call DGEMM_('T','T',                                                &
                    (lc+1)*(lc+2)/2,nZeta*((ld+1)*(ld+2)/2),(lc+1)*(lc+2)/2, &
                    1.0D0,RSph(ipSph(lc)),((lc+1)*(lc+2)/2),                 &
-                         Array(ipScr),((ld+1)*(ld+2)/2)*nZeta,                    &
+                         Array(ipScr),((ld+1)*(ld+2)/2)*nZeta,              &
                    0.0D0,Array(ipRes),(lc+1)*(lc+2)/2 )
 !
 !     4) transpose to the correct order
