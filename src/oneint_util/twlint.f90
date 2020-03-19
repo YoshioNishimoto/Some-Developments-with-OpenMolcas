@@ -54,10 +54,7 @@
       Real*8 kVector_local(3)
       Real*8 A_Local(3), RB_Local(3)
 
-      Integer, parameter :: dim = 3
-      Real(kind=8), dimension(dim,dim) :: a_mtrx, inv_mtrx, iTransM
-
-      Integer :: i, im, jm
+      Integer :: i
 !
       Zero =0.0D0
       Half =0.5D0
@@ -151,9 +148,6 @@
 !
 !     1) transform the integrals to spherical harmonics (with the contaminant).
 !        ij,a,b  ->  B,ij,a
-!        (B,b) * b,(ij,a) -> B,(ij,a)
-!        (B,b) * b,(ij,a) -> (B,ij),a
-!        (b,B)^T * ( (ij,a),b )^T
 !
       Call DGEMM_('T','T',                                                 &
                   (lb+1)*(lb+2)/2,nZeta*((la+1)*(la+2)/2),(lb+1)*(lb+2)/2, &
@@ -162,9 +156,6 @@
                   0.0D0,Array(ipScr),(lb+1)*(lb+2)/2 )
 !
 !        B,ij,a  ->  A,B,ij
-!        (A,a) * a,(B,ij) -> A,(B,ij)
-!        (A,a) * a,(B,ij) -> (A,B),ij
-!        (a,A)^T * ( (B,ij),a )^T
 !
       Call DGEMM_('T','T',                                                 &
                   (la+1)*(la+2)/2,((lb+1)*(lb+2)/2)*nZeta,(la+1)*(la+2)/2, &
@@ -181,6 +172,8 @@
 !==============================================================================
 !        Generate the blocks of the transformation matrix and put them into
 !        TransM
+         Call dmm_tranform(l,Fi2, dmm)
+!
 !==============================================================================
       End Do
       Call DGEMM_(
@@ -581,57 +574,5 @@
 !**********************************************************************
     End SubRoutine OAM_xy
 !======================================================================
-!
-SubRoutine sqr_invers(n, a_mtrx, inv_mtrx)
-
-  Implicit None
-
-  Integer, intent(in) :: n
-  Integer :: info, lda, lwork, nb
-  Integer, dimension(n) :: ipiv
-  Real(kind=8), intent(in), dimension(n,n) :: a_mtrx
-  Real(kind=8), intent(out), dimension(n,n) :: inv_mtrx
-  Real(kind=8), allocatable, dimension(:) :: work
-  Integer :: ilaenv_
-
-  lda = n !- leading dimension of array
-  nb = ILAENV_(1, 'DGETRI', '', n, n, -1, -1)
-  lwork = n * nb
-  !print *, "lwork is :", lwork
-  allocate(work(lwork))
-  !- ipiv(output) integer array, dimension(min(m,n))
-  !- the pivot indicies; for 1 <= i <= min(m,n), row
-  !- i of the matrix was interchanged with row ipiv(i).
-  inv_mtrx = a_mtrx
-  !===================
-  !- LU factorization
-  !===================
-  call dgetrf_(n, n, inv_mtrx, lda, ipiv, info)
-
-  if (info > 0 ) then
-!     print *, "factor is singular :-("
-  elseif (info < 0) then
-!     print *, "the ", info, &
-!          "th argument had an illegal value :-("
-  end if
-  !===================
-  !- matrix inversion
-  !===================
-  call dgetri_(n, inv_mtrx, lda, ipiv, work, lwork, info)
-!
-  if (info > 0 ) then
-!     print *, "the U(i,i), i =  ", info, &
-!          "is zero, singular matrix :-("
-  elseif (info < 0) then
-!     print *, "the ", info, &
-!          "th argument had an illegal value :-("
-  end if
-
-  !print *, "for optimal performance Lwork = ", work(1)
-
-  deallocate(work)
-!
-End SubRoutine sqr_invers
-!======================================================
 !
 End SubRoutine TWLInt
