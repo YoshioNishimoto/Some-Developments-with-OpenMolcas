@@ -1,15 +1,16 @@
-Subroutine dmm_tranform(l,Fi2, dmm)
+Subroutine dmm_tranform(l,Fi1,Fi2,Fi3,tmp,dmm)
 
   Implicit None
 
   Integer, intent(in) :: l
-  Real, intent(in) :: Fi2
-  Real*8, intent(out) :: dmm(dim,dim)
+  Real, intent(in) :: Fi1, Fi2, Fi3
+  Real*8, intent(out) :: dmm((l+1)*(l+2)/2,-l:l)  !Dmm
+  Real*8, intent(out) :: tmp((l+1)*(l+2)/2,-l:l)
 
   Integer :: k_min, k_max, k, m, mp, a1, a2
+  Integer :: i
   Real :: fact1, fact2, fact3, fact4, coeff
-  Integer :: dim
-  dim = 2*l + 1
+  Real :: re1, re2
 !====================================================================
 
   Do m = -l, l
@@ -26,9 +27,12 @@ Subroutine dmm_tranform(l,Fi2, dmm)
            a1 = choose(l+m, k)
            a2 = choose(l-m, l-mp-k)
 
-           dmm = dmm + (-1)**k * a1 * a2 * cos((Fi2)/2)**(2*l-mp+m-2*k)*  &
+           tmp = tmp + (-1)**k * a1 * a2 * cos((Fi2)/2)**(2*l-mp+m-2*k)*  &
                 sin((Fi2/2))**(2*k-m+mp)
         End Do
+        re1 = exp(-i*mp*Fi1)
+        re2 = exp(-i*m*Fi3)
+        dmm = Real(re1*tmp*re2)
      End Do
   End Do
 
