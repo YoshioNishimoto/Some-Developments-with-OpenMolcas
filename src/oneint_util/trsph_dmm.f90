@@ -1,18 +1,18 @@
-Subroutine dmm_tranform(l,Fi1,Fi2,Fi3,tmp,dmm)
+Subroutine dmm_tranform(l,Fi1,Fi2,Fi3,dmm,lda)
 
   Implicit None
 
   Integer, intent(in) :: l
   Real, intent(in) :: Fi1, Fi2, Fi3
-  Real*8, intent(out) :: dmm((l+1)*(l+2)/2,-l:l)  !Dmm
-  Real*8, intent(out) :: tmp((l+1)*(l+2)/2,-l:l)
+  Real*8, intent(out) :: dmm(lda,-l:l)  !Dmm
 
   Integer :: k_min, k_max, k, m, mp, a1, a2
   Integer :: i
-  Real :: fact1, fact2, fact3, fact4, coeff
-  Real :: re1, re2
+  Real :: fact1, fact2, fact3, fact4, coeff, tmp
+  Real :: re1, re3
 !====================================================================
 
+  dmm(1:2l+1,:) = 0.0D0
   Do m = -l, l
      Do mp = -l, l
         fact1 = factorial(l+mp)
@@ -23,6 +23,7 @@ Subroutine dmm_tranform(l,Fi1,Fi2,Fi3,tmp,dmm)
 
         Call k_interval(l, m, mp, k_min, k_max)
 
+        tmp=0.0D0
         Do k = k_min, k_max
            a1 = choose(l+m, k)
            a2 = choose(l-m, l-mp-k)
@@ -30,9 +31,25 @@ Subroutine dmm_tranform(l,Fi1,Fi2,Fi3,tmp,dmm)
            tmp = tmp + (-1)**k * a1 * a2 * cos((Fi2)/2)**(2*l-mp+m-2*k)*  &
                 sin((Fi2/2))**(2*k-m+mp)
         End Do
-        re1 = exp(-i*mp*Fi1)
-        re2 = exp(-i*m*Fi3)
-        dmm = Real(re1*tmp*re2)
+
+        If (mp.gt.0) Then
+           re1 = cos(-mp*Fi1)/Sqrt(2.0D0)
+        Else If (mp.lt.0) Then
+           re1 = sin(-mp*Fi1)/Sqrt(2.0D0)
+        Else
+           re1 = 1.0D0
+        End If
+
+        If (m .gt.0) Then
+           re3 = cos(-m *Fi3)/Sqrt(2.0D0)
+        Else If (m .lt.0) Then
+           re3 = sin(-m *Fi3)/Sqrt(2.0D0)
+        Else
+           re3 = 1.0D0
+        End If
+
+        dmm(mp+l+1,m) = Real(re1*tmp*re3)
+
      End Do
   End Do
 
