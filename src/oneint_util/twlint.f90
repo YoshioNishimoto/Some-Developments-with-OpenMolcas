@@ -162,7 +162,7 @@
                   (la+1)*(la+2)/2,((lb+1)*(lb+2)/2)*nZeta,(la+1)*(la+2)/2, &
                   1.0D0,RSph(ipSph(la)),(la+1)*(la+2)/2,                   &
                         Array(ipScr),((lb+1)*(lb+2)/2)*nZeta,              &
-                        0.0D0,Array(ipRes),(la+1)*(la+2)/2 )
+                  0.0D0,Array(ipRes),(la+1)*(la+2)/2 )
 !
 !     2) backtransform the spherical harmonics to the original coordinate system
 !
@@ -173,15 +173,15 @@
 !==============================================================================
 !        Generate the blocks of the transformation matrix and put them into
 !        TransM
-         Call dmm_tranform(l,Fi2, dmm)
+         Call dmm_transform(l,-Fi3,-Fi2,-Fi1,TransM)
 !
 !==============================================================================
       End Do
-      Call DGEMM_(
-!                  bla,bla,
-                 1.0D0,TransM,
-                       Array(ipRes),
-                 0.0D0,Array(ipScr),
+      Call DGEMM_('T','T',                                                 &
+                 (la+1)*(la+2)/2,((lb+1)*(lb+2)/2)*nZeta,(la+1)*(la+2)/2,  &
+                 1.0D0,TransM,(la+1)*(la+2)/2,                             &
+                       Array(ipRes),((lb+1)*(lb+2)/2)*nZeta,               &
+                 0.0D0,Array(ipScr),(la+1)*(la+2)/2)
       Call mma_deallocate(TransM)
 !
 !        B(new),ij,A(orig) -> ij,A(orig),B(orig)
@@ -190,13 +190,15 @@
 !==============================================================================
 !        Generate the blocks of the transformation matrix and put them into
 !        TransM
+         Call dmm_transfom(...)
 !==============================================================================
       End Do
-      Call DGEMM_(
-!                  bla,bla,
-                 1.0D0,TransM,
-                       Array(ipScr),
-                    0.0D0,Array(ipRes),
+      Call DGEMM_('T','T',                                                 &
+                 (lb+1)*(lb+2)/2,((la+1)*(la+2)/2)*nZeta,(lb+1)*(lb+2)/2,  &
+                  1.0D0,TransM,(lb+1)*(lb+2)/2,                            &
+                        Array(ipScr),nZeta*((la+1)*(la+2)/2),              &
+                 0.0D0,Array(ipRes),(lb+1)*(lb+2)/2)
+
       Call mma_deallocate(TransM)
 !
 !     3) transform the spherical harmonics to the Cartesians.
