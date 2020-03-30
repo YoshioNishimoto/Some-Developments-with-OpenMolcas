@@ -57,6 +57,7 @@
      &    finalize_dmrg, dump_dmrg_info
 #endif
       use stdalloc, only: mma_allocate, mma_deallocate
+      use fortran_strings, only: str
       use write_orbital_files, only : OrbFiles, putOrbFile
 
       use generic_CI, only: CI_solver_t
@@ -1262,6 +1263,17 @@ c     &              ' ',WORK(LPA),NACPAR)
       Call Timing(Swatch,Swatch,Zenith_2,Swatch)
       Zenith_2 = Zenith_2 - Zenith_1
       Zenith_3 = Zenith_3 + Zenith_2
+
+      block
+        integer :: ierr
+        call execute_command_line(
+     &      "cp RASWFN RASWFN_"//str(actual_iter), exitstat=ierr)
+        if (ierr /= 0) then
+            call WarningMessage(2, "Copy of RASWFN failed")
+            call QTrace()
+            call Abend()
+        end if
+      end block
 
 *
 c      Call rasscf_xml(Iter)
