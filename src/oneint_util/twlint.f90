@@ -56,6 +56,9 @@
 
       Integer :: i, l
       Real*8 :: dmm
+
+!      Real(kind=8), dimension(dim,dim) :: a_mtrx, inv_mtrx, RSph_inv
+      Integer :: i, im, jm
 !
       Zero =0.0D0
       Half =0.5D0
@@ -190,7 +193,7 @@
 !==============================================================================
 !        Generate the blocks of the transformation matrix and put them into
 !        TransM
-         Call dmm_transfom(...)
+         Call dmm_transform(...)
 !==============================================================================
       End Do
       Call DGEMM_('T','T',                                                 &
@@ -204,9 +207,26 @@
 !     3) transform the spherical harmonics to the Cartesians.
 !
 !        Find inverse for RSph(ipSph(ld))
-!============================================
-!  Computing Inverse matrix - more to come ..
-!============================================
+!====================================================================
+!     Computing Inverse matrix
+!====================================================================
+!%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+!
+      Do im = 1,3   ! - I need to clarify here the correct dimension
+         Do jm = 1,3
+            a_mtrx(im, jm) = RSph(im, jm)
+         End Do
+      End Do
+
+      Call sqr_invers(dim, a_mtrx, inv_mtrx)
+
+      Do im = 1,3
+         Do jm = 1,3
+            RSph_inv(im, jm) = inv_mtrx (im, jm)
+         End Do
+      End Do
+!%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+!===================================================================
 !       ij,A,B -> b,ij,A
         Call DGEMM_('T','T',                                                &
                    (ld+1)*(ld+2)/2,nZeta*((la+1)*(la+2)/2),(lb+1)*(lb+2)/2, &
@@ -577,5 +597,55 @@
 !**********************************************************************
     End SubRoutine OAM_xy
 !======================================================================
+SubRoutine sqr_invers(n, a_mtrx, inv_mtrx)
+
+  Implicit None
+
+  Integer, intent(in) :: n
+  Integer :: info, lda, lwork, nb
+  Integer, dimension(n) :: ipiv
+  Real(kind=8), intent(in), dimension(n,n) :: a_mtrx
+  Real(kind=8), intent(out), dimension(n,n) :: inv_mtrx
+  Real(kind=8), allocatable, dimension(:) :: work
+  Integer :: ilaenv_
+
+  lda = n !- leading dimension of array
+  nb = ILAENV_(1, 'DGETRI', '', n, n, -1, -1)
+  lwork = n * nb
+  !print *, "lwork is :", lwork
+  allocate(work(lwork))
+  !- ipiv(output) integer array, dimension(min(m,n))
+  !- the pivot indicies; for 1 <= i <= min(m,n), row
+  !- i of the matrix was interchanged with row ipiv(i).
+  inv_mtrx = a_mtrx
+  !===================
+  !- LU factorization
+  !===================
+  call dgetrf_(n, n, inv_mtrx, lda, ipiv, info)
+
+  if (info > 0 ) then
+!     print *, "factor is singular :-("
+  elseif (info < 0) then
+!     print *, "the ", info, &
+!          "th argument had an illegal value :-("
+  end if
+  !===================
+  !- matrix inversion
+  !===================
+  call dgetri_(n, inv_mtrx, lda, ipiv, work, lwork, info)
 !
+  if (info > 0 ) then
+!     print *, "the U(i,i), i =  ", info, &
+!          "is zero, singular matrix :-("
+  elseif (info < 0) then
+!     print *, "the ", info, &
+!          "th argument had an illegal value :-("
+  end if
+
+! print *, "for optimal performance Lwork = ", work(1)
+
+  deallocate(work)
+!
+End SubRoutine sqr_invers
+!=========================================================
 End SubRoutine TWLInt
