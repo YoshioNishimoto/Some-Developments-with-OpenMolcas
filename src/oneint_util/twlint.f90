@@ -56,9 +56,6 @@
 
       Integer :: i, l
       Real*8 :: dmm
-
-!      Real(kind=8), dimension(dim,dim) :: a_mtrx, inv_mtrx, RSph_inv
-      Integer :: i, im, jm
 !
       Zero =0.0D0
       Half =0.5D0
@@ -199,7 +196,10 @@
 !==============================================================================
 !        Generate the blocks of the transformation matrix and put them into
 !        TransM
-         Call dmm_transform(...)
+         Call dmm_transform(i,-Fi3,-Fi2,-Fi1,TransM(iOff,iOff),            &
+                            (lb+1)*(lb+2)/2))
+         iOff = iOff + 2*i +1
+!
 !==============================================================================
       End Do
       Call DGEMM_('T','T',                                                 &
