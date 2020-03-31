@@ -48,8 +48,8 @@
       Integer iAlpha, iBeta, ixyz
       Integer ipA, ipAOff, ipAxyz, ipB, ipBOff, ipBxyz, ipQxyz, ipRes, &
               ipVxyz, nip, icomp, iOper, lDCRT, llOper, LmbdT, nDCRT,  &
-              nIrrep, nOp, nStabO, ipP, lAng, ipScr
-      Real*8 Zero, Half, One, Two, Three, Four, Rxy, Fi1, Rxyz, Fi2
+              nIrrep, nOp, nStabO, ipP, lAng, ipScr, iOff
+      Real*8 Zero, Half, One, Two, Three, Four, Rxy, Fi1, Rxyz, Fi2, Fi3
       Real*8, Allocatable:: TransM(:,:)
       Real*8 kVector_local(3)
       Real*8 A_Local(3), RB_Local(3)
@@ -99,6 +99,8 @@
       kVector_Local(1)=Zero
       kVector_Local(2)=Zero
       kVector_Local(3)=Rxyz
+!
+      Fi3=0.0D0
 !
       Call mma_Allocate(TransM,3,3,Label="TransM")
       TransM(1,1)= Cos(Fi1)
@@ -172,11 +174,15 @@
 !        A(new),B,ij -> B,ij,A(orig)  (one set of sphericals at the time)
 !
       Call mma_Allocate(TransM,(la+1)*(la+2)/2,(la+1)*(la+2)/2,Label="TransM")
+      TransM(:,:)=0.0D0
+      iOff=1
       Do i = la,0,-2
 !==============================================================================
 !        Generate the blocks of the transformation matrix and put them into
 !        TransM
-         Call dmm_transform(l,-Fi3,-Fi2,-Fi1,TransM)
+         Call dmm_transform(i,-Fi3,-Fi2,-Fi1,TransM(iOff,iOff),            &
+                            (la+1)*(la+2)/2))
+         iOff = iOff + 2*i + 1
 !
 !==============================================================================
       End Do
