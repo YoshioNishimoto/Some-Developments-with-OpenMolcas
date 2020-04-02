@@ -170,8 +170,16 @@
 !
 !        A(new),B,ij -> B,ij,A(orig)  (one set of sphericals at the time)
 !
+!
+!     First generate the matrix which transforms between spherical harmonics
+!     in different coordinate system. Here the two coordinates systems are
+!     related throught theee Euler angles, rotating z-x-z. We do the rotations
+!     in the opposite order as we rotated above.
+!
       Call mma_Allocate(TransM,(la+1)*(la+2)/2,(la+1)*(la+2)/2,Label="TransM")
       TransM(:,:)=0.0D0
+!     Note the order, this is the same order as the transformation matrix
+!     Cartesian to Spherical has!
       iOff=1
       Do i = la,0,-2
 !==============================================================================
@@ -183,15 +191,29 @@
 !
 !==============================================================================
       End Do
+!
+!     Time to do the actual transformations.
+!
+!     We like to do Trans(A(old),A(new)) I(A(new),(B,ij)) to I(A(old),(B,ij))
+!
+!     However, prepare for the next transformation we like to the order of
+!     result to be I((B,ij),A(old)). Thus we will have to change the order
+!     of the matrices and transpose them.
+!
       Call DGEMM_('T','T',                                                 &
-                 (la+1)*(la+2)/2,((lb+1)*(lb+2)/2)*nZeta,(la+1)*(la+2)/2,  &
-                 1.0D0,TransM,(la+1)*(la+2)/2,                             &
-                       Array(ipRes),((lb+1)*(lb+2)/2)*nZeta,               &
-                 0.0D0,Array(ipScr),(la+1)*(la+2)/2)
+                 ((lb+1)*(lb+2)/2)*nZeta,(la+1)*(la+2)/2,(la+1)*(la+2)/2   &
+                 1.0D0,Array(ipRes),(la+1)*(la+2)/2),                      &
+                      ,TransM,(la+1)*(la+2)/2,                             &
+                 0.0D0,Array(ipScr),((lb+1)*(lb+2)/2)*nZeta)
       Call mma_deallocate(TransM)
 !
-!        B(new),ij,A(orig) -> ij,A(orig),B(orig)
+!        Repeat the transformation on the second index, B(new)
+!
+!        B(new),(ij,A(orig)) -> (ij,A(orig)),B(orig)
+!
       Call mma_Allocate(TransM,(lb+1)*(lb+2)/2,(lb+1)*(lb+2)/2,Label="TransM")
+      TransM(:,:)=0.0D0
+      iOff=1
       Do i = lb,0,-2
 !==============================================================================
 !        Generate the blocks of the transformation matrix and put them into
@@ -203,34 +225,49 @@
 !==============================================================================
       End Do
       Call DGEMM_('T','T',                                                 &
-                 (lb+1)*(lb+2)/2,((la+1)*(la+2)/2)*nZeta,(lb+1)*(lb+2)/2,  &
-                  1.0D0,TransM,(lb+1)*(lb+2)/2,                            &
-                        Array(ipScr),nZeta*((la+1)*(la+2)/2),              &
-                 0.0D0,Array(ipRes),(lb+1)*(lb+2)/2)
+                 nZeta*((la+1)*(la+2)/2),(lb+1)*(lb+2)/2,(lb+1)*(lb+2)/2   &
+                  1.0D0,Array(ipScr),nZeta*((la+1)*(la+2)/2),              &
+                       ,TransM,(lb+1)*(lb+2)/2,                            &
+                 0.0D0,Array(ipRes),nZeta*((la+1)*(la+2)/2))
 
       Call mma_deallocate(TransM)
 !
-!     3) transform the spherical harmonics to the Cartesians.
+!     3) transform the spherical harmonics to Cartesians.
 !
-!        Find inverse for RSph(ipSph(ld))
+!       Find inverse for RSph(ipSph(ld))
+!
+        Call mma_Allocate(TransM,(lb+1)*(lb+2)/2,(lb+1)*(lb+2)/2,Label='TransM')
+        Call DCopy_(((lb+1)*(lb+2)/2)**2,RSph(ipSph(lb)),1,TransM,1)
+        Call MatInvert(TransM,(lb+1)*(lb+2)/2)
 !====================================================================
-!       ij,A,B -> b,ij,A
-        Call DGEMM_('T','T',                                                &
-                   (ld+1)*(ld+2)/2,nZeta*((la+1)*(la+2)/2),(lb+1)*(lb+2)/2, &
-                   1.0D0,RSph(ipSph(lb)),((lb+1)*(lb+2)/2),                 &
+!       (ij,A),B -> b,(ij,A)
+        Call DGEMM_('N','T',                                                &
+                   (lb+1)*(lb+2)/2,nZeta*((la+1)*(la+2)/2),(lb+1)*(lb+2)/2, &
+                   1.0D0,TransM,((lb+1)*(lb+2)/2),                 &
                          Array(ipRes),nZeta*((la+1)*(la+2)/2),              &
-                   0.0D0,Array(ipScr),(lb+1)*(lb+2)/2 )
+                   0.0D0,Array(ipScr),(lb+1)*(lb+2)/2)
+        Call mma_deallocate(TransM)
 
 !       Find inverse for RSph(ipSph(lc))
-!       b,ij,A -> a,b,ij
+!
+        Call mma_Allocate(TransM,(la+1)*(la+2)/2,(la+1)*(la+2)/2,Label='TransM')
+        Call DCopy_(((la+1)*(la+2)/2)**2,RSph(ipSph(la)),1,TransM,1)
+        Call MatInvert(TransM,(la+1)*(la+2)/2)
+!....
+!       (b,ij),A -> a,(b,ij)
         Call DGEMM_('T','T',                                                &
-                   (lc+1)*(lc+2)/2,nZeta*((ld+1)*(ld+2)/2),(lc+1)*(lc+2)/2, &
-                   1.0D0,RSph(ipSph(lc)),((lc+1)*(lc+2)/2),                 &
-                         Array(ipScr),((ld+1)*(ld+2)/2)*nZeta,              &
-                   0.0D0,Array(ipRes),(lc+1)*(lc+2)/2 )
+                   (la+1)*(la+2)/2,((lb+1)*(lb+2)/2)*nZeta,(la+1)*(la+2)/2, &
+                   1.0D0,TransM,(la+1)*(la+2)/2,                            &
+                         Array(ipScr),((lb+1)*(lb+2)/2)*nZeta,              &
+                   0.0D0,Array(ipRes),(la+1)*(la+2)/2 )
+        Call mma_deallocate(TransM)
 !
 !     4) transpose to the correct order
-!        c,d,ij -> ij,c,d  make sure that it is in Array(ipRes)
+!        (a,b),ij -> ij,(a,b)  make sure that it is in Array(ipRes)
+!
+        Call DCopy_(((la+1)*(la+2)/2)*((lb+1)*(lb+2)/2)*nZeta,Array(ipRes),1, &
+                                                              Array(ipScr),1)
+        Call Trnsps(((la+1)*(la+2)/2)*((lb+1)*(lb+2)/2),nZeta,Array(ipScr),Array(ipRes))
 !
 !=====================================================================
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
