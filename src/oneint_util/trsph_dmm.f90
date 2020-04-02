@@ -1,8 +1,8 @@
-Subroutine dmm_tranform(l,Fi1,Fi2,Fi3,dmm,lda)
+Subroutine dmm_transform(l,Fi1,Fi2,Fi3,dmm,lda)
 
   Implicit None
 
-  Integer, intent(in) :: l
+  Integer, intent(in) :: l, lda
   Real, intent(in) :: Fi1, Fi2, Fi3
   Real*8, intent(out) :: dmm(lda,-l:l)  !Dmm
 
@@ -12,7 +12,6 @@ Subroutine dmm_tranform(l,Fi1,Fi2,Fi3,dmm,lda)
   Real :: re1, re3
 !====================================================================
 
-  dmm(1:2l+1,:) = 0.0D0
   Do m = -l, l
      Do mp = -l, l
         fact1 = factorial(l+mp)
@@ -92,4 +91,4 @@ Contains
   End Subroutine k_interval
 
 !======================================================
-End Subroutine dmm_tranform
+End Subroutine dmm_transform

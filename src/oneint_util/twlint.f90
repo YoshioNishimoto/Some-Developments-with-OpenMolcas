@@ -186,7 +186,7 @@
 !        Generate the blocks of the transformation matrix and put them into
 !        TransM
          Call dmm_transform(i,-Fi3,-Fi2,-Fi1,TransM(iOff,iOff),            &
-                            (la+1)*(la+2)/2))
+                            (la+1)*(la+2)/2)
          iOff = iOff + 2*i + 1
 !
 !==============================================================================
@@ -201,9 +201,9 @@
 !     of the matrices and transpose them.
 !
       Call DGEMM_('T','T',                                                 &
-                 ((lb+1)*(lb+2)/2)*nZeta,(la+1)*(la+2)/2,(la+1)*(la+2)/2   &
-                 1.0D0,Array(ipRes),(la+1)*(la+2)/2),                      &
-                      ,TransM,(la+1)*(la+2)/2,                             &
+                 ((lb+1)*(lb+2)/2)*nZeta,(la+1)*(la+2)/2,(la+1)*(la+2)/2,  &
+                 1.0D0,Array(ipRes),((la+1)*(la+2)/2),                     &
+                       TransM,(la+1)*(la+2)/2,                             &
                  0.0D0,Array(ipScr),((lb+1)*(lb+2)/2)*nZeta)
       Call mma_deallocate(TransM)
 !
@@ -219,15 +219,15 @@
 !        Generate the blocks of the transformation matrix and put them into
 !        TransM
          Call dmm_transform(i,-Fi3,-Fi2,-Fi1,TransM(iOff,iOff),            &
-                            (lb+1)*(lb+2)/2))
+                            (lb+1)*(lb+2)/2)
          iOff = iOff + 2*i +1
 !
 !==============================================================================
       End Do
       Call DGEMM_('T','T',                                                 &
-                 nZeta*((la+1)*(la+2)/2),(lb+1)*(lb+2)/2,(lb+1)*(lb+2)/2   &
+                 nZeta*((la+1)*(la+2)/2),(lb+1)*(lb+2)/2,(lb+1)*(lb+2)/2,  &
                   1.0D0,Array(ipScr),nZeta*((la+1)*(la+2)/2),              &
-                       ,TransM,(lb+1)*(lb+2)/2,                            &
+                        TransM,((lb+1)*(lb+2)/2),                          &
                  0.0D0,Array(ipRes),nZeta*((la+1)*(la+2)/2))
 
       Call mma_deallocate(TransM)
@@ -243,7 +243,7 @@
 !       (ij,A),B -> b,(ij,A)
         Call DGEMM_('N','T',                                                &
                    (lb+1)*(lb+2)/2,nZeta*((la+1)*(la+2)/2),(lb+1)*(lb+2)/2, &
-                   1.0D0,TransM,((lb+1)*(lb+2)/2),                 &
+                   1.0D0,TransM,((lb+1)*(lb+2)/2),                          &
                          Array(ipRes),nZeta*((la+1)*(la+2)/2),              &
                    0.0D0,Array(ipScr),(lb+1)*(lb+2)/2)
         Call mma_deallocate(TransM)
