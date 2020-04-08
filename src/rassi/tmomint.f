@@ -17,6 +17,7 @@
       Use MpmC
       Implicit Real*8 (A-H,O-Z)
       External EMFInt, EMFMem
+      External TwLInt, TwLMem
 *     ipList: list of pointers to the integrals of each component
 *             of the operator
 *     OperI: list which irreps a particular component of the operator
