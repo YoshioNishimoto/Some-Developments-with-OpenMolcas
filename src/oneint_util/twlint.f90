@@ -45,9 +45,10 @@
 !
 !     Local Arrays and integers
 !
+      Integer iOper(0:7)
       Integer iAlpha, iBeta, ixyz
       Integer ipA, ipAOff, ipAxyz, ipB, ipBOff, ipBxyz, ipQxyz, ipRes, &
-              ipVxyz, nip, icomp, iOper, lDCRT, llOper, LmbdT, nDCRT,  &
+              ipVxyz, nip, icomp, lDCRT, llOper, LmbdT, nDCRT,  &
               nIrrep, nOp, nStabO, ipP, lAng, ipScr, iOff
       Real*8 Zero, Half, One, Two, Three, Four, Rxy, Fi1, Rxyz, Fi2, Fi3
       Real*8, Allocatable:: TransM(:,:)
@@ -57,6 +58,13 @@
       Integer :: i, l
       Real*8 :: dmm
 !
+!     since we do not include info.fh -- it is a f77 style line contiuation file --
+!     we have to have a dirty work around here.
+!
+      Call Peek_iScalar('nSym',nIrrep)
+      iOper(:)=0
+      Call Peek_iOper(iOper,nIrrep)
+!
       Zero =0.0D0
       Half =0.5D0
       One  =1.0D0
@@ -64,6 +72,7 @@
       Three=3.0D0
       Four =4.0D0
       lAng= 1             ! Temporary set value
+      lAng= 0             ! Temporary set value
       nip = 1
 !
       If (lAng.ne.0 .and. nOrdOp.eq.0) Then
