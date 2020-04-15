@@ -64,6 +64,7 @@
       Call Peek_iScalar('nSym',nIrrep)
       iOper(:)=0
       Call Peek_iOper(iOper,nIrrep)
+!#define _DEBUG_
 !
       Zero =0.0D0
       Half =0.5D0
@@ -320,7 +321,7 @@
       Real*8, Target :: Array(*)
       Real*8 A(3), RB(3), P(nZeta,3)
       Complex*16, Pointer :: zAxyz(:),zBxyz(:),zQxyz(:),zVxyz(:)
-      Real*8 Alpha_, Beta_, rKappa(nZeta)
+      Real*8 Alpha_, Beta_
 !
       ABeq(1) = A(1).eq.RB(1)
       ABeq(2) = A(2).eq.RB(2)

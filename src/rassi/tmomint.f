@@ -17,7 +17,10 @@
       Use MpmC
       Implicit Real*8 (A-H,O-Z)
       External EMFInt, EMFMem
+#define _NEW_CODE_
+#ifdef _NEW_CODE_
       External TwLInt, TwLMem
+#endif
 *     ipList: list of pointers to the integrals of each component
 *             of the operator
 *     OperI: list which irreps a particular component of the operator
@@ -336,14 +339,17 @@
       OperC(:) = 0 ! Dummy
 *
       Call dcopy_(nComp,[Zero],0,Nuc,1)
-*     Call OneEl(EMFInt,EMFMem,Label,ipList,OperI,nComp,
-*    &           CoorO,nOrdOp,Nuc,rHrmt,OperC,
-*    &           dum,1,dum,idum,0,0,
-*    &           dum,1,0)
+#ifdef _NEW_CODE_
       Call OneEl(TwLInt,TwLMem,Label,ipList,OperI,nComp,
      &           CoorO,nOrdOp,Nuc,rHrmt,OperC,
      &           dum,1,dum,idum,0,0,
      &           dum,1,0)
+#else
+      Call OneEl(EMFInt,EMFMem,Label,ipList,OperI,nComp,
+     &           CoorO,nOrdOp,Nuc,rHrmt,OperC,
+     &           dum,1,dum,idum,0,0,
+     &           dum,1,0)
+#endif
 *
       Call Deallocate_Aux()
       End If
