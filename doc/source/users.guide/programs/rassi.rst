@@ -1247,14 +1247,22 @@ Keywords
               </KEYWORD>
 
 :kword:`NTOCalc`
-  Enables natural transition orbital (NTO) calculation of two states. The NTO files are printed out as :file:`.PartNTO` and :file:`.HoleNTO`, which have the same format as :file:`.ScfOrb` or :file:`.RasOrb`.
+  Enables natural transition orbital (NTO) calculation of two states from two JobIph files (which can be identical to each other).
+  The NTO calculations can be performed for states with different spatial symmetries.
+  To perform an NTO calculation, two JobIph files, which by convention are named :file:`JOB001` and :file:`JOB002`, are needed. Since NTO calculations are performed usually between the ground state and an excited state, :file:`JOB001` is used to provide the information for the ground state, and :file:`JOB002` is used to provide the information for excited states. This way of storing information was chosen so that NTO calculations can be performed either for states with the same symmetry or states with different symmetries, but in the former case, if two states are obtained in a single SA-CASSCF or SA-RASSCF calculation, one may make a copy of the JobIph file to get the second JobIph file. The two states are specified in the keyword :kword:`NROF` to tell the program for which two states the NTO calculation is to be performed.
+  The NTO files are named as :file:`$Project.NTOrb.I_J.Spin.NTOType`, which has the same format as :file:`.ScfOrb` or :file:`.RasOrb`, where :file:`Spin` is `a` for alpha NTOs and `b` for beta NTOs, and where :file:`I` and :file:`J` are the RASSI states between which the NTOs are calculated, and where :file:`NTOType` is `PART` for particle NTOs and `HOLE` for hole NTOs.
+  One may search for ``Nr of states`` in the RASSI part of the output and the three lines after this information tell the correspondence of the RASSI states (in the line starting with ``State:``) with the actual states (in the line starting with ``Root nr:``) in each JobIph file (in the line starting with ``JobIph:``). If the states for which the NTO calculation is performed are singlets, only the alpha NTOs are printed out.
+  For more information and examples of this method, please refer to the Minnesota OpenMolcas webpage\ [#fn1]_.
 
-  .. xmldoc:: <KEYWORD MODULE="RASSI" NAME="NTOC" KIND="SINGLE" LEVEL="ADVANCED" >
+  .. [#fn1] https://comp.chem.umn.edu/openmolcas/
+
+  .. xmldoc:: <KEYWORD MODULE="RASSI" NAME="NTOC" APPEAR="Natural transition orbitals" KIND="SINGLE" LEVEL="ADVANCED" >
               %%Keyword: NTOC <advanced>
               <HELP>
-              Enables natural transition orbital calculation. See http://hdl.handle.net/11299/210242 for a detailed explanation of the outputs.
+              Enables natural transition orbital calculation from two JobIph files.
               </HELP>
               </KEYWORD>
+
 Input example
 .............
 
@@ -1273,6 +1281,19 @@ Input example
   * spanned by the 8 input functions. Assume only the first
   * 4 are of interest, and we want natural orbitals out
   NATO= 4
+
+An NTO input example using the JobIph file from a state-averaged calculation is as follows: ::
+
+  >>COPY  "Jobiph file 1" JOB001
+  >>COPY  "Jobiph file 2" JOB002
+
+  &RASSI
+  NTOC
+  Nr of JobIphs=2 1 1
+  1; 2
+  *This NTO calculation is performed for the ground state and the first
+  *excited state of the previous calculation done in the &RASSCF module.
+
 
 .. xmldoc:: <KEYWORD MODULE="RASSI" NAME="SONORB" KIND="INTS_COMPUTED" SIZE="1" LEVEL="UNDOCUMENTED" />
 
