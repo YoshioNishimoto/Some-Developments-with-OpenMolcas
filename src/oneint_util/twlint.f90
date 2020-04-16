@@ -64,7 +64,7 @@
       Call Peek_iScalar('nSym',nIrrep)
       iOper(:)=0
       Call Peek_iOper(iOper,nIrrep)
-!#define _DEBUG_
+#define _DEBUG_
 !
       Zero =0.0D0
       Half =0.5D0
@@ -85,27 +85,32 @@
 !     the k-vector coincides with the z-vector direction.
 !     In particular, we will transform P to the new coordinate system.
 !
+#ifdef _TEMP_SKIP_
       If (lAng.eq.0) Then
          kVector_Local(1)=kVector(1)
          kVector_Local(2)=kVector(2)
          kVector_Local(3)=kVector(3)
          Go To 114
       End If
+#endif
 !
 !     Use Euler angles (z-x-z). We skip the last rotation.
 !     Rotate around the z-axis so that the x-component becomes zero.
       Rxy=Sqrt(kvector(1)**2 + kvector(2)**2)
-      Fi1= ATAN2(kvector(2),kvector(1))
+      Fi1= ATAN2(kvector(1),kvector(2))
       kVector_Local(1)=Rxy
       kVector_Local(2)=Zero
       kVector_Local(3)=kVector(3)
+      Write(6,*) 'kVector=',kVector
+      Write(6,*) 'kVector_local=',kVector_Local
 !
 !     Rotate around the x-axis so that the y-component becomes zero.
-      Rxyz=Sqrt(kVector_Local(1)**2 + kVector_Local(3)**2)
-      Fi2 = ATAN2(kVector_Local(3),kVector_Local(1))
+      Rxyz=Sqrt(kVector_Local(2)**2 + kVector_Local(3)**2)
+      Fi2 = ATAN2(kVector_Local(2),kVector_Local(3))
       kVector_Local(1)=Zero
       kVector_Local(2)=Zero
       kVector_Local(3)=Rxyz
+      Write(6,*) 'kVector_local=',kVector_Local
 !
       Fi3=0.0D0
 !
@@ -119,6 +124,13 @@
       TransM(1,3)= Sin(Fi1)*Sin(Fi2)
       TransM(2,3)=-Cos(Fi1)*Sin(Fi2)
       TransM(3,3)=          Cos(Fi2)
+#ifdef _DEBUG_
+      Write (6,*) 'Fi1,Fi2,Fi3=',Fi1,Fi2,Fi3
+      Call RecPrt('TransM',' ',TransM,3,3)
+      Call RecPrt('A',' ',A,3,1)
+      Call RecPrt('RB',' ',RB,3,1)
+      Call RecPrt('P',' ',P,nZeta,3)
+#endif
 !
 !     Transform A, RB, and P
 !
@@ -133,23 +145,34 @@
                    1.0D0,TransM,3,                                      &
                          RB,3,                                          &
                    0.0D0,RB_Local,3)
-      Call DGEMM_('N','T',3,3,nZeta,                                    &
+      Call DGEMM_('N','T',nZeta,3,3,                                    &
                    1.0D0,P,nZeta,                                       &
                          TransM,3,                                      &
-                   0.0D0,Array(ipP),3)
+                   0.0D0,Array(ipP),nZeta)
       Call mma_deallocate(TransM)
+#ifdef _DEBUG_
+      Call RecPrt('A_local',' ',A_local,3,1)
+      Call RecPrt('RB_local',' ',RB_local,3,1)
+      Call RecPrt('P_local',' ',Array(ipP),nZeta,3)
+#endif
 !
  114  Continue
+#ifdef _TEMP_SKIP_
       If (lAng.eq.0) Then
          Call TWLInt_Internal(Array,A,RB,P)
       Else
          Call TWLInt_Internal(Array,A_Local,RB_Local,Array(ipP))
       End If
+#else
+      Call TWLInt_Internal(Array,A_Local,RB_Local,Array(ipP))
+#endif
 !
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 !====================================================================
 !
+#ifdef _TEMP_SKIP_
       If (lAng.eq.0) Go To 263
+#endif
 !     Now when all Cartesian components have been computed we
 !     transform back to the coordinate system of the molecule.
 !
@@ -350,18 +373,18 @@
          nip = nip + nZeta*nElem(la)*nElem(lb)*nComp
       End If
       If (nip-1.gt.nArr*nZeta) Then
-         Call WarningMessage(2,'EMFInt: nip-1.gt.nArr*nZeta')
+         Call WarningMessage(2,'TWLINT: nip-1.gt.nArr*nZeta')
          Write (6,*) ' nArr is Wrong! ', nip-1,' > ',nArr*nZeta
-         Write (6,*) ' Abend in EMFInt'
+         Write (6,*) ' Abend in TWLINT'
          Call Abend()
       End If
 !
 #ifdef _DEBUG_
-      Call RecPrt(' In EMFInt: A',' ',A,1,3)
-      Call RecPrt(' In EMFInt: RB',' ',RB,1,3)
-      Call RecPrt(' In EMFInt: KVector',' ',kvector_Local,1,3)
-      Call RecPrt(' In EMFInt: P',' ',P,nZeta,3)
-      Write (6,*) ' In EMFInt: la,lb=',la,lb
+      Call RecPrt(' In TWLINT: A',' ',A,1,3)
+      Call RecPrt(' In TWLINT: RB',' ',RB,1,3)
+      Call RecPrt(' In TWLINT: KVector',' ',kvector_Local,1,3)
+      Call RecPrt(' In TWLINT: P',' ',P,nZeta,3)
+      Write (6,*) ' In TWLINT: la,lb=',la,lb
 #endif
 !
 !**********************************************************************
@@ -371,56 +394,56 @@
 !    compute the x and y components in the OAM formalism replacing the
 !    OAM-free x and y components.
 !
-      Call dcopy_(nZeta*nElem(la)*nElem(lb)*nIC,[Zero],0,Final,1)
+     Final(:,:,:,:)=Zero
 !
+!    Compute the Cartesian values of the basis functions angular part
+!    Note that these arrays are complex.
 !
-!     Compute the Cartesian values of the basis functions angular part
-!     Note that these arrays are complex.
+     Call C_F_Pointer(C_Loc(Array(ipAxyz)),zAxyz,[nZeta*3*nHer*(la+nOrdOp+1)])
+     Call CCrtCmp(Zeta,P,nZeta,A,zAxyz,la+nOrdOp,HerR(iHerR(nHer)),nHer,ABeq,kvector_Local)
+     Call C_F_Pointer(C_Loc(Array(ipBxyz)),zBxyz,[nZeta*3*nHer*(lb+nOrdOp+1)])
+     Call CCrtCmp(Zeta,P,nZeta,RB,zBxyz,lb+nOrdOp,HerR(iHerR(nHer)),nHer,ABeq,kvector_Local)
+     Nullify(zAxyz,zBxyz)
 !
-      Call C_F_Pointer(C_Loc(Array(ipAxyz)),zAxyz,[nZeta*3*nHer*(la+nOrdOp+1)])
-      Call CCrtCmp(Zeta,P,nZeta,A,zAxyz,la+nOrdOp,HerR(iHerR(nHer)),nHer,ABeq,kvector_Local)
-      Call C_F_Pointer(C_Loc(Array(ipBxyz)),zBxyz,[nZeta*3*nHer*(lb+nOrdOp+1)])
-      Call CCrtCmp(Zeta,P,nZeta,RB,zBxyz,lb+nOrdOp,HerR(iHerR(nHer)),nHer,ABeq,kvector_Local)
-      Nullify(zAxyz,zBxyz)
+!    Compute the Cartesian components for the multipole moment
+!    integrals. The integrals are factorized into components.
 !
-!     Compute the Cartesian components for the multipole moment
-!     integrals. The integrals are factorized into components.
+     Call C_F_Pointer(C_Loc(Array(ipAxyz)),zAxyz,[nZeta*3*nHer*(la+nOrdOp+1)])
+     Call C_F_Pointer(C_Loc(Array(ipQxyz)),zQxyz,[nZeta*3*(la+nOrdOp+1)*(lb+nOrdOp+1)])
+     Call C_F_Pointer(C_Loc(Array(ipBxyz)),zBxyz,[nZeta*3*nHer*(lb+nOrdOp+1)])
+     Call CAssmbl(zQxyz,                                             &
+                  zAxyz,la+nOrdOp,                                   &
+                  zBxyz,lb+nOrdOp,                                   &
+                  nZeta,HerW(iHerW(nHer)),nHer)
+     Nullify(zAxyz,zBxyz,zQxyz)
 !
-      Call C_F_Pointer(C_Loc(Array(ipAxyz)),zAxyz,[nZeta*3*nHer*(la+nOrdOp+1)])
-      Call C_F_Pointer(C_Loc(Array(ipQxyz)),zQxyz,[nZeta*3*(la+nOrdOp+1)*(lb+nOrdOp+1)])
-      Call C_F_Pointer(C_Loc(Array(ipBxyz)),zBxyz,[nZeta*3*nHer*(lb+nOrdOp+1)])
-      Call CAssmbl(zQxyz,                                             &
-                   zAxyz,la+nOrdOp,                                   &
-                   zBxyz,lb+nOrdOp,                                   &
-                   nZeta,HerW(iHerW(nHer)),nHer)
-      Nullify(zAxyz,zBxyz,zQxyz)
+!    Compute the cartesian components for the velocity integrals.
+!    The velocity components are linear combinations of overlap
+!    components.
 !
+     If (nOrdOp.eq.1) Then
+        ipAOff = ipA
+        Do iBeta = 1, nBeta
+           call dcopy_(nAlpha,Alpha,1,Array(ipAOff),1)
+           ipAOff = ipAOff + nAlpha
+        End Do
 !
-!     Compute the cartesian components for the velocity integrals.
-!     The velocity components are linear combinations of overlap
-!     components.
+        ipBOff = ipB
+        Do iAlpha = 1, nAlpha
+           call dcopy_(nBeta,Beta,1,Array(ipBOff),nAlpha)
+           ipBOff = ipBOff + 1
+        End Do
 !
-      If (nOrdOp.eq.1) Then
-         ipAOff = ipA
-         Do iBeta = 1, nBeta
-            call dcopy_(nAlpha,Alpha,1,Array(ipAOff),1)
-            ipAOff = ipAOff + nAlpha
-         End Do
-!
-         ipBOff = ipB
-         Do iAlpha = 1, nAlpha
-            call dcopy_(nBeta,Beta,1,Array(ipBOff),nAlpha)
-            ipBOff = ipBOff + 1
-         End Do
-!
-         Call C_F_Pointer(C_Loc(Array(ipVxyz)),zVxyz,[nZeta*3*(la+1)*(lb+1)])
-         Call C_F_Pointer(C_Loc(Array(ipQxyz)),zQxyz,[nZeta*3*(la+1)*(lb+1)])
-         Call CVelInt(zVxyz,zQxyz,la,lb,Array(ipA),Array(ipB),nZeta)
-         Nullify(zVxyz,zQxyz)
-      End If
+        Call C_F_Pointer(C_Loc(Array(ipVxyz)),zVxyz,[nZeta*3*(la+1)*(lb+1)])
+        Call C_F_Pointer(C_Loc(Array(ipQxyz)),zQxyz,[nZeta*3*(la+1)*(lb+1)])
+        Call CVelInt(zVxyz,zQxyz,la,lb,Array(ipA),Array(ipB),nZeta)
+        Nullify(zVxyz,zQxyz)
+     End If
 !
 !***********************************************************************
+#ifdef _TEMP_SKIP_
       If (lAng.ne.0) Then
+#endif
 !
 !     Now compute the OAM x and y component.
 !
@@ -437,6 +460,7 @@
 !
 !    Combine the cartesian components to the full one electron integral.
 !
+#ifdef _TEMP_SKIP_
       Else ! OAM-free case
 
          If (nOrdOp.eq.1) Then
@@ -452,6 +476,7 @@
 !
 !************************************************************************
       End If
+#endif
 !
 !     At this point the integrals are store in Array starting at the position
 !     ipRes. The size of the block is nZeta,(la+1)*(la+2)/2,(lb+1)*(lb+2)/2
@@ -479,7 +504,7 @@
                  Value1111_yA, Value1111_yB
       Real*8 Fact, rTemp
       Complex*16 Temp1, Temp2, Temp
-      Complex*16, Pointer :: zQxyz(:),zVxyz(:)
+!     Complex*16, Pointer :: zQxyz(:),zVxyz(:)
       Integer nZeta, la, lb, nComp, nOrdOp, Ind
 
 !     Statement function for Cartesian index
@@ -490,6 +515,15 @@
 !     The integration over the z-subspace is done using the normal code
 !     for the exponetial operator.
 !
+#ifdef _DEBUG_
+      Write (6,*) 'OAM_xy: nOrdOp,nComp=',nOrdOp,nComp
+      Call RecPrt('Alpha',' ',Alpha,nZeta,1)
+      Call RecPrt('Beta',' ',Beta,nZeta,1)
+      Call RecPrt('Vxyz',' ',Vxyz,nZeta*2,3*(la+1)*(lb+1)*2)
+      Call RecPrt('Sxyz',' ',Sxyz,nZeta*2,3*(la+1+nOrdOp)*(lb+1+nOrdOp)*2)
+      Call RecPrt('Final',' ',Final,nZeta,                               &
+                  ((la+1)*(la+2)/2)*((lb+1)*(lb+2)/2)*nComp)
+#endif
       Do iBeta = 1, nBeta
          Do iAlpha = 1, nAlpha
             iZeta = nAlpha*(iBeta-1) + iAlpha
@@ -626,6 +660,10 @@
             End Do     ! i_x
          End Do  ! iAlpha
       End Do     ! iBeta
+#ifdef _DEBUG_
+      Call RecPrt('Final',' ',Final,nZeta,                               &
+                  ((la+1)*(la+2)/2)*((lb+1)*(lb+2)/2)*nComp)
+#endif
 !
 !**********************************************************************
 !**********************************************************************

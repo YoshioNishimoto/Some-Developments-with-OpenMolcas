@@ -28,6 +28,10 @@
 
   intg = DCmplx(0.0D0,0.0D0)
 
+#define _DEBUG_
+#ifdef _DEBUG_
+  Write(6,*) 'TwLPrm: l:',l
+#endif
   If (i_x.lt.0 .or. i_y.lt.0 .or. j_x.lt.0 .or. j_y.lt.0) Return
 
   i=DCmplx(0.0D0,1.0D0)
@@ -81,7 +85,19 @@
                           g = a+b+l-v-w-(2*c)-(2*d)
 
                           cx = (i*g) / ( 2*Zeta*P_y )
-                          Kappa = ( exp(-Zeta * P_y**2.0) * (exp(2*pi*i*g) - 1) ) / (2.0*Zeta*P_y)
+#ifdef _DEBUG_
+       Write (6,*) 'Zeta*P_y=',Zeta*P_y
+       Write (6,*) 'exp(-Zeta * P_y**2)=',exp(-Zeta * P_y**2)
+       Write (6,*) 'exp(2*pi*i*g)=',exp(2*pi*i*g)
+#endif
+                          Kappa = ( exp(-Zeta * P_y**2) * (exp(2*pi*i*g) - 1.0D0) ) / (2.0D0*Zeta*P_y)
+#ifdef _DEBUG_
+       Write (6,*) 'Kappa=',Kappa
+       Write (6,*) 'g1=',g1
+       Write (6,*) 'g2=',g2
+       Write (6,*) 'h1=',h1
+       Write (6,*) 'h2=',h2
+#endif
 
                           Omega = Kappa *(g1*g2*h1*h2)
 
@@ -95,7 +111,12 @@
                                 l1 = (-cx)**(f-t) * (cx + P_x)**(t-1-p) * (-1/2)**p *(1/(2*sqrt(2*pi)))
                                 l2 = integral_gauss(Zeta,p)
                                 Gamma = ( k1 * k2 * l1 * l2 )
-
+#ifdef _DEBUG_
+      Write (6,*) 'Lambda=',Lambda
+      Write (6,*) 'Theta=',Theta
+      Write (6,*) 'Omega=',Omega
+      Write (6,*) 'Gamma=',Gamma
+#endif
                                 intg = intg + Lambda * Theta * Omega * Gamma
 
                              End Do ! p
