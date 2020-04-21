@@ -83,7 +83,7 @@ c      iTrii(i,j) = Max(i,j)*(Max(i,j)-1)/2 + Min(i,j)
 C Local print level (if any)
 ***********************************************************
       IPRLEV=IPRLOC(3)
-
+      IPRLEV=DEBUG
 
 ***********************************************************
 * Load the nuclear repulsion energy
@@ -221,6 +221,18 @@ c--reads kinetic energy integrals  Work(iTmpk)--(Label=Kinetic)----
       Endif
 c      end if
 
+!      Call GetMem('fockop','Allo','Real',ifckop,nTot1)
+c--reads kinetic energy integrals  Work(iTmpk)--(Label=Kinetic)----
+!      iComp  =  1
+!      iSyLbl =  1
+!      iRc    = -1
+!      iOpt   =  6
+!      Label  = 'Fock op '
+!      Call RdOne(iRc,iOpt,Label,iComp,Work(ifckop),iSyLbl)
+!      write(*,*) 'fockup'
+!      do i=1,ntot1
+!        write(*,*) Work(ifckop-1+i)
+!      end do
 
 !Here we calculate the D1 Inactive matrix (AO).
       Call GetMem('D1Inact','Allo','Real',iD1I,NTOT2)
@@ -730,9 +742,15 @@ cPS         call xflush(6)
 
       CALL GETMEM('FI_V','ALLO','REAL',ifiv,Ntot1)
       Call Get_dArray('FI_V',work(ifiv),NTOT1)
-!         Call Dscal_(nTOT1,4.0d0,Work(ifiv),1)
+      write(*,*) 'ifiv'
+      do i=1,ntot1
+        write(*,*) Work(ifiv+1-i)
+      end do
+!         Call Dscal_(nTOT1,0.0d0,Work(ifiv),1)
 
       !Call daxpy_(ntot1,0.5d0,Work(ifiv),1,Work(iFocka),1)
+!CHANGE HERE: 1 to -1
+!AMS
       Call daxpy_(ntot1,1.0d0,Work(ifiv),1,Work(iFocka),1)
       Call daxpy_(ntot1,1.0d0,Work(iptmploeotp),1,Work(iFocka),1)
 
@@ -763,12 +781,87 @@ cPS         call xflush(6)
           end do
         end do
       end do
-        If ( IPRLEV.ge.DEBUG ) then
-      write(6,*) 'F1 to send'
-      do i=1,NTOT1
-        write(6,*) work(iFone-1+i)
+!        If ( IPRLEV.ge.DEBUG ) then
+      !Check if irreps > 1
+      If (nsym>1) then
+        write(*,*) "Problem: Symmetry higher than C1 is being used. 
+     & This is not yet supported.  Aborting."
+        Call quit(1)
+      end if
+        
+
+!      write(6,*) 'F1 to send'
+!      write(*,*) NTOT1
+!      do i=1,NTOT1
+!        write(6,*) work(iFone-1+i)
+!      end do
+
+      !First, convert to a square matrix.  Do we divide offdiag by 2?
+!      write(*,*) "NTOT1",NTOT1
+!      write(*,*) "Nbas",nbas(1)
+      offset = 0
+      Call GetMem('F1_sq_MO','Allo','Real',iF1sqmo,nBas(1)*nBas(1))
+      Call GetMem('ipscr1','Allo','Real',ipscr1,nBas(1)*nBas(1))
+      Call GetMem('F1_sq_AO','Allo','Real',iF1sqao,nBas(1)*nBas(1))
+      do i=1,nbas(1)
+        do j=1,i
+          sf = 0.5
+          if (i.eq.j) then
+            sf=1
+          end if
+          Work(iF1sqmo-1 + (i-1)*nbas(1) + j) = Work(iFone + offset)*sf
+          Work(iF1sqmo-1 + (j-1)*nbas(1) + i) = Work(iFone + offset)*sf
+          offset = offset + 1
+        end do
+      end do 
+      write(*,*) "Square Fock MO"
+      do i=1,nbas(1)
+        do j=1,nbas(1)
+          write(*,*) i,j,Work(iF1sqmo-1+(i-1)*nbas(1) +j)
+     &,CMO((i-1)*nbas(1) +j)
+        end do
       end do
-        end if
+
+!      CALL DCOPY_(Nbas(1)**2,[0.0D0],0,WORK(iF1sqmo),1)
+!      offset = 0
+!      do i=1,2
+!        work(iF1sqmo+offset) = 2.0
+!        offset = offset + nbas(1) + 1
+!      end do
+        
+!Next, convert to AO basis set:
+      isym = 1
+      iCMO = 1
+            Call DGEMM_('N','N',
+     &                  nBas(iSym),nOrb(isym),nOrb(isym),
+     &                  1.0d0,CMO(iCMo),nBas(iSym),
+     &                  Work(iF1sqmo),nOrb(isym),
+     &                  0.0d0,Work(ipScr1),nBas(iSym))
+            Call DGEMM_('N','T',
+     &                  nBas(iSym),nBas(iSym),nOrb(isym),
+     &                  1.0d0,Work(ipScr1),nBas(iSym),
+     &                  CMO(iCMo),nBas(iSym),
+     &                  0.0d0,Work(iF1sqao),nBas(iSym))
+
+      write(*,*) "Square Fock AO"
+      do i=1,nbas(1)
+        do j=1,nbas(1)
+          write(*,*) i,j,Work(iF1sqao-1+(i-1)*nbas(1) +j)
+        end do
+      end do
+
+      Open(unit=1999,file='FOCK_AO',action='write',iostat=ios)
+      if (ios.ne.0) then
+        write (6,*) "error opening FOCK_AO file"
+      end if
+      do i=1,nbas(1)
+        do j=1,nbas(1)
+          write(1999,*) i,j,Work(iF1sqao-1+(i-1)*nbas(1)+j)
+        end do
+      end do
+      close(1999)
+
+!        end if
 
       !Add the V_kktu contribution to Fone_tu?
 !STILL MUST DO!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
