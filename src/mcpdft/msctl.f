@@ -109,6 +109,7 @@ C Local print level (if any)
          Call QTrace
          Call Abend
       Endif
+      Call GetMem('OvMat','Allo','Real',iOvMat,ntot**2)
 !Write overlap matrix to file 'Overlap'
       counter = 0
       offset = 0
@@ -119,6 +120,10 @@ C Local print level (if any)
           do j=1,i
 !            if(abs(Work(iTmp0+counter)).ge.1d-12) then
               write(87,*) i+offset,j+offset,Work(iTmp0+counter)
+              Work(iOvMat+(i+offset-1)*ntot+(j+offset-1))= 
+     &        Work(iTmp0+counter)
+              Work(iOvMat+(j+offset-1)*ntot+(i+offset-1))= 
+     &        Work(iTmp0+counter)
 !            end if
             counter = counter + 1
           end do
@@ -220,19 +225,6 @@ c--reads kinetic energy integrals  Work(iTmpk)--(Label=Kinetic)----
          Call Abend
       Endif
 c      end if
-
-!      Call GetMem('fockop','Allo','Real',ifckop,nTot1)
-c--reads kinetic energy integrals  Work(iTmpk)--(Label=Kinetic)----
-!      iComp  =  1
-!      iSyLbl =  1
-!      iRc    = -1
-!      iOpt   =  6
-!      Label  = 'Fock op '
-!      Call RdOne(iRc,iOpt,Label,iComp,Work(ifckop),iSyLbl)
-!      write(*,*) 'fockup'
-!      do i=1,ntot1
-!        write(*,*) Work(ifckop-1+i)
-!      end do
 
 !Here we calculate the D1 Inactive matrix (AO).
       Call GetMem('D1Inact','Allo','Real',iD1I,NTOT2)
@@ -389,6 +381,18 @@ c--reads kinetic energy integrals  Work(iTmpk)--(Label=Kinetic)----
          end do
 cPS         call xflush(6)
       end if
+
+      Call GetMem('D1AOsq','Allo','Real',id1aosq,nTot**2)
+      counter = 0
+      do i=1,ntot
+        do j=1,i
+          Work(id1aosq+(i-1)*nTot+(j-1)) = Work(iTmp3+counter)
+          Work(id1aosq+(j-1)*nTot+(i-1)) = Work(iTmp3+counter)
+          counter = counter +1
+        end do
+      end do
+     
+
 
 !Get the spin density matrix for open shell cases
 ***********************************************************
@@ -802,7 +806,9 @@ cPS         call xflush(6)
       offset = 0
       Call GetMem('F1_sq_MO','Allo','Real',iF1sqmo,nBas(1)*nBas(1))
       Call GetMem('ipscr1','Allo','Real',ipscr1,nBas(1)*nBas(1))
+      Call GetMem('ipscr2','Allo','Real',ipscr2,nBas(1)*nBas(1))
       Call GetMem('F1_sq_AO','Allo','Real',iF1sqao,nBas(1)*nBas(1))
+      CALL DCOPY_(nbas(1)*nbas(1),[0.0D0],0,WORK(iF1sqao),1)
       do i=1,nbas(1)
         do j=1,i
           sf = 0.5
@@ -814,6 +820,14 @@ cPS         call xflush(6)
           offset = offset + 1
         end do
       end do 
+
+!Andrew - try to zero elts after the 2nd part:
+!       do i=13,100
+!         Work(iF1sqmo-1+i) = 0.0d0
+!       end do
+
+!         Call Dscal_(nBas(1)*nBas(1),2.0d0,Work(iF1sqmo),1)
+
       write(*,*) "Square Fock MO"
       do i=1,nbas(1)
         do j=1,nbas(1)
@@ -822,26 +836,77 @@ cPS         call xflush(6)
         end do
       end do
 
+!ANDREW - check the MO to AO transform routine
 !      CALL DCOPY_(Nbas(1)**2,[0.0D0],0,WORK(iF1sqmo),1)
 !      offset = 0
 !      do i=1,2
 !        work(iF1sqmo+offset) = 2.0
 !        offset = offset + nbas(1) + 1
 !      end do
-        
+
+!attempt to invert D1AO:
+      Call GetMem('temp90','allo','Real',itmp90,ntot**2)
+      Call GetMem('temp92','allo','Real',itmp92,ntot**2)
+      Call GetMem('temp91','allo','Real',itmp91,ntot)
+      Call Dcopy_(ntot**2,CMO,1,Work(itmp90),1)
+      Call Dgetrf_(ntot,ntot,Work(itmp90),ntot,Work(itmp91),info)
+!      write(*,*) 'info',info
+      Call Dgetri_(ntot,Work(itmp90),ntot,Work(itmp91),Work(itmp92),
+     &        ntot**2,info)
+!      write(*,*) 'info',info
+       
+!            Call DGEMM_('N','N',
+!     &                  ntot,ntot,ntot,
+!     &                  1.0d0,Work(itmp90),ntot,
+!     &                  CMO,ntot,
+!     &                  0.0d0,Work(ipScr1),ntot)
+!      write(*,*) "inversecheck"
+!      do i=1,ntot
+!        do j=1,ntot
+!          write(*,*) i,j,Work(ipscr1-1+(i-1)*ntot +j),
+!     &      Work(itmp90-1+(i-1)*ntot +j)
+!        end do
+!      end do
 !Next, convert to AO basis set:
       isym = 1
       iCMO = 1
+!      write(*,*) 'norb, nbas',norb(isym),nbas(isym)
+!      write(*,*) 'norb, nbas',norb(isym),nbas(isym)
+!*******************
             Call DGEMM_('N','N',
-     &                  nBas(iSym),nOrb(isym),nOrb(isym),
-     &                  1.0d0,CMO(iCMo),nBas(iSym),
-     &                  Work(iF1sqmo),nOrb(isym),
-     &                  0.0d0,Work(ipScr1),nBas(iSym))
-            Call DGEMM_('N','T',
-     &                  nBas(iSym),nBas(iSym),nOrb(isym),
-     &                  1.0d0,Work(ipScr1),nBas(iSym),
-     &                  CMO(iCMo),nBas(iSym),
-     &                  0.0d0,Work(iF1sqao),nBas(iSym))
+     &                  ntot,ntot,ntot,
+     &                  1.0d0,Work(iovmat),ntot,
+     &                  CMO,ntot,
+     &                  0.0d0,Work(ipScr1),ntot)
+            Call DGEMM_('N','N',
+     &                  ntot,ntot,ntot,
+     &                  1.0d0,Work(ipscr1),ntot,
+     &                  Work(iF1sqmo),ntot,
+     &                  0.0d0,Work(ipScr2),ntot)
+            Call DGEMM_('N','N',
+     &                  ntot,ntot,ntot,
+     &                  1.0d0,Work(ipscr2),ntot,
+     &                  Work(itmp90),ntot,
+     &                  0.0d0,Work(iF1sqao),ntot)
+
+!*******************
+!            Call DGEMM_('N','N',
+!            Call DGEMM_('T','N',
+!     &                  nBas(iSym),nOrb(isym),nOrb(isym),
+!     &                  1.0d0,CMO,nBas(iSym),
+!     &                  Work(iF1sqmo),nOrb(isym),
+!     &                  0.0d0,Work(ipScr1),nBas(iSym))
+!      do i=1,nbas(1)
+!        do j=1,nbas(1)
+!          write(*,*) i,j,Work(ipscr1-1+(i-1)*nbas(1) +j)
+!        end do
+!      end do
+!            Call DGEMM_('N','T',
+!            Call DGEMM_('N','N',
+!     &                  nBas(iSym),nBas(iSym),nOrb(isym),
+!     &                  1.0d0,Work(ipScr1),nBas(iSym),
+!     &                  CMO,nBas(iSym),
+!     &                  0.0d0,Work(iF1sqao),nBas(iSym))
 
       write(*,*) "Square Fock AO"
       do i=1,nbas(1)
@@ -849,6 +914,7 @@ cPS         call xflush(6)
           write(*,*) i,j,Work(iF1sqao-1+(i-1)*nbas(1) +j)
         end do
       end do
+
 
       Open(unit=1999,file='FOCK_AO',action='write',iostat=ios)
       if (ios.ne.0) then
@@ -861,6 +927,11 @@ cPS         call xflush(6)
       end do
       close(1999)
 
+      Call GetMem('OvMat','free','Real',iOvMat,ntot**2)
+      Call GetMem('D1AOsq','free','Real',id1aosq,nTot**2)
+      Call GetMem('temp90','free','Real',itmp90,ntot**2)
+      Call GetMem('temp92','free','Real',itmp92,ntot**2)
+      Call GetMem('temp91','free','Real',itmp91,ntot)
 !        end if
 
       !Add the V_kktu contribution to Fone_tu?
