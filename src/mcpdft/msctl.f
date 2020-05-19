@@ -603,10 +603,94 @@ c         call xflush(6)
 ************************************************************************
 
       If (.not.DoCholesky .or. ALGO.eq.1) Then
+!ANDREW ADD NOW
+      IF(.false.) then
+        Call GetMem('id1act_FA','ALLO','Real',id1act_FA,nacpar)
+        Call GetMem('id1actao_FA','ALLO','Real',id1actao_FA,ntot2)
+
+        itsDisk = IADR19(3)
+        do i=1,irlxroot-1
+          Call DDaFile(JOBOLD,0,Work(iD1Act_FA),NACPAR,itsDisk)
+          Call DDaFile(JOBOLD,0,Work(iD1Spin),NACPAR,itsDisk)
+          Call DDaFile(JOBOLD,0,Work(iP2d),NACPR2,itsDisk)
+          Call DDaFile(JOBOLD,0,Work(iP2d),NACPR2,itsDisk)
+        end do
+        Call DDaFile(JOBOLD,2,Work(iD1Act_FA),NACPAR,itsDisk)
+        IF ( NASH(1).NE.NAC ) CALL DBLOCK_m(Work(iD1Act_FA))
+        Call Get_D1A_RASSCF_m(CMO,Work(iD1Act_FA),Work(iD1ActAO_FA))
+
+        Call GetMem('lcmo','ALLO','Real',lcmo,ntot2)
+        CALL DCOPY_(NTOT2,CMO,1,WORK(LCMO),1)
+
+
+        Call GetMem('FockI_save','ALLO','Real',ifocki_save,ntot1)
+        if(iprlev.ge.debug) then
+            write(6,*) 'ifocki before tractl'
+            do i=1,ntot1
+              write(*,*) work(ifocki-1+i)
+            end do
+        end if
+*
+        call  dcopy_(ntot1,work(ifocki),1,work(ifocki_save),1)
+
+
+      Call GetMem('ltuvx_tmp','ALLO','Real',ltuvx_tmp,nacpr2)
+      Call GetMem('lpuvx_tmp','ALLO','Real',lpuvx_tmp,nfint)
+*
+      CALL DCOPY_(nacpr2,[Zero],0,WORK(ltuvx_tmp),1)
+      if (iprlev.ge.debug) then
+            write(6,*) 'ltuvx before !!! tractl'
+            do i=1, nacpr2
+              write(*,*) work(ltuvx_tmp-1+i)
+            end do
+      end if
+*
+      CALL DCOPY_(nfint,[Zero],0,WORK(lpuvx_tmp),1)
+      if (iprlev.ge.debug) then
+            write(6,*) 'lpuvx before tractl'
+            do i=1,nfint
+              write(*,*) work(lpuvx_tmp-1+i)
+            end do
+      end if
+*
+*
+         CALL TRACTL2(WORK(lcmo),WORK(LPUVX_tmp),WORK(LTUVX_tmp),
+     &                WORK(iD1I),WORK(ifocki),
+     &                WORK(iD1ActAO),WORK(ifocka),
+     &                IPR,lSquare,ExFac)
+*        Call dcopy_(ntot1,FA,1,Work(ifocka),1)
+        if (iprlev.ge.debug) then
+             write(6,*) 'FA tractl msctl'
+             call wrtmat(Work(ifocka),1,ntot1,1,ntot1)
+             write(6,*) 'FI tractl msctl'
+             call wrtmat(Work(ifocki),1,ntot1,1,ntot1)
+        end if
+*
+      Call GetMem('ltuvx_tmp','Free','Real',ltuvx_tmp,nacpr2)
+      Call GetMem('lpuvx_tmp','Free','Real',lpuvx_tmp,nfint)
+
+
+!END ANDREW ADD NOW
+
+
          Call Fmat_m(CMO,Work(lPUVX),Work(iD1Act),Work(iD1ActAO),
      &             Work(iFockI),Work(iFockA))
 !
 !
+!Second ANDREW ADD NOW:
+        call  dcopy_(ntot1,work(ifocki_save),1,work(ifocki),1)
+*        call  dcopy_(nacpar,work(id1act_FA),1,work(id1act),1)
+        Call GetMem('FockI_Save','Free','Real',ifocki_save,ntot1)
+        Call GetMem('lcmo','Free','Real',lcmo,ntot2)
+        Call GetMem('id1act_FA','Free','Real',id1act_FA,nacpar)
+        Call GetMem('id1actao_FA','Free','Real',id1actao_FA,ntot2)
+!END Second ANDREW ADD NOW
+
+      ELSE
+         Call Fmat_m(CMO,Work(lPUVX),Work(iD1Act),Work(iD1ActAO),
+     &             Work(iFockI),Work(iFockA))
+      END IF
+
         If ( IPRLEV.ge.DEBUG ) then
         write(6,*) 'FA_old'
         call wrtmat(Work(ifocka),1,ntot1,1,ntot1)
@@ -751,11 +835,14 @@ cPS         call xflush(6)
         write(*,*) Work(ifiv+1-i)
       end do
 !         Call Dscal_(nTOT1,0.0d0,Work(ifiv),1)
+      CALL GETMEM('FA_V','ALLO','REAL',ifav,Ntot1)
+      Call Get_dArray('FA_V',work(ifav),NTOT1)
 
       !Call daxpy_(ntot1,0.5d0,Work(ifiv),1,Work(iFocka),1)
 !CHANGE HERE: 1 to -1
 !AMS
       Call daxpy_(ntot1,1.0d0,Work(ifiv),1,Work(iFocka),1)
+      Call daxpy_(ntot1,1.0d0,Work(ifav),1,Work(iFocka),1)
       Call daxpy_(ntot1,1.0d0,Work(iptmploeotp),1,Work(iFocka),1)
 
 
@@ -770,7 +857,7 @@ cPS         call xflush(6)
         iAct = nAsh(iSym)
         iIsh = nIsh(iSym)
 
-      !FI + FA + V_oe
+      !FI + FA + V_oe + FA_V (last addition is for Fock project)
 
         do i=1,iBas
           do j=1,i
@@ -991,8 +1078,6 @@ cPS         call xflush(6)
 !The corrections (from the potentials) to FI and FA are built in the NQ
 !part of the code, for efficiency's sake.  It still needs to be
 !debugged.
-      CALL GETMEM('FA_V','ALLO','REAL',ifav,Ntot1)
-      Call Get_dArray('FA_V',work(ifav),NTOT1)
 !         Call Dscal_(nTOT1,4.0d0,Work(ifav),1)
       !work(ifav-1+2) = 0d0
 
