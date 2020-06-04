@@ -168,7 +168,7 @@
 *     The threshold for restricted step optimization.
       Beta = 0.30D0
 *     The threshold for restricted variance optimization.
-      Beta_Disp=0.100D0
+      Beta_Disp=0.30D0
       GNrm_Threshold=0.2D0
       CnstWght=1.0D0
       Call DecideOnESPF(Do_ESPF)
@@ -501,6 +501,7 @@ C           NADC= .False. ! for debugging
       mB_Tot=0
       mdB_Tot=0
       mq=0
+      Force_dB=.False.
 *                                                                      *
 ************************************************************************
 *                                                                      *

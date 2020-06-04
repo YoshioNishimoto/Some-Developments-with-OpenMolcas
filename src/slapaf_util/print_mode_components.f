@@ -258,6 +258,7 @@
       PrQ=.False.
       nFix=0
       nWndw=iter
+      iRef=0
       Call BMtrx(iRow,nBVec,ipB,nsAtom,mInt,ipqInt,Lbl,
      &           Work(ipCoor),nDimBC,Work(ipCM),AtomLbl,nSym,iOper,
      &           Smmtrc,Degen,BSet,HSet,iter,ipdqInt,ipShf,
@@ -392,7 +393,7 @@
          Call GetMem('qInt',  'Free','Real',ipqInt,  nqInt)
       End If
       If (BSet) Then
-         Call Free_Work(ipShf)
+         Call GetMem('Shift','Free','Real',ipShf,nQQ*iter)
       End If
       If (Ref_Geom) Then
          Call GetMem('ipRef',  'Free','Real',ipRef,    3*nsAtom)
