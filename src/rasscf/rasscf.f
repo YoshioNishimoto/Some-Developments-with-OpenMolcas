@@ -56,6 +56,7 @@
       use qcmaquis_interface_environment, only:
      &    finalize_dmrg, dump_dmrg_info
 #endif
+      use fortran_strings, only: str
       use stdalloc, only: mma_allocate, mma_deallocate
       use write_orbital_files, only : OrbFiles, putOrbFile
 
@@ -1293,7 +1294,7 @@ c     &              ' ',WORK(LPA),NACPAR)
      &          1, "Copy of RASORB failed in iteration "
      &              //str(actual_iter))
         else
-            write(6, *) 'Successfully copied RASORB
+            write(6, *) 'Successfully copied RASORB'
         end if
       end block
 
