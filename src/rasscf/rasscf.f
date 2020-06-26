@@ -131,7 +131,7 @@
       real*8, allocatable :: orbital_E(:), folded_Fock(:)
 * --------- End FCIDUMP stuff:
 * --------- Procedure pointers for CI-solvers
-        class(CI_solver_t), allocatable :: CI_solver
+      class(CI_solver_t), allocatable :: CI_solver
 * --------- End Procedure pointers.
 
 ! actual_iter starts at 0, so iter 1A == 0, 1B == 1, 2 == 2, 3 == 3 and so on
@@ -1266,37 +1266,7 @@ c     &              ' ',WORK(LPA),NACPAR)
       Zenith_2 = Zenith_2 - Zenith_1
       Zenith_3 = Zenith_3 + Zenith_2
 
-      block
-        use filesystem, only: real_path
-        integer :: ierr
-        character(:), allocatable :: path
-        path = real_path('RASWFN')
-        call execute_command_line(
-     &      "cp "//path//" "//path//"_"//str(actual_iter),exitstat=ierr)
-        if (ierr /= 0) then
-            call WarningMessage(
-     &          1, "Copy of RASWFN failed in iteration "
-     &              //str(actual_iter))
-        else
-            write(6, *) 'Successfully copied RASWFN'
-        end if
-      end block
-
-      block
-        use filesystem, only: real_path
-        integer :: ierr
-        character(:), allocatable :: path
-        path = real_path('RASORB')
-        call execute_command_line(
-     &      "cp "//path//" "//path//"_"//str(actual_iter),exitstat=ierr)
-        if (ierr /= 0) then
-            call WarningMessage(
-     &          1, "Copy of RASORB failed in iteration "
-     &              //str(actual_iter))
-        else
-            write(6, *) 'Successfully copied RASORB'
-        end if
-      end block
+      ! NOTE(@Werner): Here I would print the RDMS.
 
 
 *
@@ -1590,6 +1560,41 @@ cGLM some additional printout for MC-PDFT
           Write(LF,'(6X,120A1)') ('*',i=1,120)
         END IF
       end if
+
+      block
+        use filesystem, only: real_path
+        integer :: ierr
+        character(:), allocatable :: path
+        path = real_path('RASWFN')
+        call execute_command_line(
+     &      "cp "//path//" "//path//"_"//str(actual_iter),exitstat=ierr)
+        if (ierr /= 0) then
+            call WarningMessage(
+     &          1, "Copy of RASWFN failed in iteration "
+     &              //str(actual_iter))
+        else
+            write(6, *) 'Successfully copied RASWFN'
+        end if
+      end block
+
+      block
+        use filesystem, only: real_path
+        integer :: ierr
+        character(:), allocatable :: path
+        path = real_path('RASORB')
+        call execute_command_line(
+     &      "cp "//path//" "//path//"_"//str(actual_iter),exitstat=ierr)
+        if (ierr /= 0) then
+            call WarningMessage(
+     &          1, "Copy of RASORB failed in iteration "
+     &              //str(actual_iter))
+        else
+            write(6, *) 'Successfully copied RASORB'
+        end if
+      end block
+
+
+
 
 *
 * Convergence check:
