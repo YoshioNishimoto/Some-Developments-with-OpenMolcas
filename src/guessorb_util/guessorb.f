@@ -51,14 +51,13 @@
 *----------------------------------------------------------------------*
       Call cre_gsswfn
       Call FckByInt(iRC,StandAlone)
-*     If(iRC.eq.0) GoTo 999
-      If(.true.) GoTo 999
+#ifdef _EXPERIMENTAL_CODE_
       If(nSym.eq.1) Then
          Call Fmod1n(StandAlone)
       Else
          Call Fmod1s(StandAlone)
       End If
-999   Continue
+#endif
       Call cls_gsswfn
 *----------------------------------------------------------------------*
 * Produce MOLDEN input                                                 *

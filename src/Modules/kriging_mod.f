@@ -37,7 +37,7 @@
 
       contains
 
-      Subroutine Setup_Kriging(nPoints,nInter,x_,dy_,y_)
+      Subroutine Setup_Kriging_Core(nPoints,nInter,x_,dy_,y_)
 
       integer :: nPoints, nInter, i, j
       real*8 :: x_(nInter,nPoints), dy_(nInter,nPoints), y_(nPoints)
@@ -60,6 +60,6 @@
       enddo
 
       return
-      end subroutine Setup_kriging
+      end subroutine Setup_kriging_Core
 
       end module kriging_mod

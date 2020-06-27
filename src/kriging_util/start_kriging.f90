@@ -18,7 +18,7 @@ Subroutine Start_Kriging(nPoints,nInter,x_,dy_,y_)
   Integer nInter,nPoints
   Real*8 x_(nInter,nPoints),dy_(nInter,nPoints),y_(nPoints)
 !
-!#define _DEBUG_
+#define _DEBUG_
 #ifdef _DEBUG_
   Call RecPrt('Start_Kriging: x',' ',x_,nInter,nPoints)
   Call RecPrt('Start_Kriging: y',' ',y_,     1,nPoints)
@@ -28,7 +28,7 @@ Subroutine Start_Kriging(nPoints,nInter,x_,dy_,y_)
   Call mma_Allocate(dy,nInter*nPoints,Label="dy")
   Call mma_Allocate(y,nPoints,Label="y")
 !
-  Call Setup_Kriging(nPoints,nInter,x_,dy_,y_)
+  Call Setup_Kriging_Core(nPoints,nInter,x_,dy_,y_)
 !
 !nx is the n-dimensional vector of the last iteration computed in update_sl
   Call mma_Allocate(nx,nInter,1,Label="nx")

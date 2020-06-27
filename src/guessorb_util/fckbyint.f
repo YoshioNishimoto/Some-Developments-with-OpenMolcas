@@ -240,6 +240,7 @@
             Call NIdiag(T3,CMO(ijS),nS,nB,0)
             Call goPickup(T3,Eps(ijL),nS)
             Call goSort(Eps(ijL),CMO(ijS),nS,nB)
+            Call goDelocalize(Eps(ijL),CMO(ijS),nS,nB)
 *
             Do i = 1, nS
                tmp = OrbPhase(CMO(ijS+(i-1)*nB),nB)
@@ -315,6 +316,7 @@
             Call NIdiag(T3,CMO(ijS+nB*nC),nS,nB,0)
             Call goPickup(T3,Eps(ijL+nC),nS)
             Call goSort(Eps(ijL+nC),CMO(ijS+nB*nC),nS,nB)
+            Call goDelocalize(Eps(ijL+nC),CMO(ijS+nB*nC),nS,nB)
             If(Debug) Then
                Call RecPrt('Eps',' ',Eps(ijL+nC),nS,1)
                Call RecPrt('Virtual Orbitals',' ',

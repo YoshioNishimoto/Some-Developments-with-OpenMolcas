@@ -8,14 +8,13 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1992, Per-Olof Widmark                                 *
-*               1992, Markus P. Fuelscher                              *
-*               1992, Piotr Borowski                                   *
+* Copyright (C) 2020, Roland Lindski                                   *
 ************************************************************************
-      SubRoutine goSort(EVal,EVec,n,nB)
+      SubRoutine goDelocalize(EVal,EVec,n,nB)
 ************************************************************************
 *                                                                      *
-*     purpose: Sort the set of eigenvalues and eigenvectors            *
+*     purpose: Rotate degenerate eigenvectors to optimize              *
+*              delocalization.                                         *
 *                                                                      *
 *                                                                      *
 *     input:                                                           *
@@ -27,44 +26,90 @@
 *       EVal    : sorted set of eigenvalues                            *
 *       EVec    : sorted set of eigenvectors                           *
 *                                                                      *
-*     called from: DCore, NewOrb, IvoGen                               *
 *                                                                      *
 *----------------------------------------------------------------------*
 *                                                                      *
 *     written by:                                                      *
-*     P.O. Widmark, M.P. Fuelscher and P. Borowski                     *
-*     University of Lund, Sweden, 1992                                 *
+*     Roland Lindh                                                     *
+*     University of Uppsala, Sweden 2020                               *
 *                                                                      *
 *----------------------------------------------------------------------*
 *                                                                      *
 *     history: none                                                    *
 *                                                                      *
 ************************************************************************
+      Implicit None
 *
-      Implicit Real*8 (a-h,o-z)
+      Integer nB, N
+      Real*8 EVal(n),EVec(nB,n)
 *
-      Dimension EVal(n),EVec(nB,n)
+      Integer nAtom, i, j, k
+      Real*8 E1, E2, Test
 *
 *----------------------------------------------------------------------*
 *     Start                                                            *
 *----------------------------------------------------------------------*
 *
-      Do 100 i = 1,n - 1
-         k = i
-         Do 110 j = i + 1, n
-            If (EVal(j).lt.EVal(k)) k = j
-110      Continue
-         If (k.ne.i) Then
-            Swap    = EVal(k)
-            EVal(k) = EVal(i)
-            EVal(i) = Swap
-            Do 120 l = 1, nB
-               Swap      =   EVec(l,k)
-               EVec(L,K) = - EVec(l,i)
-               EVec(L,I) =   Swap
-120         Continue
+      Call Get_nAtoms_All(nAtom)
+      If (nAtom.eq.1) Return
+      Call RecPrt('Eval',' ',Eval,1,n)
+#ifdef _OLD_CODE_
+      i = 1
+ 666  Continue
+      E1=EVal(i)
+!
+!     Do not try to delocalize these cases, probably fake degeneracy
+      If (Abs(E1).lt.1.0D-10.or.E1.gt.5.0D0) Then
+         i=i+1
+         Go To 666
+      End If
+      Do j = i+1, n
+         E2=EVal(j)
+         Test=2.0D0* Abs(E1-E2)/Abs(E1+E2)
+         If (Test.gt.1.0D-12) Then
+            If (j.eq.i+1) Then
+               i=j
+               Go To 666
+            Else
+               Write (6,*) 'Eigenvalues',(EVal(k),k=i,j-1)
+               k=j-i
+               Call canonical_degenerate_eigenvectors(EVec(1,i),nB,k)
+               i=j
+               Go To 666
+            End if
          End If
-100   Continue
+      End Do
+!
+#else
+      i=1
+      Do
+         If (i.eq.n) Exit
+         E1=EVal(i)
+!
+!        Do not try to delocalize these cases, probably fake degeneracy
+         If (Abs(E1).lt.1.0D-10.or.E1.gt.5.0D0) Then
+            i=i+1
+            Cycle
+         End If
+         Do j = i+1, n
+            E2=EVal(j)
+            Test=2.0D0* Abs(E1-E2)/Abs(E1+E2)
+            If (Test.gt.1.0D-12) Then
+               If (j.eq.i+1) Then
+                  i=j
+                  Exit
+               Else
+                  Write (6,*) 'Eigenvalues',(EVal(k),k=i,j-1)
+                  k=j-i
+                  Call canonical_degenerate_eigenvectors(EVec(1,i),nB,k)
+                  i=j
+                  Exit
+               End if
+            End If
+         End Do
+!
+      End Do
+#endif
 *
 *----------------------------------------------------------------------*
 *     Exit                                                             *
