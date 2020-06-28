@@ -8,7 +8,7 @@
 ! For more details see the full text of the license in the file        *
 ! LICENSE or in <http://www.gnu.org/licenses/>.                        *
 !                                                                      *
-! Copyright (C) 1990,1991,1994, Roland Lindh                           *
+! Copyright (C) 2020 Roland Lindh                                      *
 !***********************************************************************
 !                                                                      *
 ! For a set of d degenerate eigenvectors P with the length n, rotate   *
