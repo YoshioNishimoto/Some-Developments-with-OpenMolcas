@@ -21,10 +21,10 @@
       Integer, Intent(In):: n, d
       Real*8, Intent(InOut):: P_Old(n,d)
       Logical, Intent(In)::  Option
+#include "stdalloc.fh"
 !
       External DDot_
       Real*8 DDot_
-#include "stdalloc.fh"
       Integer k, kOpt, i, j, nAngles, iAngles, jAngles, iter, iSing, nRaw
       Real*8 D_k, Tmp, grad2, gradMax, Det, D_k_Sum
       Real*8 :: Thr1=1.0D-8, Thr2=1.0D-8
@@ -599,7 +599,6 @@
 !
       Subroutine pdHess(H,nH)
       Implicit None
-#include "stdalloc.fh"
       Integer nH
       Real*8 H(nH,nH)
       Integer i, j, k
