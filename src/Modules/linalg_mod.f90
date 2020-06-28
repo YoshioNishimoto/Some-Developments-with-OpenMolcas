@@ -12,10 +12,15 @@
 !***********************************************************************
 
 module linalg_mod
+    use stdalloc, only : mma_allocate, mma_deallocate
     use definitions, only: wp, r8
     implicit none
     private
-    public :: mult
+    public :: mult, operator(.mult.), operator(.Tmult.), operator(.multT.), &
+        operator(.TmultT.), diagonalize
+
+    ! NOTE: When it is easier to have modules in molcas, separate this procedures.
+    public :: assert_, abort_
 
 
 !>  @brief
@@ -36,7 +41,62 @@ module linalg_mod
         module procedure mult_2D, mult_2D_1D, mult_2d_raw
     end interface
 
+    interface operator(.mult.)
+        module procedure f_mult_2D_N_N
+        module procedure f_mult_2D_1D_N
+    end interface
+
+    interface operator(.Tmult.)
+        module procedure f_mult_2D_T_N
+        module procedure f_mult_2D_1D_T
+    end interface
+
+    interface operator(.multT.)
+        module procedure f_mult_2D_N_T
+    end interface
+
+    interface operator(.TmultT.)
+        module procedure f_mult_2D_T_T
+    end interface
+
 contains
+
+    function f_mult_2D_N_N(A, B) result(C)
+        real(wp), intent(in) :: A(:, :), B(:, :)
+        real(wp) :: C(size(A, 1), size(B, 2))
+        call mult(A, B, C)
+    end function
+
+    function f_mult_2D_T_N(A, B) result(C)
+        real(wp), intent(in) :: A(:, :), B(:, :)
+        real(wp) :: C(size(A, 2), size(B, 2))
+        call mult(A, B, C, transpA=.true.)
+    end function
+
+    function f_mult_2D_N_T(A, B) result(C)
+        real(wp), intent(in) :: A(:, :), B(:, :)
+        real(wp) :: C(size(A, 1), size(B, 1))
+        call mult(A, B, C, transpB=.true.)
+    end function
+
+    function f_mult_2D_T_T(A, B) result(C)
+        real(wp), intent(in) :: A(:, :), B(:, :)
+        real(wp) :: C(size(A, 2), size(B, 1))
+        call mult(A, B, C, transpA=.true., transpB=.true.)
+    end function
+
+    function f_mult_2D_1D_N(A, x) result(y)
+        real(wp), intent(in) :: A(:, :), x(:)
+        real(wp) :: y(size(A, 1))
+        call mult(A, x, y)
+    end function
+
+    function f_mult_2D_1D_T(A, x) result(y)
+        real(wp), intent(in) :: A(:, :), x(:)
+        real(wp) :: y(size(A, 2))
+        call mult(A, x, y, transpA=.true.)
+    end function
+
 
 !>  @brief
 !>    Wrapper around dgemm for matrix-matrix multiplication.
@@ -196,6 +256,29 @@ contains
                     M, N, K, 1._wp, A, shapeA(1), B, shapeB(1), &
                     0._wp, C, shapeC(1))
     end subroutine
+
+    subroutine diagonalize(A, V, lambda)
+        real(wp), intent(in) :: A(:, :)
+        real(wp), intent(out) :: V(:, :), lambda(:)
+
+        integer, parameter :: do_worksize_query = -1
+        integer :: info
+        real(wp), allocatable :: work(:)
+        real(wp) :: dummy(2), query_result(2)
+
+        V(:, :) = A(:, :)
+        call dsyev_('V', 'L', size(V, 2), dummy, size(V, 1), dummy, &
+                    query_result, do_worksize_query, info)
+
+        call assert_(info == 0, 'Error in diagonalize')
+
+        call mma_allocate(work, int(query_result(1)))
+        call dsyev_('V', 'L', size(V, 2), V, size(V, 1), lambda, &
+                    work, size(work), info)
+        call mma_deallocate(work)
+
+        call assert_(info == 0, 'Error in diagonalize')
+    end subroutine diagonalize
 
     subroutine abort_(message)
         character(*), intent(in) :: message

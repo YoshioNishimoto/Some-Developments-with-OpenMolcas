@@ -19,7 +19,8 @@
      &    from_raw, to_raw, from_symm_raw, blocksizes
         use sorting, only : argsort
         use sorting_funcs, only : ge_r
-        use linalg_mod, only: mult
+        use linalg_mod, only: operator(.mult.), operator(.Tmult.),
+     &      operator(.multT.), diagonalize, assert_
 
         implicit none
         save
@@ -159,21 +160,16 @@
 
         integer :: i
         real(wp), allocatable :: U(:, :), s_diag(:), X(:, :),
-     &        S_transf(:, :), tmp(:, :)
+     &        tmp(:, :)
 
-        call mma_allocate(S_transf, size(S, 1), size(S, 2))
         call mma_allocate(U, size(S, 1), size(S, 2))
         call mma_allocate(X, size(S, 1), size(S, 2))
         call mma_allocate(tmp, size(S, 1), size(S, 2))
         call mma_allocate(s_diag, size(S, 2))
 
 ! Transform AO-overlap matrix S to the overlap matrix of basis.
-! S_transf = basis^T S basis
-! We search X that diagonalizes S_transf
-        call mult(S, basis, tmp)
-        call mult(basis, tmp, S_transf, transpA=.true.)
-
-        call diagonalize(S_transf, U, s_diag)
+! We search X that diagonalizes basis^T S basis
+        call diagonalize(basis .Tmult. S .mult. basis , U, s_diag)
 
         call assert_(all(s_diag > 1.0d-10),
      &      "Linear dependency detected. "//
@@ -184,18 +180,17 @@
         do i = 1, size(tmp, 2)
           tmp(:, i) = U(:, i) / sqrt(s_diag(i))
         end do
-        call mult(tmp, U, X, transpB=.true.)
-! With this X the overlap matrix S_transf has diagonal form.
+        X(:, :) = tmp .multT. U
+! With this X the overlap matrix has diagonal form.
 ! X^T basis^T S basis X = 1
 ! We finally have to convert to get the form:
 ! ONB^T S ONB = 1
-        call mult(basis, X, ONB)
+        ONB = basis .mult. X
 
         call mma_deallocate(tmp)
         call mma_deallocate(s_diag)
         call mma_deallocate(X)
         call mma_deallocate(U)
-        call mma_deallocate(S_transf)
       end subroutine Lowdin_Array
 
 
@@ -226,10 +221,9 @@
         logical :: lin_dep_detected
         integer :: i
         integer, allocatable :: idx(:)
-        real(wp), allocatable :: U(:, :), s_diag(:), S_transf(:, :),
+        real(wp), allocatable :: U(:, :), s_diag(:),
      &      X(:, :), tmp(:, :)
 
-        call mma_allocate(S_transf, size(S, 1), size(S, 2))
         call mma_allocate(U, size(S, 1), size(S, 2))
         call mma_allocate(s_diag, size(S, 2))
         call mma_allocate(X, size(S, 1), size(S, 2))
@@ -238,10 +232,7 @@
 
 ! Transform AO-overlap matrix S to the overlap matrix of basis.
 ! We search X that diagonalizes basis^T S basis
-        call mult(S, basis, tmp)
-        call mult(basis, tmp, S_transf, transpA=.true.)
-
-        call diagonalize(S_transf, U, s_diag)
+        call diagonalize(basis .Tmult. S .mult. basis , U, s_diag)
 
         idx(:) = argsort(s_diag, ge_r)
         U(:, :) = U(:, idx)
@@ -262,19 +253,18 @@
         do i = 1, n_new
           X(:, i) = U(:, i) / sqrt(s_diag(i))
         end do
-! With this X the overlap matrix S_transf has diagonal form.
+! With this X the transformed overlap matrix has diagonal form.
 ! X^T basis^T S basis X = 1
 ! We finally have to convert to get the form:
 ! ONB^T S ONB = 1
         ONB(:, n_new + 1:) = basis(:, n_new + 1 :)
-        call mult(basis, X(:, :n_new), ONB(:, :n_new))
+        ONB(:, :n_new) = basis .mult. X(:, :n_new)
 
         call mma_deallocate(tmp)
         call mma_deallocate(X)
         call mma_deallocate(idx)
         call mma_deallocate(s_diag)
         call mma_deallocate(U)
-        call mma_deallocate(S_transf)
       end subroutine Canonical_Array
 
 ! TODO: It would be nice, to use `impure elemental`
@@ -323,7 +313,7 @@
           lin_dep_detected = .false.
           do while (improve_solution .and. .not. lin_dep_detected)
             correction = 0._wp
-            call mult(S, curr, v)
+            v(:) = S .mult. curr
 
             do j = 1, n_new
               correction(:) = correction(:)
@@ -455,45 +445,6 @@
         call qExit(ROUTINE)
       end subroutine
 
-      subroutine diagonalize(A, V, lambda)
-        real(wp), intent(in) :: A(:, :)
-        real(wp), intent(out) :: V(:, :), lambda(:)
-
-        integer, parameter :: do_worksize_query = -1
-        integer :: info
-        real(wp), allocatable :: work(:)
-        real(wp) :: dummy(2), query_result(2)
-
-        V(:, :) = A(:, :)
-        call dsyev_('V', 'L', size(V, 2), dummy, size(V, 1), dummy,
-     &              query_result, do_worksize_query, info)
-
-        call assert_(info == 0, 'Error in diagonalize')
-
-        call mma_allocate(work, int(query_result(1)))
-        call dsyev_('V', 'L', size(V, 2), V, size(V, 1), lambda,
-     &              work, size(work), info)
-        call mma_deallocate(work)
-
-        call assert_(info == 0, 'Error in diagonalize')
-      end subroutine diagonalize
-
-
-      subroutine abort_(message)
-        character(*), intent(in) :: message
-        call WarningMessage(2, message)
-        call QTrace()
-        call Abend()
-      end subroutine
-
-      subroutine assert_(test_expression, message)
-        logical, intent(in) :: test_expression
-        character(*), intent(in) :: message
-        if (.not. test_expression) then
-          call abort_(message)
-        end if
-      end subroutine
-
 !>
 !>  @brief
 !>    Calculates v1^T S v2.
@@ -508,20 +459,12 @@
 !>  If S is ommited, it defaults to the unit matrix,
 !>  i.e. the Euclidean dot-product.
       function dot_product_(v1, v2, S) result(dot)
-! One cannot use matmul + customly allocated arrays.
-! .and. One cannot overload dot_product with a non pure function
-! => call it dot_product_
         real(wp), intent(in) :: v1(:), v2(:)
         real(wp), intent(in), optional :: S(:, :)
         real(wp) :: dot
 
-        real(wp), allocatable :: tmp(:)
-
         if (present(S)) then
-          call mma_allocate(tmp, size(v1))
-          call mult(S, v1, tmp)
-          dot = dot_product(tmp, v2)
-          call mma_deallocate(tmp)
+          dot = dot_product(v1, S .mult. v2)
         else
           dot = dot_product(v1, v2)
         end if
