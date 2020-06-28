@@ -41,20 +41,29 @@ module linalg_mod
         module procedure mult_2D, mult_2D_1D, mult_2d_raw
     end interface
 
+
+    !> @brief
+    !>    Matrix multiplication operator
     interface operator(.mult.)
         module procedure f_mult_2D_N_N
         module procedure f_mult_2D_1D_N
     end interface
 
+    !> @brief
+    !>    Matrix multiplication operator, with lhs transposed.
     interface operator(.Tmult.)
         module procedure f_mult_2D_T_N
         module procedure f_mult_2D_1D_T
     end interface
 
+    !> @brief
+    !>    Matrix multiplication operator, with rhs transposed.
     interface operator(.multT.)
         module procedure f_mult_2D_N_T
     end interface
 
+    !> @brief
+    !>    Matrix multiplication operator, with lhs and rhs transposed.
     interface operator(.TmultT.)
         module procedure f_mult_2D_T_T
     end interface
