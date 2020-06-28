@@ -22,7 +22,7 @@
       Real*8 Value_l
       Real*8, Allocatable:: Array_l(:), HTri(:), Hessian(:,:),
      &                      qInt_s(:,:), Grad_s(:,:)
-#define _DEBUG_
+*#define _DEBUG_
 #ifdef _DEBUG_
       Call RecPrt('Setup_Kriging: Energy',' ',Energy,1,nRaw)
       Call RecPrt('Setup_Kriging: qInt',' ',qInt,nInter,nRaw)
@@ -35,7 +35,7 @@
 *
       U(:,:)=Zero
       Forall (i=1:nInter) U(i,i)=One
-      Call RecPrt('U(raw)',' ',U,nInter,nInter)
+*     Call RecPrt('U(raw)',' ',U,nInter,nInter)
 *
       Call mma_allocate(Hessian,nInter,nInter,Label='Hessian')
       Call mma_allocate(HTri,nInter*(nInter+1)/2,Label='HTri')
@@ -46,12 +46,12 @@
             HTri(ij)=Hessian_HMF(iInter,jInter)
          End Do
       End Do
-      Call TriPrt('HTri(raw)',' ',HTri,nInter)
+*     Call TriPrt('HTri(raw)',' ',HTri,nInter)
       Call NIDiag_new(HTri,U,nInter,nInter,0)
 *     U(:,:)=Zero
 *     Forall (i=1:nInter) U(i,i)=One
-      Call TriPrt('HTri',' ',HTri,nInter)
-      Call RecPrt('U',' ',U,nInter,nInter)
+*     Call TriPrt('HTri',' ',HTri,nInter)
+*     Call RecPrt('U',' ',U,nInter,nInter)
       Hessian(:,:) = Zero
       Forall (i=1:nInter) Hessian(i,i)=HTri(i*(i+1)/2)
 *

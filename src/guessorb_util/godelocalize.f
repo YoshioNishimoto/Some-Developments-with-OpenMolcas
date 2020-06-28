@@ -52,38 +52,11 @@
 *
       Call Get_nAtoms_All(nAtom)
       If (nAtom.eq.1) Return
-      Call RecPrt('Eval',' ',Eval,1,n)
-#ifdef _OLD_CODE_
-      i = 1
- 666  Continue
-      E1=EVal(i)
-!
-!     Do not try to delocalize these cases, probably fake degeneracy
-      If (Abs(E1).lt.1.0D-10.or.E1.gt.5.0D0) Then
-         i=i+1
-         Go To 666
-      End If
-      Do j = i+1, n
-         E2=EVal(j)
-         Test=2.0D0* Abs(E1-E2)/Abs(E1+E2)
-         If (Test.gt.1.0D-12) Then
-            If (j.eq.i+1) Then
-               i=j
-               Go To 666
-            Else
-               Write (6,*) 'Eigenvalues',(EVal(k),k=i,j-1)
-               k=j-i
-               Call canonical_degenerate_eigenvectors(EVec(1,i),nB,k)
-               i=j
-               Go To 666
-            End if
-         End If
-      End Do
-!
-#else
+C     Call RecPrt('Eval',' ',Eval,1,n)
+*
       i=1
       Do
-         If (i.eq.n) Exit
+         If (i.ge.n) Exit
          E1=EVal(i)
 !
 !        Do not try to delocalize these cases, probably fake degeneracy
@@ -99,17 +72,18 @@
                   i=j
                   Exit
                Else
-                  Write (6,*) 'Eigenvalues',(EVal(k),k=i,j-1)
+C                 Write (6,*) 'Eigenvalues',(EVal(k),k=i,j-1)
                   k=j-i
-                  Call canonical_degenerate_eigenvectors(EVec(1,i),nB,k)
+                  Call canonical_degenerate_eigenvectors(EVec(1,i),nB,
+     &                                                   k,.True.)
                   i=j
                   Exit
                End if
             End If
          End Do
+         i=i+1
 !
       End Do
-#endif
 *
 *----------------------------------------------------------------------*
 *     Exit                                                             *

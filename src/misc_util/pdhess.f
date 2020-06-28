@@ -19,7 +19,7 @@
       Real*8, Allocatable:: EVal(:), EVec(:,:)
       Real*8  Hii
 *
-#define _DEBUG_
+*#define _DEBUG_
 #ifdef _DEBUG_
       Call RecPrt('pdHess: H(Start)',' ',H,nH,nH)
 #endif

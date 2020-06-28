@@ -15,42 +15,55 @@
 ! the vectors to achieve optimal delacalization.                       *
 !                                                                      *
 !***********************************************************************
-      Subroutine canonical_degenerate_eigenvectors(P,n,d)
+      Subroutine canonical_degenerate_eigenvectors(P_Old,n,d,Option)
       Use kriging_mod, only: blavAI
       Implicit None
+      Integer, Intent(In):: n, d
+      Real*8, Intent(InOut):: P_Old(n,d)
+      Logical, Intent(In)::  Option
+!
       External DDot_
       Real*8 DDot_
 #include "stdalloc.fh"
-      Integer n, d, k, kOpt, i, j, ij, nAngles, iAngles, jAngles,      &
+      Integer k, kOpt, i, j, ij, nAngles, iAngles, jAngles,      &
               kAngles, iter, iSing, nRaw
-      Real*8 P(n,d), D_k, Tmp, grad2, gradMax, Det, D_k_Sum
+      Real*8 D_k, Tmp, grad2, gradMax, Det, D_k_Sum
       Real*8 :: Thr1=1.0D-8, Thr2=1.0D-8, Hii
       Real*8, Allocatable:: Angles(:), QSub(:,:,:), PQ(:,:), Q(:,:)
       Real*8, Allocatable:: dAngles(:), dQSub(:,:,:), dPQ(:,:,:),      &
-                            dQ(:,:,:), QTmp(:,:,:)
+                            dQ(:,:,:), QTmp(:,:,:), P(:,:)
       Real*8, Allocatable:: Delta_Angles(:)
       Real*8, Parameter:: Zero=0.0D0, One=1.0D0
       Real*8, Allocatable:: HessInv(:,:), Hess(:,:)
       Integer, Parameter:: iter_max=100
       Real*8, Allocatable:: f_of_phi(:), phi(:,:), dfdphi(:,:)
-      Real*8 :: Last_Value=0.0D0
+      Real*8 :: Last_Value=0.0D0, Factor=0.0D0
       Logical :: Converged=.True.
-#define _DEBUG_
-#define _DEBUG2_
-!#ifdef _ONE_ROW_
+!#define _DEBUG_
+!#define _DEBUG2_
+!#define _ONE_ROW_
 !#define _NUMERICAL_TEST_
 #ifdef _NUMERICAL_TEST_
       Real*8, Allocatable:: PQnum(:,:,:), Qnum(:,:,:), QSubNum(:,:,:)
       Real*8, Parameter:: Two=2.0D0
       Real*8 Delta
+!
 #endif
 !
-!     If (d.gt.2) Call Abend()
+      Call mma_allocate(P,n,d,Label='deg:P')
+      P(:,:)=P_Old(:,:)
+      If (Option) Then
+         Factor = -1.0D0
+      Else
+         Factor =  1.0D0
+      End If
 !
+!     If (d.gt.2) Call Abend()
 !
 !     Find the row of the vectors P where the sum of the absolute values
 !     of the coefficients are as large as possible. We will use this row
 !     to compute the degree of the delocalization.
+!
       kOpt=0
       D_k=Zero
       D_k_Sum = Zero
@@ -70,12 +83,12 @@
 #ifdef _ONE_ROW_
       Write (6,*)
       Write (6,*) 'kOpt=',kOpt
-      Write (6,*) 'D_k=',-D_k
+      Write (6,*) 'D_k=', Factor * D_k
       Write (6,*) 'P(kOpt,i)=',(P(kOpt,i),i=1,d)
       Write (6,*)
 #else
       Write (6,*)
-      Write (6,*) 'D_k_Sum=',-D_k_Sum
+      Write (6,*) 'D_k_Sum=',Factor * D_k_Sum
       Write (6,*)
 #endif
 #endif
@@ -237,13 +250,13 @@
       Call RecPrt('Angles',' ',Angles,1,nAngles)
       Call RecPrt('Phi(:,iter)',' ',Phi(1,iter),1,nAngles)
       Write (6,*)
-      Write (6,*) 'D_k=',D_k
+      Write (6,*) 'iter, D_k=',iter, D_k
       Write (6,*)
 #endif
 !
       Call Mk_derivatives
       dfdphi(:,iter)=dAngles(:)
-#ifdef _DEBUG_
+#ifdef _DEBUG3_
       Call RecPrt('Phi(:,iter)',' ',Phi(1,iter),1,nAngles)
       Call RecPrt('dfdphi',' ',dfdphi(1,iter),1,nAngles)
 #endif
@@ -272,16 +285,15 @@
 !     be screwed.
       Hess(:,:)=Zero
       ForAll (i=1:nAngles) Hess(i,i)=1.0D0
-#ifdef _DEBUG_
+#ifdef _DEBUG3_
       Call RecPrt('Hess(Unit)',' ',Hess,nAngles,nAngles)
-#endif
-!
       Call RecPrt('f_of_phi',' ',f_of_phi,1,iter)
       Call RecPrt('Phi(:,iter)',' ',Phi(1,iter),1,nAngles)
       Call RecPrt('dfdphi',' ',dfdphi(1,iter),1,nAngles)
+#endif
 #define _NEW_
 #ifdef _NEW_
-      nRaw=Min(d+1,iter)
+      nRaw=Min(2*d+1,iter)
       Call SetUp_Kriging(nRaw,nAngles,Phi(1,iter-nRaw+1),        &
                                    dfdphi(1,iter-nRaw+1),        &
                                    f_of_phi(iter-nRaw+1),Hess)
@@ -290,16 +302,16 @@
 #endif
       Call Hessian_Kriging_Layer(phi(1,iter),Hess,nAngles)
       Call Close_Kriging()
-#ifdef _DEBUG_
+#ifdef _DEBUG3_
       Call RecPrt('Hess(Kriging)',' ',Hess,nAngles,nAngles)
 #endif
 !     Make sure that the Hessian is positive definite -- we are going for a minimum!
       Call pdHess(Hess,nAngles)
-#ifdef _DEBUG_
+#ifdef _DEBUG3_
       Call RecPrt('Hess(pdHess)',' ',Hess,nAngles,nAngles)
 #endif
       Call Minv(Hess,HessInv,iSing,Det,nAngles)
-#ifdef _DEBUG_
+#ifdef _DEBUG3_
       Call RecPrt('HessInv',' ',HessInv,nAngles,nAngles)
 #endif
 !
@@ -322,7 +334,13 @@
 #ifdef _DEBUG_
       Call RecPrt('Delta_Angles',' ',Delta_Angles,nAngles,1)
 #endif
+!#define _INC_
+#ifdef _INC_
+      Angles(:)= - Delta_Angles(:)
+      P(:,:)=PQ(:,:)
+#else
       Angles(:)=Angles(:) - Delta_Angles(:)
+#endif
 !
 !***************************************************************************************************
 !***************************************************************************************************
@@ -334,12 +352,10 @@
 !
 !     Here if converged. If not, skip procedure all together.
 !
-      If (Converged) Then
-         P(:,:)=PQ(:,:)
 #ifdef _DEBUG_
-         Call RecPrt('P(final)',' ',P,n,d)
+      Call RecPrt('PQ(final)',' ',PQ,n,d)
 #endif
-     End If
+      If (Converged) P_Old(:,:)=PQ(:,:)
 !
 !***************************************************************************************************
 !     Release the resources
@@ -359,6 +375,7 @@
       Call mma_deallocate(dPQ)
       Call mma_deallocate(PQ)
       Call mma_deallocate(QTmp)
+      Call mma_deallocate(P)
 !
       Return
 !
@@ -463,12 +480,12 @@
       D_k=Zero
 #ifdef _ONE_ROW_
       Do i = 1, d
-         D_k=D_k-Abs(PQ(kOpt,i))
+         D_k=D_k + Factor * Abs(PQ(kOpt,i))
       End Do
 #else
       Do i = 1, d
          Do k = 1, n
-             D_k=D_k-Abs(PQ(k,i))
+             D_k=D_k + Factor * Abs(PQ(k,i))
          End Do
       End Do
 #endif
@@ -555,12 +572,12 @@
          Tmp = Zero
 #ifdef _ONE_ROW_
          Do i = 1, d
-            Tmp = Tmp - SIGN(One,PQ(kOpt,i)) * dPQ(kOpt,i,iAngles)
+            Tmp = Tmp + Factor * SIGN(One,PQ(kOpt,i)) * dPQ(kOpt,i,iAngles)
          End Do
 #else
          Do i = 1, d
             Do k = 1, n
-               Tmp = Tmp - SIGN(One,PQ(k,i)) * dPQ(k,i,iAngles)
+               Tmp = Tmp + Factor * SIGN(One,PQ(k,i)) * dPQ(k,i,iAngles)
             End Do
          End Do
 #endif
