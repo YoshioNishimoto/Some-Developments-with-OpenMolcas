@@ -25,10 +25,9 @@
       External DDot_
       Real*8 DDot_
 #include "stdalloc.fh"
-      Integer k, kOpt, i, j, ij, nAngles, iAngles, jAngles,      &
-              kAngles, iter, iSing, nRaw
+      Integer k, kOpt, i, j, nAngles, iAngles, jAngles, iter, iSing, nRaw
       Real*8 D_k, Tmp, grad2, gradMax, Det, D_k_Sum
-      Real*8 :: Thr1=1.0D-8, Thr2=1.0D-8, Hii
+      Real*8 :: Thr1=1.0D-8, Thr2=1.0D-8
       Real*8, Allocatable:: Angles(:), QSub(:,:,:), PQ(:,:), Q(:,:)
       Real*8, Allocatable:: dAngles(:), dQSub(:,:,:), dPQ(:,:,:),      &
                             dQ(:,:,:), QTmp(:,:,:), P(:,:)
@@ -44,6 +43,7 @@
 !#define _ONE_ROW_
 !#define _NUMERICAL_TEST_
 #ifdef _NUMERICAL_TEST_
+      Integer kAngles
       Real*8, Allocatable:: PQnum(:,:,:), Qnum(:,:,:), QSubNum(:,:,:)
       Real*8, Parameter:: Two=2.0D0
       Real*8 Delta
