@@ -1561,6 +1561,7 @@ cGLM some additional printout for MC-PDFT
         END IF
       end if
 
+#ifdef _HDF5_
       block
         use filesystem, only: real_path
         integer :: ierr
@@ -1576,6 +1577,7 @@ cGLM some additional printout for MC-PDFT
             write(6, *) 'Successfully copied RASWFN'
         end if
       end block
+#endif
 
       block
         use filesystem, only: real_path
