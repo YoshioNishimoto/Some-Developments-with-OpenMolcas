@@ -58,10 +58,11 @@
 #endif
       use stdalloc, only: mma_allocate, mma_deallocate
       use write_orbital_files, only : OrbFiles, putOrbFile
+      use fortran_strings, only: str
 
       use generic_CI, only: CI_solver_t
       use fciqmc, only: DoNECI, fciqmc_solver_t
-      use CC_CI_mod, only: Do_CC_CI, CC_CI_solver_t
+      use CC_CI_mod, only: Do_CC_CI, CC_CI_solver_t, write_RDM
       use fcidump, only : make_fcidumps, transform, DumpOnly
 
       use orthonormalization, only : ON_scheme
@@ -1127,6 +1128,31 @@ c.. upt to here, jobiph are all zeros at iadr15(2)
 
 c      call triprt('twxy',' ',WORK(LTUVX),nAc*(nAc+1)/2)
 c      call triprt('P-mat 2',' ',WORK(LPMAT),nAc*(nAc+1)/2)
+
+        block
+            integer :: file_id
+            integer, parameter :: arbitrary_magic_number = 42
+            file_id = isFreeUnit(arbitrary_magic_number)
+            call molcas_open(file_id,'DMAT_'//str(actual_iter)//'.mat')
+            call write_RDM(work(lDMAT : lDMAT + nAcPar - 1), file_id)
+            close(file_id)
+        end block
+        block
+            integer :: file_id
+            integer, parameter :: arbitrary_magic_number = 42
+            file_id = isFreeUnit(arbitrary_magic_number)
+            call molcas_open(file_id,'PSMAT_'//str(actual_iter)//'.mat')
+            call write_RDM(work(lpmat : lPMat + nAcpr2 - 1), file_id)
+            close(file_id)
+        end block
+        block
+            integer :: file_id
+            integer, parameter :: arbitrary_magic_number = 42
+            file_id = isFreeUnit(arbitrary_magic_number)
+            call molcas_open(file_id,'PAMAT_'//str(actual_iter)//'.mat')
+            call write_RDM(work(lpa : lpa + nAcPr2 - 1), file_id)
+            close(file_id)
+        end block
 
         EAV=0.0d0
         If (DoSplitCAS) Then
