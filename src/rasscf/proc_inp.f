@@ -1561,6 +1561,7 @@ CIgorS End
          read(luinput,*,end=9910,err=9920)
      &    (igsoccx(igas,mm),mm=1,2)
        end do
+      write(6, *) 'hello', igsoccx(1:nGAS, 1:2)
        iDoGas = .true.
        iorbdata=1
       end if

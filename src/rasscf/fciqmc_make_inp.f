@@ -15,7 +15,8 @@
       module fciqmc_make_inp
         use stdalloc, only : mma_deallocate
         use linalg_mod, only: assert_
-        use gas_data, only: ngssh, iDoGas, nGAS, iGSOCCX
+        use general_data, only: nSym
+        use gas_data, only: ngssh, nGAS, iGSOCCX
         implicit none
         private
         public :: make_inp, cleanup
@@ -74,7 +75,7 @@
       logical, intent(in), optional :: readpops
       ! Perform a GAS calculation.
       integer, intent(in), optional ::
-     &      GAS_orbitals(:), GAS_minmax_cumN(:, :)
+     &      GAS_orbitals(nGAS, nSym), GAS_minmax_cumN(nGAS, 2)
       logical :: readpops_
       integer :: i, isFreeUnit, file_id, indentlevel
       integer, parameter :: indentstep = 4
@@ -180,11 +181,12 @@
 
         subroutine write_GAS_spec(file_id, GAS_spaces, GAS_minmax_cumN,
      &                      permutation)
-        integer, intent(in) :: GAS_spaces(:, :), GAS_minmax_cumN
+        integer, intent(in) :: GAS_spaces(nGAS, nSym),
+     &                         GAS_minmax_cumN(nGAS, 2)
         integer, intent(in), optional :: permutation(:)
         integer, parameter :: arbitrary_magic_number = 42
         integer :: i, GAS_ORB(sum(GAS_spaces)), iGAS, iSym, file_id
-        character(*), parameter :: GAS_fmt = '(I0, I0, I0, " +++")'
+        character(:), allocatable :: GAS_fmt, GAS_ORB_fmt
 
         GAS_ORB(:) = [(((iGAS, i = 1, GAS_spaces(iGAS, iSym)),
      &                 iGAS = 1, size(GAS_spaces, 1)), iSym = 1, nSym)]
@@ -193,13 +195,21 @@
 
         write(file_id, A_fmt())
      &      'GAS-SPEC '//str(size(GAS_spaces, 1))//'+++'
+        call indent()
+        GAS_fmt = '('//indent_fmt()//'I0, 1x, I0, 1x, I0, 1x, "+++")'
         do iGAS = 1, size(GAS_spaces, 1)
           write(file_id, GAS_fmt)
      &      sum(GAS_spaces(iGAS, :)),
      &      GAS_minmax_cumN(iGAS, 1),
      &      GAS_minmax_cumN(iGAS, 2)
         end do
-        write(file_id, *) GAS_ORB
+
+        write(file_id, '('//indent_fmt()//')', advance='no')
+        do i = 1, size(GAS_ORB) - 1
+          write(file_id, '(I0, 1x)', advance='no') GAS_ORB(i)
+        end do
+        write(file_id, '(I0)') GAS_ORB(i)
+        call dedent()
         end subroutine
 
 

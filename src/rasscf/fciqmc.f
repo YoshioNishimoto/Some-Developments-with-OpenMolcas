@@ -122,7 +122,7 @@
 ! SOME DIRTY SETUPS
       S = 0.5_wp * dble(iSpin - 1)
 
-      call check_options(lRoots, lRf, KSDFT, iDoGAS, iGSOCCX, nGAS)
+      call check_options(lRoots, lRf, KSDFT)
 
 ! Produce a working FCIDUMP file
       if (ReOrFlag /= 0) then
@@ -148,12 +148,21 @@
 #ifdef _MOLCAS_MPP_
       if (is_real_par()) call MPI_Barrier(MPI_COMM_WORLD, error)
 #endif
-
-      call run_neci(DoEmbdNECI, actual_iter == 1,
-     &  ascii_fcidmp, h5_fcidmp, doGAS=iDoGAS,
-     &  reuse_pops=actual_iter >= 5 .and. abs(rotmax) < 1d-2,
-     &  NECIen=NECIen,
-     &  D1S_MO=D1S_MO, DMAT=DMAT, PSMAT=PSMAT, PAMAT=PAMAT)
+      if (iDoGAS) then
+        call run_neci(DoEmbdNECI, actual_iter == 1,
+     &    ascii_fcidmp, h5_fcidmp,
+     &    reuse_pops=actual_iter >= 5 .and. abs(rotmax) < 1d-2,
+     &    NECIen=NECIen,
+     &    D1S_MO=D1S_MO, DMAT=DMAT, PSMAT=PSMAT, PAMAT=PAMAT,
+     &    GAS_orbitals=nGSSH(:nGAS, :nSYM),
+     &    GAS_minmax_cumN=iGSOCCX(:nGAS, :2))
+      else
+        call run_neci(DoEmbdNECI, actual_iter == 1,
+     &    ascii_fcidmp, h5_fcidmp,
+     &    reuse_pops=actual_iter >= 5 .and. abs(rotmax) < 1d-2,
+     &    NECIen=NECIen,
+     &    D1S_MO=D1S_MO, DMAT=DMAT, PSMAT=PSMAT, PAMAT=PAMAT)
+      end if
 ! NECIen so far is only the energy for the GS.
 ! Next step it will be an array containing energies for all the optimized states.
       do jRoot = 1, lRoots
@@ -174,30 +183,26 @@
       subroutine run_neci(DoEmbdNECI, fake_run,
      &      ascii_fcidmp, h5_fcidmp,
      &      reuse_pops,
-     &      NECIen, D1S_MO, DMAT, PSMAT, PAMAT, doGAS)
+     &      NECIen, D1S_MO, DMAT, PSMAT, PAMAT,
+     &      GAS_orbitals, GAS_minmax_cumN)
         use fciqmc_make_inp, only: make_inp
         logical, intent(in) :: DoEmbdNECI, fake_run, reuse_pops
         character(*), intent(in) :: ascii_fcidmp, h5_fcidmp
         real(wp), intent(out) :: NECIen, D1S_MO(nAcPar), DMAT(nAcpar),
      &      PSMAT(nAcpr2), PAMAT(nAcpr2)
-        logical, intent(in), optional :: doGAS
-        logical :: doGAS_
+        integer, intent(in), optional ::
+     &      GAS_orbitals(nGAS, nSym), GAS_minmax_cumN(nGAS, 2)
         real(wp), save :: previous_NECIen = 0.0_wp
 
         character(*), parameter :: input_name = 'FCINP',
      &    energy_file = 'NEWCYCLE'
 
-        if (present(doGAS)) then
-          doGAS_ = doGAS
-        else
-          doGAS_ = .false.
-        end if
-
         if (fake_run) then
           NECIen = previous_NECIen
         else
+          call make_inp(input_name, reuse_pops, GAS_orbitals,
+     &                  GAS_minmax_cumN)
           if (DoEmbdNECI) then
-            call make_inp(input_name, doGAS=doGAS_, readpops=reuse_pops)
 #ifdef _NECI_
             write(6,*) 'NECI called automatically within Molcas!'
             if (myrank /= 0) call chdir_('..')
@@ -212,7 +217,6 @@
      &'for compiling or use an external NECI.')
 #endif
           else
-            call make_inp(input_name, doGAS=doGAS_)
             if (myrank == 0) then
               call write_ExNECI_message(input_name, ascii_fcidmp,
      &                                  h5_fcidmp, energy_file)
@@ -290,7 +294,7 @@
       end subroutine write_ExNECI_message
 
       subroutine write_GASORB(GAS_spaces, permutation)
-        integer, intent(in) :: GAS_spaces(:, :)
+        integer, intent(in) :: GAS_spaces(nGAS, nSym)
         integer, intent(in), optional :: permutation(:)
         integer, parameter :: arbitrary_magic_number = 42
         integer :: i, GAS_ORB(sum(GAS_spaces)), iGAS, iSym, file_id
