@@ -245,10 +245,9 @@
       end subroutine
 
 
-      subroutine check_options(lroots, lRf, KSDFT,
-     &      DoGAS, iGSOCCX, nGAS)
-        integer, intent(in) :: lroots, iGSOCCX(:, :),nGAS
-        logical, intent(in) :: lRf, DoGAS
+      subroutine check_options(lroots, lRf, KSDFT)
+        integer, intent(in) :: lroots
+        logical, intent(in) :: lRf
         character(*), intent(in) :: KSDFT
         logical :: Do_ESPF
         if (lroots > 1) then
@@ -257,12 +256,6 @@
         call DecideOnESPF(Do_ESPF)
         if ( lRf .or. KSDFT /= 'SCF' .or. Do_ESPF) then
           call abort_('FCIQMC does not support Reaction Field yet!')
-        end if
-        if (DoGAS) then
-          if (.not. all(iGSOCCX(:nGAS, 1) == iGSOCCX(:nGAS, 2))) then
-            call abort_('Only disconnected GAS spaces are '//
-     &        'currently supported in FCIQMC.')
-          end if
         end if
       end subroutine check_options
 

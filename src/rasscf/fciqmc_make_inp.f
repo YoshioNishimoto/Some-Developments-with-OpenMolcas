@@ -14,6 +14,8 @@
 
       module fciqmc_make_inp
         use stdalloc, only : mma_deallocate
+        use linalg_mod, only: assert_
+        use gas_data, only: ngssh, iDoGas, nGAS, iGSOCCX
         implicit none
         private
         public :: make_inp, cleanup
@@ -64,13 +66,16 @@
 !>    G. Li Manni, Oskar Weser
 !>
 !>  @paramin[in] readpops  If true the readpops option for NECI is set.
-      subroutine make_inp(path, readpops, doGAS)
+      subroutine make_inp(path, readpops, GAS_orbitals, GAS_minmax_cumN)
       use general_data, only : nActEl, iSpin
       use stdalloc, only : mma_deallocate
       use fortran_strings, only : str
       character(*), intent(in) :: path
-      logical, intent(in), optional :: readpops, doGAS
-      logical :: readpops_, doGAS_
+      logical, intent(in), optional :: readpops
+      ! Perform a GAS calculation.
+      integer, intent(in), optional ::
+     &      GAS_orbitals(:), GAS_minmax_cumN(:, :)
+      logical :: readpops_
       integer :: i, isFreeUnit, file_id, indentlevel
       integer, parameter :: indentstep = 4
 
@@ -79,11 +84,9 @@
       else
         readpops_ = .false.
       end if
-      if (present(doGAS)) then
-        doGAS_ = doGAS
-      else
-        doGAS_ = .false.
-      end if
+      call assert_(present(GAS_orbitals).eqv.present(GAS_minmax_cumN),
+     &      'GAS orbitals and cumulated minimum and maximum particle '
+     &      //'number required.')
 
       call add_info('Default number of total walkers',
      &  [dble(totalwalkers)], 1, 6)
@@ -107,7 +110,11 @@
           write(file_id, I_fmt()) 'spin-restrict', iSpin - 1
         end if
         write(file_id, A_fmt()) 'freeformat'
-        if (doGas_) write(file_id, A_fmt()) 'part-conserving-gas'
+
+        if (present(GAS_orbitals)) then
+          call write_GAS_spec(file_id, GAS_orbitals, GAS_minmax_cumN)
+        end if
+
       call dedent()
       write(file_id, A_fmt()) 'endsys'
       write(file_id, *)
@@ -171,6 +178,31 @@
 
       contains
 
+        subroutine write_GAS_spec(file_id, GAS_spaces, GAS_minmax_cumN,
+     &                      permutation)
+        integer, intent(in) :: GAS_spaces(:, :), GAS_minmax_cumN
+        integer, intent(in), optional :: permutation(:)
+        integer, parameter :: arbitrary_magic_number = 42
+        integer :: i, GAS_ORB(sum(GAS_spaces)), iGAS, iSym, file_id
+        character(*), parameter :: GAS_fmt = '(I0, I0, I0, " +++")'
+
+        GAS_ORB(:) = [(((iGAS, i = 1, GAS_spaces(iGAS, iSym)),
+     &                 iGAS = 1, size(GAS_spaces, 1)), iSym = 1, nSym)]
+
+        if (present(permutation)) GAS_ORB = GAS_ORB(permutation)
+
+        write(file_id, A_fmt())
+     &      'GAS-SPEC '//str(size(GAS_spaces, 1))//'+++'
+        do iGAS = 1, size(GAS_spaces, 1)
+          write(file_id, GAS_fmt)
+     &      sum(GAS_spaces(iGAS, :)),
+     &      GAS_minmax_cumN(iGAS, 1),
+     &      GAS_minmax_cumN(iGAS, 2)
+        end do
+        write(file_id, *) GAS_ORB
+        end subroutine
+
+
         function indent_fmt() result(res)
           character(:), allocatable :: res
           if (indentlevel /= 0) then
@@ -213,5 +245,6 @@
       subroutine cleanup()
         if (allocated(definedet)) call mma_deallocate(definedet)
       end subroutine cleanup
+
 
       end module fciqmc_make_inp
