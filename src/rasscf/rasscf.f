@@ -57,12 +57,14 @@
      &    finalize_dmrg, dump_dmrg_info
 #endif
       use stdalloc, only: mma_allocate, mma_deallocate
+      use definitions, only: wp
       use write_orbital_files, only : OrbFiles, putOrbFile
       use fortran_strings, only: str
 
       use generic_CI, only: CI_solver_t
       use fciqmc, only: DoNECI, fciqmc_solver_t
-      use CC_CI_mod, only: Do_CC_CI, CC_CI_solver_t, write_RDM
+      use CC_CI_mod, only: Do_CC_CI, CC_CI_solver_t, write_RDM,
+     &   inv_triang_number, calc_1RDM
       use fcidump, only : make_fcidumps, transform, DumpOnly
 
       use orthonormalization, only : ON_scheme
@@ -1137,6 +1139,24 @@ c      call triprt('P-mat 2',' ',WORK(LPMAT),nAc*(nAc+1)/2)
             call write_RDM(work(lDMAT : lDMAT + nAcPar - 1), file_id)
             close(file_id)
         end block
+
+        associate(PSMAT => work(lpmat : lPMat + nAcpr2 - 1))
+        block
+            integer :: file_id
+            integer, parameter :: arbitrary_magic_number = 42
+            real(wp), allocatable :: calc_DMAT(:)
+
+            allocate(calc_DMAT(inv_triang_number(size(PSMAT))))
+            call calc_1RDM(PSMAT, calc_DMAT)
+
+            file_id = isFreeUnit(arbitrary_magic_number)
+            call molcas_open(file_id,
+     &              'calculated_DMAT_'//str(actual_iter)//'.mat')
+            call write_RDM(calc_DMAT, file_id)
+            close(file_id)
+        end block
+        end associate
+
         block
             integer :: file_id
             integer, parameter :: arbitrary_magic_number = 42

@@ -35,8 +35,9 @@
 
       implicit none
       save
-      private
-      public :: Do_CC_CI, CC_CI_solver_t, write_RDM
+!     TODO uncomment
+!       private
+!       public :: Do_CC_CI, CC_CI_solver_t, write_RDM
       logical :: Do_CC_CI = .false.
 #include "para_info.fh"
       interface
@@ -269,13 +270,27 @@
      &      'Dimension mismatch PSMAT, DMAT')
 
         DMAT(:) = 0._wp
+
         do pq = lbound(DMAT, 1), ubound(DMAT, 1)
           call one_el_idx(pq, p, q)
-          do r = 1, inv_triang_number(size(DMAT))
-            DMAT(pq) = DMAT(pq) + PSMAT(two_el_idx_flatten(p, q, r, r))
-          end do
+          if (p == q) then
+            do r = 1, inv_triang_number(size(DMAT))
+              DMAT(pq) = DMAT(pq)
+     &            + 2.0_wp * PSMAT(two_el_idx_flatten(p, q, r, r))
+            end do
+          else
+            do r = 1, p - 1
+              DMAT(pq) = DMAT(pq)
+     &            + 2.0_wp * PSMAT(two_el_idx_flatten(p, q, r, r))
+            end do
+            do r = p, inv_triang_number(size(DMAT))
+              DMAT(pq) = DMAT(pq)
+     &            + PSMAT(two_el_idx_flatten(p, q, r, r))
+            end do
+          end if
+
         end do
-        DMAT(:) = DMAT(:) * 2.0_wp / real(nActEl - 1, kind=wp)
+        DMAT(:) = DMAT(:) / real(nActEl - 1, kind=wp)
 
       end subroutine
 
