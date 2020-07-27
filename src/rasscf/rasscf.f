@@ -1603,6 +1603,40 @@ cGLM some additional printout for MC-PDFT
         END IF
       end if
 
+#ifdef _HDF5_
+      block
+        use filesystem, only: real_path
+        integer :: ierr
+        character(:), allocatable :: path
+        path = real_path('RASWFN')
+        call execute_command_line(
+     &      "cp "//path//" "//path//"_"//str(actual_iter),exitstat=ierr)
+        if (ierr /= 0) then
+            call WarningMessage(
+     &          1, "Copy of RASWFN failed in iteration "
+     &              //str(actual_iter))
+        else
+            write(6, *) 'Successfully copied RASWFN'
+        end if
+      end block
+#endif
+
+      block
+        use filesystem, only: real_path
+        integer :: ierr
+        character(:), allocatable :: path
+        path = real_path('RASORB')
+        call execute_command_line(
+     &      "cp "//path//" "//path//"_"//str(actual_iter),exitstat=ierr)
+        if (ierr /= 0) then
+            call WarningMessage(
+     &          1, "Copy of RASORB failed in iteration "
+     &              //str(actual_iter))
+        else
+            write(6, *) 'Successfully copied RASORB'
+        end if
+      end block
+
 *
 * Convergence check:
 * check is done on largest BLB matrix
