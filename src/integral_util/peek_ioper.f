@@ -8,31 +8,31 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1999, Roland Lindh                                     *
+* Copyright (C) 2020, Roland Lindh                                     *
 ************************************************************************
-      SubRoutine IniSew(DSCF,nDiff)
+      SubRoutine Peek_iOper(jOper,njOper)
 ************************************************************************
+*                                                                      *
+* Object:                                                              *
+*                                                                      *
+* Called from:                                                         *
+*                                                                      *
+* Calling    : QEnter                                                  *
+*              QExit                                                   *
+*                                                                      *
 *     Author: Roland Lindh, Dept. of Chemical Physics,                 *
 *             University of Lund, SWEDEN                               *
 ************************************************************************
       Implicit Real*8 (A-H,O-Z)
-#include "SysDef.fh"
-#include "nsd.fh"
-#include "setup.fh"
-#include "status.fh"
+#include "itmax.fh"
+#include "info.fh"
+      Integer jOper(0:njOper-1)
 *
-      Logical DSCF
-*
-      If (Seward_Status.eq.Active) Then
-         Call ClsSew()
-         Call xRlsMem_Ints()
+      If (njOper.ne.nIrrep) Then
+         Write (6,*) "njOper.ne.nIrrep"
+         Call Abend()
       End If
-*
-      Call Seward_Init()
-*
-      Call GetInf(DSCF,nDiff)
-*
-      Call Poke_iScalar('nSym',nIrrep)
+      Call ICopy(nIrrep,iOper,1,jOper,1)
 *
       Return
       End

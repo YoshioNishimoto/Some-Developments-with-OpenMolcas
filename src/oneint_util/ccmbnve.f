@@ -18,7 +18,6 @@
 *             January  91                                              *
 ************************************************************************
       Implicit Real*8 (A-H,O-Z)
-#include "print.fh"
 #include "real.fh"
       Real*8 Final(nZeta,(la+1)*(la+2)/2,(lb+1)*(lb+2)/2,nComp),
      &       Zeta(nZeta), rKappa(nZeta), rTemp, Fact, KVector(3)
@@ -29,8 +28,14 @@
 *
       Ind(ixyz,ix,iz) = (ixyz-ix)*(ixyz-ix+1)/2 + iz + 1
 *
-      iRout = 161
-      iPrint = nPrint(iRout)
+*#define _DEBUG_
+#ifdef _DEBUG_
+      Call RecPrt('KVector',' ',kVector,3,1)
+      Call RecPrt('Zeta',' ',Zeta,nZeta,1)
+      Call RecPrt('rKappa',' ',rKappa,nZeta,1)
+      Call RecPrt('Rnxyz',' ',Rnxyz,2*nZeta,3*(la+2)*(lb+2))
+      Call RecPrt('Vxyz',' ',Vxyz,2*nZeta,3*(la+1)*(lb+1)*2)
+#endif
 *
       Do 10 ixa = 0, la
          iyaMax=la-ixa
@@ -90,24 +95,24 @@
                Final(iZeta,ipa,ipb,9 )= DIMAG((Temp1+Temp2)*Half)
                Final(iZeta,ipa,ipb,12)= DIMAG((Temp1-Temp2)*Half)
  30         Continue
-            If (iPrint.ge.99) Then
-               Write (6,*) '(',ixa,iya,iza,ixb,iyb,izb,')'
-               Write (6,*) 'x-component'
-               Write (6,*) Final(1,ipa,ipb,1)
-               Write (6,*) Final(1,ipa,ipb,4)
-               Write (6,*) Final(1,ipa,ipb,7)
-               Write (6,*) Final(1,ipa,ipb,10)
-               Write (6,*) 'y-component'
-               Write (6,*) Final(1,ipa,ipb,2)
-               Write (6,*) Final(1,ipa,ipb,5)
-               Write (6,*) Final(1,ipa,ipb,8)
-               Write (6,*) Final(1,ipa,ipb,11)
-               Write (6,*) 'z-component'
-               Write (6,*) Final(1,ipa,ipb,3)
-               Write (6,*) Final(1,ipa,ipb,6)
-               Write (6,*) Final(1,ipa,ipb,9)
-               Write (6,*) Final(1,ipa,ipb,12)
-            End If
+#ifdef _DEBUG_
+            Write (6,*) '(',ixa,iya,iza,ixb,iyb,izb,')'
+            Write (6,*) 'x-component'
+            Write (6,*) Final(1,ipa,ipb,1)
+            Write (6,*) Final(1,ipa,ipb,4)
+            Write (6,*) Final(1,ipa,ipb,7)
+            Write (6,*) Final(1,ipa,ipb,10)
+            Write (6,*) 'y-component'
+            Write (6,*) Final(1,ipa,ipb,2)
+            Write (6,*) Final(1,ipa,ipb,5)
+            Write (6,*) Final(1,ipa,ipb,8)
+            Write (6,*) Final(1,ipa,ipb,11)
+            Write (6,*) 'z-component'
+            Write (6,*) Final(1,ipa,ipb,3)
+            Write (6,*) Final(1,ipa,ipb,6)
+            Write (6,*) Final(1,ipa,ipb,9)
+            Write (6,*) Final(1,ipa,ipb,12)
+#endif
 *
  21      Continue
  20      Continue
