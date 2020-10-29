@@ -518,180 +518,165 @@
     Real*8, external :: fact
 !                                                                                            
 !                                                                                            
-cx=2.d0**0.5d0/w0*(dcos(Alpha)*dcos(Gamma)-dcos(Beta)*dsin(Alpha)*dsin(Gamma))
-cy=2.d0**0.5d0/w0*(dcos(Gamma)*dsin(Alpha)+dcos(Alpha)*dcos(Beta)*dsin(Gamma))
-cz=2.d0**0.5d0/w0*dsin(Beta)*dsin(Gamma)
+    cx=2.d0**0.5d0/w0*(dcos(Alpha)*dcos(Gamma)-dcos(Beta)*dsin(Alpha)*dsin(Gamma))
+    cy=2.d0**0.5d0/w0*(dcos(Gamma)*dsin(Alpha)+dcos(Alpha)*dcos(Beta)*dsin(Gamma))
+    cz=2.d0**0.5d0/w0*dsin(Beta)*dsin(Gamma)
 !                                                                                            
-bx=2.d0**0.5d0/w0*(-dcos(Beta)*dcos(Gamma)*dsin(Alpha)-dcos(Alpha)*dsin(Gamma))
-by=2.d0**0.5d0/w0*(dcos(Alpha)*dcos(Beta)*dcos(Gamma)-dsin(Alpha)*dsin(Gamma))
-bz=2.d0**0.5d0/w0*(dcos(Gamma)*dsin(Beta))
+    bx=2.d0**0.5d0/w0*(-dcos(Beta)*dcos(Gamma)*dsin(Alpha)-dcos(Alpha)*dsin(Gamma))
+    by=2.d0**0.5d0/w0*(dcos(Alpha)*dcos(Beta)*dcos(Gamma)-dsin(Alpha)*dsin(Gamma))
+    bz=2.d0**0.5d0/w0*(dcos(Gamma)*dsin(Beta))
 !                                                                                            
-cxx=(dcos(Alpha)**2.d0+dcos(Beta)**2.d0*dsin(Alpha)**2.d0)/w0**2.d0
-cyy=(dcos(Alpha)**2.d0*dcos(Beta)**2.d0+dsin(Alpha)**2.d0)/w0**2.d0
-czz=(dsin(Beta)**2.d0)/w0**2.d0
-cxy=2.d0*dsin(Alpha)*dcos(Alpha)*dsin(Beta)**2.d0/w0**2.d0
-cyz=2.d0*dcos(Alpha)*dsin(Beta)*dcos(Beta)/w0**2.d0
-czx=-2.d0*dcos(Beta)*dsin(Alpha)*dsin(Beta)/w0**2.d0
+    cxx=(dcos(Alpha)**2.d0+dcos(Beta)**2.d0*dsin(Alpha)**2.d0)/w0**2.d0
+    cyy=(dcos(Alpha)**2.d0*dcos(Beta)**2.d0+dsin(Alpha)**2.d0)/w0**2.d0
+    czz=(dsin(Beta)**2.d0)/w0**2.d0
+    cxy=2.d0*dsin(Alpha)*dcos(Alpha)*dsin(Beta)**2.d0/w0**2.d0
+    cyz=2.d0*dcos(Alpha)*dsin(Beta)*dcos(Beta)/w0**2.d0
+    czx=-2.d0*dcos(Beta)*dsin(Alpha)*dsin(Beta)/w0**2.d0
 !                                                                                            
-AA=expo*cone+cone*cyy-cone*cxy**2.d0/4.d0/(cone*expo+cone*cxx)
-BB=cone*2.d0*expo*yp+eye*dcos(Alpha)*dsin(Beta)*k0 &
-  &-cone*(cone*2.d0*expo*xp-eye*dsin(Alpha)*dsin(Beta)*k0)*cxy/2.d0/(cone*expo+cone*cxx)
-CC=cone*cxy*czx/2.d0/(cone*expo+cone*cxx)-cone*cyz
+    AA=expo*cone+cone*cyy-cone*cxy**2.d0/4.d0/(cone*expo+cone*cxx)
+    BB=cone*2.d0*expo*yp+eye*dcos(Alpha)*dsin(Beta)*k0 &
+         &-cone*(cone*2.d0*expo*xp-eye*dsin(Alpha)*dsin(Beta)*k0)*cxy/2.d0/(cone*expo+cone*cxx)
+    CC=cone*cxy*czx/2.d0/(cone*expo+cone*cxx)-cone*cyz
 !                                                                                            
-DD=cone*expo+cone*czz-cone*czx**2.d0/4.d0/(cone*expo+cone*cxx)-cone*CC**2.d0/4.d0/AA
-FF=cone*2.d0*expo*zp-cone*(cone*2.d0*expo*xp-eye*dsin(Alpha)*dsin(Beta)*k0)*czx/2.d0/(cone*e\
-xpo+cone*cxx) &
-  &+cone*BB*CC/2.d0/AA - eye*dcos(Beta)*k0
+    DD=cone*expo+cone*czz-cone*czx**2.d0/4.d0/(cone*expo+cone*cxx)-cone*CC**2.d0/4.d0/AA
+    FF=cone*2.d0*expo*zp-cone*(cone*2.d0*expo*xp-eye*dsin(Alpha)*dsin(Beta)*k0)*czx/2.d0/(cone*e\
+    xpo+cone*cxx) &
+         &+cone*BB*CC/2.d0/AA - eye*dcos(Beta)*k0
 !                                              
 !                                                                                            
 !write(*,*) DD, FF, cdexp(FF**2.d0/4.d0/DD)                                                  
 !stop                                                                                        
 
 !                                                                                            
-gau_her=czero
-ctmp1=czero
-ctmp2=czero
-ctmp3=czero
-ctmp4=czero
-ctmp5=czero
+    gau_her=czero
+    ctmp1=czero
+    ctmp2=czero
+    ctmp3=czero
+    ctmp4=czero
+    ctmp5=czero
 !                                                                                            
-ctmp6=-cone*expo*xp**2.d0 &
-     &+(cone*2.d0*expo*xp-eye*dsin(Alpha)*dsin(Beta)*k0)**2.d0/4.d0/(cone*expo+cone*cxx) &
-     &-cone*expo*yp**2.d0 &
-     &+BB**2.d0/4.d0/AA &
-     &-cone*expo*zp**2.d0 &
-     &+FF**2.d0/4.d0/DD
-ctmp7=cdexp(ctmp6)
+    ctmp6=-cone*expo*xp**2.d0 &
+         &+(cone*2.d0*expo*xp-eye*dsin(Alpha)*dsin(Beta)*k0)**2.d0/4.d0/(cone*expo+cone*cxx) &
+         &-cone*expo*yp**2.d0 &
+         &+BB**2.d0/4.d0/AA &
+         &-cone*expo*zp**2.d0 &
+         &+FF**2.d0/4.d0/DD
+    ctmp7=cdexp(ctmp6)
 !write(*,*) ctmp6, ctmp7                                                                     
 !stop                                                                                        
 !                                                                                            
-if ((m .lt. 0) .or. (n .lt. 0)) then
-  gau_her=czero
-else
-do r=0,m/2
-  do s=0, m-2*r
-    do t=0,m-2*r
-      ctmp1=czero
-      if ((s+t) .le. (m-2*r)) then
-        !write(*,*) 'r, s,t loop'                                                            
-        ctmp1=cone*(-1.d0)**dble(r)*fact(m)*cx**dble(s)*cy**dble(t)*cz**dble(m-2*r-s-t) &
-            &*2.d0**dble(m-2*r)/fact(r)/fact(s)/fact(t)/fact(m-2*r-s-t)
-       !if (cdabs(ctmp1) .ge. 1.d20) then                                                    
-       !  write(*,*) 'ctmp1',ctmp1                                                           
-       !  stop                                                                               
-       !endif                                                                                
-        do r1=0,n/2
-          do s1=0,n-2*r1
-            do t1=0,n-2*r1
-              ctmp2=czero
-              if ((s1+t1) .le. (n-2*r1)) then
-                !write(*,*) 'r1, s1,t1 loop'            
-                ctmp2=cone*(-1.d0)**dble(r1)*fact(n)*bx**dble(s1)*by**dble(t1)*bz**dble(n-2*\
-r1-s1-t1) &
-                     &*2.d0**dble(n-2*r1)/fact(r1)/fact(s1)/fact(t1)/fact(n-2*r1-s1-t1)
-               !if (cdabs(ctmp2) .ge. 1.d20) then                                            
-               !  write(*,*) 'ctmp2', ctmp2                                                  
-               !  stop                                                                       
-               !endif                                                                        
-                do d=0,a
-                  do f=0,(d+s+s1)/2
-                    do g=0,d+s+s1-2*f
-                      do h=0,d+s+s1-2*f
-                        ctmp3=czero
-                        if ((g+h) .le. (d+s+s1-2*f)) then
-                          !write(*,*) 'd, f, g, h  loop'                                     
-                          ctmp3=cone*fact(a)/fact(d)/fact(a-d)*fact(d+s+s1)/fact(f)/fact(g)/\
-fact(h)/fact(d+s+s1-2*f-g-h) &
-                               &*cdsqrt(pi/(cone*expo+cone*cxx))*(-xp)**dble(a-d) &
-                               &*2.d0**dble(d+s+s1-2*f)/(4.d0*(cone*expo+cone*cxx))**dble(d+\
-s+s1-f) &
-                               &*(cone*2.d0*expo*xp-eye*dsin(alpha)*dsin(beta)*k0)**dble(g) \
-&
-                               &*(-cxy)**dble(h)*(-czx)**dble(d+s+s1-2*f-g-h)
-                         !if (cdabs(ctmp3) .ge. 1.d20) then                                  
-                         !  write(*,*) 'ctmp3',ctmp3                                         
-                         !  stop                                                             
-                         !endif                                                              
-                          do d1=0,b
-                            do f1=0,(t+t1+d1+h)/2
-                              do g1=0,t+t1+d1+h-2*f1
-                                !write(*,*) 'd1, f1, g1 loop'                                
-                                ctmp4=cdsqrt(pi/AA)*fact(b)/fact(d1)/fact(b-d1) &
-                                     &*fact(t+t1+d1+h)/fact(f1)/fact(g1)/fact(t+t1+d1+h-2*f1\
--g1) &
-                                     &*(-yp)**dble(b-d1)*2.d0**dble(t+t1+d1+h-2*f1)/(4.d0*AA\
-)**dble(t+t1+d1+h-f1) &
-                                     &*BB**dble(g1)*CC**dble(t+t1+d1+h-2*f1-g1)
-                               !if (cdabs(ctmp4) .ge. 1.d20) then                            
-                               !  write(*,*) 'ctmp4', ctmp4                                  
-                               !  stop                                                       
-                               !endif                                                        
-                                do d2=0,c
-                                  do f2=0,(m-2*r+n-2*r1+d2+d-2*f-g+d1-2*f1-g1)/2
-                                    !write(*,*) 'd2, f2 loop'           
-                                    !write(*,*) 'm,r,t,n,r1,t1,d2,d,f,g,d1,f1,g1,d2,f2'      
-                                    !write(*,*)  m,r,t,n,r1,t1,d2,d,f,g,d1,f1,g1,d2,f2       
-                                    !write(*,*) m-2*r+n-2*r1+d2+d-2*f-g+d1-2*f1-g1           
-                                    !write(*,*) m,2*r,n,2*r1,d,2*f,g,d1,2*f1,g1,d2           
-                                    !write(*,*) m-2*r-s-t, n-2*r1-s1-t1,d+s+s1-2*f-g-h,t+t1+\
-d1+h-2*f1-g1                                                                                 
-                                    ctmp5=cdsqrt(pi/DD)*fact(c)/fact(d2)/fact(c-d2) &
-                                         &*(-zp)**dble(c-d2) &
-                                         &*fact(m-2*r+n-2*r1+d2+d-2*f-g+d1-2*f1-g1)/fact(f2)\
- &
-                                         &/fact(m-2*r+n-2*r1+d2+d-2*f-g+d1-2*f1-g1-2*f2) &
-                                         &*(2.d0*FF)**dble(m-2*r+n-2*r1+d2+d-2*f-g+d1-2*f1-g\
-1-2*f2) &
-                                         &/(4.d0*DD)**dble(m-2*r+n-2*r1+d2+d-2*f-g+d1-2*f1-g\
-1-f2)
-                                   !if (cdabs(ctmp5) .ge. 1.d20) then                        
-                                   !  write(*,*) 'ctmp5',ctmp5                               
-                                      !write(*,*) cdsqrt(pi/DD), dexp(-expo*zp**2.d0), 1.d0*\
-fact(c)/fact(d2)/fact(c-d2)                                                                  
-                                      !write(*,*)                                            
-                                      !write(*,*) (-zp)**dble(c-d2), cdexp(FF**2.d0/4.d0/DD)
-                                      !write(*,*)                                            
-                                      !write(*,*) 1.d0*fact(m-2*r+n-2*r1+d2+d-2*f-g+d1-2*f1-\
-g1)/fact(f2)                                                                                 
-                                      !write(*,*)                                            
-                                      !write(*,*) 1.d0*fact(m-2*r+n-2*r1+d2+d-2*f-g+d1-2*f1-\
-g1-2*f2)                                                                                     
-                                      !write(*,*)                                            
-                                      !write(*,*) (2.d0*FF)**dble(m-2*r+n-2*r1+d2+d-2*f-g+d1\
--2*f1-g1-2*f2)                                                                               
-                                      !write(*,*)                                            
-                                      !write(*,*) (4.d0*DD)**dble(m-2*r+n-2*r1+d2+d-2*f-g+d1\
--2*f1-g1-f2)                                                                                 
-                                      !stop                                                  
-                                   !  stop                                                   
-                                   !endif                                                    
-                                   !                                                         
-                                   gau_her=gau_her+ctmp1*ctmp2*ctmp3*ctmp4*ctmp5*ctmp7
-                                  enddo ! f2 loop                                            
-                                enddo ! d2 loop                                              
-                              enddo ! g1 loop                                                
-                            enddo ! f1 loop                                                  
-                          enddo ! d1 loop                                                    
-                        endif
-                      enddo ! h loop                                                         
-                    enddo ! g loop                                                           
-                  enddo ! f loop                                                             
-                enddo ! d loop                                                               
-              endif
-            enddo ! t1 loop                                                                  
-          enddo ! s1 loop                                                                    
-        enddo ! r1 loop                                                                      
-      endif
-    enddo ! t loop                                                                           
-  enddo ! s loop                                                                             
-enddo ! r loop                                                                               
-!                                                                                            
-endif
-
-!                                                                                            
-return
-end
-
+    If ((m .lt. 0) .or. (n .lt. 0)) Then
+       gau_her=czero
+    Else
+       Do r=0,m/2
+          Do s=0, m-2*r
+             Do t=0,m-2*r
+                ctmp1=czero
+                If ((s+t) .le. (m-2*r)) Then
+                   !write(*,*) 'r, s,t loop'                                                            
+                   ctmp1=cone*(-1.d0)**dble(r)*fact(m)*cx**dble(s)*cy**dble(t)*cz**dble(m-2*r-s-t) &
+                        &*2.d0**dble(m-2*r)/fact(r)/fact(s)/fact(t)/fact(m-2*r-s-t)
+                   !if (cdabs(ctmp1) .ge. 1.d20) then                                                    
+                   !  write(*,*) 'ctmp1',ctmp1                                                           
+                   !  stop                                                                               
+                   !endif                                                                                
+                   Do r1=0,n/2
+                      Do s1=0,n-2*r1
+                         Do t1=0,n-2*r1
+                            ctmp2=czero
+                            If ((s1+t1) .le. (n-2*r1)) Then
+                               !write(*,*) 'r1, s1,t1 loop'            
+                               ctmp2=cone*(-1.d0)**dble(r1)*fact(n)*bx**dble(s1)*by**dble(t1)*bz**dble(n-2*r1-s1-t1) &
+                                    &*2.d0**dble(n-2*r1)/fact(r1)/fact(s1)/fact(t1)/fact(n-2*r1-s1-t1)
+                               !if (cdabs(ctmp2) .ge. 1.d20) then                                            
+                               !  write(*,*) 'ctmp2', ctmp2                                                  
+                               !  stop                                                                       
+                               !endif                                                                        
+                               Do d=0,a
+                                  Do f=0,(d+s+s1)/2
+                                     Do g=0,d+s+s1-2*f
+                                        Do h=0,d+s+s1-2*f
+                                           ctmp3=czero
+                                           If ((g+h) .le. (d+s+s1-2*f)) Then
+                                              !write(*,*) 'd, f, g, h  loop'                                     
+                                              ctmp3=cone*fact(a)/fact(d)/fact(a-d)*fact(d+s+s1)/fact(f)/fact(g)/fact(h)/fact(d+s+s1-2*f-g-h) &
+                                                   &*cdsqrt(pi/(cone*expo+cone*cxx))*(-xp)**dble(a-d) &
+                                                   &*2.d0**dble(d+s+s1-2*f)/(4.d0*(cone*expo+cone*cxx))**dble(d+s+s1-f) &
+                                                   &*(cone*2.d0*expo*xp-eye*dsin(alpha)*dsin(beta)*k0)**dble(g) &
+                                                   &*(-cxy)**dble(h)*(-czx)**dble(d+s+s1-2*f-g-h)
+                                              !if (cdabs(ctmp3) .ge. 1.d20) then                                  
+                                              !  write(*,*) 'ctmp3',ctmp3                                         
+                                              !  stop                                                             
+                                              !endif                                                              
+                                              Do d1=0,b
+                                                 Do f1=0,(t+t1+d1+h)/2
+                                                    Do g1=0,t+t1+d1+h-2*f1
+                                                       !write(*,*) 'd1, f1, g1 loop'                                
+                                                       ctmp4=cdsqrt(pi/AA)*fact(b)/fact(d1)/fact(b-d1) &
+                                                            &*fact(t+t1+d1+h)/fact(f1)/fact(g1)/fact(t+t1+d1+h-2*f1-g1) &
+                                                            &*(-yp)**dble(b-d1)*2.d0**dble(t+t1+d1+h-2*f1)/(4.d0*AA)**dble(t+t1+d1+h-f1) &
+                                                            &*BB**dble(g1)*CC**dble(t+t1+d1+h-2*f1-g1)
+                                                       !if (cdabs(ctmp4) .ge. 1.d20) then                            
+                                                       !  write(*,*) 'ctmp4', ctmp4                                  
+                                                       !  stop                                                       
+                                                       !endif                                                        
+                                                       Do d2=0,c
+                                                          Do f2=0,(m-2*r+n-2*r1+d2+d-2*f-g+d1-2*f1-g1)/2
+                                                             !write(*,*) 'd2, f2 loop'           
+                                                             !write(*,*) 'm,r,t,n,r1,t1,d2,d,f,g,d1,f1,g1,d2,f2'      
+                                                             !write(*,*)  m,r,t,n,r1,t1,d2,d,f,g,d1,f1,g1,d2,f2       
+                                                             !write(*,*) m-2*r+n-2*r1+d2+d-2*f-g+d1-2*f1-g1           
+                                                             !write(*,*) m,2*r,n,2*r1,d,2*f,g,d1,2*f1,g1,d2           
+                                                             !write(*,*) m-2*r-s-t, n-2*r1-s1-t1,d+s+s1-2*f-g-h,t+t1+d1+h-2*f1-g1                                                                             
+                                                             ctmp5=cdsqrt(pi/DD)*fact(c)/fact(d2)/fact(c-d2) &
+                                                                  &*(-zp)**dble(c-d2) &
+                                                                  &*fact(m-2*r+n-2*r1+d2+d-2*f-g+d1-2*f1-g1)/fact(f2)&
+                                                                  &/fact(m-2*r+n-2*r1+d2+d-2*f-g+d1-2*f1-g1-2*f2) &
+                                                                  &*(2.d0*FF)**dble(m-2*r+n-2*r1+d2+d-2*f-g+d1-2*f1-g1-2*f2) &
+                                                                  &/(4.d0*DD)**dble(m-2*r+n-2*r1+d2+d-2*f-g+d1-2*f1-g1-f2)
+                                                             !if (cdabs(ctmp5) .ge. 1.d20) then                        
+                                                             !  write(*,*) 'ctmp5',ctmp5                               
+                                                             !  write(*,*) cdsqrt(pi/DD), dexp(-expo*zp**2.d0), 1.d0*fact(c)/fact(d2)/fact(c-d2)                                                                  
+                                                             !  write(*,*)                                            
+                                                             !  write(*,*) (-zp)**dble(c-d2), cdexp(FF**2.d0/4.d0/DD)
+                                                             !  write(*,*)                                            
+                                                             !  write(*,*) 1.d0*fact(m-2*r+n-2*r1+d2+d-2*f-g+d1-2*f1-g1)/fact(f2)                                                                                 
+                                                             !  write(*,*)                                            
+                                                             !  write(*,*) 1.d0*fact(m-2*r+n-2*r1+d2+d-2*f-g+d1-2*f1-g1-2*f2)                                                                                     
+                                                             !  write(*,*)                                            
+                                                             !  write(*,*) (2.d0*FF)**dble(m-2*r+n-2*r1+d2+d-2*f-g+d1-2*f1-g1-2*f2)                                                                               
+                                                             !  write(*,*)                                            
+                                                             !  write(*,*) (4.d0*DD)**dble(m-2*r+n-2*r1+d2+d-2*f-g+d1-2*f1-g1-f2)                                                                                 
+                                                             !  stop                                                  
+                                                             !  stop                                                   
+                                                             !endif                                                    
+                                                             !                                                        
+                                                             gau_her=gau_her+ctmp1*ctmp2*ctmp3*ctmp4*ctmp5*ctmp7
+                                                          End Do ! f2 loop                                            
+                                                       End Do ! d2 loop                                              
+                                                    End Do ! g1 loop                                                
+                                                 End Do ! f1 loop                                                  
+                                              End Do ! d1 loop                                                    
+                                           End If
+                                        End Do ! h loop                                                         
+                                     End Do ! g loop                                                           
+                                  End Do ! f loop                                                             
+                               End Do ! d loop                                                               
+                            End If
+                         End Do ! t1 loop                                                                  
+                      End Do ! s1 loop                                                                    
+                   End Do ! r1 loop                                                                      
+                End If
+             End Do ! t loop                                                                           
+          End Do ! s loop                                                                             
+       End Do ! r loop                                                                               
+       !                                                                                            
+    End If
+    
+    !                                                                                            
+    Return
+  End SubRoutine OAM_xyz
+!
 !=========================================================================
 ! Subroutine to calculate the xy-integral -- M-R Version -- 
 !=========================================================================
