@@ -492,16 +492,15 @@
 !=========================================================================
 ! Subroutine to calculate the xyz-integral
 
-! -- In the ZXZ convention.
 ! -- Performing the rotational averaging, by rotating the molecule by the angles (α, β, γ)
+! -- Using the the rotation matrix in the ZXZ convention,
 ! -- With the Euler angles α ∈ [0, 2π], β ∈ [0, π], and γ ∈ [0, 2π].
  
     SubRoutine OAM_xyz(Alpha, Beta, Gamma,a,b,c,xp,yp,zp,expo,m,n,k0,w0)
     implicit none
     Real*8 :: Alpha, Beta, Gamma
-    Integer :: a,b,c
+    Integer :: a,b,c,m,n
     Real*8  :: xp, yp, zp, expo
-    Integer :: m,n
     Real*8  :: k0, w0
     Complex*16 :: gau_her
     Complex*16,parameter :: cone=(1.d0,0.d0), eye=(0.d0,1.d0), czero=(0.d0,0.d0)
@@ -511,11 +510,10 @@
     Real*8  :: cx,cy,cz,bx,by,bz,cxx,cyy,czz,cxy,cyz,czx
     Complex*16 :: AA, BB, CC, DD, FF
 !                                                                                            
-    Complex*16 :: ctmp1, ctmp2, ctmp3, ctmp4, ctmp5, ctmp6, ctmp7, ctmp8, ctmp9, ctmp10, ctmp11,\
-    ctmp12, ctmp13
-    Complex*16 :: ctmp14, ctmp15, ctmp16, ctmp17, ctmp18, ctmp19, ctmp20
+    Complex*16 :: ctmp1, ctmp2, ctmp3, ctmp4, ctmp5, ctmp6, ctmp7, ctmp8, ctmp9, ctmp10, ctmp11
+    Complex*16 :: ctmp12, ctmp13, ctmp14, ctmp15, ctmp16, ctmp17, ctmp18, ctmp19, ctmp20
 !                                                                                            
-    Real*8, external :: fact
+    Real*8, external :: fact    ! Function to calculate factorial
 !                                                                                            
 !                                                                                            
     cx=2.d0**0.5d0/w0*(dcos(Alpha)*dcos(Gamma)-dcos(Beta)*dsin(Alpha)*dsin(Gamma))
@@ -676,6 +674,29 @@
     !                                                                                            
     Return
   End SubRoutine OAM_xyz
+!
+!*************************************************************************
+Function fact(n)
+ 
+Implicit None
+Integer :: n
+Real*8 :: fact
+Integer :: i
+
+If (n .eq. 0) Then
+  fact=1.d0
+Else If (n .lt. 0) Then
+  Write(*,*) 'n should .ge. 0 ', n
+  Stop
+Else
+  fact=1.d0
+  Do i=1,n
+    fact=fact* dble(i) 
+  End Do
+End If
+
+Return
+End function
 !
 !=========================================================================
 ! Subroutine to calculate the xy-integral -- M-R Version -- 
