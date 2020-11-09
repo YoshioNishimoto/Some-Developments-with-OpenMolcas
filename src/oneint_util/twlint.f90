@@ -497,23 +497,24 @@
 ! -- With the Euler angles α ∈ [0, 2π], β ∈ [0, π], and γ ∈ [0, 2π].
  
     SubRoutine OAM_xyz(Alpha, Beta, Gamma,a,b,c,xp,yp,zp,expo,m,n,k0,w0)
-    implicit none
-    Real*8 :: Alpha, Beta, Gamma
-    Integer :: a,b,c,m,n
-    Real*8  :: xp, yp, zp, expo
-    Real*8  :: k0, w0
-    Complex*16 :: gau_her
-    Complex*16,parameter :: cone=(1.d0,0.d0), eye=(0.d0,1.d0), czero=(0.d0,0.d0)
-    Real*8, parameter :: pi=3.141592653589793d0
-    Integer :: r,s,t,r1,s1,t1
-    Integer :: d,f,g,h,d1,f1,g1,d2,f2
-    Real*8  :: cx,cy,cz,bx,by,bz,cxx,cyy,czz,cxy,cyz,czx
-    Complex*16 :: AA, BB, CC, DD, FF
+
+      implicit none
+      Real*8 :: Alpha, Beta, Gamma
+      Integer :: a,b,c,m,n
+      Real*8  :: xp, yp, zp, expo
+      Real*8  :: k0, w0
+      Complex*16 :: gau_her
+      Complex*16,parameter :: cone=(1.d0,0.d0), eye=(0.d0,1.d0), czero=(0.d0,0.d0) !cone=(1.d0,0.d0)=1+0.i  
+      Real*8, parameter :: pi=3.141592653589793d0
+      Integer :: r,s,t,r1,s1,t1
+      Integer :: d,f,g,h,d1,f1,g1,d2,f2
+      Real*8  :: cx,cy,cz,bx,by,bz,cxx,cyy,czz,cxy,cyz,czx
+      Complex*16 :: AA, BB, CC, DD, FF
 !                                                                                            
-    Complex*16 :: ctmp1, ctmp2, ctmp3, ctmp4, ctmp5, ctmp6, ctmp7, ctmp8, ctmp9, ctmp10, ctmp11
-    Complex*16 :: ctmp12, ctmp13, ctmp14, ctmp15, ctmp16, ctmp17, ctmp18, ctmp19, ctmp20
+      Complex*16 :: ctmp1, ctmp2, ctmp3, ctmp4, ctmp5, ctmp6, ctmp7, ctmp8, ctmp9, ctmp10, ctmp11
+      Complex*16 :: ctmp12, ctmp13, ctmp14, ctmp15, ctmp16, ctmp17, ctmp18, ctmp19, ctmp20
 !                                                                                            
-    Real*8, external :: fact    ! Function to calculate factorial
+      Real*8, external :: fact    ! Function to calculate factorial
 !                                                                                            
 !                                                                                            
     cx=2.d0**0.5d0/w0*(dcos(Alpha)*dcos(Gamma)-dcos(Beta)*dsin(Alpha)*dsin(Gamma))
