@@ -482,28 +482,31 @@
 !     ipRes. The size of the block is nZeta,(la+1)*(la+2)/2,(lb+1)*(lb+2)/2
 !
     End SubRoutine TWLInt_Internal
-!=========================================================================
+!===========================================================================
 !
     Integer Function nElem(ixyz)
       Integer ixyz
       nElem = (ixyz+1)*(ixyz+2)/2
     End Function nElem
 !
-!=========================================================================
-! Subroutine to calculate the xyz-integral
+!===========================================================================
+!    Subroutine to calculate the xyz-integral
+!---------------------------------------------------------------------------    
+!    SUPPORTING INFORMATION of "J. Chem. Theory Comput. 2019, 15, 4180−4186"
 
-! -- Performing the rotational averaging, by rotating the molecule by the angles (α, β, γ)
+! -- Performing the rotational averaging, by rotating the molecule
+!    by the angles (α, β, γ).    
 ! -- Using the the rotation matrix in the ZXZ convention,
 ! -- With the Euler angles α ∈ [0, 2π], β ∈ [0, π], and γ ∈ [0, 2π].
  
     SubRoutine OAM_xyz(Alpha, Beta, Gamma,a,b,c,xp,yp,zp,expo,m,n,k0,w0)
 
       implicit none
-      Real*8 :: Alpha, Beta, Gamma
-      Integer :: a,b,c,m,n
-      Real*8  :: xp, yp, zp, expo
-      Real*8  :: k0, w0
-      Complex*16 :: gau_her
+      Real*8 :: Alpha, Beta, Gamma  
+      Integer :: a,b,c,m,n                                             
+      Real*8  :: xp, yp, zp, expo                         
+      Real*8  :: k0, w0  
+      Complex*16 :: gau_her  
       Complex*16,parameter :: cone=(1.d0,0.d0), eye=(0.d0,1.d0), &
                               czero=(0.d0,0.d0) !cone=(1.d0,0.d0)=1+0.i  
       Real*8, parameter :: pi=3.141592653589793d0
@@ -517,9 +520,9 @@
       Complex*16 :: ctmp12, ctmp13, ctmp14, ctmp15, ctmp16,   &
                     ctmp17, ctmp18, ctmp19, ctmp20
 !                                                                                            
-      Real*8, external :: fact    ! Function to calculate factorial
+      Real*8, external :: fact  ! Function to calculate factorial 
 !                                                                                            
-!- Following parameters are "S29 - S45" from SUPPORTING INFORMATION of "J. Chem. Theory Comput. 2019, 15, 4180−4186".
+!- Following are parameters in "S29 - S45":
 !      
     bx=2.d0**0.5d0/w0*(-dcos(Beta)*dcos(Gamma)*dsin(Alpha)-dcos(Alpha)*dsin(Gamma))
     by=2.d0**0.5d0/w0*(dcos(Alpha)*dcos(Beta)*dcos(Gamma)-dsin(Alpha)*dsin(Gamma))
@@ -528,7 +531,7 @@
     cx=2.d0**0.5d0/w0*(dcos(Alpha)*dcos(Gamma)-dcos(Beta)*dsin(Alpha)*dsin(Gamma))
     cy=2.d0**0.5d0/w0*(dcos(Gamma)*dsin(Alpha)+dcos(Alpha)*dcos(Beta)*dsin(Gamma))
     cz=2.d0**0.5d0/w0*dsin(Beta)*dsin(Gamma)
-!   
+! 
     cxx=(dcos(Alpha)**2.d0+dcos(Beta)**2.d0*dsin(Alpha)**2.d0)/w0**2.d0
     cyy=(dcos(Alpha)**2.d0*dcos(Beta)**2.d0+dsin(Alpha)**2.d0)/w0**2.d0
     czz=(dsin(Beta)**2.d0)/w0**2.d0
@@ -538,43 +541,46 @@
     czx=-2.d0*dcos(Beta)*dsin(Alpha)*dsin(Beta)/w0**2.d0
 !                                                                                            
     AA=expo*cone+cone*cyy-cone*cxy**2.d0/4.d0/(cone*expo+cone*cxx)                              ! A 
+!
     BB=cone*2.d0*expo*yp+eye*dcos(Alpha)*dsin(Beta)*k0 &
          &-cone*(cone*2.d0*expo*xp-eye*dsin(Alpha)*dsin(Beta)*k0)*cxy/2.d0/(cone*expo+cone*cxx) ! B
-    CC=cone*cxy*czx/2.d0/(cone*expo+cone*cxx)-cone*cyz
+!
+    CC=cone*cxy*czx/2.d0/(cone*expo+cone*cxx)-cone*cyz                                          ! C
 !                                                                                            
     DD=cone*expo+cone*czz-cone*czx**2.d0/4.d0/(cone*expo+cone*cxx)-cone*CC**2.d0/4.d0/AA        ! D
+!
     FF=cone*2.d0*expo*zp-cone*(cone*2.d0*expo*xp-eye*dsin(Alpha)*dsin(Beta)*k0)*czx/2.d0/(cone*e\ 
-    xpo+cone*cxx) &
+    xpo+cone*cxx) &  
          &+cone*BB*CC/2.d0/AA - eye*dcos(Beta)*k0                                               ! F
 !                                              
-!                                                                                            
-!                                                                                            
-    gau_her=czero
+!                                                                                                                                                                                        
+    gau_her=czero       
     ctmp1=czero
     ctmp2=czero
     ctmp3=czero
     ctmp4=czero
     ctmp5=czero
-!                                                                                            
+!
+!   The exponential terms in equation (S28)     
     ctmp6=-cone*expo*xp**2.d0 &
          &+(cone*2.d0*expo*xp-eye*dsin(Alpha)*dsin(Beta)*k0)**2.d0/4.d0/(cone*expo+cone*cxx) &
          &-cone*expo*yp**2.d0 &
          &+BB**2.d0/4.d0/AA &
          &-cone*expo*zp**2.d0 &
          &+FF**2.d0/4.d0/DD
+!
     ctmp7=cdexp(ctmp6)
-!write(*,*) ctmp6, ctmp7                                                                     
-!stop                                                                                        
 !                                                                                            
     If ((m .lt. 0) .or. (n .lt. 0)) Then
        gau_her=czero
     Else
 !       
 !      Sum over r, s, t
-       Do r=0,m/2           ! 'm' comes from the Hermite polynomials H_m(x) used in (S27) 
+       Do r=0,m/2           ! 'm' comes from the Hermite polynomials H_m(x) used in (S27)
+!                              m = 0, 1, ...
           Do s=0, m-2*r
              Do t=0,m-2*r
-                ctmp1=czero
+                ctmp1=czero                                                                
                 If ((s+t) .le. (m-2*r)) Then
 !
 !                  ctmp1: The first fraction in equation (S28)
@@ -583,6 +589,7 @@
 !
 !                  Sum over r1(r'), s1(s'), t1(t') 
                    Do r1=0,n/2                       ! 'n' comes from the Hermite polynomials H_n(x) used in (S27)
+!                                                       n = 0, 1, ...
                       Do s1=0,n-2*r1
                          Do t1=0,n-2*r1
                             ctmp2=czero
@@ -631,6 +638,7 @@
                                                                   &/(4.d0*DD)**dble(m-2*r+n-2*r1+d2+d-2*f-g+d1-2*f1-g1-f2)
 !
                                                              gau_her=gau_her+ctmp1*ctmp2*ctmp3*ctmp4*ctmp5*ctmp7
+!
                                                           End Do ! f2 loop                                            
                                                        End Do ! d2 loop                                              
                                                     End Do ! g1 loop                                                
@@ -653,211 +661,214 @@
     End If 
 !                                                                                            
     Return
-  End SubRoutine OAM_xyz
-!
 !*************************************************************************
-Function fact(n)
- 
-Implicit None
-Integer :: n
-Real*8 :: fact
-Integer :: i
-
-If (n .eq. 0) Then
-  fact=1.d0
-Else If (n .lt. 0) Then
-  Write(*,*) 'n should .ge. 0 ', n
-  Stop
-Else
-  fact=1.d0
-  Do i=1,n
-    fact=fact* dble(i) 
-  End Do
-End If
-
-Return
-End function
+!*************************************************************************    
+  End SubRoutine OAM_xyz
+!*************************************************************************
+! Function to calculate the factorial
+!------------------------------------  
+  Function fact(n)
+!
+    Implicit None
+    Integer :: n
+    Real*8 :: fact
+    Integer :: i
+!
+    If (n .eq. 0) Then
+       fact=1.d0
+    Else If (n .lt. 0) Then
+       Write(*,*) 'n should .ge. 0 ', n
+       Stop
+    Else
+       fact=1.d0
+       Do i=1,n
+          fact=fact* dble(i) 
+       End Do
+    End If
+!    
+    Return
+  End function fact
 !
 !=========================================================================
 ! Subroutine to calculate the xy-integral -- M-R Version -- 
 !=========================================================================
-    SubRoutine OAM_xy(Vxyz,Sxyz,nZeta,la,lb,nOrdOp,Alpha,Beta,Final,nComp)
+!     SubRoutine OAM_xy(Vxyz,Sxyz,nZeta,la,lb,nOrdOp,Alpha,Beta,Final,nComp)
 
-      Real*8 Final(nZeta,(la+1)*(la+2)/2,(lb+1)*(lb+2)/2,nComp)
-      Complex*16 Vxyz(nZeta,3,0:la,0:lb,2)
-      Complex*16 Sxyz(nZeta,3,0:la+nOrdOp,0:lb+nOrdOp)
-      Real*8 Alpha(nZeta), Beta(nZeta)
-      Integer iZeta, i_x, i_y, i_z, j_x, j_y, j_z
-      Integer ix, iz, ixyz, ipa, ipb
-      Complex*16 Value1111, Value2111, Value0111, Value1211, Value1011, &
-                 Value1121, Value1101, Value1112, Value1110
-      Complex*16 Value1111_xA, Value1111_xB,                            &
-                 Value1111_yA, Value1111_yB
-      Real*8 Fact, rTemp
-      Complex*16 Temp1, Temp2, Temp
-!     Complex*16, Pointer :: zQxyz(:),zVxyz(:)
-      Integer nZeta, la, lb, nComp, nOrdOp, Ind
+!       Real*8 Final(nZeta,(la+1)*(la+2)/2,(lb+1)*(lb+2)/2,nComp)
+!       Complex*16 Vxyz(nZeta,3,0:la,0:lb,2)
+!       Complex*16 Sxyz(nZeta,3,0:la+nOrdOp,0:lb+nOrdOp)
+!       Real*8 Alpha(nZeta), Beta(nZeta)
+!       Integer iZeta, i_x, i_y, i_z, j_x, j_y, j_z
+!       Integer ix, iz, ixyz, ipa, ipb
+!       Complex*16 Value1111, Value2111, Value0111, Value1211, Value1011, &
+!                  Value1121, Value1101, Value1112, Value1110
+!       Complex*16 Value1111_xA, Value1111_xB,                            &
+!                  Value1111_yA, Value1111_yB
+!       Real*8 Fact, rTemp
+!       Complex*16 Temp1, Temp2, Temp
+! !     Complex*16, Pointer :: zQxyz(:),zVxyz(:)
+!       Integer nZeta, la, lb, nComp, nOrdOp, Ind
 
-!     Statement function for Cartesian index
-!
-      Ind(ixyz,ix,iz) = (ixyz-ix)*(ixyz-ix+1)/2 + iz + 1
-!
-!
-!     The integration over the z-subspace is done using the normal code
-!     for the exponetial operator.
-!
-#ifdef _DEBUG_
-      Write (6,*) 'OAM_xy: nOrdOp,nComp=',nOrdOp,nComp
-      Call RecPrt('Alpha',' ',Alpha,nZeta,1)
-      Call RecPrt('Beta',' ',Beta,nZeta,1)
-      Call RecPrt('Vxyz',' ',Vxyz,nZeta*2,3*(la+1)*(lb+1)*2)
-      Call RecPrt('Sxyz',' ',Sxyz,nZeta*2,3*(la+1+nOrdOp)*(lb+1+nOrdOp)*2)
-      Call RecPrt('Final',' ',Final,nZeta,                               &
-                  ((la+1)*(la+2)/2)*((lb+1)*(lb+2)/2)*nComp)
-#endif
-      Do iBeta = 1, nBeta
-         Do iAlpha = 1, nAlpha
-            iZeta = nAlpha*(iBeta-1) + iAlpha
-!
-            Do i_x =  0, la
-               Do i_y = 0, la-i_x
-                  i_z = la - i_x - i_y
-                  ipa=Ind(la,i_x,i_z)
-!
-                  Do j_x =  0, lb
-                     Do j_y = 0, lb-j_x
-                        j_z = lb - j_x - j_y
-                        ipb=Ind(lb,j_x,j_z)
-!
-                        rTemp=KVector(1)**2 + kVector(2)**2 + kVector(3)**2
-                        rTemp=rTemp/(Four*Zeta(iZeta))
-!
-!
-!      Compute the x-y part of the integral
-!
-                        Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
-                                    Alpha(iZeta), Beta(iZeta),               &
-                                    i_x, i_y,                                &
-                                    j_x, j_y, lAng, Value1111)
+! !     Statement function for Cartesian index
+! !
+!       Ind(ixyz,ix,iz) = (ixyz-ix)*(ixyz-ix+1)/2 + iz + 1
+! !
+! !
+! !     The integration over the z-subspace is done using the normal code
+! !     for the exponetial operator.
+! !
+! #ifdef _DEBUG_
+!       Write (6,*) 'OAM_xy: nOrdOp,nComp=',nOrdOp,nComp
+!       Call RecPrt('Alpha',' ',Alpha,nZeta,1)
+!       Call RecPrt('Beta',' ',Beta,nZeta,1)
+!       Call RecPrt('Vxyz',' ',Vxyz,nZeta*2,3*(la+1)*(lb+1)*2)
+!       Call RecPrt('Sxyz',' ',Sxyz,nZeta*2,3*(la+1+nOrdOp)*(lb+1+nOrdOp)*2)
+!       Call RecPrt('Final',' ',Final,nZeta,                               &
+!                   ((la+1)*(la+2)/2)*((lb+1)*(lb+2)/2)*nComp)
+! #endif
+!       Do iBeta = 1, nBeta
+!          Do iAlpha = 1, nAlpha
+!             iZeta = nAlpha*(iBeta-1) + iAlpha
+! !
+!             Do i_x =  0, la
+!                Do i_y = 0, la-i_x
+!                   i_z = la - i_x - i_y
+!                   ipa=Ind(la,i_x,i_z)
+! !
+!                   Do j_x =  0, lb
+!                      Do j_y = 0, lb-j_x
+!                         j_z = lb - j_x - j_y
+!                         ipb=Ind(lb,j_x,j_z)
+! !
+!                         rTemp=KVector(1)**2 + kVector(2)**2 + kVector(3)**2
+!                         rTemp=rTemp/(Four*Zeta(iZeta))
+! !
+! !
+! !      Compute the x-y part of the integral
+! !
+!                         Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
+!                                     Alpha(iZeta), Beta(iZeta),               &
+!                                     i_x, i_y,                                &
+!                                     j_x, j_y, lAng, Value1111)
 
-                        If (nOrdOp.eq.1) Then
-                           Fact = rKappa(iZeta) * Zeta(iZeta)**(-Three/Two) * Exp(-rTemp)
+!                         If (nOrdOp.eq.1) Then
+!                            Fact = rKappa(iZeta) * Zeta(iZeta)**(-Three/Two) * Exp(-rTemp)
 
-                           Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
-                                       Alpha(iZeta), Beta(iZeta),               &
-                                       i_x+1, i_y,                              &
-                                       j_x, j_y, lAng, Value2111)
+!                            Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
+!                                        Alpha(iZeta), Beta(iZeta),               &
+!                                        i_x+1, i_y,                              &
+!                                        j_x, j_y, lAng, Value2111)
 
-                           Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
-                                       Alpha(iZeta), Beta(iZeta),               &
-                                       i_x-1, i_y,                              &
-                                       j_x, j_y, lAng, Value0111)
+!                            Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
+!                                        Alpha(iZeta), Beta(iZeta),               &
+!                                        i_x-1, i_y,                              &
+!                                        j_x, j_y, lAng, Value0111)
 
 
-                           Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
-                                       Alpha(iZeta), Beta(iZeta),               &
-                                       i_x, i_y,                                &
-                                       j_x+1,j_y, lAng, Value1211)
+!                            Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
+!                                        Alpha(iZeta), Beta(iZeta),               &
+!                                        i_x, i_y,                                &
+!                                        j_x+1,j_y, lAng, Value1211)
 
-                           Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
-                                       Alpha(iZeta), Beta(iZeta),               &
-                                       i_x, i_y,                                &
-                                       j_x-1, j_y, lAng, Value1011)
+!                            Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
+!                                        Alpha(iZeta), Beta(iZeta),               &
+!                                        i_x, i_y,                                &
+!                                        j_x-1, j_y, lAng, Value1011)
 
-                           Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
-                                       Alpha(iZeta), Beta(iZeta),               &
-                                       i_x, i_y+1,                              &
-                                       j_x, j_y, lAng, Value1121)
-                           Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
-                                       Alpha(iZeta), Beta(iZeta),               &
-                                       i_x ,i_y-1,                              &
-                                       j_x, j_y, lAng, Value1101)
+!                            Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
+!                                        Alpha(iZeta), Beta(iZeta),               &
+!                                        i_x, i_y+1,                              &
+!                                        j_x, j_y, lAng, Value1121)
+!                            Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
+!                                        Alpha(iZeta), Beta(iZeta),               &
+!                                        i_x ,i_y-1,                              &
+!                                        j_x, j_y, lAng, Value1101)
 
-                           Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
-                                       Alpha(iZeta), Beta(iZeta),               &
-                                       i_x, i_y,                                &
-                                       j_x, j_y+1, lAng, Value1112)
+!                            Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
+!                                        Alpha(iZeta), Beta(iZeta),               &
+!                                        i_x, i_y,                                &
+!                                        j_x, j_y+1, lAng, Value1112)
 
-                           Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
-                                       Alpha(iZeta), Beta(iZeta),               &
-                                       i_x, i_y,                                &
-                                       j_x, j_y-1, lAng, Value1110)
+!                            Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
+!                                        Alpha(iZeta), Beta(iZeta),               &
+!                                        i_x, i_y,                                &
+!                                        j_x, j_y-1, lAng, Value1110)
 
-!                          Let us form the Cartesian intermediate intergral
+! !                          Let us form the Cartesian intermediate intergral
 
-                           If (i_x.ne.0) Then
-                           Value1111_xA=DBLE(i_x) * Value0111                   &
-                                       - Two*Alpha(iZeta) * Value2111
-                           Else
-                           Value1111_xA= - Two*Alpha(iZeta) * Value2111
-                           End If
-                           If (j_x.ne.0) Then
-                           Value1111_xB=DBLE(j_x) * Value1011                   &
-                                       - Two* Beta(iZeta) * Value1211
-                           Else
-                           Value1111_xB= - Two* Beta(iZeta) * Value1211
+!                            If (i_x.ne.0) Then
+!                            Value1111_xA=DBLE(i_x) * Value0111                   &
+!                                        - Two*Alpha(iZeta) * Value2111
+!                            Else
+!                            Value1111_xA= - Two*Alpha(iZeta) * Value2111
+!                            End If
+!                            If (j_x.ne.0) Then
+!                            Value1111_xB=DBLE(j_x) * Value1011                   &
+!                                        - Two* Beta(iZeta) * Value1211
+!                            Else
+!                            Value1111_xB= - Two* Beta(iZeta) * Value1211
 
-                           End If
-                           If (i_y.ne.0) Then
-                           Value1111_yA=DBLE(i_y) * Value0111                   &
-                                       - Two*Alpha(iZeta) * Value2111
-                           Else
-                           Value1111_yA= - Two*Alpha(iZeta) * Value2111
+!                            End If
+!                            If (i_y.ne.0) Then
+!                            Value1111_yA=DBLE(i_y) * Value0111                   &
+!                                        - Two*Alpha(iZeta) * Value2111
+!                            Else
+!                            Value1111_yA= - Two*Alpha(iZeta) * Value2111
 
-                           End If
-                           If (j_y.ne.0) Then
-                           Value1111_yB=DBLE(j_y) * Value1011                   &
-                                       - Two* Beta(iZeta) * Value1211
-                           Else
-                           Value1111_yB= - Two* Beta(iZeta) * Value1211
+!                            End If
+!                            If (j_y.ne.0) Then
+!                            Value1111_yB=DBLE(j_y) * Value1011                   &
+!                                        - Two* Beta(iZeta) * Value1211
+!                            Else
+!                            Value1111_yB= - Two* Beta(iZeta) * Value1211
 
-                           End If
-!
-                           Temp1 = Fact *                                       &
-                                   Value1111_xA * Sxyz(iZeta,3,i_z,j_z)
-                           Temp2 = Fact *                                       &
-                                   Value1111_xB * Sxyz(iZeta,3,i_z,j_z)
-                           Final(iZeta,ipa,ipb,1) = DBLE((Temp1+Temp2)*Half)
-                           Final(iZeta,ipa,ipb,4) = DBLE((Temp1-Temp2)*Half)
-                           Final(iZeta,ipa,ipb,7) = DIMAG((Temp1+Temp2)*Half)
-                           Final(iZeta,ipa,ipb,10)= DIMAG((Temp1-Temp2)*Half)
-                           Temp1 = Fact *                                       &
-                                   Value1111_yA * Sxyz(iZeta,3,i_z,j_z)
-                           Temp2 = Fact *                                       &
-                                   Value1111_yB * Sxyz(iZeta,3,i_z,j_z)
-                           Final(iZeta,ipa,ipb,2) = DBLE((Temp1+Temp2)*Half)
-                           Final(iZeta,ipa,ipb,5) = DBLE((Temp1-Temp2)*Half)
-                           Final(iZeta,ipa,ipb,8) = DIMAG((Temp1+Temp2)*Half)
-                           Final(iZeta,ipa,ipb,11)= DIMAG((Temp1-Temp2)*Half)
-                           Temp1 = Fact *                                       &
-                                   Value1111    * Vxyz(iZeta,3,i_z,j_z,1)
-                           Temp2 = Fact *                                       &
-                                   Value1111    * Vxyz(iZeta,3,i_z,j_z,2)
-                           Final(iZeta,ipa,ipb,3) = DBLE((Temp1+Temp2)*Half)
-                           Final(iZeta,ipa,ipb,6 )= DBLE((Temp1-Temp2)*Half)
-                           Final(iZeta,ipa,ipb,9 )= DIMAG((Temp1+Temp2)*Half)
-                           Final(iZeta,ipa,ipb,12)= DIMAG((Temp1-Temp2)*Half)
-                        Else
-                           Fact = rKappa(iZeta) * (1.0D0/Sqrt(Zeta(iZeta)**3))  &
-                                * Exp(-rTemp)
-                           Temp1 = Fact *                                       &
-                                   Value1111    * Sxyz(iZeta,3,i_z,j_z)
-                           Final(iZeta,ipa,ipb,1) = DBLE(Temp)
-                           Final(iZeta,ipa,ipb,2) = DIMAG(Temp)
-                        End If
-                     End Do  ! j_y
-                  End Do     ! j_x
-               End Do  ! i_y
-            End Do     ! i_x
-         End Do  ! iAlpha
-      End Do     ! iBeta
-#ifdef _DEBUG_
-      Call RecPrt('Final',' ',Final,nZeta,                               &
-                  ((la+1)*(la+2)/2)*((lb+1)*(lb+2)/2)*nComp)
-#endif
-!
-!**********************************************************************
-!**********************************************************************
-    End SubRoutine OAM_xy
+!                            End If
+! !
+!                            Temp1 = Fact *                                       &
+!                                    Value1111_xA * Sxyz(iZeta,3,i_z,j_z)
+!                            Temp2 = Fact *                                       &
+!                                    Value1111_xB * Sxyz(iZeta,3,i_z,j_z)
+!                            Final(iZeta,ipa,ipb,1) = DBLE((Temp1+Temp2)*Half)
+!                            Final(iZeta,ipa,ipb,4) = DBLE((Temp1-Temp2)*Half)
+!                            Final(iZeta,ipa,ipb,7) = DIMAG((Temp1+Temp2)*Half)
+!                            Final(iZeta,ipa,ipb,10)= DIMAG((Temp1-Temp2)*Half)
+!                            Temp1 = Fact *                                       &
+!                                    Value1111_yA * Sxyz(iZeta,3,i_z,j_z)
+!                            Temp2 = Fact *                                       &
+!                                    Value1111_yB * Sxyz(iZeta,3,i_z,j_z)
+!                            Final(iZeta,ipa,ipb,2) = DBLE((Temp1+Temp2)*Half)
+!                            Final(iZeta,ipa,ipb,5) = DBLE((Temp1-Temp2)*Half)
+!                            Final(iZeta,ipa,ipb,8) = DIMAG((Temp1+Temp2)*Half)
+!                            Final(iZeta,ipa,ipb,11)= DIMAG((Temp1-Temp2)*Half)
+!                            Temp1 = Fact *                                       &
+!                                    Value1111    * Vxyz(iZeta,3,i_z,j_z,1)
+!                            Temp2 = Fact *                                       &
+!                                    Value1111    * Vxyz(iZeta,3,i_z,j_z,2)
+!                            Final(iZeta,ipa,ipb,3) = DBLE((Temp1+Temp2)*Half)
+!                            Final(iZeta,ipa,ipb,6 )= DBLE((Temp1-Temp2)*Half)
+!                            Final(iZeta,ipa,ipb,9 )= DIMAG((Temp1+Temp2)*Half)
+!                            Final(iZeta,ipa,ipb,12)= DIMAG((Temp1-Temp2)*Half)
+!                         Else
+!                            Fact = rKappa(iZeta) * (1.0D0/Sqrt(Zeta(iZeta)**3))  &
+!                                 * Exp(-rTemp)
+!                            Temp1 = Fact *                                       &
+!                                    Value1111    * Sxyz(iZeta,3,i_z,j_z)
+!                            Final(iZeta,ipa,ipb,1) = DBLE(Temp)
+!                            Final(iZeta,ipa,ipb,2) = DIMAG(Temp)
+!                         End If
+!                      End Do  ! j_y
+!                   End Do     ! j_x
+!                End Do  ! i_y
+!             End Do     ! i_x
+!          End Do  ! iAlpha
+!       End Do     ! iBeta
+! #ifdef _DEBUG_
+!       Call RecPrt('Final',' ',Final,nZeta,                               &
+!                   ((la+1)*(la+2)/2)*((lb+1)*(lb+2)/2)*nComp)
+! #endif
+! !
+! !**********************************************************************
+! !**********************************************************************
+!     End SubRoutine OAM_xy
 !======================================================================
 End SubRoutine TWLInt
