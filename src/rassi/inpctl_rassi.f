@@ -36,6 +36,9 @@
 
       LOGICAL READ_STATES
       INTEGER JOB, i
+C      Character*(LENIN8) Clean_BName
+C      External Clean_BName
+
 
       CALL QENTER(ROUTINE)
 
@@ -45,7 +48,14 @@
       Call Get_dscalar('PotNuc',ENUC)
 
 C Read data from the ONEINT file:
-      CALL GETCNT(NGROUP,IGROUP,NATOMS,ATLBL)
+C      CALL GETCNT(NGROUP,IGROUP,NATOMS,ATLBL)
+CC VK/GG 2020 CC
+      CALL GETCNT(NGROUP,IGROUP,NATOMS,ATLBL,NAME)
+C      write(*,*) 'basis functions:'
+C      do i=1,nBasF(1)
+C        write(*,*) Clean_BName(name(i),Lenin)
+C      enddo
+CC CC
 
       NSTATE=0
 C Read (and do some checking) the standard input.

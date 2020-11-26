@@ -19,9 +19,11 @@
 #include "maxbfn.fh"
 #ifndef _DEMO_
        Integer mxAtom
+       Integer ndetmax
        Integer mxNemoAtom
        Parameter (mxAtom = 5000)
-       Parameter (mxroot = 600)
+       Parameter (mxroot = 3000)
+       Parameter (ndetmax= 10000)
        Parameter (mxNemoAtom = 200)
 #else
        Integer mxAtom

@@ -263,9 +263,9 @@ CC VK/GG 2020 CC
 C put the pair of transformed orbitals to hdf5 file
         if (PRCI) then
         call mh5_put_dset_array_real(wfn_cmo,CMO1,
-     &                               [nCMO,1,1],[0,JOB1-1,0])
+     &                               [nCMO,1],[0,JOB1-1])
         call mh5_put_dset_array_real(wfn_cmo,CMO2,
-     &                               [nCMO,1,1],[0,JOB2-1,0])
+     &                               [nCMO,1],[0,JOB2-1])
         endif
 CC CC
         TRORB = .true.
@@ -707,7 +707,7 @@ C          write(6,'(A,I18)')'OCSP = ',ocsp
      &              '       Coef       Weight'
             do i=1,ndt1
               write(6,fomt)i,'                 ',
-     &          TRIM(detocc1(i)),
+     &          trim(detocc1(i)),
      &          '     ',detcoeff1(i),'     ',detcoeff1(i)**2
             enddo
             write(6,*)('*',i=1,80)
@@ -717,6 +717,14 @@ C put them to hdf5
      &                               [ndt1,1,1],[0,istate-1,JOB1-1])
           do i=1,ndt1
             call mh5_put_dset_array_str(wfn_detocc,
+     &           trim(detocc1(i)),[1,1],[i-1,JOB1-1])
+          enddo
+        else
+C put original coefficents to hdf5
+          call mh5_put_dset_array_real(wfn_detcoeff_or,detcoeff1,
+     &                               [ndt1,1,1],[0,istate-1,JOB1-1])
+          do i=1,ndt1
+            call mh5_put_dset_array_str(wfn_detocc_or,
      &           trim(detocc1(i)),[1,1],[i-1,JOB1-1])
           enddo
         endif
@@ -804,7 +812,7 @@ CC VK/GG 2020 CC
      &              '       Coef       Weight'
               do i=1,ndt2
                 write(6,fomt) i,'                 ',
-     &          trim(detocc2(i)),
+     &          detocc2(i),
      &          '     ',detcoeff2(i),'     ',detcoeff2(i)**2
               enddo
               write(6,*)('*',i=1,80)
@@ -814,7 +822,7 @@ C put them to hdf5
      &                               [ndt2,1,1],[0,jstate-1,JOB2-1])
             do i=1,ndt2
               call mh5_put_dset_array_str(wfn_detocc,
-     &             trim(detocc2(i)),[1,1],[i-1,JOB2-1])
+     &             detocc2(i),[1,1],[i-1,JOB2-1])
             enddo
           endif
           call mma_deallocate(detcoeff2)

@@ -28,11 +28,15 @@
 #  include "stdalloc.fh"
 #  include "rassiwfn.fh"
 #  include "lebedev.fh"
+#  include "centra.fh"
 
-      integer :: ISTATE, NSS
+      integer :: ISTATE, NSS, i
       integer :: nData, nIJ
       integer, allocatable :: state_irreps(:), state_mult(:)
       integer :: nbast, njobpairs
+*      integer, parameter :: ndetmax = 1000
+      Character*(LENIN8) Clean_BName
+      External Clean_BName
 
       nbast = sum(nbasf(1:nsym)**2)
       njobpairs = njob*(njob-1)/2
@@ -148,21 +152,35 @@
 
 ** VK/GG 2020**
       wfn_detcoeff = mh5_create_dset_real(wfn_fileid,
-     $        'DETCOEFF', 3, [100000,nstate,njob])
+     $        'DETCOEFF', 2, [ndetmax,nstate])
       call mh5_init_attr(wfn_detcoeff,'description',
      $         'transformed CI in basis of Slater determinants')
+      wfn_detcoeff_or = mh5_create_dset_real(wfn_fileid,
+     $        'DETCOEFF_ORIGINAL', 2, [ndetmax,nstate])
+      call mh5_init_attr(wfn_detcoeff_or,'description',
+     $         'original CI in basis of Slater determinants')
       wfn_detocc = mh5_create_dset_str(wfn_fileid,
-     $        'DETOCC', 2, [100000,njob],NASHT)
+     $        'DETOCC', 2, [ndetmax,njob],(NASHT+1))
       call mh5_init_attr(wfn_detocc,'description',
+     $         'Occupations of Slater determinants in BIORT basis')
+      wfn_detocc_or = mh5_create_dset_str(wfn_fileid,
+     $        'DETOCC_ORIGINAL', 2, [ndetmax,njob],(NASHT+1))
+      call mh5_init_attr(wfn_detocc_or,'description',
      $         'Occupations of Slater determinants')
+      wfn_baslab = mh5_create_dset_str(wfn_fileid,
+     $        'BASLAB', 1, [nbasf(1)],LENIN8)
       wfn_cmo = mh5_create_dset_real(wfn_fileid,
-     $        'MO_TRANSFORMED', 3, [ncmo,2,njobpairs])
+     $        'MO_TRANSFORMED', 2, [ncmo,njob])
       call mh5_init_attr(wfn_cmo,'description',
      $         'Molecular orbital coefficients in biorthonormal basis')
       wfn_cmo_or = mh5_create_dset_real(wfn_fileid,
      $        'MO_ORIGINAL', 2, [ncmo,njob])
       call mh5_init_attr(wfn_cmo_or,'description',
-     $         'Molecular orbital coefficients in original basis')
+     $        'Molecular orbital coefficients in original basis')
+      do i=1,nbasf(1)
+        call mh5_put_dset_array_str(wfn_baslab,
+     $           Clean_BName(name(i),Lenin),[1],[i-1])
+      enddo
 ** **
 
       if (do_tmom) then
