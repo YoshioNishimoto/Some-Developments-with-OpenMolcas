@@ -553,7 +553,7 @@
     xpo+cone*cxx) &  
          &+cone*BB*CC/2.d0/AA - eye*dcos(Beta)*k0                                               ! F
 !                                              
-!                                                                                                                                                                                        
+!                                                                                                                                                                                       
     gau_her=czero       
     ctmp1=czero
     ctmp2=czero
@@ -595,7 +595,7 @@
                             ctmp2=czero
                             If ((s1+t1) .le. (n-2*r1)) Then
 !                               
-!                              ctmp2: The 2nd fraction in equation (S28)
+!                              ctmp2: The 2nd fraction from the first term in (S28)
                                ctmp2=cone*(-1.d0)**dble(r1)*fact(n)*bx**dble(s1)*by**dble(t1)*bz**dble(n-2*r1-s1-t1) &
                                     &*2.d0**dble(n-2*r1)/fact(r1)/fact(s1)/fact(t1)/fact(n-2*r1-s1-t1)
 !
@@ -607,7 +607,7 @@
                                            ctmp3=czero
                                            If ((g+h) .le. (d+s+s1-2*f)) Then
 !
-!                                             The 2nd & 3rd rows in equation (S28)
+!                                             The 2nd & 3rd terms of (S28)
                                               ctmp3=cone*fact(a)/fact(d)/fact(a-d)*fact(d+s+s1)/fact(f)/fact(g)/fact(h)/fact(d+s+s1-2*f-g-h) &
                                                    &*cdsqrt(pi/(cone*expo+cone*cxx))*(-xp)**dble(a-d) &
                                                    &*2.d0**dble(d+s+s1-2*f)/(4.d0*(cone*expo+cone*cxx))**dble(d+s+s1-f) &
@@ -619,7 +619,7 @@
                                                  Do f1=0,(t+t1+d1+h)/2
                                                     Do g1=0,t+t1+d1+h-2*f1
 !
-!                                                      The 4th and 5th rows in equ. (S28) 
+!                                                      The 4th and 5th terms of (S28) 
                                                        ctmp4=cdsqrt(pi/AA)*fact(b)/fact(d1)/fact(b-d1) &
                                                             &*fact(t+t1+d1+h)/fact(f1)/fact(g1)/fact(t+t1+d1+h-2*f1-g1) &
                                                             &*(-yp)**dble(b-d1)*2.d0**dble(t+t1+d1+h-2*f1)/(4.d0*AA)**dble(t+t1+d1+h-f1) &
@@ -629,7 +629,7 @@
                                                        Do d2=0,c
                                                           Do f2=0,(m-2*r+n-2*r1+d2+d-2*f-g+d1-2*f1-g1)/2
 !
-!                                                            The last two rows of equ. (S28)                                         
+!                                                            The last two terms of (S28)                                         
                                                              ctmp5=cdsqrt(pi/DD)*fact(c)/fact(d2)/fact(c-d2) &
                                                                   &*(-zp)**dble(c-d2) &
                                                                   &*fact(m-2*r+n-2*r1+d2+d-2*f-g+d1-2*f1-g1)/fact(f2)&
