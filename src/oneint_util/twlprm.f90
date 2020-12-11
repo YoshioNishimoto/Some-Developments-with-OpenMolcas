@@ -54,7 +54,7 @@
               b = i_y + j_y - k - q
 
               Lambda = (a1*a2*b1*b2*c1*c2*d1*d2* &
-                   exp((-(Alpha*Beta)/Zeta)*((A_x-B_x)**2+(A_y - B_y)**2))
+                   exp((-(Alpha*Beta)/Zeta)*((A_x-B_x)**2+(A_y - B_y)**2)))
 
               !- Theta ------
 

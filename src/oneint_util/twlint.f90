@@ -11,9 +11,9 @@
 ! Copyright (C) 2019, Marjan Khamesian                                 *
 !               2019, Roland Lindh                                     *
 !***********************************************************************
-      SubRoutine TWLInt(Alpha,nAlpha,Beta,nBeta,Zeta,ZInv,rKappa,P,    &
-                       Final,nZeta,nIC,nComp,la,lb,A,RB,nHer,          &
-                       Array,nArr,kVector,nOrdOp,lOper,iChO,           &
+      SubRoutine TWLInt(Alpha,nAlpha,Beta,nBeta,nGamma,Zeta,ZInv,      &
+                       rKappa,P,Final,nZeta,nIC,nComp,la,lb,A,RB,      &
+                       Array,nArr,kVector,nOrdOp,lOper,iChO,nHer,      &
                        iStabM,nStabM,                                  &
                        PtChrg,nGrid,iAddPot)
 !***********************************************************************
@@ -31,9 +31,9 @@
 !     External Arrays and integers
 !
       Integer nZeta, la, lb, nIC, nAlpha, nBeta, nArr, nComp, nOrdOp,  &
-              nStabM, lc, ld
+              nStabM, lc, ld, nGamma
       Real*8 Final(nZeta,(la+1)*(la+2)/2,(lb+1)*(lb+2)/2,nIC),         &
-             Zeta(nZeta), Alpha(nAlpha), Beta(nBeta), Gamma(nGamma)    &
+             Zeta(nZeta), Alpha(nAlpha), Beta(nBeta), Gamma(nGamma),   &
              ZInv(nZeta), rKappa(nZeta),                               &
              P(nZeta,3), A(3), RB(3),                                  &
              Array(nZeta*nArr), kvector(3)
@@ -124,7 +124,7 @@
       TransM(1,3)= Sin(Fi1)*Sin(Fi2)
       TransM(2,3)=-Cos(Fi1)*Sin(Fi2)
       TransM(3,3)=          Cos(Fi2)
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       Write (6,*) 'Fi1,Fi2,Fi3=',Fi1,Fi2,Fi3
       Call RecPrt('TransM',' ',TransM,3,3)
       Call RecPrt('A',' ',A,3,1)
@@ -150,7 +150,7 @@
                          TransM,3,                                      &
                    0.0D0,Array(ipP),nZeta)
       Call mma_deallocate(TransM)
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       Call RecPrt('A_local',' ',A_local,3,1)
       Call RecPrt('RB_local',' ',RB_local,3,1)
       Call RecPrt('P_local',' ',Array(ipP),nZeta,3)
@@ -379,7 +379,7 @@
          Call Abend()
       End If
 !
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       Call RecPrt(' In TWLINT: A',' ',A,1,3)
       Call RecPrt(' In TWLINT: RB',' ',RB,1,3)
       Call RecPrt(' In TWLINT: KVector',' ',kvector_Local,1,3)
@@ -491,39 +491,39 @@
 !
 !===========================================================================
 !    Subroutine to calculate the xyz-integral
-!---------------------------------------------------------------------------    
-!    SUPPORTING INFORMATION of "J. Chem. Theory Comput. 2019, 15, 4180−4186"
-
+!---------------------------------------------------------------------------
+!    SUPPORTING INFORMATION from "J. Chem. Theory Comput. 2019, 15, 4180-4186"
+!
 ! -- Performing the rotational averaging, by rotating the molecule
-!    by the angles (α, β, γ).    
+!    by the angles (alpha, beta, gamma).
 ! -- Using the the rotation matrix in the ZXZ convention,
-! -- With the Euler angles α ∈ [0, 2π], β ∈ [0, π], and γ ∈ [0, 2π].
- 
+! -- With the Euler angles alpha:[0, 2\pi], beta:[0, \pi], and gamma:[0, 2\pi].
+
     SubRoutine OAM_xyz(Alpha, Beta, Gamma,a,b,c,xp,yp,zp,expo,m,n,k0,w0)
 
       implicit none
-      Real*8 :: Alpha, Beta, Gamma  
-      Integer :: a,b,c,m,n                                             
-      Real*8  :: xp, yp, zp, expo                         
-      Real*8  :: k0, w0  
-      Complex*16 :: gau_her  
+      Real*8 :: Alpha, Beta, Gamma
+      Integer :: a,b,c,m,n
+      Real*8  :: xp, yp, zp, expo
+      Real*8  :: k0, w0
+      Complex*16 :: gau_her
       Complex*16,parameter :: cone=(1.d0,0.d0), eye=(0.d0,1.d0), &
-                              czero=(0.d0,0.d0) !cone=(1.d0,0.d0)=1+0.i  
+                              czero=(0.d0,0.d0) !cone=(1.d0,0.d0)=1+0.i
       Real*8, parameter :: pi=3.141592653589793d0
       Integer :: r,s,t,r1,s1,t1
-      Integer :: d,f,g,h,d1,f1,g1,d2,f2         
+      Integer :: d,f,g,h,d1,f1,g1,d2,f2
       Real*8  :: cx,cy,cz,bx,by,bz,cxx,cyy,czz,cxy,cyz,czx
       Complex*16 :: AA, BB, CC, DD, FF
-!                                                                                            
+!
       Complex*16 :: ctmp1, ctmp2, ctmp3, ctmp4, ctmp5, ctmp6, &
                     ctmp7, ctmp8, ctmp9, ctmp10, ctmp11
       Complex*16 :: ctmp12, ctmp13, ctmp14, ctmp15, ctmp16,   &
                     ctmp17, ctmp18, ctmp19, ctmp20
-!                                                                                            
-      Real*8, external :: fact  ! Function to calculate factorial 
-!                                                                                            
+!
+      Real*8, external :: fact  ! Function to calculate factorial
+!
 !- Following are parameters in "S29 - S45":
-!      
+!
     bx=2.d0**0.5d0/w0*(-dcos(Beta)*dcos(Gamma)*dsin(Alpha)-dcos(Alpha)*dsin(Gamma))
     by=2.d0**0.5d0/w0*(dcos(Alpha)*dcos(Beta)*dcos(Gamma)-dsin(Alpha)*dsin(Gamma))
     bz=2.d0**0.5d0/w0*(dcos(Gamma)*dsin(Beta))
@@ -531,7 +531,7 @@
     cx=2.d0**0.5d0/w0*(dcos(Alpha)*dcos(Gamma)-dcos(Beta)*dsin(Alpha)*dsin(Gamma))
     cy=2.d0**0.5d0/w0*(dcos(Gamma)*dsin(Alpha)+dcos(Alpha)*dcos(Beta)*dsin(Gamma))
     cz=2.d0**0.5d0/w0*dsin(Beta)*dsin(Gamma)
-! 
+!
     cxx=(dcos(Alpha)**2.d0+dcos(Beta)**2.d0*dsin(Alpha)**2.d0)/w0**2.d0
     cyy=(dcos(Alpha)**2.d0*dcos(Beta)**2.d0+dsin(Alpha)**2.d0)/w0**2.d0
     czz=(dsin(Beta)**2.d0)/w0**2.d0
@@ -539,29 +539,29 @@
     cxy=2.d0*dsin(Alpha)*dcos(Alpha)*dsin(Beta)**2.d0/w0**2.d0
     cyz=2.d0*dcos(Alpha)*dsin(Beta)*dcos(Beta)/w0**2.d0
     czx=-2.d0*dcos(Beta)*dsin(Alpha)*dsin(Beta)/w0**2.d0
-!                                                                                            
-    AA=expo*cone+cone*cyy-cone*cxy**2.d0/4.d0/(cone*expo+cone*cxx)                              ! A 
+!
+    AA=expo*cone+cone*cyy-cone*cxy**2.d0/4.d0/(cone*expo+cone*cxx)                              ! A
 !
     BB=cone*2.d0*expo*yp+eye*dcos(Alpha)*dsin(Beta)*k0 &
          &-cone*(cone*2.d0*expo*xp-eye*dsin(Alpha)*dsin(Beta)*k0)*cxy/2.d0/(cone*expo+cone*cxx) ! B
 !
     CC=cone*cxy*czx/2.d0/(cone*expo+cone*cxx)-cone*cyz                                          ! C
-!                                                                                            
+!
     DD=cone*expo+cone*czz-cone*czx**2.d0/4.d0/(cone*expo+cone*cxx)-cone*CC**2.d0/4.d0/AA        ! D
 !
-    FF=cone*2.d0*expo*zp-cone*(cone*2.d0*expo*xp-eye*dsin(Alpha)*dsin(Beta)*k0)*czx/2.d0/(cone*e\ 
-    xpo+cone*cxx) &  
+    FF=cone*2.d0*expo*zp-cone*(cone*2.d0*expo*xp-eye*dsin(Alpha)*dsin(Beta)*k0)*  &
+         czx/2.d0/(cone*expo+cone*cxx) &
          &+cone*BB*CC/2.d0/AA - eye*dcos(Beta)*k0                                               ! F
-!                                              
-!                                                                                                                                                                                       
-    gau_her=czero       
+!
+!
+    gau_her=czero
     ctmp1=czero
     ctmp2=czero
     ctmp3=czero
     ctmp4=czero
     ctmp5=czero
 !
-!   The exponential terms in equation (S28)     
+!   The exponential terms in equation (S28)
     ctmp6=-cone*expo*xp**2.d0 &
          &+(cone*2.d0*expo*xp-eye*dsin(Alpha)*dsin(Beta)*k0)**2.d0/4.d0/(cone*expo+cone*cxx) &
          &-cone*expo*yp**2.d0 &
@@ -570,31 +570,31 @@
          &+FF**2.d0/4.d0/DD
 !
     ctmp7=cdexp(ctmp6)
-!                                                                                            
+!
     If ((m .lt. 0) .or. (n .lt. 0)) Then
        gau_her=czero
     Else
-!       
+!
 !      Sum over r, s, t
        Do r=0,m/2           ! 'm' comes from the Hermite polynomials H_m(x) used in (S27)
 !                              m = 0, 1, ...
           Do s=0, m-2*r
              Do t=0,m-2*r
-                ctmp1=czero                                                                
+                ctmp1=czero
                 If ((s+t) .le. (m-2*r)) Then
 !
 !                  ctmp1: The first fraction in equation (S28)
                    ctmp1=cone*(-1.d0)**dble(r)*fact(m)*cx**dble(s)*cy**dble(t)*cz**dble(m-2*r-s-t) &
                         &*2.d0**dble(m-2*r)/fact(r)/fact(s)/fact(t)/fact(m-2*r-s-t)
 !
-!                  Sum over r1(r'), s1(s'), t1(t') 
+!                  Sum over r1(r'), s1(s'), t1(t')
                    Do r1=0,n/2                       ! 'n' comes from the Hermite polynomials H_n(x) used in (S27)
 !                                                       n = 0, 1, ...
                       Do s1=0,n-2*r1
                          Do t1=0,n-2*r1
                             ctmp2=czero
                             If ((s1+t1) .le. (n-2*r1)) Then
-!                               
+!
 !                              ctmp2: The 2nd fraction from the first term in (S28)
                                ctmp2=cone*(-1.d0)**dble(r1)*fact(n)*bx**dble(s1)*by**dble(t1)*bz**dble(n-2*r1-s1-t1) &
                                     &*2.d0**dble(n-2*r1)/fact(r1)/fact(s1)/fact(t1)/fact(n-2*r1-s1-t1)
@@ -608,28 +608,30 @@
                                            If ((g+h) .le. (d+s+s1-2*f)) Then
 !
 !                                             The 2nd & 3rd terms of (S28)
-                                              ctmp3=cone*fact(a)/fact(d)/fact(a-d)*fact(d+s+s1)/fact(f)/fact(g)/fact(h)/fact(d+s+s1-2*f-g-h) &
+                                              ctmp3=cone*fact(a)/fact(d)/fact(a-d)* &
+                                                   &fact(d+s+s1)/fact(f)/fact(g)/fact(h)/fact(d+s+s1-2*f-g-h) &
                                                    &*cdsqrt(pi/(cone*expo+cone*cxx))*(-xp)**dble(a-d) &
                                                    &*2.d0**dble(d+s+s1-2*f)/(4.d0*(cone*expo+cone*cxx))**dble(d+s+s1-f) &
                                                    &*(cone*2.d0*expo*xp-eye*dsin(alpha)*dsin(beta)*k0)**dble(g) &
                                                    &*(-cxy)**dble(h)*(-czx)**dble(d+s+s1-2*f-g-h)
-!                                              
-!                                             Sum over d1(d'), f1(f'), g1(g')  
+!
+!                                             Sum over d1(d'), f1(f'), g1(g')
                                               Do d1=0,b
                                                  Do f1=0,(t+t1+d1+h)/2
                                                     Do g1=0,t+t1+d1+h-2*f1
 !
-!                                                      The 4th and 5th terms of (S28) 
+!                                                      The 4th and 5th terms of (S28)
                                                        ctmp4=cdsqrt(pi/AA)*fact(b)/fact(d1)/fact(b-d1) &
                                                             &*fact(t+t1+d1+h)/fact(f1)/fact(g1)/fact(t+t1+d1+h-2*f1-g1) &
-                                                            &*(-yp)**dble(b-d1)*2.d0**dble(t+t1+d1+h-2*f1)/(4.d0*AA)**dble(t+t1+d1+h-f1) &
+                                                            &*(-yp)**dble(b-d1)* &
+                                                            &2.d0**dble(t+t1+d1+h-2*f1)/(4.d0*AA)**dble(t+t1+d1+h-f1) &
                                                             &*BB**dble(g1)*CC**dble(t+t1+d1+h-2*f1-g1)
 !
-!                                                      Sum over d2(d") and f2(f") 
+!                                                      Sum over d2(d") and f2(f")
                                                        Do d2=0,c
                                                           Do f2=0,(m-2*r+n-2*r1+d2+d-2*f-g+d1-2*f1-g1)/2
 !
-!                                                            The last two terms of (S28)                                         
+!                                                            The last two terms of (S28)
                                                              ctmp5=cdsqrt(pi/DD)*fact(c)/fact(d2)/fact(c-d2) &
                                                                   &*(-zp)**dble(c-d2) &
                                                                   &*fact(m-2*r+n-2*r1+d2+d-2*f-g+d1-2*f1-g1)/fact(f2)&
@@ -639,34 +641,34 @@
 !
                                                              gau_her=gau_her+ctmp1*ctmp2*ctmp3*ctmp4*ctmp5*ctmp7
 !
-                                                          End Do ! f2 loop                                            
-                                                       End Do ! d2 loop                                              
-                                                    End Do ! g1 loop                                                
-                                                 End Do ! f1 loop                                                  
-                                              End Do ! d1 loop                                                    
+                                                          End Do ! f2 loop
+                                                       End Do ! d2 loop
+                                                    End Do ! g1 loop
+                                                 End Do ! f1 loop
+                                              End Do ! d1 loop
                                            End If
-                                        End Do ! h loop                                                         
-                                     End Do ! g loop                                                           
-                                  End Do ! f loop                                                             
-                               End Do ! d loop                                                               
+                                        End Do ! h loop
+                                     End Do ! g loop
+                                  End Do ! f loop
+                               End Do ! d loop
                             End If
-                         End Do ! t1 loop                                                                  
-                      End Do ! s1 loop                                                                    
-                   End Do ! r1 loop                                                                      
+                         End Do ! t1 loop
+                      End Do ! s1 loop
+                   End Do ! r1 loop
                 End If
-             End Do ! t loop                                                                           
-          End Do ! s loop                                                                             
-       End Do ! r loop                                                                               
-       !                                                                                            
-    End If 
-!                                                                                            
+             End Do ! t loop
+          End Do ! s loop
+       End Do ! r loop
+!
+    End If
+!
     Return
 !*************************************************************************
-!*************************************************************************    
+!*************************************************************************
   End SubRoutine OAM_xyz
 !*************************************************************************
 ! Function to calculate the factorial
-!------------------------------------  
+!------------------------------------
   Function fact(n)
 !
     Implicit None
@@ -676,21 +678,21 @@
 !
     If (n .eq. 0) Then
        fact=1.d0
-    Else If (n .lt. 0) Then
-       Write(*,*) 'n should .ge. 0 ', n
-       Stop
+!!    Else If (n .lt. 0) Then
+!!       Write(*,*) 'n should .ge. 0 ', n
+!!       Stop
     Else
        fact=1.d0
        Do i=1,n
-          fact=fact* dble(i) 
+          fact=fact* dble(i)
        End Do
     End If
-!    
+!
     Return
   End function fact
 !
 !=========================================================================
-! Subroutine to calculate the xy-integral -- M-R Version -- 
+! Subroutine to calculate the xy-integral -- M-R Version --
 !=========================================================================
 !     SubRoutine OAM_xy(Vxyz,Sxyz,nZeta,la,lb,nOrdOp,Alpha,Beta,Final,nComp)
 
@@ -717,7 +719,7 @@
 ! !     The integration over the z-subspace is done using the normal code
 ! !     for the exponetial operator.
 ! !
-! #ifdef _DEBUG_
+! #ifdef _DEBUGPRINT_
 !       Write (6,*) 'OAM_xy: nOrdOp,nComp=',nOrdOp,nComp
 !       Call RecPrt('Alpha',' ',Alpha,nZeta,1)
 !       Call RecPrt('Beta',' ',Beta,nZeta,1)
@@ -862,7 +864,7 @@
 !             End Do     ! i_x
 !          End Do  ! iAlpha
 !       End Do     ! iBeta
-! #ifdef _DEBUG_
+! #ifdef _DEBUGPRINT_
 !       Call RecPrt('Final',' ',Final,nZeta,                               &
 !                   ((la+1)*(la+2)/2)*((lb+1)*(lb+2)/2)*nComp)
 ! #endif
