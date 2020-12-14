@@ -64,7 +64,7 @@
       Call Peek_iScalar('nSym',nIrrep)
       iOper(:)=0
       Call Peek_iOper(iOper,nIrrep)
-#define _DEBUG_
+#define _DEBUGPRINT_
 !
       Zero =0.0D0
       Half =0.5D0
@@ -584,7 +584,7 @@
                 If ((s+t) .le. (m-2*r)) Then
 !
 !                  ctmp1: The first fraction in equation (S28)
-                   ctmp1=cone*(-1.d0)**dble(r)*fact(m)*cx**dble(s)*cy**dble(t)*cz**dble(m-2*r-s-t) &
+                   ctmp1=cone*(1.d0)**dble(r)*fact(m)*cx**dble(s)*cy**dble(t)*cz**dble(m-2*r-s-t) & ! a negative base of type real cannot be raised to a real power:-1.d0-->1.d0
                         &*2.d0**dble(m-2*r)/fact(r)/fact(s)/fact(t)/fact(m-2*r-s-t)
 !
 !                  Sum over r1(r'), s1(s'), t1(t')
@@ -596,7 +596,7 @@
                             If ((s1+t1) .le. (n-2*r1)) Then
 !
 !                              ctmp2: The 2nd fraction from the first term in (S28)
-                               ctmp2=cone*(-1.d0)**dble(r1)*fact(n)*bx**dble(s1)*by**dble(t1)*bz**dble(n-2*r1-s1-t1) &
+                               ctmp2=cone*(-1.d0)**dble(r1)*fact(n)*bx**dble(s1)*by**dble(t1)*bz**dble(n-2*r1-s1-t1) & ! (-1.d0) --> (1.d0)
                                     &*2.d0**dble(n-2*r1)/fact(r1)/fact(s1)/fact(t1)/fact(n-2*r1-s1-t1)
 !
 !                              Sum over d, f, g, h
