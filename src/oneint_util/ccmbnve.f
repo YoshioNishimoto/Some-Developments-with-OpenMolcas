@@ -29,7 +29,7 @@
       Ind(ixyz,ix,iz) = (ixyz-ix)*(ixyz-ix+1)/2 + iz + 1
 *
 *#define _DEBUG_
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       Call RecPrt('KVector',' ',kVector,3,1)
       Call RecPrt('Zeta',' ',Zeta,nZeta,1)
       Call RecPrt('rKappa',' ',rKappa,nZeta,1)
@@ -95,7 +95,7 @@
                Final(iZeta,ipa,ipb,9 )= DIMAG((Temp1+Temp2)*Half)
                Final(iZeta,ipa,ipb,12)= DIMAG((Temp1-Temp2)*Half)
  30         Continue
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
             Write (6,*) '(',ixa,iya,iza,ixb,iyb,izb,')'
             Write (6,*) 'x-component'
             Write (6,*) Final(1,ipa,ipb,1)
