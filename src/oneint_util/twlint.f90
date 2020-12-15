@@ -453,8 +453,10 @@
          Else
             zVxyz=zQxyz
          End If
-         call OAM_xy(zVxyz,zQxyz,nZeta,la,lb,nOrdOp,Array(ipAOff),Array(ipBOff),       &
-                     Array(ipRes),nComp)
+         call OAM_xyz(zVxyz,zQxyz,nZeta,la,lb,nOrdOp,Array(ipAOff),Array(ipBOff),       &
+                      Array(ipRes),nComp)
+!         call OAM_xy(zVxyz,zQxyz,nZeta,la,lb,nOrdOp,Array(ipAOff),Array(ipBOff),       &
+!                     Array(ipRes),nComp)
          Nullify(zVxyz,zQxyz)
 !
 !
