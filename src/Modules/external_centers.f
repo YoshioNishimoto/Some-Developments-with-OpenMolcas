@@ -95,7 +95,7 @@
       Call Put_iArray('Misc',iDmp,3)
       Call mma_deallocate(iDmp)
       If (Allocated(KVectors)) Then
-         Call RecPrt('kVectors',' ',KVectors,3,SIZE(kVectors,2))
+         Call Put_dArray('KVectors',KVectors,SIZE(kVectors))
       End If
       Return
       End Subroutine External_Centers_Dmp

@@ -551,6 +551,7 @@ c           iPAMcount=iPAMcount+1
       PLabel=' '
       rHrmt=-One ! Note used
       If (EMFR.and..Not.Primitive_Pass) Then
+         Do k = 1, SIZE(KVectors,2)
 *
 *        The second term in eq. 14 of Bernadotte et al
 *
@@ -560,7 +561,7 @@ c           iPAMcount=iPAMcount+1
          Call Allocate_Auxiliary()
 *        Here we put in the k-vector
          Call FZero(CoorO,3*nComp)
-         Call dcopy_(3,KVectors(:,1),1,CoorO,1)
+         Call dcopy_(3,KVectors(:,k),1,CoorO,1)
 *
 *        The electromagnetic field operator contributes to all
 *        irreducible irreps, hence OperI=255. Since the operator
@@ -585,7 +586,7 @@ c           iPAMcount=iPAMcount+1
          Call Allocate_Auxiliary()
 *        Here we put in the k-vector
          Call FZero(CoorO,3*nComp)
-         Call dcopy_(3,KVectors(:,1),1,CoorO,1)
+         Call dcopy_(3,KVectors(:,k),1,CoorO,1)
 *
 *        The electromagnetic field operator contributes to all
 *        irreducible irreps, hence OperI=255. Since the operator
@@ -610,7 +611,7 @@ c           iPAMcount=iPAMcount+1
          Call Allocate_Auxiliary()
 *        Here we put in the k-vector
          Call FZero(CoorO,3*nComp)
-         Call dcopy_(3,Kvectors(:,1),1,CoorO,1)
+         Call dcopy_(3,Kvectors(:,k),1,CoorO,1)
 *        Change the argument to 2xA
          Call dscal_(3,2.0D0,CoorO,1)
 *
@@ -628,6 +629,7 @@ c           iPAMcount=iPAMcount+1
      &           dum,1,0)
 *
          Call Deallocate_Auxiliary()
+         End Do
 
       End If    ! EMFR
 ************************************************************************
