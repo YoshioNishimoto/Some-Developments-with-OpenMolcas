@@ -1792,19 +1792,26 @@ Keywords associated to one-electron integrals
 
 :kword:`EMFR`
   Request the computation of vector potential integrals due to an external homogenous radiation.
-  The keyword is followed by 3 values which specifies the direction of the k-vector and a 4th value indicating the 
+  The keyword is optionally followed by a line with a single integer entry specifying the number of k-vectors to
+  be read. If omitted the number of k-vectors default to 1. Subsequently, for each k-vector, follows a line
+  with 4 values which specifies the direction of the k-vector and specifing the  associated 
   wavelength (in au). Other possible units are possible if the line is extended with the wording Angstrom or nanometer.
 
-  .. xmldoc:: <KEYWORD MODULE="GATEWAY" NAME="EMFR" APPEAR="Vector potential integrals" KIND="REALS" SIZE="4" LEVEL="ADVANCED">
+  .. xmldoc:: <KEYWORD MODULE="GATEWAY" NAME="EMFR" APPEAR="Vector potential integrals" KIND="CUSTOM" LEVEL="ADVANCED">
+              <ALTERNATE KIND="STRING" />
               <HELP>
               Request the computation of vector potential integrals due to an external homogenous radiation.
-              The keyword is followed by 3 values which specifies the direction of the k-vector and a 4th value indicating the 
-               wavelength (in au). Other possible units are possible if the line is extended with the wording Angstrom or nanometer.
+              The keyword is optionally followed by a line with a single integer entry specifying the number of k-vectors to
+              be read. If omitted the number of k-vectors default to 1. Subsequently, for each k-vector, follows a line
+              with 4 values which specifies the direction of the k-vector and specifing the  associated 
+              wavelength (in au). Other possible units are possible if the line is extended with the wording Angstrom or nanometer.
               </HELP>
               %%Keyword: EMFR <basic>
               Request the computation of vector potential integrals due to an external homogenous radiation.
-              The keyword is followed by 3 values which specifies the direction of the k-vector and a 4th value indicating the 
-               wavelength (in au). Other possible units are possible if the line is extended with the wording Angstrom or nanometer.
+              The keyword is optionally followed by a line with a single integer entry specifying the number of k-vectors to
+              be read. If omitted the number of k-vectors default to 1. Subsequently, for each k-vector, follows a line
+              with 4 values which specifies the direction of the k-vector and specifing the  associated 
+              wavelength (in au). Other possible units are possible if the line is extended with the wording Angstrom or nanometer.
               </KEYWORD>
 
 :kword:`AMPR`

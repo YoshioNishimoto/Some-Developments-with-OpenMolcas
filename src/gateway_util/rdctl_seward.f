@@ -3670,18 +3670,41 @@ c
  8035 GWinput = .True.
       Kword = Get_Ln(LuRd)
       Call Upcase(KWord)
+*
+*     Analyse the read line to see if there is more than one entry on
+*     the line.
+*
+      iChrct=Len(KWord)
+      i1=icFrst(KWord,iChrct)
+      i2=icLast(KWord,iChrct)
+
+      EMFR=.False. ! Temporary usage
+      If (i1==i2) Then
+         Call Get_I1(1,nVectors)
+         EMFR=.True.    ! Temporary usage
+      Else If (Index(KWord(i1:i2),' ')/=0) Then
+         nVectors = 1
+      Else
+         Call Get_I1(1,nVectors)
+         EMFR=.True.    ! Temporary usage
+      End If
+
+      Call mma_Allocate(KVectors,3,nVectors,Label='KVectors')
+
+      Do  k = 1, nVectors
+         If (EMFR) Kword = Get_Ln(LuRd)
+         Call Get_F(1,KVectors(:,k),3)
+         Temp=Sqrt(KVectors(1,k)**2+KVectors(2,k)**2+KVectors(3,k)**2)
+         KVectors(:,k)=KVectors(:,k)/Temp
+*        Get the wavelength in atomic units.
+         Call Get_F1(4,Lambda)
+         If (Index(KWord,'ANGSTROM').ne.0) Lambda  = Lambda/angstr
+         If (Index(KWord,'NANOMETER').ne.0) Then
+            Lambda  = Ten*Lambda/angstr
+         End If
+         KVectors(:,k)=((Two*Pi)/Lambda)*KVectors(:,k)
+      End Do
       EMFR=.True.
-      Call mma_Allocate(KVectors,3,1,Label='KVectors')
-      Call Get_F(1,KVectors(:,1),3)
-      Temp=Sqrt(KVectors(1,1)**2+KVectors(2,1)**2+KVectors(3,1)**2)
-      KVectors(:,1)=KVectors(:,1)/Temp
-*     Get the wavelength in atomic units.
-      Call Get_F1(4,Lambda)
-      If (Index(KWord,'ANGSTROM').ne.0) Lambda  = Lambda/angstr
-      If (Index(KWord,'NANOMETER').ne.0) Then
-         Lambda  = Ten*Lambda/angstr
-      ENd If
-      KVectors(:,1)=((Two*Pi)/Lambda)*KVectors(:,1)
       Go To 998
 *                                                                      *
 ****** NOCD ************************************************************
