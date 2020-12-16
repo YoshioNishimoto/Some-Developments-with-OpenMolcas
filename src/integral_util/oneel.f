@@ -322,6 +322,7 @@ c               Close(28)
       if (Label.eq.'Mltpl  1')
      &   Call Add_info('SEWARD_MLTPL1X',Array(ip(1)),1,5)
       If (Label(1:4).eq.'EMFR') Then
+         CheckSum=Zero
          Do iComp = 1, nComp
             CheckSum=CheckSum
      &              +DDot_(n2Tri(lOper(iComp)),Array(ip(iComp)),1,One,0)
