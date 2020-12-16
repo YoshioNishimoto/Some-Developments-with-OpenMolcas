@@ -26,7 +26,7 @@
       use Integral_Parameters
       use Sizes_of_Seward, Only: S
       use Real_Info, only: ThrInt, Rtrnc, CutInt, PkAcc, Thrs, E1, E2,
-     &                     RPQMin, SadStep, Shake, kVector, CoM
+     &                     RPQMin, SadStep, Shake, CoM
       use DKH_Info
       use RICD_Info, only: iRI_Type, LDF, Do_RI, Cholesky,
      &                     Do_acCD_Basis, Skip_High_AC, DiagCheck,
@@ -3671,20 +3671,17 @@ c
       Kword = Get_Ln(LuRd)
       Call Upcase(KWord)
       EMFR=.True.
-      Call Get_F(1,KVector,3)
-      Temp=Sqrt(KVector(1)**2+KVector(2)**2+KVector(3)**2)
-      KVector(1)=KVector(1)/Temp
-      KVector(2)=KVector(2)/Temp
-      KVector(3)=KVector(3)/Temp
+      Call mma_Allocate(KVectors,3,1,Label='KVectors')
+      Call Get_F(1,KVectors(:,1),3)
+      Temp=Sqrt(KVectors(1,1)**2+KVectors(2,1)**2+KVectors(3,1)**2)
+      KVectors(:,1)=KVectors(:,1)/Temp
 *     Get the wavelength in atomic units.
       Call Get_F1(4,Lambda)
       If (Index(KWord,'ANGSTROM').ne.0) Lambda  = Lambda/angstr
       If (Index(KWord,'NANOMETER').ne.0) Then
          Lambda  = Ten*Lambda/angstr
       ENd If
-      KVector(1)=((Two*Pi)/Lambda)*KVector(1)
-      KVector(2)=((Two*Pi)/Lambda)*KVector(2)
-      KVector(3)=((Two*Pi)/Lambda)*KVector(3)
+      KVectors(:,1)=((Two*Pi)/Lambda)*KVectors(:,1)
       Go To 998
 *                                                                      *
 ****** NOCD ************************************************************

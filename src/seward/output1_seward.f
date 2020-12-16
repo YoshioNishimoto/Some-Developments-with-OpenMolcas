@@ -28,7 +28,7 @@
       use Temporary_Parameters
       use DKH_Info
       use Sizes_of_Seward, only: S
-      use Real_Info, only: ThrInt, CutInt, RPQMin, kVector
+      use Real_Info, only: ThrInt, CutInt, RPQMin
       use RICD_Info, only: iRI_Type, LDF, Do_RI, Cholesky,
      &                     Do_acCD_Basis, Skip_High_AC, Cho_OneCenter,
      &                     LocalDF, Do_nacCD_Basis, Thrshld_CD
@@ -442,13 +442,13 @@
 *     electronic transitions.
 *
       If (EMFR) Then
-         temp=Sqrt(KVector(1)**2+KVector(2)**2+kVector(3)**2)
+         temp=Sqrt(KVectors(1,1)**2+KVectors(2,1)**2+kVectors(3,1)**2)
          temp = (Two*Pi)/temp
          Write (LuWr,'(15X,A)')
      &        '   Transition moment intergrals'
          Write (LuWr,'(15X,A,3(F7.4,1X),A)')
      &                       '   The normalized wavevector k: (',
-     &   (kVector(i)*temp,i=1,3),')'
+     &   (kVectors(i,1)*temp,i=1,3),')'
          Write (LuWr,'(15X,A,(F10.4,1X),A)')
      &                       '   Wavelength:        ',
      &   Temp,'a.u.'

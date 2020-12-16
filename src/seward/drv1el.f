@@ -32,7 +32,7 @@
       use PAM2
       use DKH_Info, only: BSS, DKroll
       use Sizes_of_Seward, only: S
-      use Real_Info, only: PotNuc, kVector
+      use Real_Info, only: PotNuc
       use Logical_Info, only: Vlct, lRel, lAMFI, NEMO, Do_FckInt,
      &                        DoFMM, EMFR, GIAO, lPSOI
       Implicit Real*8 (A-H,O-Z)
@@ -560,7 +560,7 @@ c           iPAMcount=iPAMcount+1
          Call Allocate_Auxiliary()
 *        Here we put in the k-vector
          Call FZero(CoorO,3*nComp)
-         Call dcopy_(3,KVector,1,CoorO,1)
+         Call dcopy_(3,KVectors(:,1),1,CoorO,1)
 *
 *        The electromagnetic field operator contributes to all
 *        irreducible irreps, hence OperI=255. Since the operator
@@ -585,7 +585,7 @@ c           iPAMcount=iPAMcount+1
          Call Allocate_Auxiliary()
 *        Here we put in the k-vector
          Call FZero(CoorO,3*nComp)
-         Call dcopy_(3,KVector,1,CoorO,1)
+         Call dcopy_(3,KVectors(:,1),1,CoorO,1)
 *
 *        The electromagnetic field operator contributes to all
 *        irreducible irreps, hence OperI=255. Since the operator
@@ -610,7 +610,7 @@ c           iPAMcount=iPAMcount+1
          Call Allocate_Auxiliary()
 *        Here we put in the k-vector
          Call FZero(CoorO,3*nComp)
-         Call dcopy_(3,Kvector,1,CoorO,1)
+         Call dcopy_(3,Kvectors(:,1),1,CoorO,1)
 *        Change the argument to 2xA
          Call dscal_(3,2.0D0,CoorO,1)
 *

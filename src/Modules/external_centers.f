@@ -18,7 +18,7 @@
      &          OAM_Center, OMQ_Center, nDMS, DMS_Centers, Dxyz,
      &          nWel, Wel_Info, AMP_Center, nRP, RP_Centers,
      &          nData_XF, nXF, nXMolnr, XF, XEle, XMolnr,
-     &          nOrdEF, nOrd_XF, iXPolType,
+     &          nOrdEF, nOrd_XF, iXPolType, KVectors,
      &          External_Centers_Dmp,
      &          External_Centers_Free,
      &          External_Centers_Get
@@ -37,6 +37,7 @@
       Integer :: nData_XF=0, nXF=0, nXMolnr=0, nOrd_XF=1, iXPolType=0
       Real*8, Allocatable:: XF(:,:)
       Integer, Allocatable:: XEle(:), XMolnr(:,:)
+      Real*8, Allocatable:: KVectors(:,:)
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -93,6 +94,9 @@
       iDmp(3)=iXPolType
       Call Put_iArray('Misc',iDmp,3)
       Call mma_deallocate(iDmp)
+      If (Allocated(KVectors)) Then
+         Call RecPrt('kVectors',' ',KVectors,3,SIZE(kVectors,2))
+      End If
       Return
       End Subroutine External_Centers_Dmp
 *                                                                      *
@@ -129,6 +133,7 @@
          nOrd_XF=1
          iXPolType=0
       End If
+      If (Allocated(KVectors)) Call mma_deallocate(KVectors)
       Return
       End Subroutine External_Centers_Free
 *                                                                      *
@@ -207,6 +212,14 @@
             Call mma_allocate(AMP_Center,3,Label='AMP_Center')
          End If
          Call Get_dArray('AMP_Center',AMP_Center,3)
+      End If
+*
+      Call qpg_dArray('KVectors',Found,Len2)
+      If (Found) Then
+         If (.Not.Allocated(KVectors)) Then
+            Call mma_allocate(KVectors,3,Len2/3,Label='KVectors')
+         End If
+         Call Get_dArray('KVectors',KVectors,Len2)
       End If
 *
       Call qpg_dArray('RP_Centers',Found,Len2)
