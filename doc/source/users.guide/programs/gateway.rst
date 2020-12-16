@@ -1790,6 +1790,38 @@ Keywords associated to one-electron integrals
               origin (in au).
               </KEYWORD>
 
+:kword:`EMFR`
+  Request the computation of vector potential integrals due to an external homogenous radiation.
+  The keyword is followed by 3 values which specifies the direction of the k-vector and a 4th value indicating the 
+  wavelength (in au). Other possible units are possible if the line is extended with the wording Angstrom or nanometer.
+
+  .. xmldoc:: <KEYWORD MODULE="GATEWAY" NAME="EMFR" APPEAR="Vector potential integrals" KIND="REALS" SIZE="4" LEVEL="ADVANCED">
+              <HELP>
+              Request the computation of vector potential integrals due to an external homogenous radiation.
+              The keyword is followed by 3 values which specifies the direction of the k-vector and a 4th value indicating the 
+               wavelength (in au). Other possible units are possible if the line is extended with the wording Angstrom or nanometer.
+              </HELP>
+              %%Keyword: EMFR <basic>
+              Request the computation of vector potential integrals due to an external homogenous radiation.
+              The keyword is followed by 3 values which specifies the direction of the k-vector and a 4th value indicating the 
+               wavelength (in au). Other possible units are possible if the line is extended with the wording Angstrom or nanometer.
+              </KEYWORD>
+
+:kword:`AMPR`
+  Request the computation of angular momentum product integrals.
+  The keyword is followed by values which specifies the angular momentum
+  origin (in au).
+
+  .. xmldoc:: <KEYWORD MODULE="GATEWAY" NAME="AMPR" APPEAR="Angular momentum product" KIND="REALS" SIZE="3" LEVEL="ADVANCED">
+              <HELP>
+              Request the computation of angular momentum product integrals and specify the
+              angular momentum origin (in au).
+              </HELP>
+              %%Keyword: Ampr <basic>
+              Request the computation of angular momentum product integrals.
+              The keyword is followed by a card which specifies the angular momentum
+              origin (in au).
+              </KEYWORD>
 :kword:`AMPR`
   Request the computation of angular momentum product integrals.
   The keyword is followed by values which specifies the angular momentum
