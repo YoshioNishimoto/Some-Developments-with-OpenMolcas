@@ -321,6 +321,13 @@ c               Close(28)
      &   Call Add_info('SEWARD_KINETIC',Array(ip(1)),1,5)
       if (Label.eq.'Mltpl  1')
      &   Call Add_info('SEWARD_MLTPL1X',Array(ip(1)),1,5)
+      If (Label(1:4).eq.'EMFR') Then
+         Do iComp = 1, nComp
+            CheckSum=CheckSum
+     &              +DDot_(n2Tri(lOper(iComp)),Array(ip(iComp)),1,One,0)
+         End Do
+         Call Add_info('SEWARD_EMFR',CheckSum,1,6)
+      End If
 *                                                                      *
 ************************************************************************
 *                                                                      *
