@@ -566,10 +566,8 @@ c           iPAMcount=iPAMcount+1
 *        irreducible irreps, hence OperI=255. Since the operator
 *        itself is not symmetry adapted OperC is set to a dummy value.
 *
-         OperI(1   ) = 255
-         OperI(1+1 ) = 255
-         OperC(1   ) = 0 ! Dummy
-         OperC(1+1 ) = 0 ! Dummy
+         OperI(:) = 255
+         OperC(:) = 0 ! Dummy
 *
          Call dcopy_(nComp,[Zero],0,Nuc,1)
          Call OneEl(EMFInt,EMFMem,Label,ipList,OperI,nComp,
@@ -593,30 +591,8 @@ c           iPAMcount=iPAMcount+1
 *        irreducible irreps, hence OperI=255. Since the operator
 *        itself is not symmetry adapted OperC is set to a dummy value.
 *
-         OperI(1   ) = 255
-         OperI(1+1 ) = 255
-         OperI(1+2 ) = 255
-         OperI(1+3 ) = 255
-         OperI(1+4 ) = 255
-         OperI(1+5 ) = 255
-         OperI(1+6 ) = 255
-         OperI(1+7 ) = 255
-         OperI(1+8 ) = 255
-         OperI(1+9 ) = 255
-         OperI(1+10) = 255
-         OperI(1+11) = 255
-         OperC(1   ) = 0 ! Dummy
-         OperC(1+1 ) = 0 ! Dummy
-         OperC(1+2 ) = 0 ! Dummy
-         OperC(1+3 ) = 0 ! Dummy
-         OperC(1+4 ) = 0 ! Dummy
-         OperC(1+5 ) = 0 ! Dummy
-         OperC(1+6 ) = 0 ! Dummy
-         OperC(1+7 ) = 0 ! Dummy
-         OperC(1+8 ) = 0 ! Dummy
-         OperC(1+9 ) = 0 ! Dummy
-         OperC(1+10) = 0 ! Dummy
-         OperC(1+11) = 0 ! Dummy
+         OperI(:) = 255
+         OperC(:) = 0 ! Dummy
 *
          Call dcopy_(nComp,[Zero],0,Nuc,1)
          Call OneEl(EMFInt,EMFMem,Label,ipList,OperI,nComp,
@@ -625,6 +601,34 @@ c           iPAMcount=iPAMcount+1
      &              dum,1,0)
 *
          Call Deallocate_Auxiliary()
+*
+*        The A^2 term
+*
+         nOrdOp = 0
+         Label='EMFR2'
+         nComp = 2
+         Call Allocate_Auxiliary()
+*        Here we put in the k-vector
+         Call FZero(CoorO,3*nComp)
+         Call dcopy_(3,Kvector,1,CoorO,1)
+*        Change the argument to 2xA
+         Call dscal_(3,2.0D0,CoorO,1)
+*
+*        The electromagnetic field operator contributes to all
+*        irreducible irreps, hence OperI=255. Since the operator
+*        itself is not symmetry-adapted OperC is set to a dummy value.
+*
+         OperI(:) = 255
+         OperC(:) = 0 ! Dummy
+*
+         Call dcopy_(nComp,[Zero],0,Nuc,1)
+         Call OneEl(EMFInt,EMFMem,Label,ipList,OperI,nComp,
+     &           CoorO,nOrdOp,Nuc,rHrmt,OperC,
+     &           dum,1,dum,idum,0,0,
+     &           dum,1,0)
+*
+         Call Deallocate_Auxiliary()
+
       End If    ! EMFR
 ************************************************************************
 ************************************************************************
