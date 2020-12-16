@@ -1797,8 +1797,9 @@ Keywords associated to one-electron integrals
   with 4 values which specifies the direction of the k-vector and specifing the  associated 
   wavelength (in au). Other possible units are possible if the line is extended with the wording Angstrom or nanometer.
 
-  .. xmldoc:: <KEYWORD MODULE="GATEWAY" NAME="EMFR" APPEAR="Vector potential integrals" KIND="CUSTOM" LEVEL="ADVANCED">
-              <ALTERNATE KIND="STRING" />
+  .. xmldoc:: <KEYWORD MODULE="GATEWAY" NAME="EMFR" APPEAR="Vector potential integrals" KIND="REALS_COMPUTED" SIZE="4" LEVEL="ADVANCED">
+              <ALTERNATE KIND="REALS" SIZE="4"/>
+              %%Keyword: EMFR <advanced>
               <HELP>
               Request the computation of vector potential integrals due to an external homogenous radiation.
               The keyword is optionally followed by a line with a single integer entry specifying the number of k-vectors to
@@ -1806,12 +1807,6 @@ Keywords associated to one-electron integrals
               with 4 values which specifies the direction of the k-vector and specifing the  associated 
               wavelength (in au). Other possible units are possible if the line is extended with the wording Angstrom or nanometer.
               </HELP>
-              %%Keyword: EMFR <basic>
-              Request the computation of vector potential integrals due to an external homogenous radiation.
-              The keyword is optionally followed by a line with a single integer entry specifying the number of k-vectors to
-              be read. If omitted the number of k-vectors default to 1. Subsequently, for each k-vector, follows a line
-              with 4 values which specifies the direction of the k-vector and specifing the  associated 
-              wavelength (in au). Other possible units are possible if the line is extended with the wording Angstrom or nanometer.
               </KEYWORD>
 
 :kword:`AMPR`
