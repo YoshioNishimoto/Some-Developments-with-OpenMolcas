@@ -14,7 +14,7 @@
       SubRoutine TWLInt(Alpha,nAlpha,Beta,nBeta,nGamma,Zeta,ZInv,      &
                        rKappa,P,Final,nZeta,nIC,nComp,la,lb,A,RB,      &
                        Array,nArr,kVector,nOrdOp,lOper,iChO,nHer,      &
-                       iStabM,nStabM,a,b,c,xp,yp,zp,expo,m,n,k0,w0,    &
+                       iStabM,nStabM,xp,yp,zp,expo,m,n,k0,w0,          &
                        PtChrg,nGrid,iAddPot)
 !***********************************************************************
 !                                                                      *
