@@ -14,7 +14,7 @@
       SubRoutine TWLInt(Alpha,nAlpha,Beta,nBeta,nGamma,Zeta,ZInv,      &
                        rKappa,P,Final,nZeta,nIC,nComp,la,lb,A,RB,      &
                        Array,nArr,kVector,nOrdOp,lOper,iChO,nHer,      &
-                       iStabM,nStabM,                                  &
+                       iStabM,nStabM,a,b,c,xp,yp,zp,expo,m,n,k0,w0,    &
                        PtChrg,nGrid,iAddPot)
 !***********************************************************************
 !                                                                      *
@@ -757,7 +757,7 @@
 !                                     j_x, j_y, lAng, Value1111)
 
 !                         If (nOrdOp.eq.1) Then
-!                            Fact = rKappa(iZeta) * Zeta(iZeta)**(-Three/Two) * Exp(-rTemp)
+!                            Fact = rKappa(iZeta) * Zeta(iZeta)**(-Three/Two) * Exp(-rTemp)
 
 !                            Call twlprm(Zeta(iZeta),P(iZeta,1),P(iZeta,2),       &
 !                                        Alpha(iZeta), Beta(iZeta),               &
