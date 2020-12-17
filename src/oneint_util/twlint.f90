@@ -445,7 +445,7 @@
       If (lAng.ne.0) Then
 #endif
 !
-!     Now compute the OAM x and y component.
+!     Now compute the OAM x and y, and z component.
 !
          Call C_F_Pointer(C_Loc(Array(ipQxyz)),zQxyz,[nZeta*3*(la+1)*(lb+1)])
          If (nOrdOp.eq.1) Then
@@ -453,8 +453,9 @@
          Else
             zVxyz=zQxyz
          End If
-         call OAM_xyz(zVxyz,zQxyz,nZeta,la,lb,nOrdOp,Array(ipAOff),Array(ipBOff),       &
-                      Array(ipRes),nComp)
+!
+         Call OAM_xyz(Alpha, Beta, Gamma,a,b,c,xp,yp,zp,expo,m,n,k0,w0)
+!
 !         call OAM_xy(zVxyz,zQxyz,nZeta,la,lb,nOrdOp,Array(ipAOff),Array(ipBOff),       &
 !                     Array(ipRes),nComp)
          Nullify(zVxyz,zQxyz)
