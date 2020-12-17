@@ -37,6 +37,10 @@
              ZInv(nZeta), rKappa(nZeta),                               &
              P(nZeta,3), A(3), RB(3),                                  &
              Array(nZeta*nArr), kvector(3)
+!
+      Integer a,b,c,m,n
+      Real*8  xp, yp, zp, expo, k0, w0
+!
       Integer iStabM(0:nStabM-1), iDCRT(0:7),                          &
               iStabO(0:7), lOper(nComp), iChO(nComp)
       Integer nHer, nGrid, iAddPot, NrOpr
