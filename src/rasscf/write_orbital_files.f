@@ -65,7 +65,6 @@
         end function
       end interface
 
-      call qEnter(routine)
 * This routine is used at normal end of a RASSCF optimization, or
 * when using the OrbOnly keyword to create orbital files.
 *-------------------------------------------------------------------
@@ -224,7 +223,6 @@ c     & Work(lCMO), Work(ipOcc), FDIAG, IndType,VecTyp)
       call getmem('CMO','free','real',LCMO,ntot2)
       call getmem('Occ','free','real',ipOcc,ntot)
 
-      Call qExit(routine)
       Return
       End subroutine
 
@@ -271,12 +269,12 @@ c     & Work(lCMO), Work(ipOcc), FDIAG, IndType,VecTyp)
         real*8, intent(in) :: CMO(:), orbital_E(:)
         logical, intent(in) :: iDoGAS
 
-        character(*), parameter :: filename = 'ORTHORB'
+        character(len=*), parameter :: filename = 'ORTHORB'
         real*8, allocatable :: occ_number(:)
         integer, parameter :: arbitrary_magic_number = 50
         integer :: file_id, typeidx(7, 8)
         character(len=80) ::
-     &    orbfile_title = 'Orbitals that are used for FCIQMC.'
+     &    orbfile_title = 'Orbitals after Orthonormalization.'
 
         file_id = arbitrary_magic_number
         file_id = isfreeunit(file_id)

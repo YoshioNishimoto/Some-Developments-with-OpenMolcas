@@ -8,17 +8,15 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
-***********************************************************************
-*                                                                     *
-*  Subroutine set_thrint:     Puts integral thresholds into info.fh  *
-*                                                                     *
-***********************************************************************
+************************************************************************
+*                                                                      *
+*  Subroutine set_thrint:     Puts integral thresholds into info.fh    *
+*                                                                      *
+************************************************************************
       subroutine set_thrint(thr,cut)
 c-----------------------------------------------------------------------
-      implicit real*8 (a-h,o-z)
-#include "itmax.fh"
-#include "info.fh"
-      thrint=max(1.d-14,thr)
-      cutint=max(1.d-14,cut)
+      use Real_Info, only: ThrInt, CutInt
+      ThrInt=max(1.d-14,thr)
+      CutInt=max(1.d-14,cut)
       return
       end

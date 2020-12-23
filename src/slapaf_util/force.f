@@ -19,7 +19,7 @@
       Character Name(nAtom)*(LENIN), Lbl(nInter)*8
       Dimension Dummy(1)
 *
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       Call RecPrt('In Force:BMx ',' ',BMx ,3*nAtom,nInter)
       Call RecPrt('In Force:Degen ',' ',Degen ,1,3*nAtom)
       Call RecPrt('In Force:GrdX',' ',GrdX,3,nAtom)
@@ -51,7 +51,7 @@
       NRHS=1
       Call Eq_Solver('N',M,N,NRHS,BMx,.TRUE.,Dummy,Work(ipFrc),
      &               Grad(1,Iter))
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       Call RecPrt(' Internal Forces in au before FIXIC ',
      &            ' ',Grad(1,Iter),nInter,1)
 #endif
@@ -65,53 +65,13 @@
 *
 *-----Write cartesian symmetry distinct forces which will be relaxed.
 *
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       Call PrList('Cartesian forces which will be relaxed'
      &            //' hartree/bohr',
      &            Name,nAtom,GrdX,3,nAtom)
 #else
 c Avoid unused argument warnings
       If (.False.) Call Unused_character(Name)
-#endif
-*
-      Call GetMem('Force','Free','Real',ipFrc,3*nAtom)
-*
-      Return
-      End
-      Subroutine G_Nrm(GrdX,nAtom,nInter,GNrm,Iter,
-     &                 Grad,Degen,mIntEff)
-      Implicit Real*8 (a-h,o-z)
-#include "real.fh"
-#include "WrkSpc.fh"
-#include "Molcas.fh"
-      Real*8 GrdX(3*nAtom),
-     &       GNrm(Iter), Grad(nInter,Iter), Degen(3*nAtom)
-*
-      Call GetMem('Force','Allo','Real',ipFrc,3*nAtom)
-*
-*     Compute the norm of the cartesian force vector.
-*
-*     |dE/dx|=Sqrt(dE/dx|u|dE/dx)
-*
-      Do i = 1, 3*nAtom
-         Work(i +ipFrc-1) = Degen(i)*GrdX(i)
-      End Do
-      Fabs=Sqrt(DDot_(3*nAtom,GrdX,1,Work(ipFrc),1))
-#ifdef _DEBUG_
-         Write (6,42) Fabs
-42       Format (/,' Norm of the force vector',F20.15)
-#endif
-      GNrm(iter)=Fabs
-*
-*-----Write out the internal force vector.
-*
-      mIntEff=0
-      Do i = 1, nInter
-         If (Abs(Grad(i,Iter)).gt.1.0d-6) mIntEff=mIntEff+1
-      End Do
-      If (mIntEff.eq.0) mIntEff=1
-#ifdef _DEBUG_
-      Write (6,*) ' mIntEff=',mIntEff
 #endif
 *
       Call GetMem('Force','Free','Real',ipFrc,3*nAtom)

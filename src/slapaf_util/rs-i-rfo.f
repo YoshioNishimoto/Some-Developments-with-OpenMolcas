@@ -10,7 +10,8 @@
 *                                                                      *
 * Copyright (C) 1994,1997, Roland Lindh                                *
 ************************************************************************
-      Subroutine RS_I_RFO(H,g,nInter,dq,UpMeth,dqHdq,StepMax,Step_Trunc)
+      Subroutine RS_I_RFO(H,g,nInter,dq,UpMeth,dqHdq,StepMax,
+     &                    Step_Trunc,Thr_RS)
 ************************************************************************
 *                                                                      *
 *     Author: Roland Lindh, Dept. of Theoretical Chemistry,            *
@@ -44,7 +45,6 @@
       Character*1 Step_Trunc
       Logical Found
 *
-*     Call QEnter('RS_I_RFO')
       iRout = 215
       Lu =6
       iPrint = nPrint(iRout)
@@ -78,7 +78,13 @@
           Call SysWarnMsg('RS_I_RFO',
      &      'Davidson procedure did not converge','')
         End If
-        If ((Work(ipVal+NumVal-1).gt.Thr).or.(NumVal.ge.nInter)) Then
+        nNeg=0
+        Do i = 1, NumVal
+           If (Work(ipVal+i-1).lt.Zero) nNeg=nNeg+1
+        End Do
+        If ( (Work(ipVal+NumVal-1).gt.Thr .and. nNeg.gt.0) .or.
+     &      (NumVal.ge.nInter)
+     &     ) Then
           Found=.True.
         Else
 *----     Increase the number of eigenpairs to compute
@@ -116,30 +122,35 @@
 *     corresponds to an elementary Householder orthogonal
 *     transformation.
 *
-      Call Allocate_Work(ipTmp,nInter)
-      call dcopy_(nInter,g,1,Work(ipTmp),1)
+      If (nNeg.gt.0) Then
+        Call Allocate_Work(ipTmp,nInter)
+        call dcopy_(nInter,g,1,Work(ipTmp),1)
 *
-      Do iNeg=1,nNeg
-        iVec = ipVec+(iNeg-1)*nInter
-        gi = DDot_(nInter,g,1,Work(iVec),1)
-        Call DaXpY_(nInter,-Two*gi,Work(iVec),1,g,1)
-        Fact = Two * Work(ipVal+iNeg-1)
-        Do j = 1, nInter
-           Do i = 1, nInter
-              H(i,j) = H(i,j) - Fact * Work(iVec+i-1) * Work(iVec+j-1)
-           End Do
+        Do iNeg=1,nNeg
+          iVec = ipVec+(iNeg-1)*nInter
+          gi = DDot_(nInter,g,1,Work(iVec),1)
+          Call DaXpY_(nInter,-Two*gi,Work(iVec),1,g,1)
+          Fact = Two * Work(ipVal+iNeg-1)
+          Do j = 1, nInter
+             Do i = 1, nInter
+                H(i,j) = H(i,j) - Fact * Work(iVec+i-1) * Work(iVec+j-1)
+             End Do
+          End Do
         End Do
-      End Do
+      End If
 *
       Call GetMem('Vector','Free','Real',ipVec,nInter*NumVal)
       Call GetMem('Values','Free','Real',ipVal,NumVal)
 *
-      Call RS_RFO(H,g,nInter,dq,UpMeth,dqHdq,StepMax,Step_Trunc)
+      Call RS_RFO(H,g,nInter,dq,UpMeth,dqHdq,StepMax,Step_Trunc,
+     &            Thr_RS)
 *
 *     Restore the original gradient
 *
-      call dcopy_(nInter,Work(ipTmp),1,g,1)
-      Call Free_Work(ipTmp)
+      If (nNeg.gt.0) Then
+        call dcopy_(nInter,Work(ipTmp),1,g,1)
+        Call Free_Work(ipTmp)
+      End If
 *
       UpMeth='RSIRFO'
 *
@@ -148,6 +159,5 @@
          Call RecPrt(' In RS_I_RFO:dq','(10f10.6)',dq,nInter,1)
       End If
 *
-*     Call QExit('RS_I_RFO')
       Return
       End

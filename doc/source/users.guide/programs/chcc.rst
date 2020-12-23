@@ -284,10 +284,19 @@ Optional keywords
               </HELP></KEYWORD>
               %%Keyword: JOINlkey <basic>
               Sets the type of parallel integral generation
+<<<<<<< HEAD
               ||0 - None (debug)
               ||1 - Minimal (low network bandwdith required)
               ||2 - Medium
               ||3 - Full (high network bandwidth required)
+=======
+
+              0 -- None (debug)
+              1 -- Minimal (low network bandwdith required)
+              2 -- Medium
+              3 -- Full (high network bandwidth required)
+              </KEYWORD>
+>>>>>>> master
 
 :kword:`MAXIterations`
   Integer on the following line specifies maximum number of CCSD iteration
@@ -344,9 +353,10 @@ Optional keywords
               </KEYWORD>
               %%Keyword: PRINtkey <advanced>
               Sets the print level
-              || 1 - Minimal
-              || 2 - Minimal + timings
-              ||10 - Debug
+
+              1  -- Minimal
+              2  -- Minimal + timings
+              10 -- Debug
 
 :kword:`END of input`
   This keyword indicates that there is no more input

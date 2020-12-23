@@ -27,7 +27,6 @@ C     Set up S matrices for cases 1..13.
 #include "pt2_guga.fh"
 #include "SysDef.fh"
 
-      CALL QENTER('MKSMAT')
 
       IF(IPRGLB.GE.VERBOSE) THEN
         WRITE(6,*)
@@ -78,7 +77,6 @@ C looping, etc in the rest  of the routines.
         END DO
       END DO
 
-      CALL QEXIT('MKSMAT')
 
       RETURN
       END
@@ -817,7 +815,7 @@ C-SVC20100831: fill in the G2 and G1 corrections for SA
         IXABS=MTUV(1,IXYZABS)
         IYABS=MTUV(2,IXYZABS)
         IZABS=MTUV(3,IXYZABS)
-        DO 100 ITUV=iLo,iHi
+        DO 101 ITUV=iLo,iHi
           ITUVABS=ITUV+NTUVES(ISYM)
           ITABS=MTUV(1,ITUVABS)
           IUABS=MTUV(2,ITUVABS)
@@ -830,7 +828,7 @@ C Add  2 dtx Gvuyz + 2 dtx dyu Gvz
               ISADR=(ITUV*(ITUV-1))/2+IXYZ
               VALUE=SA(ISADR)
             ELSE
-              GOTO 100
+              GOTO 101
             ENDIF
           END IF
           IF(ITABS.EQ.IXABS) THEN
@@ -885,6 +883,7 @@ C Add -dyu Gvzxt
           ELSE
             SA(ISADR)=VALUE
           END IF
+ 101    CONTINUE
  100  CONTINUE
       END
 
@@ -1623,7 +1622,7 @@ C-SVC20100831: fill in the G2 and G1 corrections for this SC block
         IXABS=MTUV(1,IXYZABS)
         IYABS=MTUV(2,IXYZABS)
         IZABS=MTUV(3,IXYZABS)
-        DO 100 ITUV=iLo,iHi
+        DO 101 ITUV=iLo,iHi
           ITUVABS=ITUV+NTUVES(ISYM)
           ITABS=MTUV(1,ITUVABS)
           IUABS=MTUV(2,ITUVABS)
@@ -1635,7 +1634,7 @@ C-SVC20100831: fill in the G2 and G1 corrections for this SC block
               ISADR=(ITUV*(ITUV-1))/2+IXYZ
               VALUE=SC(ISADR)
             ELSE
-              GOTO 100
+              GOTO 101
             ENDIF
           END IF
 C Add  dyu Gvztx
@@ -1675,6 +1674,7 @@ C Add  dtu Gvxyz + dtu dyx Gvz
           ELSE
             SC(ISADR)=VALUE
           END IF
+ 101    CONTINUE
  100  CONTINUE
       END
 
@@ -1703,7 +1703,6 @@ C      -4dxu dyt + 2dxu Dyt
 C    SBP(tu,xy)=SB(tu,xy)+SB(tu,yx)
 C    SBM(tu,xy)=SB(tu,xy)-SB(tu,yx)
 
-      CALL QENTER('MKSB')
 
 C Loop over superindex symmetry.
       DO 1000 ISYM=1,NSYM
@@ -1718,7 +1717,7 @@ C Loop over superindex symmetry.
           ITUABS=ITU+NTUES(ISYM)
           ITABS=MTU(1,ITUABS)
           IUABS=MTU(2,ITUABS)
-          DO 100 IXY=1,ITU
+          DO 101 IXY=1,ITU
             IXYABS=IXY+NTUES(ISYM)
             IXABS=MTU(1,IXYABS)
             IYABS=MTU(2,IXYABS)
@@ -1761,6 +1760,7 @@ C Add  -4dxu dyt + 2dxu Dyt
             END IF
             ISADR=(ITU*(ITU-1))/2+IXY
             WORK(LSB-1+ISADR)=VALUE
+ 101      CONTINUE
  100    CONTINUE
         NASP=NTGEU(ISYM)
         NSBP=(NASP*(NASP+1))/2
@@ -1777,7 +1777,7 @@ C Add  -4dxu dyt + 2dxu Dyt
           ITABS=MTGEU(1,ITGEUABS)
           IUABS=MTGEU(2,ITGEUABS)
           ITU=KTU(ITABS,IUABS)-NTUES(ISYM)
-          DO 200 IXGEY=1,ITGEU
+          DO 201 IXGEY=1,ITGEU
             IXGEYABS=IXGEY+NTGEUES(ISYM)
             IXABS=MTGEU(1,IXGEYABS)
             IYABS=MTGEU(2,IXGEYABS)
@@ -1797,12 +1797,13 @@ C Add  -4dxu dyt + 2dxu Dyt
             STUYX=WORK(LSB-1+ISADR)
             ISPADR=(ITGEU*(ITGEU-1))/2+IXGEY
             WORK(LSBP-1+ISPADR)=STUXY+STUYX
-            IF(ITABS.EQ.IUABS) GOTO 200
-            IF(IXABS.EQ.IYABS) GOTO 200
+            IF(ITABS.EQ.IUABS) GOTO 201
+            IF(IXABS.EQ.IYABS) GOTO 201
             ITGTU=KTGTU(ITABS,IUABS)-NTGTUES(ISYM)
             IXGTY=KTGTU(IXABS,IYABS)-NTGTUES(ISYM)
             ISMADR=(ITGTU*(ITGTU-1))/2+IXGTY
             WORK(LSBM-1+ISMADR)=STUXY-STUYX
+ 201      CONTINUE
  200    CONTINUE
         IF(NSB.GT.0) THEN
           CALL GETMEM('SB','FREE','REAL',LSB,NSB)
@@ -1823,7 +1824,6 @@ C Write to disk, and save size and address.
         END IF
  1000 CONTINUE
 
-      CALL QEXIT('MKSB')
 
       RETURN
       END
@@ -1848,7 +1848,6 @@ C    SD(tu1,xy1)=2*(Gutxy + dxt Duy)
 C    SD(tu2,xy1)= -(Gutxy + dxt Duy)
 C    SD(tu2,xy2)= -Gxtuy +2*dxt Duy
 
-      CALL QENTER('MKSD')
 
 C Loop over superindex symmetry.
       DO 1000 ISYM=1,NSYM
@@ -1864,7 +1863,7 @@ C Loop over superindex symmetry.
           ITUABS=ITU+NTUES(ISYM)
           ITABS=MTU(1,ITUABS)
           IUABS=MTU(2,ITUABS)
-          DO 100 IXY=1,ITU
+          DO 101 IXY=1,ITU
             IXY2=IXY+NAS
             IXYABS=IXY+NTUES(ISYM)
             IXABS=MTU(1,IXYABS)
@@ -1902,6 +1901,7 @@ C    SD(tu2,xy1)= -(Gutxy + dtx Duy)
             WORK(LSD-1+IS12)=-0.5D0*S11
 C    SD(tu2,xy2)= -Gxtuy +2*dtx Duy
             WORK(LSD-1+IS22)= S22
+ 101      CONTINUE
  100    CONTINUE
 
 C Write to disk
@@ -1914,7 +1914,6 @@ C Write to disk
         END IF
  1000 CONTINUE
 
-      CALL QEXIT('MKSD')
 
       RETURN
       END
@@ -1937,7 +1936,6 @@ C Formula used:
 C    SE(t,x)=2*dtx - Dtx
 
 
-      CALL QENTER('MKSE')
 
       DO 1000 ISYM=1,NSYM
         NINP=NINDEP(ISYM,6)
@@ -1948,7 +1946,7 @@ C    SE(t,x)=2*dtx - Dtx
         IF(NSE.GT.0) CALL GETMEM('SE','ALLO','REAL',LSE,NSE)
         DO 100 IT=1,NAS
           ITABS=IT+NAES(ISYM)
-          DO 100 IX=1,IT
+          DO 101 IX=1,IT
             IXABS=IX+NAES(ISYM)
             ISE=(IT*(IT-1))/2+IX
             ID=(ITABS*(ITABS-1))/2+IXABS
@@ -1957,6 +1955,7 @@ C    SE(t,x)=2*dtx - Dtx
             ELSE
               WORK(LSE-1+ISE)=-DREF(ID)
             END IF
+ 101      CONTINUE
  100    CONTINUE
 
 C Write to disk
@@ -1971,7 +1970,6 @@ C Write to disk
         END IF
  1000 CONTINUE
 
-      CALL QEXIT('MKSE')
 
       RETURN
       END
@@ -1997,7 +1995,6 @@ C    SFP(tu,xy)=SF(tu,xy)+SF(tu,yx)
 C    SFM(tu,xy)=SF(tu,xy)-SF(tu,yx)
 
 
-      CALL QENTER('MKSF')
 
 C Loop over superindex symmetry.
       DO 1000 ISYM=1,NSYM
@@ -2012,7 +2009,7 @@ C Loop over superindex symmetry.
           ITUABS=ITU+NTUES(ISYM)
           ITABS=MTU(1,ITUABS)
           IUABS=MTU(2,ITUABS)
-          DO 100 IXY=1,ITU
+          DO 101 IXY=1,ITU
             IXYABS=IXY+NTUES(ISYM)
             IXABS=MTU(1,IXYABS)
             IYABS=MTU(2,IXYABS)
@@ -2024,6 +2021,7 @@ C Loop over superindex symmetry.
             IP=(IP1*(IP1-1))/2+IP2
             VALUE=4.0D0*PREF(IP)
             WORK(LSF-1+ISADR)=VALUE
+ 101      CONTINUE
  100    CONTINUE
         NASP=NTGEU(ISYM)
         NSFP=(NASP*(NASP+1))/2
@@ -2040,7 +2038,7 @@ C Loop over superindex symmetry.
           ITABS=MTGEU(1,ITGEUABS)
           IUABS=MTGEU(2,ITGEUABS)
           ITU=KTU(ITABS,IUABS)-NTUES(ISYM)
-          DO 200 IXGEY=1,ITGEU
+          DO 201 IXGEY=1,ITGEU
             IXGEYABS=IXGEY+NTGEUES(ISYM)
             IXABS=MTGEU(1,IXGEYABS)
             IYABS=MTGEU(2,IXGEYABS)
@@ -2060,12 +2058,13 @@ C Loop over superindex symmetry.
             STUYX=WORK(LSF-1+ISADR)
             ISPADR=(ITGEU*(ITGEU-1))/2+IXGEY
             WORK(LSFP-1+ISPADR)=STUXY+STUYX
-            IF(ITABS.EQ.IUABS) GOTO 200
-            IF(IXABS.EQ.IYABS) GOTO 200
+            IF(ITABS.EQ.IUABS) GOTO 201
+            IF(IXABS.EQ.IYABS) GOTO 201
             ITGTU=KTGTU(ITABS,IUABS)-NTGTUES(ISYM)
             IXGTY=KTGTU(IXABS,IYABS)-NTGTUES(ISYM)
             ISMADR=(ITGTU*(ITGTU-1))/2+IXGTY
             WORK(LSFM-1+ISMADR)=STUXY-STUYX
+ 201      CONTINUE
  200    CONTINUE
         IF(NSF.GT.0) THEN
           CALL GETMEM('SF','FREE','REAL',LSF,NSF)
@@ -2086,7 +2085,6 @@ C Write to disk
         END IF
  1000 CONTINUE
 
-      CALL QEXIT('MKSF')
 
       RETURN
       END
@@ -2108,7 +2106,6 @@ C Set up the matrix SG(t,x)
 C Formula used:
 C    SG(t,x)= Dtx
 
-      CALL QENTER('MKSG')
 
       DO 1000 ISYM=1,NSYM
         NINP=NINDEP(ISYM,10)
@@ -2119,11 +2116,12 @@ C    SG(t,x)= Dtx
         IF(NSG.GT.0) CALL GETMEM('SG','ALLO','REAL',LSG,NSG)
         DO 100 IT=1,NAS
           ITABS=IT+NAES(ISYM)
-          DO 100 IX=1,IT
+          DO 101 IX=1,IT
             IXABS=IX+NAES(ISYM)
             ISG=(IT*(IT-1))/2+IX
             ID=(ITABS*(ITABS-1))/2+IXABS
             WORK(LSG-1+ISG)= DREF(ID)
+ 101      CONTINUE
  100    CONTINUE
 
 C Write to disk
@@ -2138,7 +2136,6 @@ C Write to disk
         END IF
  1000 CONTINUE
 
-      CALL QEXIT('MKSG')
 
       RETURN
       END

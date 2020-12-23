@@ -27,7 +27,6 @@
 #include "symmul.fh"
 #include "rassi.fh"
 #include "WrkSpc.fh"
-      Call qEnter('FINDT')
 C BEGIN BY COMPUTING MO OVERLAPS, SXY.
 C MO OVERLAP MATRIX HAS SAME STRUCTURE AS TRA1,TRA2:
       NSXY=NTRA
@@ -78,6 +77,5 @@ C print transformed MOs (as in rdcmo routine)
       END IF
 CC CC
 
-      Call qExit('FINDT')
       RETURN
       END

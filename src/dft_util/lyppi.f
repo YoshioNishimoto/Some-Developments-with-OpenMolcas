@@ -17,12 +17,6 @@
 *                                                                      *
 * Object:  Lyp Functional(Formula taken from Molpro Manual)            *
 *                                                                      *
-* Called from:Do_batch                                                 *
-*                                                                      *
-* Calling    : QEnter                                                  *
-*              GetMem                                                  *
-*              QExit                                                   *
-*                                                                      *
 *      Author: Per-AAke Malmquist,Department of Theoretical Chemistry  *
 *              University of LUnd, SWEDEN                              *
 *              D. Ajitha , Department of Theoretical Chemistry         *
@@ -129,14 +123,14 @@
 100   Continue
       End Do
 
-*                                                                     *
-***********************************************************************
-*                                                                     *
+*                                                                      *
+************************************************************************
+*                                                                      *
 *     iSpin=/= 1
       Else
-*                                                                     *
-***********************************************************************
-*                                                                     *
+*                                                                      *
+************************************************************************
+*                                                                      *
 *
       Do iGrid = 1, mGrid
       rhoa=Max(Rho_min,Rho(ipRa,iGrid))
@@ -232,9 +226,9 @@
 
       Functional= ec1+ec2+ec3+ec4
       F_xc(iGrid)=F_xc(iGrid)+Coeff*functional
-*                                                                     *
-***********************************************************************
-*                                                                     *
+*                                                                      *
+************************************************************************
+*                                                                      *
 *
       dF_dRho(ipRa,iGrid)=dF_dRho(ipRa,iGrid)
      &                   +Coeff*(dec1dra+dec2dra+dec3dra+dec4dra)

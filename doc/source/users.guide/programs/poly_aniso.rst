@@ -22,23 +22,24 @@
             the spin-orbit interaction. As a starting point it uses the results
             of a RASSI calculation for the ground and several excited spin-orbital
             multiplets.
+
             The following quantities can be computed:
-            ||
-            ||1. Parameters of pseudospin magnetic Hamiltonians:
-            ||   a) First order (linear after pseudospin) Zeeman splitting tensor (g tensor),
-            ||      including the determination of the sign of the product gX*gY*gZ
-            ||   b) Second order (bilinear after pseudospin) zero-field splitting tensor (D tensor)
-            ||   c) Higher order zero-field splitting tensors (D^2, D^4, D^6, ..., etc.)
-            ||   d) Higher order Zeeman splitting tensors (G^1, G^3, G^5, ..., etc.)
-            ||   e) Angular Moments along the main magnetic axes
-            ||
-            ||2. Crystal-Field parameters for the ground atomic multiplet for lanthanides
-            ||
-            ||3. Static magnetic properties:
-            ||   a) Van Vleck susceptibility tensor
-            ||   b) Powder magnetic susceptibility function
-            ||   c) Magnetization vector for specified directions of the applied magnetic field
-            ||   d) Powder magnetization
+
+            1. Parameters of pseudospin magnetic Hamiltonians:
+              a) First order (linear after pseudospin) Zeeman splitting tensor (g tensor),
+                 including the determination of the sign of the product gX*gY*gZ
+              b) Second order (bilinear after pseudospin) zero-field splitting tensor (D tensor)
+              c) Higher order zero-field splitting tensors (D^2, D^4, D^6, ..., etc.)
+              d) Higher order Zeeman splitting tensors (G^1, G^3, G^5, ..., etc.)
+              e) Angular Moments along the main magnetic axes
+
+            2. Crystal-Field parameters for the ground atomic multiplet for lanthanides
+
+            3. Static magnetic properties:
+              a) Van Vleck susceptibility tensor
+              b) Powder magnetic susceptibility function
+              c) Magnetization vector for specified directions of the applied magnetic field
+              d) Powder magnetization
             </HELP>
 
 The :program:`POLY_ANISO` program is a routine which allows a semi-ab initio
@@ -253,6 +254,32 @@ Mandatory keywords defining the calculation
   There is no maximal value for :kword:`NNEQ`, although the calculation becomes quite heavy in case the number of
   exchange functions is large.
 
+<<<<<<< HEAD
+=======
+  .. xmldoc:: <KEYWORD MODULE="POLY_ANISO" NAME="NNEQ" APPEAR="Definition of input magnetic sites" KIND="CUSTOM" LEVEL="BASIC">
+              %%Keyword: NNEQ <basic>
+              <HELP>
+              This keyword defines several important parameters of the calculation. On the
+              first line after the keyword the program reads 2 values:
+
+              1) the number of types of different magnetic centers (NON-EQ) of the cluster and
+              2) a letter "T" or "F" in the second position of the same line.
+
+              The number of NON-EQ is the total number of magnetic centers of the cluster
+              which cannot be related by point group symmetry.
+              In the second position the answer to the question: "Have all NON-EQ centers been computed ab initio?"
+              is given: "T" for True and "F" for False.
+              On the third position, the answer to the question: "Are the rassi.h5 files to be read for input?"
+              is given. For the current status, the letter "F" is the only option.
+              On the following line the program will read NON-EQ values specifying the
+              number of equivalent centers of each type.
+              On the following line the program will read NON-EQ integer numbers specifying
+              the number of low-lying spin-orbit functions from each center forming the local
+              exchange basis.
+              </HELP>
+              </KEYWORD>
+
+>>>>>>> master
 :kword:`SYMM`
   Specifies rotation matrices to symmetry equivalent sites. This keyword is mandatory in the case more centers of a given type are present in the calculation.
   This keyword is mandatory when the calculated polynuclear compound has exact crystallographic point group symmetry. In other words, when the number of
@@ -453,6 +480,7 @@ Optional general keywords to control the input
               %%Keyword: TINT <basic>
               <HELP>
               Specifies the temperature points for the evaluation of the magnetic susceptibility.
+<<<<<<< HEAD
               The program will read four numbers: Tmin, Tmax, nT, and dltT0. Units of temperature = kelvin (K).
               ||
               ||Tmin  -- the minimal temperature (Default 0.0 K)
@@ -460,6 +488,13 @@ Optional general keywords to control the input
               ||nT    -- number of temperature points (Default 101)
               ||dltT0 -- the minimal temperature above the 0.0 K that helps to avoid infinite
               ||         values during calculation (Default 0.001 K).
+=======
+              The program will read three numbers: Tmin, Tmax, nT. Units of temperature = kelvin (K).
+
+              Tmin -- the minimal temperature (Default 0.0 K)
+              Tmax -- the maximal temperature (Default 300.0 K)
+              nT   -- number of temperature points (Default 101)
+>>>>>>> master
               </HELP>
               </KEYWORD>
 
@@ -488,10 +523,10 @@ Optional general keywords to control the input
               <HELP>
               Specifies the field points for the evaluation of the molar magnetization.
               The program will read four numbers: Hmin, Hmax, nH, and dltH0. Units of magnetic field = tesla (T).
-              ||
-              ||Hmin -- the minimal field (Default 0.0 T)
-              ||Hmax -- the maximal field (Default 300.0 T)
-              ||nH   -- number of field points (Default 101)
+
+              Hmin -- the minimal field (Default 0.0 T)
+              Hmax -- the maximal field (Default 300.0 T)
+              nH   -- number of field points (Default 101)
               </HELP>
               </KEYWORD>
 
@@ -641,8 +676,10 @@ Optional general keywords to control the input
               <HELP>
               Specifies the number of directions of the applied magnetic field for the computation
               of the powder molar magnetization. The program will read two numbers: N_theta and N_phi.
-              ||N_theta -- number of "theta" points in the interval (0, pi/2) (i.e. on the Z axis ) (Default 12)
-              ||N_phi   -- number of  "phi"  points in the interval (0, 2*pi).(i.e. on the equator) (Default 24)
+
+              N_theta -- number of "theta" points in the interval (0, pi/2) (i.e. on the Z axis ) (Default 12)
+              N_phi   -- number of  "phi"  points in the interval (0, 2*pi).(i.e. on the equator) (Default 24)
+
               The number of directions over which the actual averaging will take place is roughly the product of N_theta and N_phi.
               </HELP>
               </KEYWORD>
@@ -665,7 +702,7 @@ Optional general keywords to control the input
               This keyword allows computation of the magnetic susceptibility at experimental
               temperature points. On the line below the keyword, the number of experimental
               points NT is defined, and on the next NT lines the program reads the experimental
-              temperature (in K) and the experimental magnetic susceptibility (in cm^3Kmol^{-1}).
+              temperature (in K) and the experimental magnetic susceptibility (in cm^3 K mol^-1).
               TEXP and TINT keywords are mutually exclusive. The POLY_ANISO will also print the
               standard deviation from the experiment.
               </HELP>
@@ -721,9 +758,29 @@ Optional general keywords to control the input
               %%Keyword: PRLV <basic>
               <HELP>
               This keyword controls the print level.
-              ||2 -- normal. (Default)
-              ||3 or larger (debug)
+
+              2  -- normal. (Default)
+              3+ -- (debug)
               </HELP>
               </KEYWORD>
 
+<<<<<<< HEAD
+=======
+:kword:`PLOT`
+  This keyword will generate a few plots (png or eps format) via an interface to the linux program *gnuplot*.
+  The interface generates a datafile, a gnuplot script and attempts execution of the script for generation of the image.
+  The plots are generated only if the respective function is invoked. The magnetic susceptibility, molar magnetisation and blocking barrier (UBAR) plots are generated.
+  The files are named: :file:`XT.dat`, :file:`XT.plt`, :file:`XT.png`, :file:`MH.dat`, :file:`MH.plt`, :file:`MH.png`, :file:`BARRIER_TME.dat`, :file:`BARRIER_ENE.dat`, :file:`BARRIER.plt` and :file:`BARRIER.png`.
+
+  .. xmldoc:: <KEYWORD MODULE="POLY_ANISO" NAME="PLOT" KIND="SINGLE" LEVEL="BASIC">
+              %%Keyword: PLOT <basic>
+              <HELP>
+              This keyword will generate a few plots (png or eps format) via an interface to the linux program "gnuplot".
+              The interface generates a datafile, a gnuplot script and attempts execution of the script for generation of the image.
+              The plots are generated only if the respective function is invoked. The magnetic susceptibility, molar magnetisation and blocking barrier (UBAR) plots are generated.
+              The files are named: XT.dat, XT.plt, XT.png, MH.dat, MH.plt, MH.png, BARRIER_TME.dat, BARRIER_ENE.dat, BARRIER.plt and BARRIER.png.
+              </HELP>
+              </KEYWORD>
+
+>>>>>>> master
 .. xmldoc:: </MODULE>

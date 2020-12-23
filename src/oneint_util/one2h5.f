@@ -31,7 +31,7 @@
       real*8, allocatable :: SAO(:), Scr(:)
 
       integer :: iRc, iOpt, iComp, iSyLbl
-      character(8) :: Label
+      character(len=8) :: Label
 
       integer :: iOff1, iOff2
 
@@ -50,7 +50,7 @@
 *     atomic orbital overlap matrix
       dsetid = mh5_create_dset_real(fileid,
      $        'AO_OVERLAP_MATRIX', 1, [NBAST2])
-      call mh5_init_attr(dsetid, 'description',
+      call mh5_init_attr(dsetid, 'DESCRIPTION',
      $        'Overlap matrix of the atomic orbitals, '//
      $        'arranged as blocks of size [NBAS(i)**2], i=1,#irreps')
 
@@ -102,7 +102,7 @@
       real*8, allocatable :: SAO(:), Scr(:)
 
       integer :: iRc, iOpt, iComp, iSyLbl
-      character(8) :: Label
+      character(len=8) :: Label
 
       integer :: iOff1, iOff2
 
@@ -121,7 +121,7 @@
 *     atomic orbital Fock matrix
       dsetid = mh5_create_dset_real(fileid,
      $        'AO_FOCKINT_MATRIX', 1, [NBAST2])
-      call mh5_init_attr(dsetid, 'description',
+      call mh5_init_attr(dsetid, 'DESCRIPTION',
      $        'Fock matrix of the atomic orbitals, '//
      $        'arranged as blocks of size [NBAS(i)**2], i=1,#irreps')
 
@@ -177,10 +177,10 @@
       real*8, dimension(3,3) :: mp_orig
 
       integer :: iRc, iOpt, iComp, iSyMsk
-      character(8) :: Label
+      character(len=8) :: Label
 
-      character(1) :: mltpl1_comp(3) = ['X','Y','Z']
-      character(2) :: mltpl2_comp(6) = ['XX','XY','XZ','YY','YZ','ZZ']
+      character(len=1)::mltpl1_comp(3) = ['X','Y','Z']
+      character(len=2)::mltpl2_comp(6) = ['XX','XY','XZ','YY','YZ','ZZ']
 
       integer :: i, j, iOff, jOff, iScrOff, iBas, jBas
 
@@ -247,7 +247,7 @@
       End Do
       dsetid = mh5_create_dset_real(fileid,
      $        'AO_MLTPL_'//mltpl1_comp(icomp), 2, [NBAST,NBAST])
-      call mh5_init_attr(dsetid, 'description',
+      call mh5_init_attr(dsetid, 'DESCRIPTION',
      $        '1st-order multipole matrix of the atomic orbitals, '//
      $        'arranged as matrix of size [NBAST,NBAST]')
       call mh5_put_dset_array_real(dsetid,MLTPL)
@@ -304,7 +304,7 @@
       End Do
       dsetid = mh5_create_dset_real(fileid,
      $        'AO_MLTPL_'//mltpl2_comp(icomp), 2, [NBAST,NBAST])
-      call mh5_init_attr(dsetid, 'description',
+      call mh5_init_attr(dsetid, 'DESCRIPTION',
      $        '2nd-order multipole matrix of the atomic orbitals, '//
      $        'arranged as matrix of size [NBAST,NBAST]')
       call mh5_put_dset_array_real(dsetid,MLTPL)
@@ -318,7 +318,7 @@
 
       dsetid = mh5_create_dset_real(fileid,
      $        'MLTPL_ORIG', 2, [3,3])
-      call mh5_init_attr(dsetid, 'description',
+      call mh5_init_attr(dsetid, 'DESCRIPTION',
      $        'Origin used for the multipole moment operators: '//
      $        'arranged as overlap, dipole, quadrupole')
       call mh5_put_dset_array_real(dsetid,mp_orig,[3,3],[0,0])

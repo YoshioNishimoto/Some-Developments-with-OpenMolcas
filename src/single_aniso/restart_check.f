@@ -20,15 +20,14 @@ c
       Logical ::  Ifrestart
       Logical ::  GRAD
       Real    ::  rdummy
-      Character(280) :: line, tmp
-      Character(180) :: input_file_name
+      Character(Len=280) :: line, tmp
+      Character(Len=180) :: input_file_name
       Integer :: ncut,nk,mg
       Real    :: encut_rate
       Logical :: KeyREST,KeyTEXP,KeyHEXP,KeyHINT,KeyTINT,KeyTMAG,
      &           KeyMVEC,KeyZEEM,KeyMLTP,KeyNCUT,KeyENCU,KeyERAT,KeyGRAD
       Logical :: DBG
 
-      Call qEnter('SA_rest_chk')
       DBG=.false.
 
       nH=0
@@ -198,7 +197,7 @@ C=========== End of default settings====================================
       End If
 
 200   Continue
-      Write(6,'(5X,A)') 'NO ERORR WAS LOCATED WHILE READING INPUT'
+      Write(6,'(5X,A)') 'NO ERROR WAS LOCATED WHILE READING INPUT'
 
 c      print *,'KeyREST=',KeyREST
 c      print *,'KeyTEXP=',KeyTEXP
@@ -238,6 +237,5 @@ C------ errors ------------------------------
 
 
 190   Continue
-      Call qExit('SA_rest_chk')
       Return
       End

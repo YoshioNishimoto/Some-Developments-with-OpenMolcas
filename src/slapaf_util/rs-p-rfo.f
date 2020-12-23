@@ -12,7 +12,8 @@
 * Copyright (C) 1994,1997, Roland Lindh                                *
 *               2014, Ignacio Fdez. Galvan                             *
 ************************************************************************
-      Subroutine RS_P_RFO(H,g,nInter,dq,UpMeth,dqHdq,StepMax,Step_Trunc)
+      Subroutine RS_P_RFO(H,g,nInter,dq,UpMeth,dqHdq,StepMax,
+     &                    Step_Trunc)
 ************************************************************************
 *                                                                      *
 *     Author: Roland Lindh, Dept. of Theoretical Chemistry,            *
@@ -48,7 +49,6 @@
       Character*1 Step_Trunc
       Logical Found,Iterate
 *
-*     Call QEnter('RS_P_RFO')
       iRout = 215
       Lu =6
       iPrint = nPrint(iRout)
@@ -363,6 +363,5 @@
          Call RecPrt(' In RS_P_RFO:dq','(10f10.6)',dq,nInter,1)
       End If
 *
-*     Call QExit('RS_P_RFO')
       Return
       End

@@ -10,7 +10,7 @@
 ************************************************************************
       Subroutine BMtrx(nLines,nBVec,ipBMx,nAtom,nInter,
      &                 ip_rInt,Lbl,Coor,nDim,dMass,
-     &                 Name,nSym,iOper,Smmtrc,
+     &                 Name,Smmtrc,
      &                 Degen,BSet,HSet,nIter,ip_drInt,
      &                 ipShift,Gx,Cx,mTtAtm,iAnr,iOptH,User_Def,
      &                 nStab,jStab,Curvilinear,Numerical,
@@ -26,7 +26,7 @@
       Real*8 Coor(3,nAtom),  dMass(nAtom), Degen(3*nAtom),
      &       Gx(3*nAtom,nIter), Cx(3*nAtom,nIter)
       Character Lbl(nInter)*8,Name(nAtom)*(LENIN)
-      Integer   iOper(0:nSym-1), iAnr(nAtom),
+      Integer   iAnr(nAtom),
      &          nStab(nAtom), jStab(0:7,nAtom), iCoSet(0:7,nAtom)
       Logical Smmtrc(3*nAtom), BSet, HSet, Redundant,
      &        User_Def, Curvilinear, Numerical, DDV_Schlegel,
@@ -36,11 +36,10 @@
 *                                                                      *
 ************************************************************************
 *                                                                      *
-*define _DEBUG_
+*define _DEBUGPRINT_
 *                                                                      *
 ************************************************************************
 *                                                                      *
-      Call QEnter('BMtrx')
       iRout=133
       iPrint=nPrint(iRout)
 *
@@ -52,15 +51,17 @@
 *            internal coordinate to define the K-matrix and to generate
 *            the raw model Hessian and TR vectors.
 *
-      If (.Not.BSet.and..Not.Numerical) Then
-         iIter = nIter-1         ! Compute cartesian Structure
-      Else If (Numerical) Then
+      If (Numerical) Then
          iIter = 1               ! Numerical Hessian Computation
-      Else
-         iIter = nIter           ! Normal Computation
+      Else If (iIter.eq.0) Then
+         If (.Not.BSet) Then
+            iIter = nIter-1      ! Compute cartesian Structure
+         Else
+            iIter = nIter        ! Normal Computation
+         End If
       End If
 *
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       Write (6,*) ' Actual structure from iteration',iIter
       Write (6,*) ' Last structure from iteration',nIter
 #endif
@@ -73,8 +74,8 @@
       Call Allocate_Work(ipTR,18*nAtom)
       Call FZero(Work(ipTR),18*nAtom)
 *
-      Call TRPGen(nDim,nAtom,Cx(1,iIter),Degen,nSym,iOper,Smmtrc,mTR,
-     &            dMass,.False.,Work(ipTR))
+      Call TRPGen(nDim,nAtom,Cx(1,iIter),Degen,Smmtrc,mTR,dMass,.False.,
+     &            Work(ipTR))
 *
       Call Allocate_Work(ipTRnew,3*nAtom*mTR)
       Call FZero(Work(ipTRnew),3*nAtom*mTR)
@@ -100,7 +101,7 @@
 *
 *-----Generate Grand atoms list
 *
-      Call GenCoo(Cx(1,iIter),nAtom,Work(ipCoor),iOper,nSym,
+      Call GenCoo(Cx(1,iIter),nAtom,Work(ipCoor),
      &            mTtAtm,Work(ipVec),Smmtrc,nDim,iAnr,iWork(ipAN),
      &            iWork(ip_TabAI),Degen)
 *
@@ -141,7 +142,7 @@
      &            Work(ipScr2),Work(ipVec),nAtom,nDim,iWork(ipAN),
      &            Smmtrc,Cx,Gx,nIter,iOptH,Degen, DDV_Schlegel,
      &            Analytic_Hessian,iOptC,iWork(ip_TabB),iWork(ip_TabA),
-     &            nBonds,nMax,nHidden,nMDstep,ipMMKept,nSym)
+     &            nBonds,nMax,nHidden,nMDstep,ipMMKept)
 *
       Call GetMem('scr2','Free','Real',ipScr2,(3*mTtAtm)**2)
 *                                                                      *
@@ -170,7 +171,7 @@
          Call BMtrx_User_Defined(
      &                 nLines,nBVec,ipBMx,nAtom,nInter,
      &                 ip_rInt,Lbl,Coor,nDim,dMass,
-     &                 Name,nSym,iOper,Smmtrc,
+     &                 Name,Smmtrc,
      &                 Degen,BSet,HSet,nIter,ip_drInt,
      &                 Gx,Cx,mTtAtm,iAnr,
      &                 nStab,jStab,Numerical,
@@ -199,7 +200,7 @@
          Call BMtrx_Internal(
      &                 nLines,ipBMx,nAtom,nInter,
      &                 ip_rInt,Coor,nDim,dMass,
-     &                 Name,nSym,iOper,Smmtrc,
+     &                 Name,Smmtrc,
      &                 Degen,BSet,HSet,nIter,ip_drInt,
      &                 Gx,Cx,mTtAtm,iAnr,
      &                 nStab,jStab,Numerical,
@@ -224,7 +225,7 @@
          Call BMtrx_Cartesian(
      &                 nLines,ipBMx,nAtom,nInter,
      &                 ip_rInt,Coor,nDim,dMass,
-     &                 Name,nSym,iOper,Smmtrc,
+     &                 Name,Smmtrc,
      &                 Degen,BSet,HSet,nIter,ip_drInt,
      &                 Gx,Cx,mTtAtm,iAnr,
      &                 nStab,jStab,Numerical,
@@ -265,8 +266,8 @@
 *---- Compute the shift vector in the basis.
 *
       If (Bset) Then
-         Call GetMem('Shift','Allo','Real',ipShift,nQQ*nIter)
-         Call FZero(Work(ipShift),nQQ*nIter)
+         Call GetMem('Shift','Allo','Real',ipShift,nQQ*MaxItr)
+         Call FZero(Work(ipShift),nQQ*MaxItr)
          Call ShfANM(nQQ,nIter,Work(ip_rInt),Work(ipShift),iPrint)
       Else
          ipShift=ip_Dummy
@@ -287,7 +288,7 @@
          If (mTR.ne.0) Then
             Call Allocate_Work(ipTROld,3*nAtom*mTR)
             Call FZero(Work(ipTROld),3*nAtom*mTR)
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
             Call RecPrt('TRVec',' ',Work(ipTR),3*nAtom,mTR)
 #endif
             i = 0
@@ -306,7 +307,7 @@
 *
 *---- Print the B-matrix
 *
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       Call RecPrt(' The BMtrx',' ',Work(ipBMx),3*nAtom,nQQ)
 #endif
       Call Free_Work(ipTR)
@@ -326,6 +327,5 @@
 *                                                                      *
 ************************************************************************
 *                                                                      *
-      Call QExit('BMtrx')
       Return
       End

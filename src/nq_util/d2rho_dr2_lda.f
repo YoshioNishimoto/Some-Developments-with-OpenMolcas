@@ -17,26 +17,18 @@
      &                         Grid_type,Fixed_Grid,Fact,ndc,TabAOMax,
      &                         T_X,list_bas,Index,nIndex)
 ************************************************************************
-*                                                                      *
-* Object:                                                              *
-*                                                                      *
-* Called from: Do_Batch                                                *
-*                                                                      *
-* Calling    : QEnter                                                  *
-*              QExit                                                   *
-*                                                                      *
 *      Author:Roland Lindh, Department of Chemical Physics, University *
 *             of Lund, SWEDEN.  2000                                   *
 *                                                                      *
 *             Modified May-June 2002 in Tokyo for DFT gradient by RL.  *
 ************************************************************************
       use iSD_data
+      use k2_arrays, only: DeDe, ipDijS
+      use Center_Info
       Implicit Real*8 (A-H,O-Z)
-#include "itmax.fh"
-#include "info.fh"
+#include "Molcas.fh"
 #include "disp.fh"
 #include "real.fh"
-#include "WrkSpc.fh"
 #include "print.fh"
 #include "debug.fh"
 #include "nsd.fh"
@@ -60,14 +52,12 @@
 *                                                                      *
 ************************************************************************
 *                                                                      *
-#ifdef _DEBUG_
-      Call QEnter('d2Rho_dR2_LDA')
+#ifdef _DEBUGPRINT_
       If (Debug) Then
          Call RecPrt('d2Rho_dR2_LDA:Dens',' ',Dens,nDens,nD)
          Write (6,*) 'mAO=',mAO
          Write (6,*) 'mGrid=',mGrid
          Write (6,*) 'nTabAO=',nTabAO
-         Write (6,*) 'nIrrep=',nIrrep
          Write (6,*) 'nlist_s=',nlist_s
          Write (6,*) 'nD=',nD
          Do iList_s = 1, nList_s
@@ -103,10 +93,10 @@
          iPrim      =iSD( 5,iS)
          index_i    =list_bas(2,ilist_s)
 *
-         lDCRE=NrOpr(kDCRE,iOper,nIrrep)
-         Phase(1,1)=DBLE(nStab(mdci))
-         Phase(2,1)=DBLE(nStab(mdci))
-         Phase(3,1)=DBLE(nStab(mdci))
+         lDCRE=NrOpr(kDCRE)
+         Phase(1,1)=DBLE(dc(mdci)%nStab)
+         Phase(2,1)=DBLE(dc(mdci)%nStab)
+         Phase(3,1)=DBLE(dc(mdci)%nStab)
 *
          jNQ=Maps2p(iS,lDCRE)
          Call ICopy(3,list_g(1,ilist_s),1,IndGrd_Eff(1,1),1)
@@ -126,10 +116,10 @@
             jShell     =iSD(11,jS)
             index_j    =list_bas(2,jlist_s)
 *
-            lDCRR=NrOpr(kDCRR,iOper,nIrrep)
-            Phase(1,2)=DBLE(nStab(mdcj))
-            Phase(2,2)=DBLE(nStab(mdcj))
-            Phase(3,2)=DBLE(nStab(mdcj))
+            lDCRR=NrOpr(kDCRR)
+            Phase(1,2)=DBLE(dc(mdcj)%nStab)
+            Phase(2,2)=DBLE(dc(mdcj)%nStab)
+            Phase(3,2)=DBLE(dc(mdcj)%nStab)
 *
             kNQ=Maps2p(jS,lDCRR)
             Call ICopy(3,list_g(1,jlist_s),1,IndGrd_Eff(1,2),1)
@@ -143,7 +133,7 @@
             ijS=iTri(iShell,jShell)
             ipTmp=ipDijs
             Call Dens_Info(ijS,ipDij,ipDSij,mDCRij,ipDDij,ipTmp,nD)
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
             If (Debug) Then
                Write (6,*)
                Write (6,*) 'iS,jS=',iS,jS
@@ -158,20 +148,20 @@
             If (ilist_s.eq.jlist_s) Deg=One
 *
             iER=iEOr(kDCRE,kDCRR)
-            lDCRER=NrOpr(iER,iOper,nIrrep)
+            lDCRER=NrOpr(iER)
 *
             ip_D_a=ipDij+lDCRER*mDij
             ip_D_b=ip_D_a
             If (nD.ne.1) ip_D_b=ipDSij+lDCRER*mDij
 *
-            ix=iDAMax_(mDij,Work(ip_D_a),1)
-            DMax_ij=Abs(Work(ip_D_a-1+ix))
+            ix=iDAMax_(mDij,DeDe(ip_D_a),1)
+            DMax_ij=Abs(DeDe(ip_D_a-1+ix))
             If (nD.ne.1) Then
-               ix=iDAMax_(mDij,Work(ip_D_b),1)
-               DMax_ij=DMax_ij+Abs(Work(ip_D_a-1+ix))
+               ix=iDAMax_(mDij,DeDe(ip_D_b),1)
+               DMax_ij=DMax_ij+Abs(DeDe(ip_D_a-1+ix))
             End If
             If (TMax_i*TMax_j*DMax_ij.lt.T_X) Go To 98
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
             If (Debug) Then
                Write (6,*) 'd2Rho_dR2_LDA'
                nBB = iBas*jBas
@@ -179,9 +169,9 @@
                Write (6,*) 'iShell,jShell=',iShell,jShell
                Write (6,*) 'kDCRE,kDCRR=',kDCRE,kDCRR
                Write (6,*) 'iER,lDCRER=',iER,lDCRER
-               Call RecPrt('DAij',' ',Work(ip_D_a),nBB,nCC)
+               Call RecPrt('DAij',' ',DeDe(ip_D_a),nBB,nCC)
                If (nD.ne.1)
-     &            Call RecPrt('DBij',' ',Work(ip_D_b),nBB,nCC)
+     &            Call RecPrt('DBij',' ',DeDe(ip_D_b),nBB,nCC)
             End If
 #endif
 *
@@ -208,7 +198,7 @@
             If (nD.eq.1) Then
                If (iShell.ge.jShell) Then
                Call Do_Rho2ha(dRho_dR,d2Rho_dR2,mGrid,nGrad_Eff,
-     &                       Work(ip_D_a),                  mAO,
+     &                       DeDe(ip_D_a),                  mAO,
      &                       TabAO(ipTabAO(iList_s)),iBas,iBas_Eff,iCmp,
      &                       TabAO(ipTabAO(jList_s)),jBas,jBas_Eff,jCmp,
      &                       Fact(ij)*Deg,IndGrd_Eff,Phase,
@@ -216,7 +206,7 @@
      &                       Index(index_i),Index(index_j))
                Else
                Call Do_Rho2ha(dRho_dR,d2Rho_dR2,mGrid,nGrad_Eff,
-     &                       Work(ip_D_a),                  mAO,
+     &                       DeDe(ip_D_a),                  mAO,
      &                       TabAO(ipTabAO(jList_s)),jBas,jBas_Eff,jCmp,
      &                       TabAO(ipTabAO(iList_s)),iBas,iBas_Eff,iCmp,
      &                       Fact(ij)*Deg,IndGrd_Eff,Phase,
@@ -226,7 +216,7 @@
             Else
                If (iShell.ge.jShell) Then
                Call Do_Rho2h_(dRho_dR,d2Rho_dR2,mGrid,nGrad_Eff,
-     &                       Work(ip_D_a),Work(ip_D_b),     mAO,
+     &                       DeDe(ip_D_a),DeDe(ip_D_b),     mAO,
      &                       TabAO(ipTabAO(iList_s)),iBas,iBas_Eff,iCmp,
      &                       TabAO(ipTabAO(jList_s)),jBas,jBas_Eff,jCmp,
      &                       Fact(ij)*Deg,IndGrd_Eff,Phase,
@@ -234,7 +224,7 @@
      &                       Index(index_i),Index(index_j))
                Else
                Call Do_Rho2h_(dRho_dR,d2Rho_dR2,mGrid,nGrad_Eff,
-     &                       Work(ip_D_a),Work(ip_D_b),     mAO,
+     &                       DeDe(ip_D_a),DeDe(ip_D_b),     mAO,
      &                       TabAO(ipTabAO(jList_s)),jBas,jBas_Eff,jCmp,
      &                       TabAO(ipTabAO(iList_s)),iBas,iBas_Eff,iCmp,
      &                       Fact(ij)*Deg,IndGrd_Eff,Phase,
@@ -251,11 +241,10 @@
 *                                                                      *
 ************************************************************************
 *                                                                      *
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       If (Debug) Call RecPrt('d2Rho_dR2_LDA: dRho_dR',' ',dRho_dR,
      &                       ndRho_dR*mGrid,nGrad_Eff)
 *
-      Call QExit('d2Rho_dR2_LDA')
 #else
 c Avoid unused argument warnings
       If (.False.) Call Unused_real_array(Dens)

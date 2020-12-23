@@ -135,7 +135,9 @@ contains
   subroutine OrbitalTable_unused(table)
     type(OrbitalTable), intent(in) :: table
     integer :: n
+#ifdef _WARNING_WORKAROUND_
     if (.false.) n = length(table)
+#endif
   end subroutine OrbitalTable_unused
 
   subroutine FockTable_allocate(fock_table, n)
@@ -189,7 +191,7 @@ contains
     do i = 1, size(Fock)
       if (abs(Fock(i)) >= cutoff_) then
         n = n + 1
-        fock_table%index(:, n) = one_el_idx(i)
+        call one_el_idx(i, fock_table%index(:, n))
         fock_table%values(n) = Fock(i)
       end if
     end do
@@ -214,7 +216,9 @@ contains
   subroutine FockTable_unused(table)
     type(FockTable), intent(in) :: table
     integer :: n
+#ifdef _WARNING_WORKAROUND_
     if (.false.) n = length(table)
+#endif
   end subroutine FockTable_unused
 
   subroutine TwoElIntTable_allocate(table, n)
@@ -265,7 +269,7 @@ contains
     do i = 1, size(TUVX)
       if (abs(TUVX(i)) >= cutoff_) then
         n = n + 1
-        two_el_table%index(:, n) = two_el_idx(i)
+        call two_el_idx(i, two_el_table%index(:, n))
         two_el_table%values(n) = TUVX(i)
       end if
     end do
@@ -296,6 +300,8 @@ contains
   subroutine TwoElIntTable_unused(table)
     type(TwoElIntTable), intent(in) :: table
     integer :: n
+#ifdef _WARNING_WORKAROUND_
     if (.false.) n = length(table)
+#endif
   end subroutine TwoElIntTable_unused
 end module fcidump_tables

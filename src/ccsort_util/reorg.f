@@ -67,7 +67,6 @@ c
        INTEGER NOIPSB(106)
        Logical run_triples,run_sort
 c
-       call qEnter('CCSORT')
 c
 C PRINT THE PROGRAM HEADER
        call ccsort_helloPN
@@ -201,7 +200,6 @@ c      case, when SORT was skipped
        write (6,*) ' Input parameters are from last actual run of SORT'
        end if
 c
-       call qExit('CCSORT')
        ireturn=0
        return
        END
@@ -247,7 +245,7 @@ c
        nup=norb(isym)-ndd
 c
        do 50 p=1,norb(isym)
-       do 50 q=1,p
+       do 51 q=1,p
        pqras=pqras+1
 c
        if ((p.ge.nlow).and.(p.le.nup)) then
@@ -257,6 +255,7 @@ c
        end if
        end if
 c
+ 51     continue
  50     continue
 c
  100    continue
@@ -327,13 +326,14 @@ c
        do 200 isym=1,nsym
 c
        do 100 p=1,norb(isym)
-       do 100 q=1,p
+       do 101 q=1,p
        pq=pq+1
        if (p.eq.q) then
        fi(pq)=eps(padd+p)
        else
        fi(pq)=0.0d0
        end if
+ 101    continue
  100    continue
 c
        padd=padd+norb(isym)

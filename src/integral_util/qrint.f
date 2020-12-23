@@ -15,7 +15,6 @@
 #include "welcom.fh"
       Real*8 F(kmax+1)
 *
-      Call qEnter('qRINT')
       qRINT=Zero
       NN=N/2+1
 *     Write (*,*) ' N,NN=',n,nn
@@ -45,13 +44,13 @@
             HINT=Zero
             Do 101 K=I-1,0,-2
                HINT=HINT+Half/A*BP**K*EXP(-ARG)*GAL
-101            GAL=Half*DBLE(K)/A*GAL
+               GAL=Half*DBLE(K)/A*GAL
+101         Continue
             GINT=GINT+TAL*HINT
          EndIF
 *
          qRINT=GINT*PRSUM
  10   Continue
 *
-      Call qExit('qRINT')
       Return
       End

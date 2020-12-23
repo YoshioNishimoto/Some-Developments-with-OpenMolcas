@@ -45,7 +45,6 @@ c       integer nhelp
 c
 #include "para_info.fh"
 c
-       Call qEnter('CCT3')
 cpar
 cstare Call SetTim
 cstare call MPI_COMM_RANK(MPI_COMM_WORLD,myRank,rc)
@@ -284,7 +283,7 @@ c
 c
 c
 cnoseg do 1200 j=1,jup
-       do 1200 j=jstart,jstop
+       do 1201 j=jstart,jstop
 c
 c*    get integrals <ab|jc> for given j into R2(a,bc)
        call cct3_getint (Work(iOff),wrksize,
@@ -1524,6 +1523,7 @@ c
        end if
 cendpar
 c
+ 1201   continue
  1200   continue
  1300   continue
  1400   continue
@@ -1565,7 +1565,6 @@ c     Releasing the memory
       Call GetMem('CCT3','Free','Real',iOff,wrksize)
 c
 c
-      Call qExit('CCT3')
       ireturn=0
       return
       end

@@ -36,6 +36,8 @@ C initialize global common-block variables appropriately.
       Integer Algo
       COMMON /CHORAS  / REORD,DECO,ALGO
       COMMON /CHOTIME / timings
+* Environment
+      Character(Len=180) Env
 
       Integer I, J, M, N
       Integer ISYM
@@ -46,7 +48,6 @@ C initialize global common-block variables appropriately.
 
 #include "chocaspt2.fh"
 
-      CALL QENTER('READIN')
 
 * Hzero and Focktype are merged together into Hzero. We keep the
 * variable Focktype not to break the input keyword which is documented
@@ -86,8 +87,14 @@ C initialize global common-block variables appropriately.
         if (input%IPEA) then
           BSHIFT = input%BSHIFT
         else
-* Set default IPEA to 0.25 Eh
-          BSHIFT = 0.25d0
+* Set default IPEA to 0.25 Eh or 0.0
+          call getenvf('MOLCAS_NEW_DEFAULTS', Env)
+          call upcase(Env)
+          if (Env.eq.'YES') then
+            BSHIFT = 0.0d0
+          else
+            BSHIFT = 0.25d0
+          end if
         end if
       end if
 
@@ -207,7 +214,6 @@ C     really parallel or not.
       IOFF=NSTATE
 * This is the case for XMS-CASPT2 and XDW-CASPT2
       if (Input%XMUL) then
-        IFXMS = Input%XMUL
         if (Input%MULT) then
           call WarningMessage(2,'Keyword XMULtistate cannot be used '//
      &                          'together with keyword MULTistate.')
@@ -403,6 +409,7 @@ C     really parallel or not.
       IFMIX  = .NOT.Input % NoMix
       IFMSCOUP = (Input % MULT .OR. Input % XMUL)
      &           .AND.(.NOT.Input % NoMult)
+      IFXMS = Input % XMUL
       IFDW = Input % DWMS
 * Set exponent for DWMS
       if (IFDW) then
@@ -473,6 +480,5 @@ C Consistency of these demands:
       END DO
 *
 *---  Exit
-      CALL QEXIT('PROC_INP')
       Return
       End

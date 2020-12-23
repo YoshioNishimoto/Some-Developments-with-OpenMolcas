@@ -24,14 +24,17 @@
 *             December 2001                                            *
 ************************************************************************
       use iSD_data
+      use Symmetry_Info, only: nIrrep
+      use KSDFT_Info, only: KSDFA
+      use nq_Grid
       Implicit Real*8 (A-H,O-Z)
       External Kernel
 #include "real.fh"
 #include "WrkSpc.fh"
+#include "stdalloc.fh"
 #include "itmax.fh"
 #include "nq_info.fh"
 #include "setup.fh"
-#include "info.fh"
 #include "nsd.fh"
 #include "debug.fh"
 #include "grid_on_disk.fh"
@@ -41,6 +44,7 @@
       Logical Do_Grad, Do_MO,Do_TwoEl,PMode
       Logical l_XHol, l_casdft
       Character*4 DFTFOCK
+      Integer nBas(8), nOrb(8)
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -52,7 +56,6 @@
 *                                                                      *
 ************************************************************************
 *                                                                      *
-C     Call QEnter('DrvNQ')
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -91,6 +94,7 @@ C     Call QEnter('DrvNQ')
       Call GetMem('s2p','Allo','Inte',ips2p,nShell*nIrrep)
       Call GetMem('R_Min','Allo','Real',ipR_Min,LMax_NQ+1)
 *
+        NQ_Status=Inactive
       Call Setup_NQ(iWork(ips2p),nShell,nIrrep,nNQ,Do_Grad,Do_MO,nD,
      &              PThr,PMode,Work(ipR_Min),LMax_NQ)
 *
@@ -120,12 +124,14 @@ C     Call QEnter('DrvNQ')
       Do iSkal = 1, nShell
          iCmp  = iSD( 2,iSkal)
          iBas  = iSD( 3,iSkal)
+         iAO   = iSD( 7,iSkal)
          iShell= iSD(11,iSkal)
          Do jSkal = 1, iSkal
             jCmp  = iSD( 2,jSkal)
             jBas  = iSD( 3,jSkal)
+            jAO   = iSD( 7,jSkal)
             jShell= iSD(11,jSkal)
-            nSO = MemSO1(iSmLbl,iCmp,jCmp,iShell,jShell)
+            nSO = MemSO1(iSmLbl,iCmp,jCmp,iShell,jShell,iAO,jAO)
             nSOTemp=Max(nSOTemp,iBas*jBas*nSO)
          End Do
       End Do
@@ -136,7 +142,7 @@ C     Call QEnter('DrvNQ')
 *-----Allocate memory sufficiently large to store all grid points
 *     and associated weights.
 *
-      Call GetMem('Grid','Allo','Real',ip_Grid,nGridMax*3)
+      Call mma_Allocate(Grid,3,nGridMax,Label='Grid')
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -382,13 +388,13 @@ c     &        'Meta-GGA functional type 2 not fully DEBUGGED yet!')
          Functional_type=Other_type
          Call WarningMessage(2,'DrvNQ: Invalid Functional_type!')
          Call Abend()
+         nRho=0
+         ndF_dRho=0
       End If
 *                                                                      *
 ************************************************************************
 *                                                                      *
       Call GetMem('F_xc','Allo','Real',ip_F_xc,nGridMax)
-cGLM      Call GetMem('F_xca','Allo','Real',ip_F_xca,nGridMax)
-cGLM      Call GetMem('F_xcb','Allo','Real',ip_F_xcb,nGridMax)
       Call GetMem('Rho','Allo','Real',ip_Rho,nRho*nGridMax)
       Call GetMem('dF_dRho','Allo','Real',ip_dFdRho,ndF_dRho*nGridMax)
 *
@@ -402,31 +408,44 @@ c      Call GetMem('tmpB','Allo','Real',ip_tmpB,nGridMax)
 *                                                                      *
 ************************************************************************
 * Global variable for MCPDFT functionals                               *
-      l_casdft = KSDFA(1:5).eq.'TLSDA'   .or.
-     &           KSDFA(1:6).eq.'TLSDA5'  .or.
-     &           KSDFA(1:5).eq.'TBLYP'   .or.
-     &           KSDFA(1:6).eq.'TSSBSW'  .or.
-     &           KSDFA(1:5).eq.'TSSBD'   .or.
-     &           KSDFA(1:5).eq.'TS12G'   .or.
-     &           KSDFA(1:4).eq.'TPBE'    .or.
-     &           KSDFA(1:5).eq.'FTPBE'   .or.
-     &           KSDFA(1:5).eq.'TOPBE'   .or.
-     &           KSDFA(1:6).eq.'FTOPBE'  .or.
-     &           KSDFA(1:7).eq.'TREVPBE' .or.
-     &           KSDFA(1:8).eq.'FTREVPBE'.or.
-     &           KSDFA(1:6).eq.'FTLSDA'  .or.
-     &           KSDFA(1:6).eq.'FTBLYP'
+      l_casdft = KSDFA.eq.'TLSDA'   .or.
+     &           KSDFA.eq.'TLSDA5'  .or.
+     &           KSDFA.eq.'TBLYP'   .or.
+     &           KSDFA.eq.'TSSBSW'  .or.
+     &           KSDFA.eq.'TSSBD'   .or.
+     &           KSDFA.eq.'TS12G'   .or.
+     &           KSDFA.eq.'TPBE'    .or.
+     &           KSDFA.eq.'FTPBE'   .or.
+     &           KSDFA.eq.'TOPBE'   .or.
+     &           KSDFA.eq.'FTOPBE'  .or.
+     &           KSDFA.eq.'TREVPBE' .or.
+     &           KSDFA.eq.'FTREVPBE'.or.
+     &           KSDFA.eq.'FTLSDA'  .or.
+     &           KSDFA.eq.'FTBLYP'
       if(Debug) write(6,*) 'l_casdft value at drvnq.f:',l_casdft
       if(Debug.and.l_casdft) write(6,*) 'MCPDFT with functional:', KSDFA
 ************************************************************************
       If (Do_MO) Then
          If (NQNAC.ne.0) Then
            If(.not.l_casdft) Then
-             Call Get_D1MO(ipD1mo,nd1mo)
-             Call Get_P2mo(ipP2mo,nP2)
+             NQNACPAR = ( NQNAC**2 + NQNAC )/2
+             nd1mo=NQNACPAR
+             Call GetMem('D1MO','Allo','Real',ipD1MO,nd1mo)
+             Call Get_D1MO(Work(ipD1mo),nd1mo)
+             NQNACPR2 = ( NQNACPAR**2 + NQNACPAR )/2
+             Call GetMem('P2MO','Allo','Real',ipP2MO,nP2)
+             Call Get_P2mo(Work(ipP2mo),nP2)
+
            End If
          End If
-         Call Get_CMO(ipCmo,nCmo)
+         Call Get_iArray('nBas',nBas,mIrrep)
+         Call Get_iArray('nOrb',nOrb,mIrrep)
+         nCMO=0
+         Do i = 1, mIrrep
+            nCMO = nCMO + nBas(i)*nOrb(i)
+         End Do
+         Call GetMem('CMO','Allo','Real',ipCMO,nCMO)
+         Call Get_CMO(Work(ipCMO),nCMO)
          Call Get_iArray('nAsh',nAsh,mIrrep)
          nMOs=0
          Do iIrrep = 0, mIrrep-1
@@ -523,10 +542,14 @@ c      Call GetMem('tmpB','Allo','Real',ip_tmpB,nGridMax)
         IF(NQNAC.ne.0) then
           NQNACPAR = ( NQNAC**2 + NQNAC )/2
           NQNACPR2 = ( NQNACPAR**2 + NQNACPAR )/2
-          Call Get_D1MO(ipD1mo,nd1mo)
+          nd1mo = NQNACPAR
+          Call GetMem('D1MO','Allo','Real',ipD1MO,nd1mo)
+          Call Get_D1MO(Work(ipD1mo),nd1mo)
 cGLM          write(6,*) 'D1MO in drvNQ routine'
 cGLM          write(6,*) (Work(ipD1mo+i), i=0,NQNACPAR-1)
-          call Get_P2mo(ipP2mo,nP2)
+          nP2 = NQNACPR2
+          Call GetMEM('P2MO','Allo','Real',ipP2MO,nP2)
+          call Get_P2mo(Work(ipP2mo),nP2)
 cGLM          write(6,*) 'P2MO in drvNQ routine'
 cGLM          write(6,*) (Work(ipP2mo+i), i=0,NQNACPR2-1)
         END IF
@@ -540,14 +563,15 @@ cGLM          write(6,*) (Work(ipP2mo+i), i=0,NQNACPR2-1)
 
       end if
 
-      Call DrvNQ_(Kernel,Func,
+      Call DrvNQ_Internal(
+     &            Kernel,Func,
      &            iWork(ips2p),nIrrep,
      &            iWork(iplist_s),iWork(iplist_exp),iWork(iplist_bas),
      &            nShell,iWork(iplist_p),Work(ipR2_trail),nNQ,
      &            Work(ipAOInt),nAOInt,FckInt,nFckDim,
      &            Density,nFckInt,nD,
      &            Work(ipSOTemp),nSOTemp,
-     &            Work(ip_Grid),Work(ip_Weights),Work(ip_Rho),
+     &            Grid,Work(ip_Weights),Work(ip_Rho),
      &            nGridMax,nRho,
      &            ndF_dRho,nP2_ontop,ndF_dP2ontop,
      &            Do_Mo,Do_TwoEl,l_Xhol,
@@ -592,9 +616,7 @@ cGLM     &        Work(ip_F_xca),Work(ip_F_xcb),
 *
       Call GetMem('Rho','Free','Real',ip_Rho,nRho*nGridMax)
       Call GetMem('F_xc','Free','Real',ip_F_xc,nGridMax)
-cGLM      Call GetMem('F_xca','Free','Real',ip_F_xca,nGridMax)
-cGLM      Call GetMem('F_xcb','Free','Real',ip_F_xcb,nGridMax)
-      Call GetMem('Grid','Free','Real',ip_Grid,nGridMax*3)
+      Call mma_deallocate(Grid)
 c      Call GetMem('tmpB','Free','Real',ip_tmpB,nGridMax)
 
       if(Debug) write(6,*) 'l_casdft value at drvnq.f:',l_casdft
@@ -622,7 +644,6 @@ c      Call GetMem('tmpB','Free','Real',ip_tmpB,nGridMax)
       Call GetMem('nq_centers','Free','Real',ipNQ,nShell*l_NQ)
       Call GetMem('nMem','Free','Real',ipMem,nMem)
       Call GetMem('Tmp','Free','Real',ipTmp,nTmp)
-      Call GetMem('Dijs','Free','Real',ipDijs,MxDij)
       Call Free_Work(ip_Fact)
       Call GetMem('s2p','Free','Inte',ips2p,nshell)
       NQ_Status=Inactive
@@ -651,6 +672,5 @@ c      Call GetMem('tmpB','Free','Real',ip_tmpB,nGridMax)
 *
       Call xFlush(LuGridFile)
       Close(LuGridFile)
-C     Call QExit('DrvNQ')
       Return
       End

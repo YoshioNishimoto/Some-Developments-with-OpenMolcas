@@ -32,20 +32,19 @@ c local variables:
       Integer :: imaxrank(NMAXC,2)
       Integer :: idummy
       Integer :: irank1, irank2, iline
-      Real(kind=wp):: rdummy
-      Real(kind=wp):: TempMagn(NMAXC)
+      Real(kind=8):: rdummy
+      Real(kind=8):: TempMagn(NMAXC)
       Logical :: ab_initio_all
       Logical :: KeyCoor, KeyPair, KeyHEXP, KeyTEXP, KeyHINT, KeyTINT,
      &           KeyTMAG, KeyMLTP, KeyMVEC, KeyNNEQ, KeyZEEM, KeyITOJ
       Integer :: LUANISO, Isfreeunit
-      Character(1)   :: itype(NMAXC)
-      Character(280) :: line
-      Character(180)  :: namefile_aniso
+      Character(Len=1)   :: itype(NMAXC)
+      Character(Len=280) :: line
+      Character(Len=180)  :: namefile_aniso
       Logical :: ifHDF
       Logical :: DBG
       External Isfreeunit
 
-      Call qEnter('PA_fetch')
 
       iReturn=0
       nH=0
@@ -514,6 +513,5 @@ C------ errors ------------------------------
 
 
 190   Continue
-      Call qExit('PA_fetch')
       Return
       End

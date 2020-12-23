@@ -163,8 +163,8 @@ Molecular structure: coordinates, symmetry and basis sets
 There are three different ways to specify the molecular structure, symmetry and
 the basis sets in :program:`Gateway`:
 
-* the so-called native input (old |molcas| standard),
-* XYZ input.
+* XYZ input,
+* the so-called native input (old |molcas| standard).
 
 .. * XYZ input, and
    * Z-matrix input.
@@ -178,6 +178,7 @@ If :kword:`Coord` is used, it assumes that the input is in XYZ format.
 
 The three different modes will be described below.
 
+<<<<<<< HEAD
 Native input
 ::::::::::::
 
@@ -359,6 +360,8 @@ Example of an input in native |molcas| format: ::
 
   End of input
 
+=======
+>>>>>>> master
 Z-matrix and XYZ input
 ::::::::::::::::::::::
 
@@ -393,7 +396,13 @@ Note that coordinates in these formats use ångström as units.
       H.STO-3G
       End of basis
 
+<<<<<<< HEAD
   .. xmldoc:: %%Keyword: XBAS <basic>
+=======
+  .. xmldoc:: <KEYWORD MODULE="GATEWAY" NAME="XBAS" APPEAR="Basis set (alternate format)" KIND="CUSTOM" LEVEL="ADVANCED">
+              %%Keyword: XBAS <basic>
+              <HELP>
+>>>>>>> master
               A keyword to specify the basis for atoms. The specification is very similar
               to the native format: ATOM.BasisSet. Each new atom is written at a new line.
               The end of the keyword is marked by an 'End of basis' line.
@@ -493,11 +502,15 @@ Note that coordinates in these formats use ångström as units.
 
   In this case :program:`SLAPAF` will not regenerate the Z-matrix.
 
-  .. xmldoc:: %%Keyword: ZMAT <basic>
+  .. xmldoc:: <KEYWORD MODULE="GATEWAY" NAME="ZMAT" APPEAR="Z-matrix" KIND="CUSTOM" LEVEL="BASIC">
+              %%Keyword: ZMAT <basic>
+              <HELP>
               Alternative format to give coordinates in the form of Z-matrix.
               Only numerical values must be used (no variable names) and angstroms
               and degrees are assumed as units. Special ghost Z and dummy X atoms
               are allowed. 'End of ZMAT' or a blank line marks the end of the section.
+              </HELP>
+              </KEYWORD>
 
 :kword:`XYZ`
   The keyword is followed by XYZ formatted file (a reference to a file),
@@ -521,8 +534,12 @@ Note that coordinates in these formats use ångström as units.
   Currently, the :kword:`XYZ` keyword does not operate with symmetry, and
   the calculation is always performed without symmetry.
 
-  .. xmldoc:: %%Keyword: XYZ <basic>
-              Alternative format to set up geometry as XYZ formatted file
+  .. xmldoc:: <KEYWORD MODULE="GATEWAY" NAME="XYZ" KIND="CUSTOM" LEVEL="ADVANCED" REQUIRE="XBAS">
+              %%Keyword: XYZ <advanced>
+              <HELP>
+              Alternative format to set up geometry as XYZ formatted file.
+              </HELP>
+              </KEYWORD>
 
 Advanced XYZ input
 ::::::::::::::::::
@@ -557,7 +574,11 @@ The default units are Ångströms. By default, maximum possible symmetry is used
   The keyword may appear several times. In this case all coordinate files
   will be concatenated, and considered as individual fragments.
 
+<<<<<<< HEAD
   .. xmldoc:: <KEYWORD MODULE="GATEWAY" NAME="COORD" APPEAR="Coord" KIND="FILE" LEVEL="BASIC" INPUT="REQUIRED">
+=======
+  .. xmldoc:: <KEYWORD MODULE="GATEWAY" NAME="COORD" APPEAR="Coord" KIND="CUSTOM" INPUT="REQUIRED" LEVEL="BASIC" EXCLUSIVE="BASIS (NATIVE)">
+>>>>>>> master
               %%Keyword: COORD (XYZ format) <basic>
               <HELP>
               The keyword followed on the next line by the name of an HDF5 or XYZ file,
@@ -650,6 +671,191 @@ a mirror plane :math:`xy` is the only symmetry element. Since the third hydrogen
 slightly out of this plane, it will be corrected. Only activation of the keyword :kword:`group=C1`
 will ensure that the geometry is unchanged.
 
+Native input
+::::::::::::
+
+If the geometry is specified in a native |molcas| format, only symmetry
+inequivalent atoms should be specified. The default units are atomic units.
+By default, symmetry is not used in the calculation.
+
+.. class:: keywordlist
+
+:kword:`SYMMetry`
+  Symmetry specification follows on next line. There may be up to
+  three different point group generators specified on that line. The
+  generators of a point group is the minimal set of symmetry operators
+  which is needed to generate all symmetry
+  operators of a specific point group. A generator is in the input
+  represented as a sequence of up to three of the characters x, y, and
+  z. The order within a given sequence is arbitrary and the generators
+  can be given in any sequence. Observe that the order of the irreps
+  is defined by the order of the generators as
+  (:math:`E`, :math:`g_1`, :math:`g_2`, :math:`g_1g_2`, :math:`g_3`, :math:`g_1g_3`, :math:`g_2g_3`,
+  :math:`g_1g_2g_3`)! Note that :math:`E` is always assumed and should never
+  be specified.
+
+  Below is listed the possible generators.
+
+  * **x** --- Reflection in the :math:`yz`-plane.
+  * **y** --- Reflection in the :math:`xz`-plane.
+  * **z** --- Reflection in the :math:`xy`-plane.
+  * **xy** --- Twofold rotation around the :math:`z`-axis.
+  * **xz** --- Twofold rotation around the :math:`y`-axis.
+  * **yz** --- Twofold rotation around the :math:`x`-axis.
+  * **xyz** --- Inversion through the origin.
+
+  The default is no symmetry.
+
+  .. xmldoc:: <KEYWORD MODULE="GATEWAY" NAME="SYMMETRY" APPEAR="Symmetry" KIND="STRING" LEVEL="BASIC" EXCLUSIVE="COORD">
+              %%Keyword: Symmetry (non-XYZ format) <basic>
+              Symmetry point group is specified by up to three group generators.
+              Possible generators are "x", "y", "z", "xy", "xz", "yz", and "xyz".
+              The order of the irreps depends on the order of the generators.
+              The keyword can be used only in 'native' input format.
+              </KEYWORD>
+
+:kword:`BASIs Set`
+  This notes the start of a basis set definition.
+  The next line always contains a basis set label.
+  The basis set definition is alway terminated with the "End of Basis" keyword.
+  For the definitions of basis set labels see the subsequent sections.
+  Below follows a description of the options associated with the
+  basis set definition.
+
+  .. xmldoc:: <KEYWORD MODULE="GATEWAY" NAME="BASIS (NATIVE)" APPEAR="Basis set" KIND="CUSTOM" LEVEL="ADVANCED" INPUT="REQUIRED" EXCLUSIVE="COORD">
+              %%Keyword: BASIS (non-XYZ format) <basic>
+              This notes the start of a basis set definition.
+              The next line always contains a basis set label.
+              The basis set definition is alway terminated with the "End of Basis" keyword.
+              For details consult the manual.
+              </KEYWORD>
+
+  * **Label [/ option]** ---
+    The label is a specification of a specific basis set, e.g.
+    C.ANO...4s3p2d., which is an ANO basis set.
+    If no option is specified
+    :program:`GATEWAY` will look for the basis
+    set in the default basis directory. If an option is specified it
+    could either be the name of an alternative basis directory or
+    the wording "Inline" which defines
+    that the basis set will follow in the current input
+    file. For the format of the
+    **Inline** option see the section
+    "Basis set format". Observe that the label is arbitrary for this
+    option and will not be decoded.
+    The **Label** card is mandatory.
+
+  * **Name x, y, z (Angstrom or Bohr)** ---
+    This card specifies an arbitrary (see next sentence!) name
+    for a symmetry distinct center and its Cartesian coordinates.
+    Observe, that the
+    name "DBAS" is restricted to assign the center of the
+    diffuse basis functions required to model the continuum
+    orbitals in R-matrix calculations.
+    The label is truncated to four characters. Observe that this
+    label must be unique to each center. The coordinate unit can
+    be specified as an option. The default unit is Bohr.
+    There should at least be one card of this type in a basis set
+    definition.
+
+  * **Charge** ---
+    The real entry on the subsequent line defines
+    the charge associated with
+    this basis set. This will override the default which is defined in
+    the basis set library. The option can be used to put in ghost
+    orbitals as well as to augment the basis sets of the library.
+    The **Charge** card is optional.
+
+    .. xmldoc:: %%Keyword: Charge (non-XYZ format) <advanced>
+                The real entry on the subsequent line defines
+                the charge associated with
+                this basis set. This will override the default which is defined in
+                the basis set library. The option can be used to put in ghost
+                orbitals as well as to augment the basis sets of the library.
+                The "Charger" card is optional.
+
+  * **Spherical** [option] ---
+    Specifying which shells will be in real spherical Gaussians. Valid options
+    are "all" or a list of the shell characters separated by a blank. The
+    shell characters are s, p, d, f, etc. All shells after p are by
+    default in real spherical Gaussians, except for the d-functions in the
+    6-31G family of basis sets which are in Cartesian.
+    The **Spherical** card is optional. The s and p shells and the d-functions of
+    the 6-31G family of basis sets are by default in Cartesian Gaussians.
+
+    .. xmldoc:: %%Keyword: Spherical (non-XYZ format) <advanced>
+                Specifying which shells will be in real spherical Gaussians. Valid options
+                are "all" or a list of the shell characters separated by a blank. The
+                shell characters are s, p, d, f, etc. All shells after p are by
+                default in real spherical Gaussians, except for the d-functions in the
+                6-31G family of basis sets which are in Cartesian.
+                The "Spherical" card is optional. The s and p shells and the d-functions of
+                the 6-31G family of basis sets are by default in Cartesian Gaussians.
+
+  * **Cartesian** [option] ---
+    Specifying which shells will be in a Cartesian Gaussian representation. For syntax
+    consult the corresponding **Spherical** keyword.
+
+    .. xmldoc:: %%Keyword: Cartesian (non-XYZ format) <advanced>
+                Specifying which shells will be in a Cartesian Gaussian representation. For syntax
+                consult the corresponding Spherical keyword.
+
+  * **Contaminant** [option] ---
+    Specifying for which shells the contaminant will be kept.
+    The contaminants are functions of lower rank which are generated
+    when a Cartesian shell is transformed to a spherical representation
+    (e.g. :math:`r^2=x^2+y^2+z^2` for d-shells, p contaminants for f-shells,
+    s and d contaminants for g-shells, etc.).
+    Valid options are the same as for the **Spherical** keyword.
+    The default is no contaminant in any shell. The **Contaminant** card is optional.
+
+    .. xmldoc:: %%Keyword: Contaminant (non-XYZ format) <advanced>
+                Specifying for which shells the contaminant will be kept.
+                The contaminants are functions of lower rank which are generated
+                when a Cartesian shell is transformed to a spherical representation
+                (e.g. r^2=x^2+y^2+z^2 for d-shells, p contaminants for f-shells,
+                s and d contaminants for g-shells, etc.).
+                Valid options are the same as for the Spherical keyword.
+                The default is no contaminant in any shell. The "Contaminant" card is optional.
+
+  * **Muon** ---
+    Specifying that the basis set is muonic.
+
+    .. xmldoc:: %%Keyword: Muon (non-XYZ format) <advanced>
+                Specifying that the basis set is muonic.
+
+  * **End of Basis set** ---
+    Marks the end of the basis set specification.
+    This card is mandatory.
+
+    .. xmldoc:: %%Keyword: End of Basis set (non-XYZ format) <advanced>
+                Marks the end of the basis set specification.
+                This card is mandatory.
+
+Example of an input in native |molcas| format: ::
+
+  &GATEWAY
+  Title
+  formaldehyde
+  SYMMETRY
+  X Y
+  Basis set
+  H.STO-3G....
+  H1           0.000000    0.924258   -1.100293 /Angstrom
+  End of basis
+
+  Basis set
+  C.STO-3G....
+  C3           0.000000    0.000000   -0.519589 /Angstrom
+  End of basis
+
+  Basis set
+  O.STO-3G....
+  O            0.000000    0.000000    0.664765 /Angstrom
+  End of basis
+
+  End of input
+
 Advanced keywords:
 
 .. class:: keywordlist
@@ -661,6 +867,19 @@ Advanced keywords:
               %%Keyword: SYMThreshold (XYZ format) <advanced>
               <HELP>
               The keyword followed on the next line by the threshold for symmetry recognition code (default is 0.01)
+              </HELP>
+              </KEYWORD>
+
+:kword:`CSPF`
+  Turn on the use of Condon--Shortley phase factors.
+  Note that this changes the sign of basis functions, and orbital files will not be compatible
+  with runs without this keyword, and orbital visualizations may be wrong!
+
+  .. xmldoc:: <KEYWORD MODULE="GATEWAY" NAME="CSPF" APPEAR="Condon-Shortley phase factor" KIND="SINGLE" LEVEL="ADVANCED">
+              %%Keyword: CSPF <advanced>
+              <HELP>
+              Turn on the use of Condon-Shortley phase factors.
+              Warning: Causes incompatibilities.
               </HELP>
               </KEYWORD>
 
@@ -734,7 +953,7 @@ Advanced keywords:
 :kword:`SHAKe`
   Randomly modifies the initial coordinates of the atoms, maintaining the input (or computed)
   symmetry. This can be useful to avoid a geometry optimization converging to a higher-symmetry
-  saddle point. The maximum displacement in the axes :math:`x`, :math:`y` and :math:`z` is read from the following
+  saddle point. The maximum displacement per atom is read from the following
   real number. This number can be followed by :kword:`Bohr` or :kword:`Angstrom`, which indicates
   the unit in which the displacement is specified, the default is :kword:`Bohr`.
 
@@ -856,8 +1075,10 @@ auxiliary basis sets are very compact, since they are tailored for special
 wave function methods. However, they are not provided for all available valence
 basis sets. The aCD or acCD RI auxiliary basis sets are a more general option and
 provides auxiliary basis sets for any wave function model and valence basis set.
+If :variable:`MOLCAS_NEW_DEFAULTS` is set to ``YES``, acCD RI (:kword:`RICD`)
+will be enabled by default, it can be disabled with :kword:`NOCD`.
 
-.. xmldoc:: <GROUP MODULE="GATEWAY" KIND="BOX" NAME="AUX" APPEAR="RI/DF options (optional)" LEVEL="BASIC">
+.. xmldoc:: <GROUP MODULE="GATEWAY" KIND="BOX" NAME="RIDFOPTIONS" APPEAR="RI/DF options (optional)" LEVEL="BASIC">
             <HELP>
             Options of RI/DF definition of auxiliary basis sets.
             Set various thresholds and parameters for atomic CD auxiliary basis sets.
@@ -869,7 +1090,7 @@ provides auxiliary basis sets for any wave function model and valence basis set.
   Use the RI-J basis in the density fitting (DF) approach to treat the two-electron integrals. Note that the valence
   basis set must have a supporting auxiliary basis set for this to work.
 
-  .. xmldoc:: <KEYWORD MODULE="GATEWAY" NAME="RIJ" APPEAR="RI-J option" KIND="SINGLE" EXCLUSIVE="RIJK,RIC,RICD,LOW,MEDI,HIGH" LEVEL="BASIC">
+  .. xmldoc:: <KEYWORD MODULE="GATEWAY" NAME="RIJ" APPEAR="RI-J option" KIND="SINGLE" EXCLUSIVE="RIJK,RIC,RICD,LOW,MEDI,HIGH,NOCD" LEVEL="BASIC">
               %%Keyword: RIJ <basic>
               <HELP>
               Use the RI-J auxiliary basis in the density fitting (DF) approach to treat the two-electron integrals.
@@ -881,7 +1102,7 @@ provides auxiliary basis sets for any wave function model and valence basis set.
   Use the RI-JK auxiliary basis in the density fitting (DF) approach to treat the two-electron integrals. Note that the valence
   basis set must have a supporting auxiliary basis set for this to work.
 
-  .. xmldoc:: <KEYWORD MODULE="GATEWAY" NAME="RIJK" APPEAR="RI-JK option" KIND="SINGLE" EXCLUSIVE="RIJ,RIC,RICD,LOW,MEDI,HIGH" LEVEL="BASIC">
+  .. xmldoc:: <KEYWORD MODULE="GATEWAY" NAME="RIJK" APPEAR="RI-JK option" KIND="SINGLE" EXCLUSIVE="RIJ,RIC,RICD,LOW,MEDI,HIGH,NOCD" LEVEL="BASIC">
               %%Keyword: RIJK <basic>
               <HELP>
               Use the RI-JK auxiliary basis in the density fitting (DF) approach to treat the two-electron integrals.
@@ -893,7 +1114,7 @@ provides auxiliary basis sets for any wave function model and valence basis set.
   Use the RI-C auxiliary basis in the density fitting (DF) approach to treat the two-electron integrals. Note that the valence
   basis set must have a supporting auxiliary basis set for this to work.
 
-  .. xmldoc:: <KEYWORD MODULE="GATEWAY" NAME="RIC" APPEAR="RI-C option" KIND="SINGLE" EXCLUSIVE="RIJ,RIJK,RICD,LOW,MEDI,HIGH" LEVEL="BASIC">
+  .. xmldoc:: <KEYWORD MODULE="GATEWAY" NAME="RIC" APPEAR="RI-C option" KIND="SINGLE" EXCLUSIVE="RIJ,RIJK,RICD,LOW,MEDI,HIGH,NOCD" LEVEL="BASIC">
               %%Keyword: RIC <basic>
               <HELP>
               Use the RI-C auxiliary basis in the density fitting (DF) approach to treat the two-electron integrals.
@@ -905,7 +1126,7 @@ provides auxiliary basis sets for any wave function model and valence basis set.
   Use the aCD or acCD approach :cite:`Aquilante:07b` to treat the two-electron integrals.
   This procedure will use an on-the-fly generated auxiliary basis set.
 
-  .. xmldoc:: <KEYWORD MODULE="GATEWAY" NAME="RICD" APPEAR="RI-aCD option" KIND="SINGLE" EXCLUSIVE="RIJ,RIJK,RIC,LOW,MEDI,HIGH" LEVEL="BASIC">
+  .. xmldoc:: <KEYWORD MODULE="GATEWAY" NAME="RICD" APPEAR="RI-aCD option" KIND="SINGLE" EXCLUSIVE="RIJ,RIJK,RIC,LOW,MEDI,HIGH,NOCD" LEVEL="BASIC">
               %%Keyword: RICD <basic>
               <HELP>
               Use the aCD or acCD approach to treat the two-electron integrals.
@@ -913,6 +1134,23 @@ provides auxiliary basis sets for any wave function model and valence basis set.
               </HELP>
               </KEYWORD>
 
+<<<<<<< HEAD
+=======
+:kword:`NOCD`
+  Disable Cholesky decomposition.
+  Useful in the case :kword:`RICD` has been made the default with :variable:`MOLCAS_NEW_DEFAULTS`.
+
+  .. xmldoc:: <KEYWORD MODULE="GATEWAY" NAME="NOCD" APPEAR="No CD" KIND="SINGLE" EXCLUSIVE="RIJ,RIJK,RIC,RICD,LOW,MEDI,HIGH" LEVEL="BASIC">
+              %%Keyword: NOCD <basic>
+              <HELP>
+              Disable Cholesky decomposition.
+              Useful in the case RICD has been made the default with MOLCAS_NEW_DEFAULTS.
+              </HELP>
+              </KEYWORD>
+
+  .. xmldoc:: <KEYWORD MODULE="GATEWAY" NAME="XRICD" KIND="SINGLE" LEVEL="UNDOCUMENTED" />
+
+>>>>>>> master
 :kword:`CDTHreshold`
   Threshold for on-the-fly generation of aCD or acCD auxiliary basis sets for RI calculations
   (default value 1.0d-4).
@@ -1695,6 +1933,70 @@ Keywords associated to one-electron integrals
               </HELP>
               </KEYWORD>
 
+<<<<<<< HEAD
+=======
+  .. :kword:`DOUGlas-kroll`
+     Explicit request that the one-electron Hamiltonian include the scalar relativistic
+     effects according to the so-called Douglas--Kroll transformation.
+
+  ..   .. xmldoc:: %%Keyword: Douglas-Kroll <basic>
+                   Explicit request that the one-electron Hamiltonian include the scalar relativistic
+                   effects according to the so-called Douglas-Kroll transformation.
+                   This option is automatically invoked for the ANO-RCC and ANO-DK3 basis sets.
+
+  .. xmldoc:: <KEYWORD MODULE="GATEWAY" NAME="DOUGLAS-KROLL" KIND="SINGLE" LEVEL="UNDOCUMENTED" />
+
+:kword:`RX2C`
+  Request the scalar relativistic X2C (eXact-two-Component) corrections to the
+  one-electron Hamiltonian as well as the property integrals.
+
+  .. xmldoc:: <KEYWORD MODULE="GATEWAY" NAME="RX2C" APPEAR="Relativistic X2C integrals" KIND="SINGLE" EXCLUSIVE="RBSS" LEVEL="BASIC">
+              %%Keyword: RX2C <basic>
+              <HELP>
+              Request the scalar relativistic X2C (eXact-two-Component) corrections to the
+              one-electron Hamiltonian as well as the property integrals.
+              </HELP>
+              </KEYWORD>
+
+:kword:`RBSS`
+  Request the scalar relativistic BSS (Barysz--Sadlej--Snijders) corrections to the
+  one-electron Hamiltonian as well as the property integrals. The non-iterative
+  scheme is employed for the construction of BSS transformation.
+
+  .. xmldoc:: <KEYWORD MODULE="GATEWAY" NAME="RBSS" APPEAR="Relativistic BSS integrals" KIND="SINGLE" EXCLUSIVE="RX2C" LEVEL="BASIC">
+              %%Keyword: RBSS <basic>
+              <HELP>
+              Request the scalar relativistic BSS (Barysz-Sadlej-Snijders) corrections to the
+              one-electron Hamiltonian as well as the property integrals. The non-iterative
+              scheme is employed for the construction of BSS transformation.
+              </HELP>
+              </KEYWORD>
+
+:kword:`NOAMfi`
+  Explicit request for no computation of atomic mean-field integrals.
+
+  .. xmldoc:: <KEYWORD MODULE="GATEWAY" NAME="NOAM" APPEAR="No AMFI integrals" KIND="SINGLE" EXCLUSIVE="AMFI" LEVEL="BASIC">
+              %%Keyword: NOAMFI <basic>
+              <HELP>
+              Explicit request for no computation of atomic mean-field integrals.
+              </HELP>
+              </KEYWORD>
+
+:kword:`AMFI`
+  Explicit request for the computation of atomic mean-field integrals (used in
+  subsequent spin--orbit calculations). These integrals are computed by default for the
+  ANO-RCC and ANO-DK3 basis sets.
+
+  .. xmldoc:: <KEYWORD MODULE="GATEWAY" NAME="AMFI" APPEAR="AMFI integrals option" KIND="SINGLE" EXCLUSIVE="NOAM" LEVEL="BASIC">
+              %%Keyword: AMFI <basic>
+              <HELP>
+              Explicit request for the computation of atomic mean-field integrals (used in
+              subsequent spin-orbit calculations). These integrals are computed by default for
+              relativistic basis sets like the ANO-RCC and ANO-DK3 basis sets.
+              </HELP>
+              </KEYWORD>
+
+>>>>>>> master
 :kword:`EPOT`
   An integer follows which represents the
   number of points for which the electric potential will be computed. If
@@ -1940,9 +2242,11 @@ not make that input section redundant and should always be included.
               <HELP>
               Relative weights of each atom to use for the alignment and for the calculation of the
               "distance" between structures. The possibilities are:
-              MASS: This is the default. Each atom is given a weight proportional to its mass. Equivalent to mass-weighted coordinates.
-              EQUAL: All atoms have an equal weight.
-              HEAVY: Only heavy atoms are considered, with equal weights. Hydrogens are given zero weight.
+
+              MASS  -- This is the default. Each atom is given a weight proportional to its mass. Equivalent to mass-weighted coordinates.
+              EQUAL -- All atoms have an equal weight.
+              HEAVY -- Only heavy atoms are considered, with equal weights. Hydrogens are given zero weight.
+
               A list of N numbers can also be provided, and they will be used as weights for the N symmetry-unique atoms.
               </HELP>
               </KEYWORD>
@@ -2119,11 +2423,9 @@ fragments. (See documentation for :program:`GEO` for more details)
               Followed by two lines for each fragment.
               The first line should have 3 real numbers defining a translation and the
               second 9 real numbers defining a rotation.
-              <!--
+              </HELP>
               (See ROT and TRANS.)
               Must occur before the xyz-files are entered with coord.
-              -->
-              </HELP>
               </KEYWORD>
 
 :kword:`FRGM`

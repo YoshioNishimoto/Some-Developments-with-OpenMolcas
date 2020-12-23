@@ -10,7 +10,7 @@
 *                                                                      *
 * Copyright (C) 2018, Ignacio Fdez. Galvan                             *
 ************************************************************************
-      Subroutine Proc_Inp(DSCF,Info,lOPTO,iRc)
+      Subroutine Proc_Inp(DSCF,lOPTO,iRc)
 
       use stdalloc, only : mma_allocate, mma_deallocate
       use fortran_strings, only : to_upper, operator(.in.)
@@ -20,10 +20,11 @@
       use qcmaquis_interface_cfg
 #endif
       use active_space_solver_cfg
-      use write_orbital_files, only : OrbFiles
-      use fcidump, only : DumpOnly
-      use fcidump_reorder, only : ReOrInp, ReOrFlag
-      use fciqmc, only : DoEmbdNECI, DoNECI
+      use write_orbital_files, only: OrbFiles
+      use fcidump, only: DumpOnly
+      use fcidump_reorder, only: ReOrInp, ReOrFlag
+      use fciqmc, only: DoEmbdNECI, DoNECI
+      use CC_CI_mod, only: Do_CC_CI
       use orthonormalization, only : ON_scheme, ON_scheme_values
       use fciqmc_make_inp, only : trial_wavefunction, pops_trial,
      &  t_RDMsampling, RDMsampling,
@@ -108,7 +109,7 @@
       DIMENSION NFRO_L(8),NISH_L(8),NRS1_L(8),NRS2_L(8)
       DIMENSION NRS3_L(8),NSSH_L(8),NDEL_L(8)
 #ifdef _HDF5_
-      character(1), allocatable :: typestring(:)
+      character(len=1), allocatable :: typestring(:)
 #endif
 * TOC on JOBOLD (or JOBIPH)
       DIMENSION IADR19(15)
@@ -130,7 +131,7 @@
 
       integer :: start, step, length
 
-      character(50) :: ON_scheme_inp, uppercased
+      character(len=50) :: ON_scheme_inp, uppercased
 
 #ifdef _DMRG_
 !     dmrg(QCMaquis)-stuff
@@ -209,12 +210,9 @@ C   No changing about read in orbital information from INPORB yet.
 *    GAS flag, means the INPUT was GAS
       iDoGas = .false.
 
-*    NECI flag, means that the CI eigensolver is FCIQMC
-      DoNECI = .false.
 *     The compiler thinks NASHT could be undefined later (after 100)
       NASHT=0
 
-      Call qEnter('Proc_Inp')
 
       DBG=.false.
       NAlter=0
@@ -798,6 +796,8 @@ C   No changing about read in orbital information from INPORB yet.
      &            KSDFT(1:5).eq.'TS12G'   .or.
      &            KSDFT(1:4).eq.'TPBE'    .or.
      &            KSDFT(1:5).eq.'FTPBE'   .or.
+     &            KSDFT(1:5).eq.'TOPBE'   .or.
+     &            KSDFT(1:6).eq.'FTOPBE'  .or.
      &            KSDFT(1:7).eq.'TREVPBE' .or.
      &            KSDFT(1:8).eq.'FTREVPBE'.or.
      &            KSDFT(1:6).eq.'FTLSDA'  .or.
@@ -862,6 +862,71 @@ CGG This part will be removed. (PAM 2009: What on earth does he mean??)
        If (DBG) Write(6,*) ' CIONLY keyword was used.'
        iCIonly=1
        Call SetPos(LUInput,'CION',Line,iRc)
+       Call ChkIfKey()
+      End If
+*---  Process ROST command --------------------------------------------*
+      If (DBG) Write(6,*) ' Check if ROtSTate case.'
+      If (KeyROST) Then
+       If (DBG) Write(6,*) ' ROtSTate keyword was used.'
+       iRotPsi=1
+       Call SetPos(LUInput,'ROST',Line,iRc)
+       Call ChkIfKey()
+      End If
+*---  Process XMSI command --------------------------------------------*
+      If (DBG) Write(6,*) ' Check if XMSI case.'
+      If (KeyXMSI) Then
+       If (DBG) Write(6,*) ' XMSI keyword was used.'
+       iRotPsi=1
+       IXMSP=1
+       Call SetPos(LUInput,'XMSI',Line,iRc)
+       Call ChkIfKey()
+      End If
+*---  Process CMSI command --------------------------------------------*
+      If (DBG) Write(6,*) ' Check if CMSI case.'
+      If (KeyCMSI) Then
+       If (DBG) Write(6,*) ' CMSI keyword was used.'
+       iRotPsi=1
+       ICMSP=1
+       Call SetPos(LUInput,'CMSI',Line,iRc)
+       Call ChkIfKey()
+      End If
+*---  Process CMMA command --------------------------------------------*
+      If (KeyCMMA) Then
+       If (DBG) Write(6,*) ' CMS Max Cylces keyword was given.'
+       Call SetPos(LUInput,'CMMA',Line,iRc)
+       If(iRc.ne._RC_ALL_IS_WELL_) GoTo 9810
+       ReadStatus=' Failure reading data following CMMA keyword.'
+       Read(LUInput,*,End=9910,Err=9920) ICMSIterMax
+       ReadStatus=' O.K. reading data following CMMA keyword.'
+       If (DBG) Then
+        Write(6,*) ' Max nr of CMS cycles',ICMSIterMax
+       End If
+       Call ChkIfKey()
+      End If
+*---  Process CMMI command --------------------------------------------*
+      If (KeyCMMI) Then
+       If (DBG) Write(6,*) ' CMS Min Cylces keyword was given.'
+       Call SetPos(LUInput,'CMMI',Line,iRc)
+       If(iRc.ne._RC_ALL_IS_WELL_) GoTo 9810
+       ReadStatus=' Failure reading data following CMMI keyword.'
+       Read(LUInput,*,End=9910,Err=9920) ICMSIterMin
+       ReadStatus=' O.K. reading data following CMMI keyword.'
+       If (DBG) Then
+        Write(6,*) ' Min nr of CMS cycles',ICMSIterMin
+       End If
+       Call ChkIfKey()
+      End If
+*---  Process CMTH command --------------------------------------------*
+      If (KeyCMTH) Then
+       If (DBG) Write(6,*) ' CMS Threshold keyword was given.'
+       Call SetPos(LUInput,'CMTH',Line,iRc)
+       If(iRc.ne._RC_ALL_IS_WELL_) GoTo 9810
+       ReadStatus=' Failure reading data following CMTH keyword.'
+       Read(LUInput,*,End=9910,Err=9920) CMSThreshold
+       ReadStatus=' O.K. reading data following CMTH keyword.'
+       If (DBG) Then
+        Write(6,*) ' CMS threshold',CMSThreshold
+       End If
        Call ChkIfKey()
       End If
 *---  Process RFPE command ----- (new!) -------------------------------*
@@ -2029,6 +2094,17 @@ C orbitals accordingly
         end if
         ! call fciqmc_option_check(iDoGas, nGSSH, iGSOCCX)
       end if
+
+      if (KeyCCCI) then
+        if(DBG) write(6, *) 'CC-CI is actived'
+        Do_CC_CI = .true.
+
+        if (KeyDMPO) then
+          call WarningMessage(2, 'CC-CI and DMPOnly are mutually '//
+     &        'exclusive.')
+          GoTo 9930
+        end if
+      end if
 *
 * =======================================================================
       IF(KeySYMM) Then
@@ -2684,7 +2760,7 @@ c       write(6,*)          '  --------------------------------------'
         guess_dmrg(1:7) = 'DEFAULT'
         call mma_allocate(initial_occ,nrs2t,nroots); initial_occ = 0
         !> debug output
-#ifdef _DMRG_DEBUG_
+#ifdef _DMRG_DEBUGPRINT_
         ifverbose_dmrg = .true.
 #endif
       end if
@@ -3124,7 +3200,7 @@ C Test read failed. JOBOLD cannot be used.
      &    PCM_On()       .or.
      &    Do_OFEmb       .or.
      &    KSDFT.ne.'SCF'     )
-     &    Call IniSew(Info,DSCF.or.Langevin_On().or.PCM_On(),nDiff)
+     &    Call IniSew(DSCF.or.Langevin_On().or.PCM_On(),nDiff)
 * ===============================================================
 
       ! Setup part for DMRG calculations
@@ -3175,7 +3251,7 @@ C Test read failed. JOBOLD cannot be used.
 *
 *     Construct the Guga tables
 *
-      if (.not. (DoNECI .or. DumpOnly)) THEN
+      if (.not. (DoNECI .or. Do_CC_CI .or. DumpOnly)) THEN
 *  right now skip most part of gugactl for GAS, but only call mknsm.
         if (.not.iDoGas) then
 ! DMRG calculation no need the GugaCtl subroutine
@@ -3234,7 +3310,7 @@ C Test read failed. JOBOLD cannot be used.
 * Combinations don't work for CASVB (at least yet)!
       If (ifvb .ne. 0) iSpeed(1) = 0
 *
-      if(.not. (KeyDMRG .or. DoNECI .or. DumpOnly)) then
+      if(.not. (KeyDMRG .or. DoNECI .or. Do_CC_CI .or. DumpOnly)) then
 ! switch on/off determinants
 #ifdef _DMRG_
         if(.not.doDMRG)then
@@ -3252,18 +3328,6 @@ C Test read failed. JOBOLD cannot be used.
 #endif
       end if
 
-      IF(DoNECI) THEN
-*     ^ For NECI only orbital related arrays are allowed to be stored.
-*     ! Arrays of nConf size need to be avoided
-        CALL GETMEM('INT1  ','ALLO','REAL',KINT1,NASHT**2)
-        kint1_pointer = KINT1
-        Call FZero(Work(KINT1),NASHT**2)
-        write(6,*) ' NECI activated. List of Confs might get lengthy.'
-        write(6,*) ' Number of Configurations computed by GUGA: ',nConf
-        write(6,*) ' nConf variable is set to zero to avoid JOBIPH i/o'
-        nConf= 0
-      END IF
-*
       ISCF=0
       IF (ISPIN.EQ.NAC+1.AND.NACTEL.EQ.NAC) ISCF=1
       IF (ISPIN.EQ.1.AND.NACTEL.EQ.2*NAC)   ISCF=1
@@ -3344,12 +3408,10 @@ C Test read failed. JOBOLD cannot be used.
 *---  Normal exit -----------------------------------------------------*
 9000  CONTINUE
       If (DBG) Write(6,*)' Normal exit from PROC_INP.'
-      Call qExit('Proc_Inp')
       Return
 *---  Abnormal exit ---------------------------------------------------*
 9900  CONTINUE
       If (DBG) Write(6,*)' Abnormal exit from PROC_INP.'
-      Call qExit('Proc_Inp')
       Return
 
       end subroutine proc_inp

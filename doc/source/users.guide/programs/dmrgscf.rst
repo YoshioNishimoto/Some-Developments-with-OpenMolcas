@@ -175,7 +175,15 @@ are listed below. The start and end of the OptimizationSettings input section is
 :kword:`FCIDUMP`
   Skip the wave function optimization and write out the transformed active MO integrals to a :file:`FCIDUMP` file in :file:`$WorkDir` which can be used in subsequent **QCMaquis** DMRG calculations.
 
+<<<<<<< HEAD
   .. xmldoc:: <KEYWORD MODULE="DMRGSCF" NAME="fcidump" KIND="SINGLE" LEVEL="BASIC">
+=======
+  .. xmldoc:: <GROUP MODULE="DMRGSCF" NAME="OOPTIMIZATIONSETTINGS" APPEAR="Orbital optimization settings" KIND="BLOCK" LEVEL="BASIC">
+
+  .. xmldoc:: <INCLUDE MODULE="RASSCF" EXCEPT="VB,RGINPUT,NEVPT2PREP" />
+
+  .. xmldoc:: <KEYWORD MODULE="DMRGSCF" NAME="FCIDUMP" KIND="SINGLE" LEVEL="BASIC">
+>>>>>>> master
               %%Keyword: fcidump <basic>
               <HELP>
               Dump integrals on file FCIDUMP.

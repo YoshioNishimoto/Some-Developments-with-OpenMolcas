@@ -26,7 +26,7 @@
 C Transform to orbitals that diagonalize the diagonal
 C blocks of FIFA. Affected data sets are CMO,
 C EPS, EPSI, EPSA, and EPSE. Also, the CI arrays are
-C transformed on file LUONEM. Note: FIFA is unchanged
+C transformed on file LUCIEX. Note: FIFA is unchanged
 C and is not valid for the new orbitals. It will be
 C recomputed later.
 C The transformation matrices are returned in TORB.
@@ -54,7 +54,6 @@ C     #orbitals per symmetry
       INTEGER NF,NI,NA,NR1,NR2,NR3,NS,NO,NB
       INTEGER NSCT,NCMOSCT
 
-      CALL QENTER('MKRPTORB')
 
 * Allocate space for temporary square Fock matrix in each symmetry:
 * NBMX=Max number of basis functions in any symmetry, in common in caspt2.fh
@@ -295,7 +294,6 @@ C Finally, loop again over symmetries, transforming the CI:
       END IF
 
 
-      CALL QEXIT('MKRPTORB')
 
       RETURN
       END

@@ -17,12 +17,6 @@
 *                                                                      *
 * Object:  Lyp Functional(Formula taken from Molpro Manual)            *
 *                                                                      *
-* Called from:Do_batch                                                 *
-*                                                                      *
-* Calling    : QEnter                                                  *
-*              GetMem                                                  *
-*              QExit                                                   *
-*                                                                      *
 *      Author: Per-AAke Malmquist,Department of Theoretical Chemistry  *
 *              University of LUnd, SWEDEN                              *
 *              D. Ajitha , Department of Theoretical Chemistry         *
@@ -30,10 +24,10 @@
 *              Modify Per-AAke's code for open shell case              *
 *              and adopt for closed shell case                         *
 ************************************************************************
+      use KSDFT_Info, only: tmpB
       Implicit Real*8 (A-H,O-Z)
 #include "real.fh"
 #include "nq_index.fh"
-#include "WrkSpc.fh"
 #include "ksdft.fh"
       Real*8 dF_dRho(ndF_dRho,mGrid),Rho(nRho,mGrid),F_xc(mGrid)
 cGLM     &               F_xca(mGrid),F_xcb(mGrid),tmpB(mGrid)
@@ -46,10 +40,6 @@ cGLM     &               F_xca(mGrid),F_xcb(mGrid),tmpB(mGrid)
 * Cfconst is = (3/10)*(3*Pi**2)**(2/3)
       Cfconst2=Cfconst*2.0D0**(11.0D0/3.D0)
       Rho_Min=T_X*1.0D-2
-*                                                                      *
-************************************************************************
-*                                                                      *
-C     Call QEnter('LYP')
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -159,9 +149,9 @@ C     Call QEnter('LYP')
 
       Functional= ec1+ec2+ec3+ec4
       F_xc(iGrid)=F_xc(iGrid)+Coeff*functional
-*                                                                     *
-***********************************************************************
-*                                                                     *
+*                                                                      *
+************************************************************************
+*                                                                      *
 *      dF/dRho
        dF_dRho(ipR,iGrid)=dF_dRho(ipR,iGrid)
      &                   +Coeff*(dec1dra+dec2dra+dec3dra+dec4dra)
@@ -173,14 +163,14 @@ C     Call QEnter('LYP')
 101   Continue
       End Do
 
-*                                                                     *
-***********************************************************************
-*                                                                     *
+*                                                                      *
+************************************************************************
+*                                                                      *
 *     iSpin=/= 1
       Else
-*                                                                     *
-***********************************************************************
-*                                                                     *
+*                                                                      *
+************************************************************************
+*                                                                      *
 *         write(6,*) 'mGrid',mGrid
 *         write(6,*) 'Rho_min',Rho_min
       tmpC_tot = 0.0d0
@@ -285,10 +275,10 @@ C     Call QEnter('LYP')
 
       Functional= ec1+ec2+ec3+ec4
       F_xc(iGrid)=F_xc(iGrid)+Coeff*functional
-      Work(ip_tmpB+iGrid-1)=F_xc(iGrid)-Work(ip_tmpB+iGrid-1)
-*                                                                     *
-***********************************************************************
-*                                                                     *
+      tmpB(iGrid)=F_xc(iGrid)-tmpB(iGrid)
+*                                                                      *
+************************************************************************
+*                                                                      *
 *       dF/dRhoa, dF/dRhob
         dF_dRho(ipRa,iGrid)=dF_dRho(ipRa,iGrid)
      &                   +Coeff*(dec1dra+dec2dra+dec3dra+dec4dra)
@@ -304,6 +294,5 @@ C     Call QEnter('LYP')
       End Do
       Endif
 *
-C     Call QExit('LYP')
       Return
       End

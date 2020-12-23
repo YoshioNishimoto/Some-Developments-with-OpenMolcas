@@ -8,7 +8,7 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
-      Subroutine Proc_InpX(DSCF,Info,lOPTO,iRc)
+      Subroutine Proc_InpX(DSCF,lOPTO,iRc)
 
 ! module dependencies
 #ifdef module_DMRG
@@ -40,7 +40,7 @@
 #include "stdalloc.fh"
 #ifdef _HDF5_
 #  include "mh5.fh"
-      character(32) :: prgm
+      character(len=32) :: prgm
 #endif
 *
       Logical Do_OFemb,KEonly,OFE_first
@@ -88,7 +88,7 @@
       DIMENSION NFRO_L(8),NISH_L(8),NRS1_L(8),NRS2_L(8)
       DIMENSION NRS3_L(8),NSSH_L(8),NDEL_L(8)
 #ifdef _HDF5_
-      character(1), allocatable :: typestring(:)
+      character(len=1), allocatable :: typestring(:)
 #endif
 * TOC on JOBOLD (or JOBIPH)
       DIMENSION IADR19(15)
@@ -155,7 +155,6 @@ C   No changing about read in orbital information from INPORB yet.
 *    GAS flag, means the INPUT was GAS
       iDoGas = .false.
 
-      Call qEnter('Proc_Inp')
 
       NAlter=0
       iRc=_RC_ALL_IS_WELL_
@@ -843,6 +842,10 @@ C   No changing about read in orbital information from INPORB yet.
      &     write(6,*) ' FTBLYP functional aka BLYP for MCPDFT'
          If(KSDFT(1:6).eq.'FTLSDA')
      &     write(6,*) ' FTLSDA functional aka LSDA for MCPDFT'
+         If(KSDFT(1:6).eq.'FTOPBE')
+     &     write(6,*) ' FTOPBE functional aka OPBE for MCPDFT'
+         If(KSDFT(1:5).eq.'TOPBE')
+     &     write(6,*) ' TOPBE functional aka OPBE for MCPDFT'
        End if
 CGG Calibration of A, B, C, and D coefficients in SG's NewFunctional 1
        If ( KSDFT(1:4).eq.'NEWF') Then
@@ -897,6 +900,14 @@ CGG This part will be removed. (PAM 2009: What on earth does he mean??)
        ReadStatus=' O.K. after reading DFCF keyword.'
 !       Write(6,*) ' Exchange energy scaling factor is ',CoefX
 !       Write(6,*) ' Correlation energy scaling factor is ',CoefR
+      End If
+*---  Process MSPD command --------------------------------------------*
+      If (DBG) Write(6,*) ' Check if Multi-state MC-PDFT case.'
+      If (KeyMSPD) Then
+       If (DBG) Write(6,*) ' MSPD keyword was used.'
+       iMSPDFT=1
+       Call SetPos_m(LUInput,'MSPD',Line,iRc)
+       Call ChkIfKey_m()
       End If
 *---  Process CION command --------------------------------------------*
       If (DBG) Write(6,*) ' Check if CIONLY case.'
@@ -990,7 +1001,9 @@ CGG This part will be removed. (PAM 2009: What on earth does he mean??)
       End If
 *---  Process CIRO command --------------------------------------------*
       If (DBG) Write(6,*) ' Check for CIROOTS command.'
-      IF(KeyCIRO) Then
+*TRS - removing ciroots keyword
+*      IF(KeyCIRO) Then
+       If(.false.) Then
        If (DBG) Write(6,*) ' CIROOTS command was given.'
        Call SetPos_m(LUInput,'CIRO',Line,iRc)
        If(iRc.ne._RC_ALL_IS_WELL_) GoTo 9810
@@ -1058,7 +1071,9 @@ CBOR.. End modification 001011
        KeyCIRE=.TRUE.
       END IF
 *---  Process RLXR command --------------------------------------------*
-      If(KeyRLXR) Then
+*TRS - remove rlxr keyword
+*      If(KeyRLXR) Then
+       If(.false.) Then
        Call SetPos_m(LUInput,'RLXR',Line,iRc)
        If(iRc.ne._RC_ALL_IS_WELL_) GoTo 9810
        ReadStatus=' O.K. reading after keyword RLXR.'
@@ -2524,11 +2539,18 @@ c       write(6,*)          '  --------------------------------------'
        DoGradPDFT=.true.
        Call SetPos_m(LUInput,'GRAD',Line,iRc)
        Call ChkIfKey_m()
+*TRS - Adding else statement to make nograd the default if the grad
+*keyword isn't used
+       Else
+       DoNoGrad=.true.
+*TRS
       End If
 *
 *---  Process NOGR command --------------------------------------------*
       If (DBG) Write(6,*) ' Check if NOGRadient case.'
-      If (KeyNOGR) Then
+*TRS - removing nograd command
+*      If (KeyNOGR) Then
+       If (.false.) Then
        If (DBG) Write(6,*) ' NOGRadient keyword was used.'
        DoNoGrad=.true.
        Call SetPos_m(LUInput,'NOGR',Line,iRc)
@@ -2590,7 +2612,7 @@ c       write(6,*)          '  --------------------------------------'
         IGSOCCX(3,2) = NACTEL
       END IF
 *
-!Consideraations for gradients/geometry optimizations
+!Considerations for gradients/geometry optimizations
 
 *     Numerical gradients requested in GATEWAY
       Call Qpg_iScalar('DNG',DNG)
@@ -2605,42 +2627,46 @@ c       write(6,*)          '  --------------------------------------'
       If (ProgName(1:11).eq.'last_energy') DNG=.true.
 *
 *     Inside NUMERICAL_GRADIENT override input!
-      If (ProgName(1:18).eq.'numerical_gradient') Then
-         DNG=.true.
+      If (ProgName(1:18).eq.'numerical_gradient') DNG=.true.
+*
+*
+      If (DNG) Then
          DoGradPDFT=.false.
       End If
 *
 *     Check to see if we are in a Do While loop
-         Call GetEnvF('EMIL_InLoop',emiloop)
-         If (emiloop.eq.' ') emiloop='0'
-         Call GetEnvF('MOLCAS_IN_GEO',inGeo)
-         If ((emiloop(1:1).ne.'0') .and. inGeo(1:1) .ne. 'Y'
-     &       .and. .not.DNG) Then
-            DoGradPDFT=.true.
-         End If
+      Call GetEnvF('EMIL_InLoop',emiloop)
+      If (emiloop.eq.' ') emiloop='0'
+      Call GetEnvF('MOLCAS_IN_GEO',inGeo)
+      If ((emiloop(1:1).ne.'0') .and. inGeo(1:1) .ne. 'Y'
+     &    .and. .not.DNG) Then
+         DoGradPDFT=.true.
+      End If
 *                                                                      *
 ************************************************************************
 *                                                                      *
 *     Select default root for geometry optimization
+*TRS - Not overwriting rlxroot from sacasscf
+*      write(*,*)'irlxroot', irlxroot
+*      If (NROOTS.gt.1.and.irlxroot.eq.0)  Then
 *
-      If (NROOTS.gt.1.and.irlxroot.eq.0)  Then
 *
 *        Check if multi state SA-CASSCF
 *
-         nW = 0
-         Do iR = 1, LROOTS
-            If (WEIGHT(iR).ne.0.0D0) nW = nW + 1
-         End Do
-         If (nW.ne.1) Then
-            iRlxRoot=iroot(LROOTS)
-         Else
-            Do iR = 1, LROOTS
-               If (WEIGHT(iR).ne.0.0D0) iRlxRoot=iroot(iR)
-            End Do
-         End If
-      End If
-      If (NROOTS.eq.1.or.LROOTS.eq.1) iRlxRoot=iRoot(1)
-*                                                                      *
+*         nW = 0
+*         Do iR = 1, LROOTS
+*            If (WEIGHT(iR).ne.0.0D0) nW = nW + 1
+*         End Do
+*         If (nW.ne.1) Then
+*            iRlxRoot=iroot(LROOTS)
+*         Else
+*            Do iR = 1, LROOTS
+*               If (WEIGHT(iR).ne.0.0D0) iRlxRoot=iroot(iR)
+*            End Do
+*         End If
+*      End If
+*      If (NROOTS.eq.1.or.LROOTS.eq.1) iRlxRoot=iRoot(1)
+*   TRS                                                                   *
 ************************************************************************
 *                                                                      *
 *---  Compute IZROT. IZROT is a matrix (lower triangular over the -----*
@@ -2759,7 +2785,7 @@ C Test read failed. JOBOLD cannot be used.
      &    PCM_On()       .or.
      &    Do_OFEmb       .or.
      &    KSDFT.ne.'SCF'     )
-     &    Call IniSew(Info,DSCF.or.Langevin_On().or.PCM_On(),nDiff)
+     &    Call IniSew(DSCF.or.Langevin_On().or.PCM_On(),nDiff)
 * ===============================================================
 *
 *     Check the input data
@@ -2917,11 +2943,9 @@ C Test read failed. JOBOLD cannot be used.
 9000  CONTINUE
       close(989)
       If (DBG) Write(6,*)' Normal exit from PROC_INP.'
-      Call qExit('Proc_Inp')
       Return
 *---  Abnormal exit -----------------------------------------------------*
 9900  CONTINUE
       If (DBG) Write(6,*)' Abnormal exit from PROC_INP.'
-      Call qExit('Proc_Inp')
       Return
       End

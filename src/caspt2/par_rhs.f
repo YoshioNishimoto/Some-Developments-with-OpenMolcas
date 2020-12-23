@@ -67,6 +67,7 @@ C update the disk address in IOFFRHS
 
 C-SVC: print out DNRM2 of the all RHS components
       IDISK=0
+      NROW=0 ! dummy initialize
       DO ICASE=1,13
         DO ISYM=1,NSYM
 
@@ -1208,7 +1209,7 @@ CSVC: this routine computes product ALPHA * V1 and adds to V2
         IF (iLoV1.NE.0.AND.iLoV2.NE.0) THEN
           NV1=(iHiV1-iLoV1+1)*(jHiV1-jLoV1+1)
           NV2=(iHiV2-iLoV2+1)*(jHiV2-jLoV2+1)
-          IF (NV1.NE.NV2) CALL AbEnd('RHS_DAXPY: Error: NV1 != NV2')
+          IF (NV1.NE.NV2) CALL AbEnd()
           CALL GA_Access (lg_V1,iLoV1,iHiV1,jLoV1,jHiV1,mV1,LDV1)
           CALL GA_Access (lg_V2,iLoV2,iHiV2,jLoV2,jHiV2,mV2,LDV2)
           ! V2 <- alpha*V1 + V2

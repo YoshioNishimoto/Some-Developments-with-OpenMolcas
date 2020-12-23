@@ -8,7 +8,7 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
-       Subroutine RdInp_MCLR
+       Subroutine RdInp_MCLR()
 ************************************************************************
 *                                                                      *
 *     Locate input stream and read commands                            *
@@ -21,14 +21,16 @@
 *     history: none                                                    *
 *                                                                      *
 ************************************************************************
+      Use Basis_Info, only: Basis_Info_Get
+      Use Center_Info, only: Center_Info_Get
+      Use Exp, only: NewPre, nexp_max
+      use negpre
       Implicit Real*8 (a-h,o-z)
 #include "Input.fh"
 #include "Files_mclr.fh"
 #include "disp_mclr.fh"
-#include "WrkSpc.fh"
-#include "negpre.fh"
 #include "sa.fh"
-      Parameter ( nCom=37 )
+      Parameter ( nCom=38 )
       Character*72 Line
       Character*4 Command,ComTab(nCom)
       Character*8 Label
@@ -42,8 +44,8 @@
      &            'EXPD','NEGP','LOWM','ELHE','SAVE',
      &            'RASS','DISO','CASI','SALA','NODE',
      &            'ESTE','MOUT','MASS','NAC ','$$$$',
-     &            'THER','NEWC'/
-      Dimension idum(1)
+     &            'THER','NEWC','TWOS'/
+      Integer iDum(1)
 *----------------------------------------------------------------------*
 *     Locate "start of input"                                          *
 *----------------------------------------------------------------------*
@@ -53,7 +55,9 @@
 *----------------------------------------------------------------------*
       debug=.False.
       Epsilon_Undef=.True.
-      Call Get_info_Static(iDum(1))
+      Call Basis_Info_Get()
+      Call Center_Info_Get()
+      Call Get_info_Static()
       istate=1     ! State for which the Lagrangian is calc.
       override=.false.
       If (debug) write(6,*) 'Got info.fh'
@@ -66,7 +70,6 @@
       elechess=.false.
       TimeDep=.false.
       PrCI=.false.
-      nexp_max=100
       CIthrs=0.05d0
       PrOrb=.false.
       SewLab='NONE    '
@@ -79,7 +82,6 @@
       SA=.false.
       esterr=.false.
       FANCY_PRECONDITIONER=.true.
-      newpre=.true.
       save=.false.
       isotop=.true.
       Call lCopy(mxAtm*3+3,[.true.],0,lCalc,1)
@@ -101,6 +103,8 @@
       Deco=.true.
       Update=.true.
       Estimate=.false.
+      TwoStep=.false.
+      StepType='xxxx'
 *----------------------------------------------------------------------*
 *     Read the input stream line by line and identify key command      *
 *----------------------------------------------------------------------*
@@ -194,6 +198,8 @@
           Go to 206
         Case (37)
           Go to 210
+        Case (38)
+          Go to 220
       End Select
 *---  TITL ------------------------------------------------------------*
 10    Continue
@@ -315,7 +321,6 @@
       If ( iRc.ne.0 ) Then
          Write (6,*) 'RdInp: Error reading ONEINT'
          Write (6,'(A,A)') 'Label=',Label
-         Call QTrace
          Call Abend()
       End If
 *
@@ -465,6 +470,27 @@
 *---  Process the "NEWCho input card ----------------------------------*
 210   NewCho=.True.
       Goto 100
+*---  Process the "TWOStep" input card --------------------------------*
+220   Read(5,'(A)',Err=998,End=999) Line
+      Call LeftAd(Line)
+      Call UpCase(Line)
+      If (Line(1:1).eq.'*' ) Goto 220
+      Read(Line,*,Err=998,End=999) StepType
+      If (debug) Write(6,*) 'TWOSTEP kind: '//StepType
+      If((StepType(1:4).ne.'FIRS').and.(StepType(1:4).ne.'SECO').and.
+     &   (StepType(1:4).ne.'RUN1').and.(StepType(1:4).ne.'RUN2')) Then
+         Call WarningMessage(2,'TWOStep: input error!')
+         Call Quit_OnUserError()
+      End If
+      If (StepType(1:4).eq.'FIRS') then
+        StepType(1:4)='RUN1'
+      End If
+      If (StepType(1:4).eq.'SECO') then
+        StepType(1:4)='RUN2'
+      End If
+      TwoStep=.true.
+      If (debug) Write(6,*) 'TWOSTEP kind: '//StepType
+      Goto 100
 *----------------------------------------------------------------------*
 *     "End of input"                                                   *
 *----------------------------------------------------------------------*
@@ -519,10 +545,8 @@
 *----------------------------------------------------------------------*
  998  Write (6,*) 'RdInp: Error while reading input'
       Write (6,'(A,A)') 'Last command:',Line
-      Call QTrace
       Call Abend()
 999   Write (6,*) 'RdInp: Premature end of input file'
       Write (6,'(A,A)') 'Last command:',Line
-      Call QTrace
       Call Abend()
       End

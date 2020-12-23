@@ -40,7 +40,7 @@
 *> @param[in]     TUVX   Active 2-el integrals
 *> @param[in]     IFINAL Calculation status switch
 ************************************************************************
-      Subroutine CICtl(CMO,D,DS,P,PA,FI,D1I,D1A,TUVX,IFINAL)
+      Subroutine CICtl(CMO,D,DS,P,PA,FI,FA,D1I,D1A,TUVX,IFINAL)
 * ****************************************************************
 * history:                                                       *
 * updated to use determinant based CI-procedures                 *
@@ -59,9 +59,12 @@
 
       Implicit Real* 8 (A-H,O-Z)
 
-      Dimension CMO(*),D(*),DS(*),P(*),PA(*),FI(*),D1I(*),D1A(*),
+      Dimension CMO(*),D(*),DS(*),P(*),PA(*),FI(*),FA(*),D1I(*),D1A(*),
      &          TUVX(*)
       Logical Exist,Do_ESPF,l_casdft
+*JB   variables for state rotation on final states
+      Logical do_rotate
+*JB   end of variables for state rotation calculation
 
 #include "rasdim.fh"
 #include "rasscf.fh"
@@ -99,7 +102,6 @@
       Dimension rdum(1)
 
 *PAM05      SymProd(i,j)=1+iEor(i-1,j-1)
-      Call qEnter('CICTL')
 C Local print level (if any)
       IPRLEV=IPRLOC(3)
       IF(IPRLEV.ge.DEBUG) THEN
@@ -165,6 +167,8 @@ C Local print level (if any)
      &           KSDFT(1:5).eq.'TS12G'  .or.
      &           KSDFT(1:4).eq.'TPBE'    .or.
      &           KSDFT(1:5).eq.'FTPBE'   .or.
+     &           KSDFT(1:5).eq.'TOPBE'    .or.
+     &           KSDFT(1:6).eq.'FTOPBE'   .or.
      &           KSDFT(1:7).eq.'TREVPBE' .or.
      &           KSDFT(1:8).eq.'FTREVPBE'.or.
      &           KSDFT(1:6).eq.'FTLSDA'  .or.
@@ -509,8 +513,35 @@ C     kh0_pointer is used in Lucia to retrieve H0 from Molcas.
       iDisk = IADR15(4)
       jDisk = IADR15(3)
       IF (.not.DoSplitCAS) THEN
+*JB   Instead of RASSCF/RASCI energy, print out energy for rotated
+*JB   states
+       do_rotate=.False.
+       If (ifinal.eq.2) Then
+        IF(IXMSP.eq.1) THEN
+         CALL XMSRot(CMO,FI,FA)
+        End If
+        IF(ICMSP.eq.1) THEN
+         CALL XMSRot(CMO,FI,FA)
+         CALL CMSRot(TUVX)
+        END IF
+        If(IRotPsi==1) Then
+         CALL f_inquire('ROT_VEC',Do_Rotate)
+        End If
+        If(Do_Rotate) Then
+         CALL RotState()
+        Else
+         If(IRotPsi==1) Then
+          write(LF,'(6X,A,A)')'Do_Rotate.txt is not found. ',
+     &   'MCSCF states will not be rotated'
+         End If
+        End If
+*JB    End of condition 'Do_Rotate' to initialize rotated states
+       End If
+*JB    End If for ifinal=2
        Do jRoot = 1,lRoots
 * load back one CI vector at the time
+*JB      If do_rotate=.true., then we read CI vectors from Work(LRCIVec)
+*JB      Otherwise we read if from JOBIPH
          Call DDafile(JOBIPH,2,Work(LW4),nConf,iDisk)
          IF (IPRLEV.GE.DEBUG) THEN
           call DVcPrt('CI-Vec in CICTL',' ',Work(LW4),nConf )
@@ -557,7 +588,7 @@ C     kh0_pointer is used in Lucia to retrieve H0 from Molcas.
      &                             state = jroot,
      &                             rdm1  = .true.
      &                            )
-#ifdef _DMRG_DEBUG_
+#ifdef _DMRG_DEBUGPRINT_
            write(6,*)"==============================================="
            write(6,*)"  Set all elems in anti-symmetric 2-RDM to zero"
            write(6,*)"==============================================="
@@ -719,7 +750,8 @@ c
         Do i = 1,lRoots
           jDisk=iDisk
 * load back one CI vector at the time
-          Call DDafile(JOBIPH,2,Work(LW4),nConf,iDisk)
+*          Call DDafile(JOBIPH,2,Work(LW4),nConf,iDisk)
+           Call DDafile(JOBIPH,2,Work(LW4),nConf,iDisk)
           IF (IPRLEV.GE.DEBUG) THEN
            call DVcPrt('CI-Vec in CICTL last cycle',' ',
      &        Work(LW4),nConf)
@@ -995,6 +1027,5 @@ C     the relative CISE root given in the input by the 'CIRF' keyword.
         Call Free_Work(ipRF)
       End If
 
-      Call qExit('CICTL')
       Return
       End

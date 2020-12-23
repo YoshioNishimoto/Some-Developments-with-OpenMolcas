@@ -8,19 +8,19 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
-      Subroutine FixHess(H,nH,iOptC,Mode,Iter,ipMF,GNrm,
-     &                   GNrm_Threshold, iNeg,nAtoms,AnalHess)
+      Subroutine FixHess(H,nH,iOptC,Mode,Iter,MF,GNrm,
+     &                   GNrm_Threshold, iNeg,nAtoms,AnalHess,
+     *                   Corrected)
       Implicit Real*8 (a-h,o-z)
 #include "real.fh"
 #include "print.fh"
 #include "WrkSpc.fh"
-      Real*8 H(nH,nH)
+      Real*8 H(nH,nH), MF(3*nAtoms)
       Integer iNeg(2)
       Logical AnalHess, Corrected, Too_Small, Found
 *
       iRout=211
       iPrint=nPrint(iRout)
-      Call QEnter('FixHess')
 *
       If (iPrint.ge.99) Then
          Call RecPrt('FixHess: H(Start)',' ',H,nH,nH)
@@ -31,6 +31,7 @@
       HTh=1.0d-3
       Too_Small=.False.
       ZTh=1.0D-12
+      HHigh=1.0D0
 *
       Call GetMem('EVal','Allo','Real',ipEVal,nH*(nH+1)/2)
 *
@@ -141,7 +142,11 @@
             If (.Not.AnalHess .and.
      &          iAnd(iOptC,128).eq.128 .and.
      &          iAnd(iOptC,4096).ne.4096) Then
-               Work(i+ipFixVal-1)=Abs(Work(i+ipFixVal-1))
+*
+*              Change the sign and if just too large reduce the value
+*              to the default of HHigh.
+*
+               Work(i+ipFixVal-1)=Min(HHigh,Abs(Work(i+ipFixVal-1)))
                Corrected=.True.
             End If
          End If
@@ -172,7 +177,7 @@
 *                                                                      *
 *
       If (Too_Small.and.iPrint.ge.6) Then
-         Write (Lu,*) ' Some too small eigenvalues has been corrected'
+         Write (Lu,*) ' Some too small eigenvalues have been corrected'
          Write (Lu,*)
       End If
 *                                                                      *
@@ -186,7 +191,8 @@
 *
          If (iNeg(1).ne.0.and.iAnd(iOptC,256).ne.256.and.iPrint.ge.6)
      &   Then
-            Write (Lu,*) ' Some negative eigenvalues has been corrected'
+            Write (Lu,*) ' Some negative eigenvalues have been'
+     &                 //' corrected'
             Write (Lu,*) 'iNeg=',iNeg(1)
             Write (Lu,*)
          End If
@@ -212,10 +218,10 @@
 *
                Mode=jNeg
                ipFrom=ipLowVec + (Mode-1)*nH
-               Call ReacX(Work(ipFrom),nH,Work(ipMF),3*nAtoms)
+               Call ReacX(Work(ipFrom),nH,MF,3*nAtoms)
                If (iPrint.ge.6) Then
                   Write (Lu,'(A,I3)') ' Store Original mode:',Mode
-                  Call RecPrt(' Reaction mode',' ',Work(ipMF),3,nAtoms)
+                  Call RecPrt(' Reaction mode',' ',MF,3,nAtoms)
                End If
 *
             Else
@@ -223,7 +229,7 @@
 *------------- Check that it is the correct eigenvector!
 *
                If (iPrint.ge.6) Call RecPrt(' Old Reaction mode',' ',
-     &                                      Work(ipMF),3,nAtoms)
+     &                                      MF,3,nAtoms)
                iTest=0
                Test=Zero
                Call GetMem('Rx','Allo','Real',ipRx,3*nAtoms)
@@ -231,7 +237,7 @@
                   ipFrom=ipLowVec + (i-1)*nH
                   Call ReacX(Work(ipFrom),nH,Work(ipRx),3*nAtoms)
                   dRx=Sqrt(DDot_(3*nAtoms,Work(ipRx),1,Work(ipRx),1))
-                  rq=Abs(DDot_(3*nAtoms,Work(ipMF),1,Work(ipRx),1))/dRx
+                  rq=Abs(DDot_(3*nAtoms,MF,1,Work(ipRx),1))/dRx
                   If (rq.gt.Test) Then
                      iTest=i
                      Test=rq
@@ -268,11 +274,10 @@
 *
                Work(Mode+ipFixVal-1) = -Abs(Work(Mode+ipFixVal-1))
                ipFrom=ipLowVec + (Mode-1)*nH
-               Call ReacX(Work(ipFrom),nH,Work(ipMF),3*nAtoms)
+               Call ReacX(Work(ipFrom),nH,MF,3*nAtoms)
                If (iPrint.ge.6) Then
                   Write (Lu,'(A,1X,I3)') ' Store mode:',Mode
-                  Call RecPrt(' New Reaction mode',' ',
-     &                        Work(ipMF),3,nAtoms)
+                  Call RecPrt(' New Reaction mode',' ',MF,3,nAtoms)
                End If
 *
             End If
@@ -289,10 +294,10 @@
 *
                Mode=iLow
                ipFrom=ipLowVec + (Mode-1)*nH
-               Call ReacX(Work(ipFrom),nH,Work(ipMF),3*nAtoms)
+               Call ReacX(Work(ipFrom),nH,MF,3*nAtoms)
                If (iPrint.ge.6) Then
                   Write (Lu,'(A,I3)') ' Store Original mode:',Mode
-                  Call RecPrt(' Reaction mode',' ',Work(ipMF),3,nAtoms)
+                  Call RecPrt(' Reaction mode',' ',MF,3,nAtoms)
                End If
 *
             Else
@@ -300,7 +305,7 @@
 *------------- Find the eigenvector with the best overlap
 *
                If (iPrint.ge.6) Call RecPrt(' Old Reaction mode',' ',
-     &                                      Work(ipMF),3,nAtoms)
+     &                                      MF,3,nAtoms)
                iTest=0
                Test=Zero
                Call GetMem('Rx','Allo','Real',ipRx,3*nAtoms)
@@ -308,7 +313,7 @@
                   ipFrom=ipLowVec + (i-1)*nH
                   Call ReacX(Work(ipFrom),nH,Work(ipRx),3*nAtoms)
                   dRx=Sqrt(DDot_(3*nAtoms,Work(ipRx),1,Work(ipRx),1))
-                  rq=Abs(DDot_(3*nAtoms,Work(ipMF),1,Work(ipRx),1))/dRx
+                  rq=Abs(DDot_(3*nAtoms,MF,1,Work(ipRx),1))/dRx
                   If (rq.gt.Test) Then
                      iTest=i
                      Test=rq
@@ -332,16 +337,15 @@
                End if
 *
                ipFrom=ipLowVec + (Mode-1)*nH
-               Call ReacX(Work(ipFrom),nH,Work(ipMF),3*nAtoms)
+               Call ReacX(Work(ipFrom),nH,MF,3*nAtoms)
                If (iPrint.ge.6) Then
                   Write (Lu,'(A,1X,I3)') ' Store mode:',Mode
-                  Call RecPrt(' New Reaction mode',' ',
-     &                        Work(ipMF),3,nAtoms)
+                  Call RecPrt(' New Reaction mode',' ',MF,3,nAtoms)
                End If
 *
             End If
 *
-            Work(Mode+ipFixVal-1) = -Abs(Work(Mode+ipFixVal-1))
+            Work(Mode+ipFixVal-1) = - Half * Abs(Work(Mode+ipFixVal-1))
             Corrected=.True.
             If (iPrint.ge.6) Then
                Write (Lu,'(A,I2,A)')
@@ -362,10 +366,10 @@
 *
                Mode=iLow
                ipFrom=ipLowVec + (Mode-1)*nH
-               Call ReacX(Work(ipFrom),nH,Work(ipMF),3*nAtoms)
+               Call ReacX(Work(ipFrom),nH,MF,3*nAtoms)
                If (iPrint.ge.6) Then
                   Write (Lu,'(A,I3)') ' Store Original mode:',Mode
-                  Call RecPrt(' Reaction mode',' ',Work(ipMF),3,nAtoms)
+                  Call RecPrt(' Reaction mode',' ',MF,3,nAtoms)
                End If
 *
             Else
@@ -373,7 +377,7 @@
 *------------- Find the eigenvector with the best overlap
 *
                If (iPrint.ge.6) Call RecPrt(' Old Reaction mode',' ',
-     &                                      Work(ipMF),3,nAtoms)
+     &                                      MF,3,nAtoms)
                iTest=0
                Test=Zero
                Call GetMem('Rx','Allo','Real',ipRx,3*nAtoms)
@@ -381,7 +385,7 @@
                   ipFrom=ipLowVec + (i-1)*nH
                   Call ReacX(Work(ipFrom),nH,Work(ipRx),3*nAtoms)
                   dRx=Sqrt(DDot_(3*nAtoms,Work(ipRx),1,Work(ipRx),1))
-                  rq=Abs(DDot_(3*nAtoms,Work(ipMF),1,Work(ipRx),1))/dRx
+                  rq=Abs(DDot_(3*nAtoms,MF,1,Work(ipRx),1))/dRx
                   If (rq.gt.Test) Then
                      iTest=i
                      Test=rq
@@ -405,11 +409,10 @@
                End if
 *
                ipFrom=ipLowVec + (Mode-1)*nH
-               Call ReacX(Work(ipFrom),nH,Work(ipMF),3*nAtoms)
+               Call ReacX(Work(ipFrom),nH,MF,3*nAtoms)
                If (iPrint.ge.6) Then
                   Write (Lu,'(A,1X,I3)') ' Store mode:',Mode
-                  Call RecPrt(' New Reaction mode',' ',
-     &                        Work(ipMF),3,nAtoms)
+                  Call RecPrt(' New Reaction mode',' ',MF,3,nAtoms)
                End If
 *
             End If
@@ -512,7 +515,6 @@
 *                                                                      *
 ************************************************************************
 *                                                                      *
-      Call QExit('FixHess')
       Return
 c Avoid unused argument warnings
       If (.False.) Call Unused_integer(Iter)

@@ -50,6 +50,7 @@
 *     Modified AMS Feb 2016 - separate MCPDFT from RASSCF              *
 ************************************************************************
 
+      use stdalloc, only : mma_allocate, mma_deallocate
       Implicit Real*8 (A-H,O-Z)
 
 #include "WrkSpc.fh"
@@ -78,12 +79,25 @@
 #include "orthonormalize.fh"
 #include "ciinfo.fh"
 #include "raswfn.fh"
+*JB XMC-PDFT stuff
+#include "mspdft.fh"
+      Integer LRState,NRState         ! storing info in Do_Rotate.txt
+      Integer LHrot,NHrot             ! storing info in H0_Rotate.txt
+      CHARACTER(Len=18)::MatInfo
+      Integer LXScratch,NXScratch
+      INTEGER LUMS,IsFreeUnit
+      Dimension WGRONK(2)
+      External IsFreeUnit
+
       Logical DSCF
       Logical lTemp, lOPTO
       Character*80 Line
       Logical DoQmat,DoActive
       Logical IfOpened
       Logical Found
+      Character(len=8),DIMENSION(:),Allocatable::VecStat
+      CHARACTER(Len=8)::StatVec
+      CHARACTER(Len=30)::mspdftfmt
       Logical Gradient
 
 * --------- Cholesky stuff:
@@ -108,7 +122,6 @@
       External Get_ProgName
 !      External Get_SuperName
       Character*100 ProgName, Get_ProgName!, Get_SuperName
-      External QEnter, QExit
       External RasScf_Init
       External Scan_Inp
 !      External Proc_Inp
@@ -121,9 +134,6 @@
       real*8, allocatable :: PLWO(:)
       integer ivkcnf
       Dimension Dummy(1)
-* Start the traceback utilities
-*
-      Call QENTER(ROUTINE)
 * Set status line for monitor:
       Call StatusLine('MCPDFT:',' Just started.')
 * Set the return code(s)
@@ -215,7 +225,7 @@
 
 
 * Process the input:
-      Call Proc_InpX(DSCF,Info,lOPTO,iRc)
+      Call Proc_InpX(DSCF,lOPTO,iRc)
 * If something goes wrong in proc_inp:
       If (iRc.ne._RC_ALL_IS_WELL_) Then
        If (IPRLEV.ge.TERSE) Then
@@ -454,12 +464,68 @@ CGG03 Aug 03
         NMAYBE=IT
       END DO
   11  CONTINUE
-      do KROOT=1,lROOTS
-        ENER(IROOT(KROOT),1)=Work(iEList+MXROOT*(NMAYBE-1) +
+      Do_Rotate=.false.
+      IF(iMSPDFT==1) Then
+       call f_inquire('ROT_HAM',Do_Rotate)
+       If(.not.Do_Rotate) Then
+        write(6,'(6X,A,A)')'keyword "MSPD" is used but ',
+     &  'the file of rotated Hamiltonian is not found.'
+        write(6,'(6X,2a)')'Performing regular (state-',
+     &   'specific) MC-PDFT calculation'
+       End If
+      End IF
+      IF(Do_Rotate) Then
+        write(6,'(6X,80A)') ('=',i=1,80)
+        write(6,*)
+        write(6,'(6X,A,A)')'keyword "MSPD" is used and ',
+     &  'file recording rotated hamiltonian is found. '
+        write(6,*)
+        write(6,'(6X,A,A)')
+     &  'Switching calculation to Multi-State Pair-Density ',
+     &  'Functional Theory (MS-PDFT) '
+        write(6,'(6X,A)')'calculation.'
+        write(6,*)
+        NHRot=lroots**2
+        CALL GETMEM('HRot','ALLO','REAL',LHRot,NHRot)
+        LUMS=12
+        LUMS=IsFreeUnit(LUMS)
+        CALL Molcas_Open(LUMS,'ROT_HAM')
+        Do Jroot=1,lroots
+          read(LUMS,*) (Work(LHRot+Jroot-1+(Kroot-1)*lroots)
+     &                 ,kroot=1,lroots)
+        End Do
+        Read(LUMS,'(A18)') MatInfo
+        MSPDFTMethod=' MS-PDFT'
+        IF(trim(adjustl(MatInfo)).eq.'an unknown method') THEN
+         write(6,'(6X,A,A)')'The MS-PDFT calculation is ',
+     & 'based on a user-supplied rotation matrix.'
+        ELSE
+         write(6,'(6X,A,A,A)')'The MS-PDFT method is ',
+     &   trim(adjustl(MatInfo)),'.'
+        If(trim(adjustl(MatInfo)).eq.'XMS-PDFT') MSPDFTMethod='XMS-PDFT'
+        If(trim(adjustl(MatInfo)).eq.'CMS-PDFT') MSPDFTMethod='CMS-PDFT'
+        If(trim(adjustl(MatInfo)).eq.'VMS-PDFT') MSPDFTMethod='VMS-PDFT'
+        If(trim(adjustl(MatInfo)).eq.'FMS-PDFT') MSPDFTMethod='FMS-PDFT'
+        ENDIF
+        write(6,*)
+        write(6,'(6X,80A)') ('=',i=1,80)
+        write(6,*)
+        Close(LUMS)
+        do KROOT=1,lROOTS
+          ENER(IROOT(KROOT),1)=Work((LHRot+(Kroot-1)*lroots+
+     &                                     (KROOT-1)))
+           EAV = EAV + ENER(IROOT(KROOT),ITER) * WEIGHT(KROOT)
+           Work(iRef_E + KROOT-1) = ENER(IROOT(KROOT),1)
+        end do
+      Else
+        do KROOT=1,lROOTS
+          ENER(IROOT(KROOT),1)=Work(iEList+MXROOT*(NMAYBE-1) +
      &                                     (KROOT-1))
-         EAV = EAV + ENER(IROOT(KROOT),ITER) * WEIGHT(KROOT)
-         Work(iRef_E + KROOT-1) = ENER(IROOT(KROOT),1)
-      end do
+           EAV = EAV + ENER(IROOT(KROOT),ITER) * WEIGHT(KROOT)
+           Work(iRef_E + KROOT-1) = ENER(IROOT(KROOT),1)
+        end do
+      End IF!End IF for Do_Rotate=.true.
+
       Call GetMem('ELIST','FREE','REAL',iEList,MXROOT*MXITER)
       If(JOBOLD.gt.0.and.JOBOLD.ne.JOBIPH) Then
         Call DaClos(JOBOLD)
@@ -504,6 +570,8 @@ CGG03 Aug 03
       If (.not.DoCholesky .or. ALGO.eq.1) Then
          Call GetMem('PUVX','Allo','Real',LPUVX,NFINT)
          Call FZero(Work(LPUVX),NFINT)
+      Else
+         LPUVX=ip_Dummy
       EndIf
       Call Get_D1I_RASSCF_m(Work(LCMO),Work(lD1I))
 
@@ -525,9 +593,15 @@ c      call triprt('P-mat 1',' ',WORK(LPMAT),nAc*(nAc+1)/2)
        IF(IPRLOC(2).EQ.4) IPR=5
        IF(IPRLOC(2).EQ.5) IPR=10
 
-
        CALL TRACTL2(WORK(LCMO),WORK(LPUVX),WORK(LTUVX),WORK(LD1I),
      &              WORK(LFI),WORK(LD1A),WORK(LFA),IPR,lSquare,ExFac)
+*       If ( IPRLEV.ge.DEBUG ) then
+*        write(6,*) 'FA_old'
+*        call wrtmat(Work(lfa),1,ntot1,1,ntot1)
+*        write(6,*) 'FI_old'
+*        call wrtmat(Work(lfi),1,ntot1,1,ntot1)
+*        End if
+
        Call Put_CMO(Work(LCMO),ntot2)
 
        if (doGSOR) then
@@ -545,8 +619,9 @@ c      call triprt('P-mat 1',' ',WORK(LPMAT),nAc*(nAc+1)/2)
         end if
        IADR19(:)=0
        IAD19=0
-       Open(unit=87,file='CI_THETA',iostat=ios,
-     &    action='read')
+       LUCT=87
+       LUCT=IsFreeUnit(LUCT)
+       CALL Molcas_Open(LUCT,'CI_THETA')
 
       Call IDaFile(JOBOLD,2,IADR19,15,IAD19)
           CALL GETMEM('CIVEC','ALLO','REAL',LW4,NCONF)
@@ -566,7 +641,7 @@ c      call triprt('P-mat 1',' ',WORK(LPMAT),nAc*(nAc+1)/2)
        Call GetMem('CIVtmp','Allo','Real',LW11,nConf)
           DO jRoot=1,lroots
            do i=1,nconf
-             read(87,*) Work(LW4-1+i)
+             read(LUCT,*) Work(LW4-1+i)
            end do
            Call DDafile(JOBOLD,1,Work(LW4),nConf,iDisk)
           call getmem('kcnf','allo','inte',ivkcnf,nactel)
@@ -591,7 +666,7 @@ c      call triprt('P-mat 1',' ',WORK(LPMAT),nAc*(nAc+1)/2)
          Call DDafile(JOBOLD,1,Work(LW8),NACPR2,jDisk)
          Call DDafile(JOBOLD,1,Work(LW9),NACPR2,jDisk)
        end do
-       Close(87)
+       Close(LUCT)
 
        Call fCopy('JOBIPH','JOBGS',ierr)
 
@@ -628,6 +703,63 @@ c      call triprt('P-mat 1',' ',WORK(LPMAT),nAc*(nAc+1)/2)
         CALL GETMEM('CASDFT_Fock','ALLO','REAL',LFOCK,NACPAR)
         Call MSCtl(Work(LCMO),Work(LFOCK),Work(LFI),Work(LFA),
      &       Work(iRef_E))
+        If (Do_Rotate) Then
+        NHRot=lroots**2
+         Do Jroot=1,lroots
+          Work(LHRot+Jroot-1+(Jroot-1)*lroots)=Work(iRef_E-1+Jroot)
+         End DO
+         Write(6,'(6X,80a)') ('*',i=1,80)
+         Write(6,*)
+         Write(6,'(34X,2A)')MSPDFTMethod,' FINAL RESULTS'
+         Write(6,*)
+         Write(6,'(6X,80a)') ('*',i=1,80)
+         Write(6,*)
+         write(6,'(6X,2A)')
+     &   MSPDFTMethod,' Effective Hamiltonian'
+         Call RecPrt(' ','',Work(LHRot),lroots,lroots)
+         write (6,*)
+*XMC-PDFT    To diagonalize the final MS-PDFT effective H matrix.
+*XMC-PDFT    Eigenvectors will be stored in LRState. This notation for the
+*XMC-PDFT    address here is the same for the rotated space in XMS-CASPT2.
+         NRState=NHRot
+         CALL GETMEM('RotStat','ALLO','REAL',LRState,NRState)
+         Call FZero(Work(LRState),NRState)
+         Call Dsyev_('V','U',lroots,Work(LHRot),lroots,Work(LRState),
+     &               WGRONK,-1,INFO)
+         NXScratch=Int(WGRONK(1))
+         Call GetMem('XScratch','Allo','Real',LXScratch,NXScratch)
+         Call Dsyev_('V','U',lroots,Work(LHRot),lroots,Work(LRState),
+     &               Work(LXScratch),NXScratch,INFO)
+         write(6,'(6X,2A)')MSPDFTMethod,' Energies:'
+         Do Jroot=1,lroots
+           write(6,'(6X,3A,1X,I2,5X,A13,F18.8)')
+     &'::    ',MSPDFTMethod,' Root',
+     &     Jroot,'Total energy:',Work(LRState+Jroot-1)
+         End Do
+         Write(6,*)
+         CALL mma_allocate(VecStat,lRoots)
+         Do Jroot=1,lRoots
+          write(StatVec,'(A6,I2)')'Root ',JRoot
+          VecStat(JRoot)=StatVec
+         End Do
+         write(6,'(6X,2A)')MSPDFTMethod,' Eigenvectors:'
+         if(lroots.lt.10) then
+          write(mspdftfmt,'(A5,I1,A9)')
+     &     '(13X,',lRoots,'(A8,16X))'
+          write(6,mspdftfmt)((VecStat(JRoot)),JRoot=1,lroots)
+         else
+          write(mspdftfmt,'(A5,I2,A9)')
+     &     '(13X,',lRoots,'(A8,16X))'
+          write(6,mspdftfmt)((VecStat(JRoot)),JRoot=1,lroots)
+         end if
+         CALL mma_deallocate(VecStat)
+         Call RecPrt(' ','',Work(LHRot),lroots,lroots)
+         Write(6,*)
+         Write(6,'(6X,80a)') ('*',i=1,80)
+         Call GetMem('XScratch','FREE','Real',LXScratch,NXScratch)
+         CALL GETMEM('HRot','FREE','REAL',LHRot,NHRot)
+         CALL GETMEM('RotStat','FREE','REAL',LRState,NRState)
+        End If
         CALL GETMEM('CASDFT_Fock','FREE','REAL',LFOCK,NACPAR)
       END IF
 
@@ -663,6 +795,7 @@ c      call triprt('P-mat 1',' ',WORK(LPMAT),nAc*(nAc+1)/2)
           Call GetMem('PUVX','Allo','Real',LPUVX,NFINT)
           Call FZero(Work(LPUVX),NFINT)
         EndIf
+
         CALL TRACTL2(WORK(LCMO),WORK(LPUVX),WORK(LTUVX),WORK(LD1I),
      &             WORK(LFI),WORK(LD1A),WORK(LFA),IPR,lSquare,ExFac)
 
@@ -820,7 +953,6 @@ C Close the one-electron integral file:
         END DO
         Close(LUInput)
       End If
-      Call qExit(ROUTINE)
       return
       End
 

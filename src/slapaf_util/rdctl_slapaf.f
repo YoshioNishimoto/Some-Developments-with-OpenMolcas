@@ -9,6 +9,8 @@
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
       Subroutine RdCtl_Slapaf(iRow,iInt,nFix,LuSpool,Dummy_Call)
+      use kriging_mod
+      use Symmetry_Info, only: Symmetry_Info_Get
       Implicit Real*8 (a-h,o-z)
 #include "real.fh"
 #include "WrkSpc.fh"
@@ -41,7 +43,6 @@
 ************************************************************************
 *                                                                      *
       iRout=2
-      Call QEnter('RdCtl_Slapaf')
       Expert=.False.
       Lu=6
 *                                                                      *
@@ -50,6 +51,7 @@
 *
 *-----Initiate some parameters
 *
+      Call Symmetry_Info_Get()
       Call Init_Slapaf(iRow)
       iPrint=nPrint(iRout)
       iSetAll=2**30 - 1
@@ -96,6 +98,13 @@ C     Write (Lu,'(A)') Char
 C     Write (Lu,*) iOptC
       If (Char.eq.BLine) Go To 999
       If (Char(1:1).eq.'*') Go To 999
+!     If (Char(1:4).eq.'AIL ') Go To 102
+!     If (Char(1:4).eq.'AIP ') Go To 104
+!     If (Char(1:4).eq.'AISP') Go To 105
+!     If (Char(1:4).eq.'AIME') Go To 107
+!     If (Char(1:4).eq.'AIBL') Go To 108
+!     If (Char(1:4).eq.'AIMB') Go To 109
+!     If (Char(1:4).eq.'L-VA') Go To 112
       If (Char(1:4).eq.'BAKE') Go To 926
       If (Char(1:4).eq.'C1-D') Go To 936
       If (Char(1:4).eq.'C2-D') Go To 937
@@ -125,14 +134,18 @@ C     Write (Lu,*) iOptC
       If (Char(1:4).eq.'INTE') Go To 902
       If (Char(1:4).eq.'IRC ') Go To 997
       If (Char(1:4).eq.'ITER') Go To 925
+      If (Char(1:4).eq.'KRIG') Go To 100
       If (Char(1:4).eq.'LAST') Go To 9280
       If (Char(1:4).eq.'LINE') Go To 9281
       If (Char(1:4).eq.'MAXS') Go To 915
+      If (Char(1:4).eq.'MAXD') Go To 916
       If (Char(1:4).eq.'MEP-'.or. Char(1:4).eq.'MEP ') Go To 964
       If (Char(1:4).eq.'MEPA'.or. Char(1:4).eq.'IRCA') Go To 322
+      If (Char(1:4).eq.'MEPC'.or. Char(1:4).eq.'IRCC') Go To 323
       If (Char(1:4).eq.'MEPS'.or. Char(1:4).eq.'IRCS') Go To 9971
       If (Char(1:4).eq.'MEPT'.or. Char(1:4).eq.'IRCT') Go To 321
       If (Char(1:4).eq.'MODE') Go To 942
+      If (Char(1:4).eq.'MXMI') Go To 106
       If (Char(1:4).eq.'NMEP'.or. Char(1:4).eq.'NIRC') Go To 965
       If (Char(1:4).eq.'NEWT') Go To 935
       If (Char(1:4).eq.'NOEM') Go To 991
@@ -156,6 +169,7 @@ C     Write (Lu,*) iOptC
       If (Char(1:4).eq.'RTRN') Go To 962
       If (Char(1:4).eq.'SCHL') Go To 927
       If (Char(1:4).eq.'SUPS') Go To 911
+      If (Char(1:4).eq.'TFOF') Go To 110
       If (Char(1:4).eq.'THER') Go To 9451
       If (Char(1:4).eq.'THRS') Go To 908
       If (Char(1:4).eq.'TOLE') Go To 909
@@ -435,6 +449,14 @@ c        iOptH = iOr(2,iAnd(iOptH,32))
       Call Get_F1(1,Beta)
       Go To 999
 *                                                                      *
+****** MAXD ************************************************************
+*                                                                      *
+ 916  Char=Get_Ln(LuRd)
+      If (Char.eq.BLine) Go To 916
+      If (Char(1:1).eq.'*') Go To 916
+      Call Get_F1(1,Beta_Disp)
+      Go To 999
+*                                                                      *
 ****** PRIN ************************************************************
 *                                                                      *
  920  Char=Get_Ln(LuRd)
@@ -471,6 +493,107 @@ c        iOptH = iOr(2,iAnd(iOptH,32))
       Call Get_I1(1,iTmp)
       MxItr=Min(iTmp,MxItr)
       Go To 999
+*                                                                      *
+****** KRIG ************************************************************
+*                                                                      *
+*     Activate Kriging
+*
+100   Kriging = .True.
+      Line_Search = .False.
+      Go To 999
+!*                                                                      *
+!****** AIMD ************************************************************
+!*                                                                      *
+!*      Analitical or numerical Matern derivatives
+!*
+!101   Char=Get_Ln(LuRd)
+!      If (Char.eq.'False'.or.Char.eq.'false') then
+!            anMd = .False.
+!      Else
+!            anMd = .True.
+!      EndIf
+!      Go To 999
+!*                                                                      *
+!****** AIL  ************************************************************
+!*                                                                      *
+!*     Width limits of the Matern function
+!*
+!102   Char=Get_Ln(LuRd)
+!      Call Get_F(1,lb,3)
+!      Go To 999
+!*                                                                      *
+!****** AIP  ************************************************************
+!*                                                                      *
+!*     Parameter of differentiability for Matern function
+!*
+!104   Char=Get_Ln(LuRd)
+!      Call Get_F1(1,pAI)
+!      If(pAI.gt.3.or.pAI.lt.1) anMd = .False.
+!      Go To 999
+!*                                                                      *
+!****** AISP ************************************************************
+!*                                                                      *
+!*     Defining the number of source points for the AI method
+!*
+!105   Char=Get_Ln(LuRd)
+!      Call Get_I1(1,nspAI)
+!      Go To 999
+*                                                                      *
+****** MXMI ************************************************************
+*                                                                      *
+*     Maximum number of Iterations for the Kriging method
+*
+106   Char=Get_Ln(LuRd)
+      Call Get_I1(1,Max_Microiterations)
+      Go To 999
+!*                                                                      *
+!****** AIME ************************************************************
+!*                                                                      *
+!*     Minimum energy differences of the last two iterations
+!*     (loop exit condition)
+!*
+!107   Char=Get_Ln(LuRd)
+!      Call Get_F1(1,Thr_microiterations)
+!      Go To 999
+!*                                                                      *
+!****** AIBL ************************************************************
+!*                                                                      *
+!*     Base line modification value to not ordinary
+!*     (Trend Function on GEK)
+!*
+!108   Char=Get_Ln(LuRd)
+!      Call Get_F1(1,blvAI)
+!      blAI = .True.
+!      Go To 999
+!*                                                                      *
+!****** AIMB ************************************************************
+!*                                                                      *
+!*     Base line modification value to maximum value of the Energy
+!*     This option supersedes any value assigned to blAI
+!*
+!109   Char=Get_Ln(LuRd)
+!      mblAI = .True.
+!      Go To 999
+*                                                                      *
+****** TFOF ************************************************************
+*                                                                      *
+*     adding energy to the last energy value of the base line
+*     This option supersedes any value assigned to blAI and mblAI
+*
+110   Char=Get_Ln(LuRd)
+      Call Get_F1(1,blavAI)
+      Go To 999
+!*                                                                      *
+!****** L-VA ************************************************************
+!*                                                                      *
+!*     Change the l value of the GEK.
+!*
+!112   Char=Get_Ln(LuRd)
+!      Set_l=.True.
+!      Call Get_F1(1,Value_l)
+!      Call Qpg_dScalar('Value_l',Found)
+!      If (.Not.Found) Call Put_dScalar('Value_l',Value_l)
+!      Go To 999
 *                                                                      *
 ****** BAKE ************************************************************
 *                                                                      *
@@ -734,6 +857,13 @@ c        iOptH = iOr(2,iAnd(iOptH,32))
       End If
       Go To 999
 *                                                                      *
+****** MEPC/IRCC *******************************************************
+*                                                                      *
+ 323  Char=Get_Ln(LuRd)
+      Call Get_F1(1,ThrMEP)
+      ThrMEP=Max(Zero,ThrMEP)
+      Go To 999
+*                                                                      *
 ****** REFE ************************************************************
 *                                                                      *
  966  Call GetMem('RefGeom','Allo','Real',ipRef,3*nsAtom)
@@ -963,7 +1093,7 @@ c        iOptH = iOr(2,iAnd(iOptH,32))
          Write(Lu_UDCTMP,*) 'END'
          Close (Lu_UDCTMP)
          Call Merge_Constraints('UDC','UDCTMP','UDC',nLambda,iRow_c)
-         Beta=Abs(dMEPStep)
+         Beta=Min(Beta,Abs(Valu))
          MEPnum=nLambda
       End If
 *
@@ -1190,6 +1320,17 @@ CGGd: Coherency with patch 7.1.615 !      If (lNmHss) nPrint(122)=10
 *                                                                      *
 ************************************************************************
 *                                                                      *
+*     In case of Kriging we use a sorting step in update_sl. For this
+*     to work we need the values of the internal coordinates for more
+*     points than the window size. Here we increase it with a factor of
+*     2 temporarily. The sorted list will still be of the original size.
+*     However, the default window for kriging is twice as large as
+*     for conventional calculations.
+*
+      If (Kriging) nWndw=4*nWndw  ! 2*2=4
+*                                                                      *
+************************************************************************
+*                                                                      *
 *.....Write out input parameters, No output if we didn't find the proper
 *     gradients on the runfile. We will come back!!!
 *
@@ -1224,7 +1365,6 @@ CGGd: Coherency with patch 7.1.615 !      If (lNmHss) nPrint(122)=10
 *                                                                      *
 ************************************************************************
 *                                                                      *
-      Call QExit('RdCtl_Slapaf')
       Return
 *
       End

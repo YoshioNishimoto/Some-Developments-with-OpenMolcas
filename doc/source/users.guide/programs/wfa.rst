@@ -173,7 +173,13 @@ Basic Keywords:
 :kword:`REFState`
   Index of the reference state for 1TDM and 1DDM analysis (default: 1).
 
+<<<<<<< HEAD
   .. xmldoc:: %%Keyword:REFState <basic>
+=======
+  .. xmldoc:: <KEYWORD MODULE="WFA" NAME="REFSTATE" APPEAR="Reference state" KIND="INT" LEVEL="BASIC" DEFAULT_VALUE="1">
+              %%Keyword:REFState <basic>
+              <HELP>
+>>>>>>> master
               Index of the reference state for 1TDM and 1DDM analysis.
 
 Advanced keywords for fine grain output options and debug information:
@@ -207,8 +213,17 @@ Advanced keywords for fine grain output options and debug information:
 :kword:`DOCTnumbers`
   Activate charge transfer number analysis and creation of :file:`*.om` files.
 
+<<<<<<< HEAD
   .. xmldoc:: %%Keyword:DOCTnumbers <advanced>
               Activate charge transfer number analysis and creation of *.om files.
+=======
+  .. xmldoc:: <KEYWORD MODULE="WFA" NAME="DOCTNUMBERS" APPEAR="Charge transfer numbers" KIND="SINGLE" LEVEL="ADVANCED">
+              %%Keyword:DOCTnumbers <advanced>
+              <HELP>
+              Activate charge transfer number analysis and creation of *.om files.
+              </HELP>
+              </KEYWORD>
+>>>>>>> master
 
 :kword:`H5ORbitals`
   Print the NOs, NTOs, and/or NDOs to the HDF file.

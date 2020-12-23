@@ -13,7 +13,7 @@
       SUBROUTINE CHO_FOCKTWO(rc,nSym,nBas,nDen,DoCoulomb,DoExchange,
      &           FactC,FactX,ipDLT,ipDSQ,ipFLT,ipFSQ,ipNocc,MinMem)
 
-**********************************************************************
+************************************************************************
 *  Author : F. Aquilante
 *
 *  Purpose:
@@ -60,7 +60,7 @@
 *  MinMem(nSym) : minimum amount of memory required to read
 *                 a single Cholesky vector in full storage
 *
-***********************************************************************
+************************************************************************
 
       Implicit Real*8 (a-h,o-z)
 
@@ -95,7 +95,7 @@
 **************************************************
 
 
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
 c      Debug=.true.
       Debug=.false.! to avoid double printing in SCF-debug
 #else
@@ -184,7 +184,6 @@ C ------------------
 C         ***QUIT*** bad initialization
          WRITE(6,*) 'Cho_FockTwo: bad initialization'
          rc=99
-         CALL QTrace()
          CALL Abend()
          nVec = -9999  ! dummy assignment - avoid compiler warnings
       End If
@@ -202,7 +201,6 @@ C         ***QUIT*** insufficient memory
          WRITE(6,*) 'NumCho= ',NumCho(jsym)
          WRITE(6,*) 'jsym= ',jsym
          rc = 205
-         CALL QTrace()
          CALL Abend()
          nBatch = -9999  ! dummy assignment
       End If
@@ -286,7 +284,7 @@ C --- Special trick for the vector L11 ; used to store X(a,Jb)
 
        kLab = kWab + kcount
 
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
        write(6,*) 'Batch ',iBatch,' of ',nBatch,': NumV = ',NumV
        write(6,*) 'Total allocated:     ',kRdMem,' at ',kWab
        write(6,*) 'Memory pointers KSQ1:',(KSQ1(i),i=1,nSym)
@@ -678,7 +676,7 @@ C -- Close Files
 
 
 c Print the Fock-matrix
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
 
       if(Debug) then !to avoid double printing in SCF-debug
 

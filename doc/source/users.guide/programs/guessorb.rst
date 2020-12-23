@@ -98,6 +98,23 @@ Keywords
   * 3 --- As for 2 but with orbitals printed in compact format.
   * 4 --- As for 3 but orbitals are printed in full format.
 
+<<<<<<< HEAD
+=======
+  .. xmldoc:: <KEYWORD MODULE="GUESSORB" NAME="PRMO" KIND="CUSTOM" LEVEL="BASIC">
+              %%Keyword: PRMO <basic>
+              <HELP>
+              Print the generated orbitals, an integer controls the output level.
+              Optionally, a floating point number limits the orbitals printed to
+              those with energy below the number (default 5.0 au).
+
+              1 -- Only occupation numbers and orbital energies are printed.
+              2 -- As for 1 but with an additional sorted list of orbital energies.
+              3 -- As for 2 but with orbitals printed in compact format.
+              4 -- As for 3 but orbitals are printed in full format.
+              </HELP>
+              </KEYWORD>
+
+>>>>>>> master
 :kword:`PRPOpulation`
   This keyword will print a Mulliken population analysis based on the
   assumptions guessorb make with regards to populating orbitals.

@@ -168,8 +168,16 @@ Optional general keywords
 
   .. xmldoc:: %%Keyword: POLArizability <basic>
               This specifies if the polarizability should be calculated or not.
+<<<<<<< HEAD
               0 Means no polarizability should be calculated.
               1 (Default) Means polarizability should be calculated.
+=======
+
+              0 -- Means no polarizability should be calculated.
+              1 -- (Default) Means polarizability should be calculated.
+              </HELP>
+              </KEYWORD>
+>>>>>>> master
 
 :kword:`NONEarestAtom`
   The program is written in the way that multipoles should be moved

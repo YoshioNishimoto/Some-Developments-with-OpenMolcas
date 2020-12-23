@@ -10,21 +10,17 @@
 *                                                                      *
 * Copyright (C) 1991, Roland Lindh                                     *
 ************************************************************************
-      SubRoutine PrGrad(Label,Grad,nGrad,lIrrep,Names,iPrint)
+      SubRoutine PrGrad(Label,Grad,nGrad,Names,iPrint)
 ************************************************************************
 *                                                                      *
 * Object: to print set gradient with respect to the symmetrical dis-   *
 *         placements.                                                  *
 *                                                                      *
-* Called from:                                                         *
-*                                                                      *
-* Calling    : QEnter                                                  *
-*              QExit                                                   *
-*                                                                      *
 *     Author: Roland Lindh, Dept. of Theoretical Chemistry,            *
 *             University of Lund, SWEDEN                               *
 *             October '91                                              *
 ************************************************************************
+      use Symmetry_Info, only: lIrrep
       Implicit Real*8 (A-H,O-Z)
 #include "Molcas.fh"
 #include "real.fh"
@@ -32,9 +28,7 @@
       Real*8 CGrad(3,MxAtom)
       Character CNames(MxAtom)*(LENIN5)
       Character Label*(*), Names(nGrad)*(LENIN6)
-      Character lIrrep(0:7)*3, Namei*(LENIN5)
-*
-*     Call qEnter('PrGrad')
+      Character Namei*(LENIN5)
 *
       Write (6,*)
       Call Banner(Label,1,Len(Label)+30)
@@ -43,21 +37,17 @@
       If (.True.) then
          Call TrGrd_Alaska_(CGrad,CNames,Grad,nGrad,iCen)
          Write (6,'(1x,A,A)') ' Irreducible representation: ',lIrrep(0)
-         Write (6,'(1x,A)')
-     &       '---------------------------------------------------------'
-         Write (6,'(1x,A)')
-     &       '                    X             Y             Z        '
-         Write (6,'(1x,A)')
-     &       '---------------------------------------------------------'
+         Write (6,'(1x,90A     )') ('-',i=1,90)
+         Write (6,'(7x,3(23x,A))')  'X','Y','Z'
+         Write (6,'(1x,90A     )') ('-',i=1,90)
          Do iGrad = 1, iCen
             TempX = CGrad(1,iGrad)
             TempY = CGrad(2,iGrad)
             TempZ = CGrad(3,iGrad)
             Namei = CNames(iGrad)
-            Write (6,'(2X,A,3X,3F14.8)') Namei, TempX, TempY, TempZ
+            Write (6,'(2X,A,3X,3ES24.14)') Namei, TempX, TempY, TempZ
          End Do
-         Write (6,'(1x,A)')
-     &       '---------------------------------------------------------'
+         Write (6,'(1x,90A     )') ('-',i=1,90)
       else
 *
 *        Modified by Luca De Vico november 2005 Teokem
@@ -87,7 +77,6 @@
       EndIf
       Write (6,*)
 *
-*     Call qExit('PrGrad')
       Return
 c Avoid unused argument warnings
       If (.False.) Call Unused_integer(iPrint)

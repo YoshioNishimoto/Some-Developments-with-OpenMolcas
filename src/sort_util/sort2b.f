@@ -47,13 +47,12 @@
 *                                                                      *
 **** M. Fuelscher and P.-Aa. Malmqvist, Univ. of Lund, Sweden, 1991 ****
 *
+      use srt2
       Implicit Real*8 (A-H,O-Z)
 *
-#include "TwoDef.fh"
 #include "TwoDat.fh"
 #include "srt0.fh"
 #include "srt1.fh"
-#include "srt2.fh"
 
 #include "SysDef.fh"
 #include "print.fh"
@@ -67,7 +66,7 @@
 *     pick up the print level                                          *
 *----------------------------------------------------------------------*
 *
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       iRout = 86
       iPrint = nPrint(iRout)
       If ( iPrint.gt.5 ) then
@@ -106,7 +105,6 @@
      &      '*** Error in SORT2B ***'
             Write(6,'(2X,A)') 'nSave = 0'
             Write(6,*)
-            Call qTrace
             Call xFlush(6)
             Call Abend()
          End If
@@ -122,7 +120,6 @@
             Write(6,'(2X,A)') 'An inconsistency has been deteced'
             Write(6,'(2X,A)') 'lVRec > mxVRec '
             Write(6,*)
-            Call qTrace
             Call xFlush(6)
             Call Abend()
          End If
@@ -138,7 +135,6 @@
             Write(6,'(2X,A)') 'An inconsistency has been deteced'
             Write(6,'(2X,A)') 'llVBin # lVRec'
             Write(6,*)
-            Call qTrace
             call xFlush(6)
             Call Abend()
          End If
@@ -159,7 +155,7 @@
             iOptIO=0
             Call dDAFILE(LuTwo,iOptIO,[0.0d0],lStRec,mDaTwo)
          End If
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
          If ( iPrint.ge.10 ) then
            Write (6,*) ' write record: iOrd,iDaTwo ',iOrd,iDaTwo
          End If

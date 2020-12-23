@@ -22,23 +22,24 @@
             the spin-orbit interaction. As a starting point it uses the results
             of a RASSI calculation for the ground and several excited spin-orbital
             multiplets.
+
             The following quantities can be computed:
-            ||
-            ||1. Parameters of pseudospin magnetic Hamiltonians:
-            ||   a) First order (linear after pseudospin) Zeeman splitting tensor (g tensor),
-            ||      including the determination of the sign of the product gX*gY*gZ
-            ||   b) Second order (bilinear after pseudospin) zero-field splitting tensor (D tensor)
-            ||   c) Higher order zero-field splitting tensors (D^2, D^4, D^6, ... etc.)
-            ||   d) Higher order Zeeman splitting tensors (G^1, G^3, G^5, ... , etc.)
-            ||   e) Angular Moments along the main magnetic axes
-            ||
-            ||2. Crystal-Field parameters for the ground atomic multiplet for lanthanides
-            ||
-            ||3. Static magnetic properties:
-            ||   a) Van Vleck susceptibility tensor
-            ||   b) Powder magnetic susceptibility function
-            ||   c) Magnetization vector for specified directions of the applied magnetic field
-            ||   d) Powder magnetization
+
+            1. Parameters of pseudospin magnetic Hamiltonians:
+              a) First order (linear after pseudospin) Zeeman splitting tensor (g tensor),
+                 including the determination of the sign of the product gX*gY*gZ
+              b) Second order (bilinear after pseudospin) zero-field splitting tensor (D tensor)
+              c) Higher order zero-field splitting tensors (D^2, D^4, D^6, ... etc.)
+              d) Higher order Zeeman splitting tensors (G^1, G^3, G^5, ... , etc.)
+              e) Angular Moments along the main magnetic axes
+
+            2. Crystal-Field parameters for the ground atomic multiplet for lanthanides
+
+            3. Static magnetic properties:
+              a) Van Vleck susceptibility tensor
+              b) Powder magnetic susceptibility function
+              c) Magnetization vector for specified directions of the applied magnetic field
+              d) Powder magnetization
             </HELP>
 
 The :program:`SINGLE_ANISO` program is a routine which allows the non-perturbative calculation of effective spin (pseudospin) Hamiltonians and static magnetic properties of mononuclear complexes and fragments completely *ab initio*, including the spin-orbit interaction. As a starting point it uses the results of :program:`RASSI` calculation for the ground and several excited spin-orbital multiplets. A short description of methodology and applications can be found in :cite:`Chibotaru:1`, :cite:`Chibotaru:2`. The second version of the :program:`SINGLE_ANISO` program is able to calculate the following quantities:
@@ -97,7 +98,7 @@ Restart files & options
 .. class:: filelist
 
 :file:`RUNFILE`
-  The file of communication between different modules in |molcas|. Normally it is already present in :file:`i$WorkDir`.
+  The file of communication between different modules in |molcas|. Normally it is already present in :file:`$WorkDir`.
   The :program:`SINGLE_ANISO` may be restarted as many times as necessary in the same working directory where the previous :program:`RASSI` was succesfully executed. The :file:`RUNFILE` contains then all necessary data.
 
 :file:`ANISOINPUT`
@@ -221,10 +222,18 @@ Optional general keywords to control the input
               %%Keyword: TINT <basic>
               <HELP>
               Specifies the temperature points for the evaluation of the magnetic susceptibility.
+<<<<<<< HEAD
               The program will read four numbers: Tmin, Tmax, nT, and dltT0. Units of temperature = Kelvin (K).
               ||Tmin  -- the minimal temperature (Default 0.0 K)
               ||Tmax  -- the maximal temperature (Default 300.0 K)
               ||nT    -- number of temperature points (Default 101)
+=======
+              The program will read three numbers: Tmin, Tmax, nT. Units of temperature = kelvin (K).
+
+              Tmin -- the minimal temperature (Default 0.0 K)
+              Tmax -- the maximal temperature (Default 300.0 K)
+              nT   -- number of temperature points (Default 101)
+>>>>>>> master
               </HELP>
               </KEYWORD>
 
@@ -250,10 +259,18 @@ Optional general keywords to control the input
               %%Keyword: HINT <basic>
               <HELP>
               Specifies the field points for the evaluation of the molar magnetization.
+<<<<<<< HEAD
               The program will read four numbers: Hmin, Hmax, nH, and dltH0. Units of magnetic field = Tesla (T).
               ||Hmin  -- the minimal field (Default 0.0 T)
               ||Hmax  -- the maximal field (Default 300.0 T)
               ||nH    -- number of field points (Default 101)
+=======
+              The program will read four numbers: Hmin, Hmax, nH, and dltH0. Units of magnetic field = tesla (T).
+
+              Hmin -- the minimal field (Default 0.0 T)
+              Hmax -- the maximal field (Default 300.0 T)
+              nH   -- number of field points (Default 101)
+>>>>>>> master
               </HELP>
               </KEYWORD>
 
@@ -270,7 +287,10 @@ Optional general keywords to control the input
   .. xmldoc:: <KEYWORD MODULE="SINGLE_ANISO" NAME="TMAG" KIND="REAL" LEVEL="BASIC">
               %%Keyword: TMAG <basic>
               <HELP>
-              Specifies the temperature(s) at which the field-dependent magnetization is calculated. The program will read the number of temperature points (NTemp) and then an array of
+              Specifies the temperature(s) at which the field-dependent magnetization is calculated.
+              The program will read the number of temperature points (NTemp) and then an array of real
+              numbers specifying the temperatures (in kelvin) at which magnetization is to be computed.
+              Default is to compute magnetization at one temperature point (2.0 K).
               </HELP>
               </KEYWORD>
 
@@ -422,7 +442,7 @@ Optional general keywords to control the input
               This keyword allows computation of the magnetic susceptibility at experimental
               temperature points. On the line below the keyword, the number of experimental
               points NT is defined, and on the next NT lines the program reads the experimental
-              temperature (in K) and the experimental magnetic susceptibility (in cm^3Kmol^{-1} ).
+              temperature (in K) and the experimental magnetic susceptibility (in cm^3 K mol^-1).
               TEXP and TINT keywords are mutually exclusive. The SINGLE_ANISO will also print the
               standard deviation from the experiment.
               </HELP>
@@ -474,8 +494,9 @@ Optional general keywords to control the input
               %%Keyword: PRLV <basic>
               <HELP>
               This keyword controls the print level.
-              ||2 -- normal. (Default)
-              ||3 or larger (debug)
+
+              2  -- normal. (Default)
+              3+ -- (debug)
               </HELP>
               </KEYWORD>
 
@@ -528,15 +549,16 @@ Optional general keywords to control the input
               %%Keyword: QUAX <basic>
               <HELP>
               This keyword controls the quantization axis for the computation of the Crystal-Field parameters acting on the ground atomic multiplet of a lanthanide. On the next line, the program will read one of the three values:
-              ||1 -- Zm of the ground pseudospin multiplet
-              ||2 -- Zm of the ground atomic multiplet
-              ||3 -- defined by the user on the following line
+
+              1 -- Zm of the ground pseudospin multiplet
+              2 -- Zm of the ground atomic multiplet
+              3 -- defined by the user on the following line
               </HELP>
               </KEYWORD>
 
 :kword:`UBAR`
   This keyword allows estimation of the structuere of the blocking barier of a single-molecule magnet. The default is not to compute it.
-  The method prints transition matix elements of the magnetic moment according to the :numref:`fig:ubar`.
+  The method prints transition matrix elements of the magnetic moment according to the :numref:`fig:ubar`.
 
   .. figure:: ubar.*
      :name: fig:ubar
@@ -550,11 +572,11 @@ Optional general keywords to control the input
   The data is given in Bohr magnetons (:math:`\mu_{\text{Bohr}}`).
   The keyword is used with no arguments.
 
-  .. xmldoc:: <KEYWORD MODULE="SINGLE_ANISO" NAME="UBAR" KIND="STRING" LEVEL="BASIC">
+  .. xmldoc:: <KEYWORD MODULE="SINGLE_ANISO" NAME="UBAR" KIND="SINGLE" LEVEL="BASIC">
               %%Keyword: UBAR <basic>
               <HELP>
               This keyword allows estimation of the structuere of the blocking barier of a single-molecule magnet. The default is not to compute it.
-              The method prints transition matix elements of the magnetic moment connecting states with opposite magnetisations.
+              The method prints transition matrix elements of the magnetic moment connecting states with opposite magnetisations.
               The keyword is used with no arguments.
               </HELP>
               </KEYWORD>
