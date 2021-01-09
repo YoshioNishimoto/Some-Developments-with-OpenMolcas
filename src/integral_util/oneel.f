@@ -30,6 +30,11 @@
       Character*16, Dimension(:), Allocatable :: plabs
       Character Label*8, LBL*4
       Character L_Temp*8
+
+C-tbp-npy-start
+      character filename*16
+C-tbp-npy-end
+
       Real*8 CCoor(3,nComp), rNuc(nComp), PtChrg(nGrid)
       Integer ip(nComp), lOper(nComp), iChO(nComp), iStabO(0:7)
       dimension opmol(*),opnuc(*),iopadr(ncomp,*)
@@ -120,6 +125,7 @@
 #ifdef _DEBUGPRINT_
       Call PrMtrx(Label,lOper,nComp,ip,Array)
 #endif
+
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -304,6 +310,17 @@ c               Close(28)
                L_Temp=Label
                iComp_=iComp
             End If
+C-tbp-npy-start
+            write(filename,'(A8,A1,I3,A4)') L_Temp,'_',iComp_,'.npy'
+            do i = 1,12
+               if (filename(i:i) .eq. ' ') then
+                  filename(i:i) = '_'
+               end if
+            end do
+            call npy_write_dbl_vec(filename, n2Tri(lOper(iComp)),
+     *                             Array(ip(iComp)))
+C-tbp-npy-end
+
             Call WrOne(iRC,iOpt,L_Temp,iComp_,Array(ip(iComp)),iSmLbl)
 
             If (iRC.ne.0) then
@@ -340,3 +357,82 @@ c               Close(28)
 *                                                                      *
       Return
       End
+C-tbp-npy-start
+      subroutine npy_write_dbl_vec(filename, n, vec)
+C
+C     Thomas Bondo Pedersen, Dec. 2020
+C
+C     Write double-precision vector to npy file
+C
+C     Note:
+C     - uses stream io (f2003 standard)
+C     - uses 'i0' format specifier (f95 standard)
+C     - avoids gpopen/gpclose but uses the same
+C       table to find a free unit number
+C
+C
+      implicit none
+      character*(*) filename
+      integer n
+      real*8 vec(n)
+
+      integer*4 header_len
+      integer lunit, i, l
+      logical done
+
+      integer maxlen_dict_str
+      parameter (maxlen_dict_str = 85)
+      character*(maxlen_dict_str) dict_str
+      character*5 magic_str
+      character magic_num, major, minor
+
+      integer isfreeunit
+      external isfreeunit
+
+      if (n .le. 0) return ! nothing to write
+
+      magic_str = 'NUMPY'
+      magic_num = achar(147) ! x93
+      major = achar(2) ! npy file format, major version
+      minor = achar(0) ! npy file format, minor version
+
+
+      ! note that the format specifier "I0" will only work properly
+      ! with a fortran95-compliant compiler...
+      write(dict_str,'(A,I0,A)')
+     * "{'descr': '<f8', 'fortran_order': True, 'shape': (",
+     * n,",), }"
+
+      l = maxlen_dict_str
+      done = .false.
+      do while (.not. done .and. l .gt. 54)
+         if (dict_str(l:l) .eq. '}') then
+            done = .true.
+         else
+            l = l - 1
+         end if
+      end do
+      if (.not. done) then
+         write(6,*) 'npy_write_dbl_vec: unable to construct header'
+         call abend()
+      end if
+      do while (l.lt.maxlen_dict_str .and. mod(l + 11, 16) .ne. 0)
+          l = l + 1
+          dict_str(l:l) = " "
+      end do
+      dict_str(l:l) = achar(10)
+      header_len = INT(l,4)
+
+      l = 7
+      lunit = isfreeunit(l)
+      open(unit=lunit, file=filename, form='unformatted',
+     *     access='stream')
+      write(lunit) magic_num, magic_str, major, minor
+      write(lunit) header_len
+      write(lunit) dict_str(1:header_len)
+      write(lunit) (vec(i), i=1,n)
+      close(unit=lunit)
+
+      return
+      end
+C-tbp-npy-end

@@ -443,22 +443,26 @@
 *
       If (EMFR) Then
          Do k = 1, SIZE(KVectors,2)
-         temp=Sqrt(KVectors(1,k)**2+KVectors(2,k)**2+kVectors(3,k)**2)
-         temp = (Two*Pi)/temp
-         Write (LuWr,'(15X,A)')
-     &        '   Transition moment intergrals'
-         Write (LuWr,'(15X,A,3(F7.4,1X),A)')
-     &                       '   The normalized wavevector k: (',
-     &   (kVectors(i,k)*temp,i=1,3),')'
-         Write (LuWr,'(15X,A,(F10.4,1X),A)')
-     &                       '   Wavelength:        ',
-     &   Temp,'a.u.'
-         Write (LuWr,'(15X,A,(F10.4,1X),A)')
+           temp=Sqrt(KVectors(1,k)**2+KVectors(2,k)**2+kVectors(3,k)**2)
+           if (abs(temp) .gt. 1d-14) then
+             temp = (Two*Pi)/temp
+           else
+             temp = 1d99
+           end if
+           Write (LuWr,'(15X,A)')
+     &        '   Transition moment integrals'
+           Write (LuWr,'(15X,A,3(F20.8,1X),A)')
+     &                       '   Wavevector k: (',
+     &     (kVectors(i,k),i=1,3),')'
+           Write (LuWr,'(15X,A,(F20.8,1X),A)')
+     &                         '   Wavelength:        ',
+     &     Temp,'a.u.'
+           Write (LuWr,'(15X,A,(F20.8,1X),A)')
      &                       '                      ',
-     &   Temp*Angstr,'Angstrom'
-         Write (LuWr,'(15X,A,(F10.4,1X),A)')
+     &     Temp*Angstr,'Angstrom'
+           Write (LuWr,'(15X,A,(F20.8,1X),A)')
      &                       '                      ',
-     &   Temp*Angstr/Ten,'nm'
+     &     Temp*Angstr/Ten,'nm'
          End Do
       End If
 *                                                                      *

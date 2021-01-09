@@ -3691,18 +3691,28 @@ c
 
       Call mma_Allocate(KVectors,3,nVectors,Label='KVectors')
 
-      Do  k = 1, nVectors
+      Do k = 1, nVectors
          If (EMFR) Kword = Get_Ln(LuRd)
          Call Get_F(1,KVectors(:,k),3)
          Temp=Sqrt(KVectors(1,k)**2+KVectors(2,k)**2+KVectors(3,k)**2)
-         KVectors(:,k)=KVectors(:,k)/Temp
+         If (Temp .gt. 1d-14) Then
+            KVectors(:,k)=KVectors(:,k)/Temp
+         Else
+            KVectors(:,k)=0d0
+         End If
 *        Get the wavelength in atomic units.
          Call Get_F1(4,Lambda)
          If (Index(KWord,'ANGSTROM').ne.0) Lambda  = Lambda/angstr
          If (Index(KWord,'NANOMETER').ne.0) Then
             Lambda  = Ten*Lambda/angstr
          End If
-         KVectors(:,k)=((Two*Pi)/Lambda)*KVectors(:,k)
+         If (Lambda .lt. 1d-14) Then
+            KVectors(:,k)=1d15
+         Else If (Lambda .gt. 1d14) Then
+            KVectors(:,k)=0d0
+         Else
+            KVectors(:,k)=((Two*Pi)/Lambda)*KVectors(:,k)
+         End If
       End Do
       EMFR=.True.
       Go To 998
