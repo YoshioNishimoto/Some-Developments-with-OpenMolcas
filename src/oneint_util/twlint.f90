@@ -507,7 +507,7 @@
 ! -- Using the the rotation matrix in the ZXZ convention,
 ! -- With the Euler angles alpha:[0, 2\pi], beta:[0, \pi], and gamma:[0, 2\pi].
 
-    SubRoutine OAM_xyz(Alpha, Beta, Gamma,a1,b,c,xp,yp,zp,expo,m,n,k0,w0)
+    SubRoutine OAM_xyz(Alpha,Beta,Gamma,xp,yp,zp,expo,k0,w0)
 
       implicit none
       Real*8 :: Alpha, Beta, Gamma
@@ -608,7 +608,7 @@
                                     &*2.d0**dble(n-2*r1)/fact(r1)/fact(s1)/fact(t1)/fact(n-2*r1-s1-t1)
 !
 !                              Sum over d, f, g, h
-                               Do d=0,a
+                               Do d=0,a1
                                   Do f=0,(d+s+s1)/2
                                      Do g=0,d+s+s1-2*f
                                         Do h=0,d+s+s1-2*f
