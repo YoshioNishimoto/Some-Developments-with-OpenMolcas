@@ -510,16 +510,18 @@
     SubRoutine OAM_xyz(Alpha,Beta,Gamma)
 
       implicit none
-      Real*8 :: Alpha(nAlpha), Beta(nBeta), Gamma(nGamma)
+ !     Real*8 :: Alpha(nAlpha), Beta(nBeta), Gamma(nGamma)
       Integer :: a1,b,c,m,n
       Real*8  :: xp, yp, zp, expo
       Real*8  :: k0, w0
       Complex*16 :: gau_her
       Complex*16,parameter :: cone=(1.d0,0.d0), eye=(0.d0,1.d0), &
                               czero=(0.d0,0.d0) !cone=(1.d0,0.d0)=1+0.i
+!
       Real*8, parameter :: pi=3.141592653589793d0
       Integer :: r,s,t,r1,s1,t1
       Integer :: d,f,g,h,d1,f1,g1,d2,f2
+!
       Real*8  :: cx,cy,cz,bx,by,bz,cxx,cyy,czz,cxy,cyz,czx
       Complex*16 :: AA, BB, CC, DD, FF
 !
