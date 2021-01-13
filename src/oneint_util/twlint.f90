@@ -459,7 +459,7 @@
             zVxyz=zQxyz
          End If
 !
-         Call OAM_xyz(Alpha, Beta, Gamma,a1,b,c,xp,yp,zp,expo,m,n,k0,w0)
+         Call OAM_xyz(Alpha,Beta,Gamma)
 !
 !         call OAM_xy(zVxyz,zQxyz,nZeta,la,lb,nOrdOp,Array(ipAOff),Array(ipBOff),       &
 !                     Array(ipRes),nComp)
