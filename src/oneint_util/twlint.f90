@@ -459,7 +459,7 @@
             zVxyz=zQxyz
          End If
 !
-         Call OAM_xyz(Alpha,Beta,Gamma,a1,b,c,m,n,xp,yp,zp,expo,k0,w0)
+         Call OAM_xyz(Alpha,Beta,Gamma,a1,b,c,m,n,xp,yp,zp,expo,k0,w0,nZeta)
 !
 !         call OAM_xy(zVxyz,zQxyz,nZeta,la,lb,nOrdOp,Array(ipAOff),Array(ipBOff),       &
 !                     Array(ipRes),nComp)
@@ -507,118 +507,122 @@
 ! -- Using the the rotation matrix in the ZXZ convention,
 ! -- With the Euler angles alpha:[0, 2\pi], beta:[0, \pi], and gamma:[0, 2\pi].
 
-    SubRoutine OAM_xyz(Alpha,Beta,Gamma,a1,b,c,m,n,xp,yp,zp,expo,k0,w0)
+    SubRoutine OAM_xyz(Alpha,Beta,Gamma,a1,b,c,m,n,xp,yp,zp,expo,k0,w0,nZeta)
 
-      implicit none
+      Implicit None
       Real*8 :: Alpha(nZeta), Beta(nZeta), Gamma(nZeta)
-      Integer :: a1,b,c,m,n
-      Real*8  :: xp, yp, zp, expo
-      Real*8  :: k0, w0
-      Complex*16 :: gau_her
+      Integer :: nZeta,a1,b,c,m,n
+      Real*8  :: xp, yp, zp, expo, k0, w0
+
+      Complex*16 :: gau_her(nZeta)
       Complex*16,parameter :: cone=(1.d0,0.d0), eye=(0.d0,1.d0), &
-                              czero=(0.d0,0.d0) !cone=(1.d0,0.d0)=1+0.i
+                              czero=(0.d0,0.d0) ! cone=(1.d0,0.d0)=1+0.i
 !
       Real*8, parameter :: pi=3.141592653589793d0
       Integer :: r,s,t,r1,s1,t1
       Integer :: d,f,g,h,d1,f1,g1,d2,f2
 !
-      Real*8  :: cx,cy,cz,bx,by,bz,cxx,cyy,czz,cxy,cyz,czx
-      Complex*16 :: AA, BB, CC, DD, FF
+      Real*8  :: cx(nZeta),cy(nZeta),cz(nZeta),    &
+                 bx(nZeta),by(nZeta),bz(nZeta),    &
+                 cxx(nZeta),cyy(nZeta),czz(nZeta), &
+                 cxy(nZeta),cyz(nZeta),czx(nZeta)
 !
-      Complex*16 :: ctmp1, ctmp2, ctmp3, ctmp4, ctmp5, ctmp6, &
-                    ctmp7, ctmp8, ctmp9, ctmp10, ctmp11
-      Complex*16 :: ctmp12, ctmp13, ctmp14, ctmp15, ctmp16,   &
-                    ctmp17, ctmp18, ctmp19, ctmp20
+      Complex*16 :: AA(nZeta), BB(nZeta), CC(nZeta), &
+                    DD(nZeta), FF(nZeta)
+!
+      Complex*16 :: ctmp1(nZeta), ctmp2(nZeta), ctmp3(nZeta), &
+                    ctmp4(nZeta), ctmp5(nZeta), ctmp6(nZeta), &
+                    ctmp7(nZeta)
 !
       Real*8, external :: fact  ! Function to calculate factorial
 !
 !- Following are parameters in "S29 - S45":
 !
-    bx=2.d0**0.5d0/w0*(-dcos(Beta)*dcos(Gamma)*dsin(Alpha)-dcos(Alpha)*dsin(Gamma))
-    by=2.d0**0.5d0/w0*(dcos(Alpha)*dcos(Beta)*dcos(Gamma)-dsin(Alpha)*dsin(Gamma))
-    bz=2.d0**0.5d0/w0*(dcos(Gamma)*dsin(Beta))
+    bx = 2.d0**0.5d0/w0*(-dcos(Beta)*dcos(Gamma)*dsin(Alpha)-dcos(Alpha)*dsin(Gamma))
+    by = 2.d0**0.5d0/w0*(dcos(Alpha)*dcos(Beta)*dcos(Gamma)-dsin(Alpha)*dsin(Gamma))
+    bz = 2.d0**0.5d0/w0*(dcos(Gamma)*dsin(Beta))
 !
-    cx=2.d0**0.5d0/w0*(dcos(Alpha)*dcos(Gamma)-dcos(Beta)*dsin(Alpha)*dsin(Gamma))
-    cy=2.d0**0.5d0/w0*(dcos(Gamma)*dsin(Alpha)+dcos(Alpha)*dcos(Beta)*dsin(Gamma))
-    cz=2.d0**0.5d0/w0*dsin(Beta)*dsin(Gamma)
+    cx = 2.d0**0.5d0/w0*(dcos(Alpha)*dcos(Gamma)-dcos(Beta)*dsin(Alpha)*dsin(Gamma))
+    cy = 2.d0**0.5d0/w0*(dcos(Gamma)*dsin(Alpha)+dcos(Alpha)*dcos(Beta)*dsin(Gamma))
+    cz = 2.d0**0.5d0/w0*dsin(Beta)*dsin(Gamma)
 !
-    cxx=(dcos(Alpha)**2.d0+dcos(Beta)**2.d0*dsin(Alpha)**2.d0)/w0**2.d0
-    cyy=(dcos(Alpha)**2.d0*dcos(Beta)**2.d0+dsin(Alpha)**2.d0)/w0**2.d0
-    czz=(dsin(Beta)**2.d0)/w0**2.d0
+    cxx = (dcos(Alpha)**2.d0+dcos(Beta)**2.d0*dsin(Alpha)**2.d0)/w0**2.d0
+    cyy = (dcos(Alpha)**2.d0*dcos(Beta)**2.d0+dsin(Alpha)**2.d0)/w0**2.d0
+    czz = (dsin(Beta)**2.d0)/w0**2.d0
 !
-    cxy=2.d0*dsin(Alpha)*dcos(Alpha)*dsin(Beta)**2.d0/w0**2.d0
-    cyz=2.d0*dcos(Alpha)*dsin(Beta)*dcos(Beta)/w0**2.d0
-    czx=-2.d0*dcos(Beta)*dsin(Alpha)*dsin(Beta)/w0**2.d0
+    cxy = 2.d0*dsin(Alpha)*dcos(Alpha)*dsin(Beta)**2.d0/w0**2.d0
+    cyz = 2.d0*dcos(Alpha)*dsin(Beta)*dcos(Beta)/w0**2.d0
+    czx = -2.d0*dcos(Beta)*dsin(Alpha)*dsin(Beta)/w0**2.d0
 !
-    AA=expo*cone+cone*cyy-cone*cxy**2.d0/4.d0/(cone*expo+cone*cxx)                              ! A
+    AA = expo*cone+cone*cyy-cone*cxy**2.d0/4.d0/(cone*expo+cone*cxx)                              ! A
 !
-    BB=cone*2.d0*expo*yp+eye*dcos(Alpha)*dsin(Beta)*k0 &
+    BB = cone*2.d0*expo*yp+eye*dcos(Alpha)*dsin(Beta)*k0 &
          &-cone*(cone*2.d0*expo*xp-eye*dsin(Alpha)*dsin(Beta)*k0)*cxy/2.d0/(cone*expo+cone*cxx) ! B
 !
-    CC=cone*cxy*czx/2.d0/(cone*expo+cone*cxx)-cone*cyz                                          ! C
+    CC = cone*cxy*czx/2.d0/(cone*expo+cone*cxx)-cone*cyz                                          ! C
 !
-    DD=cone*expo+cone*czz-cone*czx**2.d0/4.d0/(cone*expo+cone*cxx)-cone*CC**2.d0/4.d0/AA        ! D
+    DD = cone*expo+cone*czz-cone*czx**2.d0/4.d0/(cone*expo+cone*cxx)-cone*CC**2.d0/4.d0/AA        ! D
 !
-    FF=cone*2.d0*expo*zp-cone*(cone*2.d0*expo*xp-eye*dsin(Alpha)*dsin(Beta)*k0)*  &
+    FF = cone*2.d0*expo*zp-cone*(cone*2.d0*expo*xp-eye*dsin(Alpha)*dsin(Beta)*k0)*  &
          czx/2.d0/(cone*expo+cone*cxx)                                            &
          &+cone*BB*CC/2.d0/AA - eye*dcos(Beta)*k0                                               ! F
 !
 !
-    gau_her=czero
-    ctmp1=czero
-    ctmp2=czero
-    ctmp3=czero
-    ctmp4=czero
-    ctmp5=czero
+    gau_her = czero
+    ctmp1 = czero
+    ctmp2 = czero
+    ctmp3 = czero
+    ctmp4 = czero
+    ctmp5 = czero
 !
 !   The exponential terms in equation (S28)
-    ctmp6=-cone*expo*xp**2.d0 &
+    ctmp6 = -cone*expo*xp**2.d0 &
          &+(cone*2.d0*expo*xp-eye*dsin(Alpha)*dsin(Beta)*k0)**2.d0/4.d0/(cone*expo+cone*cxx) &
          &-cone*expo*yp**2.d0 &
          &+BB**2.d0/4.d0/AA   &
          &-cone*expo*zp**2.d0 &
          &+FF**2.d0/4.d0/DD
 !
-    ctmp7=cdexp(ctmp6)
+    ctmp7 = cdexp(ctmp6)
 !
     If ((m .lt. 0) .or. (n .lt. 0)) Then
-       gau_her=czero
+       gau_her = czero
     Else
 !
 !      Sum over r, s, t
-       Do r=0,m/2           ! 'm' comes from the Hermite polynomials H_m(x) used in (S27)
+       Do r = 0,m/2           ! 'm' comes from the Hermite polynomials H_m(x) used in (S27)
 !                              m = 0, 1, ...
-          Do s=0, m-2*r
-             Do t=0,m-2*r
-                ctmp1=czero
+          Do s = 0, m-2*r
+             Do t = 0,m-2*r
+                ctmp1 = czero
                 If ((s+t) .le. (m-2*r)) Then
 !
 !                  ctmp1: The first fraction in equation (S28)
-                   ctmp1=cone*(1.d0)**dble(r)*fact(m)*cx**dble(s)*cy**dble(t)*cz**dble(m-2*r-s-t) & ! a negative base of type real cannot be raised to a real power:-1.d0-->1.d0
+                   ctmp1 = cone*(1.d0)**dble(r)*fact(m)*cx**dble(s)*cy**dble(t)*cz**dble(m-2*r-s-t) & ! a negative base of type real cannot be raised to a real power:-1.d0-->1.d0
                         &*2.d0**dble(m-2*r)/fact(r)/fact(s)/fact(t)/fact(m-2*r-s-t)
 !
 !                  Sum over r1(r'), s1(s'), t1(t')
-                   Do r1=0,n/2                       ! 'n' comes from the Hermite polynomials H_n(x) used in (S27)
+                   Do r1 = 0,n/2                       ! 'n' comes from the Hermite polynomials H_n(x) used in (S27)
 !                                                       n = 0, 1, ...
-                      Do s1=0,n-2*r1
-                         Do t1=0,n-2*r1
-                            ctmp2=czero
+                      Do s1 = 0,n-2*r1
+                         Do t1 = 0,n-2*r1
+                            ctmp2 = czero
                             If ((s1+t1) .le. (n-2*r1)) Then
 !
 !                              ctmp2: The 2nd fraction from the first term in (S28)
-                               ctmp2=cone*(-1.d0)**dble(r1)*fact(n)*bx**dble(s1)*by**dble(t1)*bz**dble(n-2*r1-s1-t1) & ! (-1.d0) --> (1.d0)
+                               ctmp2 = cone*(-1.d0)**dble(r1)*fact(n)*bx**dble(s1)*by**dble(t1)*bz**dble(n-2*r1-s1-t1) & ! (-1.d0) --> (1.d0)
                                     &*2.d0**dble(n-2*r1)/fact(r1)/fact(s1)/fact(t1)/fact(n-2*r1-s1-t1)
 !
 !                              Sum over d, f, g, h
-                               Do d=0,a1
-                                  Do f=0,(d+s+s1)/2
-                                     Do g=0,d+s+s1-2*f
-                                        Do h=0,d+s+s1-2*f
-                                           ctmp3=czero
+                               Do d = 0,a1
+                                  Do f = 0,(d+s+s1)/2
+                                     Do g = 0,d+s+s1-2*f
+                                        Do h = 0,d+s+s1-2*f
+                                           ctmp3 = czero
                                            If ((g+h) .le. (d+s+s1-2*f)) Then
 !
 !                                             The 2nd & 3rd terms of (S28)
-                                              ctmp3=cone*fact(a1)/fact(d)/fact(a1-d)*                                   &
+                                              ctmp3 = cone*fact(a1)/fact(d)/fact(a1-d)*                                   &
                                                    &fact(d+s+s1)/fact(f)/fact(g)/fact(h)/fact(d+s+s1-2*f-g-h)           &
                                                    &*cdsqrt(pi/(cone*expo+cone*cxx))*(-xp)**dble(a1-d)                  &
                                                    &*2.d0**dble(d+s+s1-2*f)/(4.d0*(cone*expo+cone*cxx))**dble(d+s+s1-f) &
@@ -626,30 +630,30 @@
                                                    &*(-cxy)**dble(h)*(-czx)**dble(d+s+s1-2*f-g-h)
 !
 !                                             Sum over d1(d'), f1(f'), g1(g')
-                                              Do d1=0,b
-                                                 Do f1=0,(t+t1+d1+h)/2
-                                                    Do g1=0,t+t1+d1+h-2*f1
+                                              Do d1 = 0,b
+                                                 Do f1 = 0,(t+t1+d1+h)/2
+                                                    Do g1 = 0,t+t1+d1+h-2*f1
 !
 !                                                      The 4th and 5th terms of (S28)
-                                                       ctmp4=cdsqrt(pi/AA)*fact(b)/fact(d1)/fact(b-d1)                  &
+                                                       ctmp4 = cdsqrt(pi/AA)*fact(b)/fact(d1)/fact(b-d1)                  &
                                                             &*fact(t+t1+d1+h)/fact(f1)/fact(g1)/fact(t+t1+d1+h-2*f1-g1) &
                                                             &*(-yp)**dble(b-d1)*                                        &
                                                             &2.d0**dble(t+t1+d1+h-2*f1)/(4.d0*AA)**dble(t+t1+d1+h-f1)   &
                                                             &*BB**dble(g1)*CC**dble(t+t1+d1+h-2*f1-g1)
 !
 !                                                      Sum over d2(d") and f2(f")
-                                                       Do d2=0,c
-                                                          Do f2=0,(m-2*r+n-2*r1+d2+d-2*f-g+d1-2*f1-g1)/2
+                                                       Do d2 = 0,c
+                                                          Do f2 = 0,(m-2*r+n-2*r1+d2+d-2*f-g+d1-2*f1-g1)/2
 !
 !                                                            The last two terms of (S28)
-                                                             ctmp5=cdsqrt(pi/DD)*fact(c)/fact(d2)/fact(c-d2)                 &
+                                                             ctmp5 = cdsqrt(pi/DD)*fact(c)/fact(d2)/fact(c-d2)                 &
                                                                   &*(-zp)**dble(c-d2)                                        &
                                                                   &*fact(m-2*r+n-2*r1+d2+d-2*f-g+d1-2*f1-g1)/fact(f2)        &
                                                                   &/fact(m-2*r+n-2*r1+d2+d-2*f-g+d1-2*f1-g1-2*f2)            &
                                                                   &*(2.d0*FF)**dble(m-2*r+n-2*r1+d2+d-2*f-g+d1-2*f1-g1-2*f2) &
                                                                   &/(4.d0*DD)**dble(m-2*r+n-2*r1+d2+d-2*f-g+d1-2*f1-g1-f2)
 !
-                                                             gau_her=gau_her+ctmp1*ctmp2*ctmp3*ctmp4*ctmp5*ctmp7
+                                                             gau_her = gau_her+ctmp1*ctmp2*ctmp3*ctmp4*ctmp5*ctmp7
 !
                                                           End Do ! f2 loop
                                                        End Do ! d2 loop
