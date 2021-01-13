@@ -610,7 +610,7 @@
                             If ((s1+t1) .le. (n-2*r1)) Then
 !
 !                              ctmp2: The 2nd fraction from the first term in (S28)
-                               ctmp2 = cone*(-1.d0)**dble(r1)*fact(n)*bx**dble(s1)*by**dble(t1)*bz**dble(n-2*r1-s1-t1) & ! (-1.d0) --> (1.d0)
+                               ctmp2 = cone*(1.d0)**dble(r1)*fact(n)*bx**dble(s1)*by**dble(t1)*bz**dble(n-2*r1-s1-t1) & ! (-1.d0) --> (1.d0)
                                     &*2.d0**dble(n-2*r1)/fact(r1)/fact(s1)/fact(t1)/fact(n-2*r1-s1-t1)
 !
 !                              Sum over d, f, g, h
@@ -686,9 +686,8 @@
   Function fact(n)
 !
     Implicit None
-    Integer :: n
+    Integer :: n, i
     Real*8 :: fact
-    Integer :: i
 !
     If (n .eq. 0) Then
        fact=1.d0
