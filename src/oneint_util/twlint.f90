@@ -510,7 +510,7 @@
     SubRoutine OAM_xyz(Alpha,Beta,Gamma)
 
       implicit none
-      Real*8 :: Alpha, Beta, Gamma
+      Real*8 :: Alpha(nAlpha), Beta(nBeta), Gamma(nGamma)
       Integer :: a1,b,c,m,n
       Real*8  :: xp, yp, zp, expo
       Real*8  :: k0, w0
