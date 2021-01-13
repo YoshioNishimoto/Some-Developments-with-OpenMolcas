@@ -15,7 +15,7 @@
                        rKappa,P,Final,nZeta,nIC,nComp,la,lb,A,RB,      &
                        Array,nArr,kVector,nOrdOp,lOper,iChO,nHer,      &
                        iStabM,nStabM,                                  &
-                       xp,yp,zp,expo,m,n,k0,w0,a,b,c,m,n,              &
+                       xp,yp,zp,expo,m,n,k0,w0,a1,b,c,                 &
                        PtChrg,nGrid,iAddPot)
 !***********************************************************************
 !                                                                      *
@@ -39,7 +39,7 @@
              P(nZeta,3), A(3), RB(3),                                  &
              Array(nZeta*nArr), kvector(3)
 !
-      Integer a,b,c,m,n
+      Integer a1,b,c,m,n
       Real*8  xp, yp, zp, expo, k0, w0
 !
       Integer iStabM(0:nStabM-1), iDCRT(0:7),                          &
@@ -53,7 +53,7 @@
       Integer iOper(0:7)
       Integer iAlpha, iBeta, ixyz
       Integer ipA, ipAOff, ipAxyz, ipB, ipBOff, ipBxyz, ipQxyz, ipRes, &
-              ipVxyz, nip, icomp, lDCRT, llOper, LmbdT, nDCRT,  &
+              ipVxyz, nip, icomp, lDCRT, llOper, LmbdT, nDCRT,         &
               nIrrep, nOp, nStabO, ipP, lAng, ipScr, iOff
       Real*8 Zero, Half, One, Two, Three, Four, Rxy, Fi1, Rxyz, Fi2, Fi3
       Real*8, Allocatable:: TransM(:,:)
@@ -459,7 +459,7 @@
             zVxyz=zQxyz
          End If
 !
-         Call OAM_xyz(Alpha, Beta, Gamma,a,b,c,xp,yp,zp,expo,m,n,k0,w0)
+         Call OAM_xyz(Alpha, Beta, Gamma,a1,b,c,xp,yp,zp,expo,m,n,k0,w0)
 !
 !         call OAM_xy(zVxyz,zQxyz,nZeta,la,lb,nOrdOp,Array(ipAOff),Array(ipBOff),       &
 !                     Array(ipRes),nComp)
@@ -482,7 +482,7 @@
             Nullify(zQxyz)
          End If
 !
-!************************************************************************
+!*****************************************************************************
       End If
 #endif
 !
@@ -490,16 +490,16 @@
 !     ipRes. The size of the block is nZeta,(la+1)*(la+2)/2,(lb+1)*(lb+2)/2
 !
     End SubRoutine TWLInt_Internal
-!===========================================================================
+!=============================================================================
 !
     Integer Function nElem(ixyz)
       Integer ixyz
       nElem = (ixyz+1)*(ixyz+2)/2
     End Function nElem
 !
-!===========================================================================
+!=============================================================================
 !    Subroutine to calculate the xyz-integral
-!---------------------------------------------------------------------------
+!-----------------------------------------------------------------------------
 !    SUPPORTING INFORMATION from "J. Chem. Theory Comput. 2019, 15, 4180-4186"
 !
 ! -- Performing the rotational averaging, by rotating the molecule
@@ -507,11 +507,11 @@
 ! -- Using the the rotation matrix in the ZXZ convention,
 ! -- With the Euler angles alpha:[0, 2\pi], beta:[0, \pi], and gamma:[0, 2\pi].
 
-    SubRoutine OAM_xyz(Alpha, Beta, Gamma,a,b,c,xp,yp,zp,expo,m,n,k0,w0)
+    SubRoutine OAM_xyz(Alpha, Beta, Gamma,a1,b,c,xp,yp,zp,expo,m,n,k0,w0)
 
       implicit none
       Real*8 :: Alpha, Beta, Gamma
-      Integer :: a,b,c,m,n
+      Integer :: a1,b,c,m,n
       Real*8  :: xp, yp, zp, expo
       Real*8  :: k0, w0
       Complex*16 :: gau_her
@@ -558,7 +558,7 @@
     DD=cone*expo+cone*czz-cone*czx**2.d0/4.d0/(cone*expo+cone*cxx)-cone*CC**2.d0/4.d0/AA        ! D
 !
     FF=cone*2.d0*expo*zp-cone*(cone*2.d0*expo*xp-eye*dsin(Alpha)*dsin(Beta)*k0)*  &
-         czx/2.d0/(cone*expo+cone*cxx) &
+         czx/2.d0/(cone*expo+cone*cxx)                                            &
          &+cone*BB*CC/2.d0/AA - eye*dcos(Beta)*k0                                               ! F
 !
 !
@@ -573,7 +573,7 @@
     ctmp6=-cone*expo*xp**2.d0 &
          &+(cone*2.d0*expo*xp-eye*dsin(Alpha)*dsin(Beta)*k0)**2.d0/4.d0/(cone*expo+cone*cxx) &
          &-cone*expo*yp**2.d0 &
-         &+BB**2.d0/4.d0/AA &
+         &+BB**2.d0/4.d0/AA   &
          &-cone*expo*zp**2.d0 &
          &+FF**2.d0/4.d0/DD
 !
@@ -616,11 +616,11 @@
                                            If ((g+h) .le. (d+s+s1-2*f)) Then
 !
 !                                             The 2nd & 3rd terms of (S28)
-                                              ctmp3=cone*fact(a)/fact(d)/fact(a-d)* &
-                                                   &fact(d+s+s1)/fact(f)/fact(g)/fact(h)/fact(d+s+s1-2*f-g-h) &
-                                                   &*cdsqrt(pi/(cone*expo+cone*cxx))*(-xp)**dble(a-d) &
+                                              ctmp3=cone*fact(a1)/fact(d)/fact(a1-d)*                                   &
+                                                   &fact(d+s+s1)/fact(f)/fact(g)/fact(h)/fact(d+s+s1-2*f-g-h)           &
+                                                   &*cdsqrt(pi/(cone*expo+cone*cxx))*(-xp)**dble(a1-d)                  &
                                                    &*2.d0**dble(d+s+s1-2*f)/(4.d0*(cone*expo+cone*cxx))**dble(d+s+s1-f) &
-                                                   &*(cone*2.d0*expo*xp-eye*dsin(alpha)*dsin(beta)*k0)**dble(g) &
+                                                   &*(cone*2.d0*expo*xp-eye*dsin(alpha)*dsin(beta)*k0)**dble(g)         &
                                                    &*(-cxy)**dble(h)*(-czx)**dble(d+s+s1-2*f-g-h)
 !
 !                                             Sum over d1(d'), f1(f'), g1(g')
@@ -629,10 +629,10 @@
                                                     Do g1=0,t+t1+d1+h-2*f1
 !
 !                                                      The 4th and 5th terms of (S28)
-                                                       ctmp4=cdsqrt(pi/AA)*fact(b)/fact(d1)/fact(b-d1) &
+                                                       ctmp4=cdsqrt(pi/AA)*fact(b)/fact(d1)/fact(b-d1)                  &
                                                             &*fact(t+t1+d1+h)/fact(f1)/fact(g1)/fact(t+t1+d1+h-2*f1-g1) &
-                                                            &*(-yp)**dble(b-d1)* &
-                                                            &2.d0**dble(t+t1+d1+h-2*f1)/(4.d0*AA)**dble(t+t1+d1+h-f1) &
+                                                            &*(-yp)**dble(b-d1)*                                        &
+                                                            &2.d0**dble(t+t1+d1+h-2*f1)/(4.d0*AA)**dble(t+t1+d1+h-f1)   &
                                                             &*BB**dble(g1)*CC**dble(t+t1+d1+h-2*f1-g1)
 !
 !                                                      Sum over d2(d") and f2(f")
@@ -640,10 +640,10 @@
                                                           Do f2=0,(m-2*r+n-2*r1+d2+d-2*f-g+d1-2*f1-g1)/2
 !
 !                                                            The last two terms of (S28)
-                                                             ctmp5=cdsqrt(pi/DD)*fact(c)/fact(d2)/fact(c-d2) &
-                                                                  &*(-zp)**dble(c-d2) &
-                                                                  &*fact(m-2*r+n-2*r1+d2+d-2*f-g+d1-2*f1-g1)/fact(f2)&
-                                                                  &/fact(m-2*r+n-2*r1+d2+d-2*f-g+d1-2*f1-g1-2*f2) &
+                                                             ctmp5=cdsqrt(pi/DD)*fact(c)/fact(d2)/fact(c-d2)                 &
+                                                                  &*(-zp)**dble(c-d2)                                        &
+                                                                  &*fact(m-2*r+n-2*r1+d2+d-2*f-g+d1-2*f1-g1)/fact(f2)        &
+                                                                  &/fact(m-2*r+n-2*r1+d2+d-2*f-g+d1-2*f1-g1-2*f2)            &
                                                                   &*(2.d0*FF)**dble(m-2*r+n-2*r1+d2+d-2*f-g+d1-2*f1-g1-2*f2) &
                                                                   &/(4.d0*DD)**dble(m-2*r+n-2*r1+d2+d-2*f-g+d1-2*f1-g1-f2)
 !
