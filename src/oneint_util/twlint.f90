@@ -507,7 +507,7 @@
 ! -- Using the the rotation matrix in the ZXZ convention,
 ! -- With the Euler angles alpha:[0, 2\pi], beta:[0, \pi], and gamma:[0, 2\pi].
 
-    SubRoutine OAM_xyz(Alpha,Beta,Gamma,xp,yp,zp,expo,k0,w0)
+    SubRoutine OAM_xyz(Alpha,Beta,Gamma)
 
       implicit none
       Real*8 :: Alpha, Beta, Gamma
