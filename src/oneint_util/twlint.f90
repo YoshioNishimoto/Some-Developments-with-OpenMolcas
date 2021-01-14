@@ -459,7 +459,7 @@
             zVxyz=zQxyz
          End If
 !
-         Call OAM_xyz(Alpha,Beta,Gamma,a1,b,c,m,n,xp,yp,zp,expo,k0,w0,nZeta,fact)
+         Call OAM_xyz(Alpha,Beta,Gamma,a1,b,c,m,n,xp,yp,zp,expo,k0,w0,nZeta)
 !
 !         call OAM_xy(zVxyz,zQxyz,nZeta,la,lb,nOrdOp,Array(ipAOff),Array(ipBOff),       &
 !                     Array(ipRes),nComp)
@@ -507,7 +507,7 @@
 ! -- Using the the rotation matrix in the ZXZ convention,
 ! -- With the Euler angles alpha:[0, 2\pi], beta:[0, \pi], and gamma:[0, 2\pi].
 
-    SubRoutine OAM_xyz(Alpha,Beta,Gamma,a1,b,c,m,n,xp,yp,zp,expo,k0,w0,nZeta,fact)
+    SubRoutine OAM_xyz(Alpha,Beta,Gamma,a1,b,c,m,n,xp,yp,zp,expo,k0,w0,nZeta)
 
       Implicit None
       Real*8 :: Alpha(nZeta), Beta(nZeta), Gamma(nZeta)
