@@ -5,9 +5,8 @@ Subroutine dmm_transform(l,Fi1,Fi2,Fi3,dmm,lda)
   Integer, intent(in) :: l, lda
   Real*8, intent(in) :: Fi1, Fi2, Fi3
   Real*8, intent(out) :: dmm(lda,-l:l)  !Dmm
-
+!
   Integer :: k_min, k_max, k, m, mp, a1, a2
-  Integer :: i
   Real*8 :: fact1, fact2, fact3, fact4
   Real*8 :: coeff, tmp, re1, re3
 !************************************************
