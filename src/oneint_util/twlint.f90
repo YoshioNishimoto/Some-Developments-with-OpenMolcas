@@ -68,7 +68,7 @@
 !
       Call Peek_iScalar('nSym',nIrrep)
       iOper(:)=0
-      Call Peek_iOper(iOper,nIrrep)
+      Call Peek_iOper(iOper,nIrrep,nIrrep)
 #define _DEBUGPRINT_
 !
       Zero =0.0D0
