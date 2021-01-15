@@ -10,7 +10,7 @@
 *                                                                      *
 * Copyright (C) 2020, Roland Lindh                                     *
 ************************************************************************
-      SubRoutine Peek_iOper(jOper,njOper,nIrrep)
+      SubRoutine Peek_iOper(jOper,njOper)
 ************************************************************************
 *                                                                      *
 * Object:                                                              *
