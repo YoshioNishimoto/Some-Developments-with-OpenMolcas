@@ -26,6 +26,10 @@ C *********************************************************************
 C   . |  1    .    2    .    3    .    4    .    5    .    6    .    7 |  .    8
 
       SUBROUTINE VelVer_First(irc)
+#ifdef _HDF5_
+      USE mh5, ONLY: mh5_put_dset
+#endif
+      IMPLICIT REAL*8 (a-h,o-z)
 #include "prgm.fh"
 #include "warnings.fh"
 #include "Molcas.fh"
@@ -37,7 +41,7 @@ C   . |  1    .    2    .    3    .    4    .    5    .    6    .    7 |  .    8
 #include "constants2.fh"
       EXTERNAL    IsFreeUnit
       INTEGER     natom,i,j,irc,file,IsFreeUnit,ipCoord
-      REAL*8      DT2,DTSQ2,Ekin,time,totimpl,RMS
+      REAL*8      DT_2,DTSQ2,Ekin,time,totimpl,RMS
 
       CHARACTER  caption*15, lastline*80, filname*80
       LOGICAL    hybrid,qmmm
@@ -119,8 +123,8 @@ C
 C
 C     Definition of the time step
 C
-      DT2   = DT / 2.0D0
-      DTSQ2 = DT * DT2
+      DT_2  = DT / 2.0D0
+      DTSQ2 = DT * DT_2
 *
       Ekin = 0.0D0
       RMS = 0.0D0
@@ -137,7 +141,7 @@ C
           RMS=RMS+(tstxyz(3*(i-1)+j)-xyz(3*(i-1)+j))**2
 ***********************************************************
           Ekin = Ekin + 5.0D-01 * Mass(i) * (vel(3*(i-1)+j) ** 2)
-          vel(3*(i-1)+j) = vel(3*(i-1)+j) + DT2 * force(3*(i-1)+j) /
+          vel(3*(i-1)+j) = vel(3*(i-1)+j) + DT_2 * force(3*(i-1)+j) /
      &       Mass(i)
           totimpl = totimpl + vel(3*(i-1)+j) * Mass(i)
         END DO
