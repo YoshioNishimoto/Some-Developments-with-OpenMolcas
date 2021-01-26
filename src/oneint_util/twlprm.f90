@@ -76,7 +76,7 @@ Subroutine twlprm(Zeta,P_x,P_y,Alpha,Beta,i_x,i_y,j_x,j_y,l,intg)
                        g2 = (1./2)**(a-v)
                        Do d = 0, b-w
                           h1 = choose(b-w, d)
-                          h2 = (1./(i))**(b-w)
+                          h2 = REAL( (1./(i))**(b-w) )
 
                           g = a+b+l-v-w-(2*c)-(2*d)
 
@@ -148,7 +148,7 @@ contains
     real*8 :: res
     !    real, intent (out) :: res
 
-    res = (0.5) * (-0.5)**p * Zeta**(0.5 - (1.*p))
+    res = (0.5) * (-0.5)**p * Zeta**(0.5 - REAL(p))
 
 
   end function integral_gauss
