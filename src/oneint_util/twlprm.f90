@@ -10,7 +10,8 @@
 !                                                                      *
 ! Copyright (C) 2019 Marjan Khamesian and Roland Lindh                 *
 !***********************************************************************
-Subroutine twlprm(Zeta,P_x,P_y,Alpha,Beta,i_x,i_y,j_x,j_y,l,intg)
+#ifdef _NOT_TO_BE_COMPILED_
+  Subroutine twlprm(Zeta,P_x,P_y,Alpha,Beta,i_x,i_y,j_x,j_y,l,intg)
   Implicit None
 !
 !
@@ -154,3 +155,8 @@ contains
   end function integral_gauss
 
 End Subroutine twlprm
+
+#else
+      Subroutine twlprm()
+      End Subroutine twlprm
+#endif
