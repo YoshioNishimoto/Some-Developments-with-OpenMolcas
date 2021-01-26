@@ -10,8 +10,8 @@
 !                                                                      *
 ! Copyright (C) 2019 Marjan Khamesian and Roland Lindh                 *
 !***********************************************************************
-      Subroutine twlprm(Zeta,P_x,P_y,Alpha,Beta,i_x,i_y,j_x,j_y,l,intg)
-      Implicit None
+Subroutine twlprm(Zeta,P_x,P_y,Alpha,Beta,i_x,i_y,j_x,j_y,l,intg)
+  Implicit None
 !
 !
 !     Local Arrays and integers
@@ -73,10 +73,10 @@
 
                     Do c = 0, a-v
                        g1 = choose(a-v, c)
-                       g2 = (1/2)**(a-v)
+                       g2 = (1./2)**(a-v)
                        Do d = 0, b-w
                           h1 = choose(b-w, d)
-                          h2 = (1/(i))**(b-w)
+                          h2 = (1./(i))**(b-w)
 
                           g = a+b+l-v-w-(2*c)-(2*d)
 
@@ -92,7 +92,7 @@
 
                                 k1 = choose(f,t)
                                 k2 = choose(t-1,p)
-                                l1 = (-cx)**(f-t) * (cx + P_x)**(t-1-p) * (-1/2)**p *(1/(2*sqrt(2*pi)))
+                                l1 = (-cx)**(f-t) * (cx + P_x)**(t-1-p) * (-1./2)**p *(1/(2*sqrt(2*pi)))
                                 l2 = integral_gauss(Zeta,p)
                                 Gamma = ( k1 * k2 * l1 * l2 )
 
@@ -148,7 +148,7 @@ contains
     real*8 :: res
     !    real, intent (out) :: res
 
-    res = (0.5) * (-0.5)**p * Zeta**(0.5-p)
+    res = (0.5) * (-0.5)**p * Zeta**(0.5 - (1.*p))
 
 
   end function integral_gauss
