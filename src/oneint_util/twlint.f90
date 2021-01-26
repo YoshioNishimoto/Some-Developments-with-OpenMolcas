@@ -32,7 +32,8 @@
 !     External Arrays and integers
 !
       Integer nZeta, la, lb, nIC, nAlpha, nBeta, nArr, nComp, nOrdOp,  &
-              nStabM, lc, ld, nGamma
+!RL           nStabM, lc, ld, nGamma
+              nStabM, nGamma
       Real*8 Final(nZeta,(la+1)*(la+2)/2,(lb+1)*(lb+2)/2,nIC),         &
              Zeta(nZeta), Alpha(nAlpha), Beta(nBeta), Gamma(nGamma),   &
              ZInv(nZeta), rKappa(nZeta),                               &
@@ -51,7 +52,8 @@
 !     Local Arrays and integers
 !
       Integer iOper(0:7)
-      Integer iAlpha, iBeta, ixyz
+!RL   Integer iAlpha, iBeta, ixyz
+      Integer iAlpha, iBeta
       Integer ipA, ipAOff, ipAxyz, ipB, ipBOff, ipBxyz, ipQxyz, ipRes, &
               ipVxyz, nip, icomp, lDCRT, llOper, LmbdT, nDCRT,         &
               nIrrep, nOp, nStabO, ipP, lAng, ipScr, iOff
@@ -60,8 +62,9 @@
       Real*8 kVector_local(3)
       Real*8 A_Local(3), RB_Local(3)
 
-      Integer :: i, l
-      Real*8 :: dmm
+!RL   Integer :: i, l
+      Integer :: i
+!RL   Real*8 :: dmm
 !
 !     since we do not include info.fh -- it is a f77 style line contiuation file --
 !     we have to have a dirty work around here.
@@ -71,6 +74,10 @@
       Call Peek_iOper(iOper,nIrrep)
 #define _DEBUGPRINT_
 !
+#ifdef _WARNING_WORKAROUND_
+      Call Unused_Real_Array(rKappa)
+      Call Unused_Real_Array(zinv)
+#endif
       Zero =0.0D0
       Half =0.5D0
       One  =1.0D0
@@ -161,8 +168,8 @@
       Call RecPrt('P_local',' ',Array(ipP),nZeta,3)
 #endif
 !
- 114  Continue
 #ifdef _TEMP_SKIP_
+ 114  Continue
       If (lAng.eq.0) Then
          Call TWLInt_Internal(Array,A,RB,P)
       Else
@@ -310,7 +317,9 @@
 !=====================================================================
 !%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 !
+#ifdef _TEMP_SKIP_
  263  Continue
+#endif
 !
       llOper=lOper(1)
       Do iComp = 2, nComp
@@ -349,7 +358,7 @@
       Real*8, Target :: Array(*)
       Real*8 A(3), RB(3), P(nZeta,3)
       Complex*16, Pointer :: zAxyz(:),zBxyz(:),zQxyz(:),zVxyz(:)
-      Real*8 Alpha_, Beta_
+!RL   Real*8 Alpha_, Beta_
 !
       ABeq(1) = A(1).eq.RB(1)
       ABeq(2) = A(2).eq.RB(2)
