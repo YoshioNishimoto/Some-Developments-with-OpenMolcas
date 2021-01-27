@@ -544,7 +544,7 @@
                     ctmp7(nZeta)
 !
 !!    Real*8, external :: fact  ! Function to calculate factorial
-      Real*8 :: fact
+      Real*8, external :: fact
 !- Following are parameters in "S29 - S45":
 !
     bx = 2.d0**0.5d0/w0*(-dcos(Beta)*dcos(Gamma)*dsin(Alpha)-dcos(Alpha)*dsin(Gamma))
@@ -689,29 +689,6 @@
 !*************************************************************************
 !*************************************************************************
   End SubRoutine OAM_xyz
-!*************************************************************************
-! Function to calculate the factorial
-!------------------------------------
-  Function fact(n)
-!
-    Implicit None
-    Integer :: n, i
-    Real*8 :: fact
-!
-    If (n .eq. 0) Then
-       fact = 1.d0
-!!    Else If (n .lt. 0) Then
-!!       Write(*,*) 'n should .ge. 0 ', n
-!!       Stop
-    Else
-       fact = 1.d0
-       Do i = 1,n
-          fact = fact* dble(i)
-       End Do
-    End If
-!
-    Return
-  End function fact
 !
 !=========================================================================
 ! Subroutine to calculate the xy-integral -- M-R Version --
@@ -896,3 +873,26 @@
 !     End SubRoutine OAM_xy
 !======================================================================
 End SubRoutine TWLInt
+!*************************************************************************
+! Function to calculate the factorial
+!------------------------------------
+  Function fact(n)
+!
+    Implicit None
+    Integer :: n, i
+    Real*8 :: fact
+!
+    If (n .eq. 0) Then
+       fact = 1.d0
+!!    Else If (n .lt. 0) Then
+!!       Write(*,*) 'n should .ge. 0 ', n
+!!       Stop
+    Else
+       fact = 1.d0
+       Do i = 1,n
+          fact = fact* dble(i)
+       End Do
+    End If
+!
+    Return
+  End function fact
