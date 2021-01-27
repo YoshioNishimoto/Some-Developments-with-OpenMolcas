@@ -688,12 +688,10 @@
     Return
 !*************************************************************************
 !*************************************************************************
-!  End SubRoutine OAM_xyz
+  End SubRoutine OAM_xyz
 !*************************************************************************
 ! Function to calculate the factorial
 !------------------------------------
-contains
-
   Function fact(n)
 !
     Implicit None
@@ -715,7 +713,6 @@ contains
     Return
   End function fact
 !
-End SubRoutine OAM_xyz
 !=========================================================================
 ! Subroutine to calculate the xy-integral -- M-R Version --
 !=========================================================================
