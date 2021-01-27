@@ -543,8 +543,8 @@
                     ctmp4(nZeta), ctmp5(nZeta), ctmp6(nZeta), &
                     ctmp7(nZeta)
 !
-!!      Real*8, external :: fact  ! Function to calculate factorial
-!
+!!    Real*8, external :: fact  ! Function to calculate factorial
+      Real*8 :: fact
 !- Following are parameters in "S29 - S45":
 !
     bx = 2.d0**0.5d0/w0*(-dcos(Beta)*dcos(Gamma)*dsin(Alpha)-dcos(Alpha)*dsin(Gamma))
