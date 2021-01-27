@@ -19,7 +19,6 @@
 #include "WrkSpc.fh"
 #include "real.fh"
 #include "cholesky.fh"
-#include "choptr.fh"
 #include "etwas.fh"
 #include "exterm.fh"
 #include "chomp2g_alaska.fh"
@@ -74,13 +73,6 @@
       End Do
       nQvMax=nQMax*NChVMx
       Call Allocate_Work(ipScr,nQMax)
-      If(iMp2prpt.eq.2) Then
-         NChUMx=0
-         Do i=0,nIrrep-1
-            NChUMx= Max(NChVMx,nU_t(i))
-         End Do
-         nQuMax=nQMax*NChUMx
-      End If
 *
       DoCAS=lPSO
 *
