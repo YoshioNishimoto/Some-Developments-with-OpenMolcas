@@ -16,7 +16,7 @@ Subroutine dmm_transform(l,Fi1,Fi2,Fi3,dmm,lda)
         fact2 = factorial(l-mp)
         fact3 = factorial(l+m)
         fact4 = factorial(l-m)
-        coeff = (-1)**(mp-m)*sqrt(fact1*fact2*fact3*fact4)
+        coeff = (-1)**(mp-m)*Sqrt(fact1*fact2*fact3*fact4)
 !
         Call k_interval(l, m, mp, k_min, k_max)
 !

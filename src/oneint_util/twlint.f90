@@ -28,6 +28,7 @@
       Implicit None
       External NrOpr
 #include "stdalloc.fh"
+!#include "real.fh"
 !
 !     External Arrays and integers
 !
@@ -57,7 +58,8 @@
       Integer ipA, ipAOff, ipAxyz, ipB, ipBOff, ipBxyz, ipQxyz, ipRes, &
               ipVxyz, nip, icomp, lDCRT, llOper, LmbdT, nDCRT,         &
               nIrrep, nOp, nStabO, ipP, lAng, ipScr, iOff
-      Real*8 Zero, Half, One, Two, Three, Four, Rxy, Fi1, Rxyz, Fi2, Fi3
+      Real*8 Zero, One, Rxy, Fi1, Rxyz, Fi2, Fi3
+!      Real*8 Half, Two, Three, Four
       Real*8, Allocatable:: TransM(:,:)
       Real*8 kVector_local(3)
       Real*8 A_Local(3), RB_Local(3)
@@ -79,11 +81,11 @@
       Call Unused_Real_Array(zinv)
 #endif
       Zero =0.0D0
-      Half =0.5D0
+!      Half =0.5D0
       One  =1.0D0
-      Two  =2.0D0
-      Three=3.0D0
-      Four =4.0D0
+!      Two  =2.0D0
+!      Three=3.0D0
+!      Four =4.0D0
       lAng= 1             ! Temporary set value
       lAng= 0             ! Temporary set value
       nip = 1
@@ -326,14 +328,13 @@
          llOper = iOr(llOper,lOper(iComp))
       End Do
       Call SOS(iStabO,nStabO,llOper)
-      Call DCR(LmbdT,iOper,nIrrep,iStabM,nStabM,iStabO,nStabO,          &
-               iDCRT,nDCRT)
+      Call DCR(LmbdT,iStabM,nStabM,iStabO,nStabO,iDCRT,nDCRT)
 !
       Do lDCRT = 0, nDCRT-1
 !
 !--------Accumulate contributions
 !
-         nOp = NrOpr(iDCRT(lDCRT),iOper,nIrrep)
+         nOp = NrOpr(iDCRT(lDCRT))
          Call SymAdO(Array(ipRes),nZeta,la,lb,nComp,Final,nIC,          &
                      nOp,lOper,iChO,One)
 !
@@ -470,7 +471,7 @@
 !
          Call OAM_xyz(Alpha,Beta,Gamma,a1,b,c,m,n,xp,yp,zp,expo,k0,w0,nZeta)
 !
-!         call OAM_xy(zVxyz,zQxyz,nZeta,la,lb,nOrdOp,Array(ipAOff),Array(ipBOff),       &
+!        call OAM_xy(zVxyz,zQxyz,nZeta,la,lb,nOrdOp,Array(ipAOff),Array(ipBOff),       &
 !                     Array(ipRes),nComp)
          Nullify(zVxyz,zQxyz)
 !
@@ -519,15 +520,15 @@
     SubRoutine OAM_xyz(Alpha,Beta,Gamma,a1,b,c,m,n,xp,yp,zp,expo,k0,w0,nZeta)
 
       Implicit None
-      Real*8 :: Alpha(nZeta), Beta(nZeta), Gamma(nZeta)
       Integer :: nZeta,a1,b,c,m,n
+      Real*8 :: Alpha(nZeta), Beta(nZeta), Gamma(nZeta)
       Real*8  :: xp, yp, zp, expo, k0, w0
 
       Complex*16 :: gau_her(nZeta)
       Complex*16,parameter :: cone=(1.d0,0.d0), eye=(0.d0,1.d0), &
                               czero=(0.d0,0.d0) ! cone=(1.d0,0.d0)=1+0.i
 !
-      Real*8, parameter :: pi=3.141592653589793d0
+      Real*8, parameter :: pi = 3.141592653589793D0
       Integer :: r,s,t,r1,s1,t1
       Integer :: d,f,g,h,d1,f1,g1,d2,f2
 !
@@ -543,8 +544,8 @@
                     ctmp4(nZeta), ctmp5(nZeta), ctmp6(nZeta), &
                     ctmp7(nZeta)
 !
-!!    Real*8, external :: fact  ! Function to calculate factorial
-      Real*8, external :: fact
+      Real*8, external :: fact  ! Function to calculate factorial
+!
 !- Following are parameters in "S29 - S45":
 !
     bx = 2.d0**0.5d0/w0*(-dcos(Beta)*dcos(Gamma)*dsin(Alpha)-dcos(Alpha)*dsin(Gamma))
@@ -563,14 +564,14 @@
     cyz = 2.d0*dcos(Alpha)*dsin(Beta)*dcos(Beta)/w0**2.d0
     czx = -2.d0*dcos(Beta)*dsin(Alpha)*dsin(Beta)/w0**2.d0
 !
-    AA = expo*cone+cone*cyy-cone*cxy**2.d0/4.d0/(cone*expo+cone*cxx)                              ! A
+    AA = expo*cone+cone*cyy-cone*cxy**2.d0/4.d0/(cone*expo+cone*cxx)                            ! A
 !
     BB = cone*2.d0*expo*yp+eye*dcos(Alpha)*dsin(Beta)*k0 &
          &-cone*(cone*2.d0*expo*xp-eye*dsin(Alpha)*dsin(Beta)*k0)*cxy/2.d0/(cone*expo+cone*cxx) ! B
 !
-    CC = cone*cxy*czx/2.d0/(cone*expo+cone*cxx)-cone*cyz                                          ! C
+    CC = cone*cxy*czx/2.d0/(cone*expo+cone*cxx)-cone*cyz                                        ! C
 !
-    DD = cone*expo+cone*czz-cone*czx**2.d0/4.d0/(cone*expo+cone*cxx)-cone*CC**2.d0/4.d0/AA        ! D
+    DD = cone*expo+cone*czz-cone*czx**2.d0/4.d0/(cone*expo+cone*cxx)-cone*CC**2.d0/4.d0/AA      ! D
 !
     FF = cone*2.d0*expo*zp-cone*(cone*2.d0*expo*xp-eye*dsin(Alpha)*dsin(Beta)*k0)*  &
          czx/2.d0/(cone*expo+cone*cxx)                                            &
@@ -592,7 +593,7 @@
          &-cone*expo*zp**2.d0 &
          &+FF**2.d0/4.d0/DD
 !
-    ctmp7 = cdexp(ctmp6)
+    ctmp7 = Exp(ctmp6)
 !
     If ((m .lt. 0) .or. (n .lt. 0)) Then
        gau_her = czero
@@ -635,7 +636,7 @@
 !                                             The 2nd & 3rd terms of (S28)
                                               ctmp3 = cone*fact(a1)/fact(d)/fact(a1-d)                                  &
                                                    &*fact(d+s+s1)/fact(f)/fact(g)/fact(h)/fact(d+s+s1-2*f-g-h)          &
-                                                   &*cdsqrt(pi/(cone*expo+cone*cxx))*(-xp)**dble(a1-d)                  &
+                                                   &*Sqrt(pi/(cone*expo+cone*cxx))*(-xp)**dble(a1-d)                  &
                                                    &*2.d0**dble(d+s+s1-2*f)/(4.d0*(cone*expo+cone*cxx))**dble(d+s+s1-f) &
                                                    &*(cone*2.d0*expo*xp-eye*dsin(alpha)*dsin(beta)*k0)**dble(g)         &
                                                    &*(-cxy)**dble(h)*(-czx)**dble(d+s+s1-2*f-g-h)
@@ -646,7 +647,7 @@
                                                     Do g1 = 0,t+t1+d1+h-2*f1
 !
 !                                                      The 4th and 5th terms of (S28)
-                                                       ctmp4 = cdsqrt(pi/AA)*fact(b)/fact(d1)/fact(b-d1)                &
+                                                       ctmp4 = Sqrt(pi/AA)*fact(b)/fact(d1)/fact(b-d1)                &
                                                             &*fact(t+t1+d1+h)/fact(f1)/fact(g1)/fact(t+t1+d1+h-2*f1-g1) &
                                                             &*(-yp)**dble(b-d1)                                         &
                                                             &*2.d0**dble(t+t1+d1+h-2*f1)/(4.d0*AA)**dble(t+t1+d1+h-f1)  &
@@ -657,7 +658,7 @@
                                                           Do f2 = 0,(m-2*r+n-2*r1+d2+d-2*f-g+d1-2*f1-g1)/2
 !
 !                                                            The last two terms of (S28)
-                                                             ctmp5 = cdsqrt(pi/DD)*fact(c)/fact(d2)/fact(c-d2)               &
+                                                             ctmp5 = Sqrt(pi/DD)*fact(c)/fact(d2)/fact(c-d2)               &
                                                                   &*(-zp)**dble(c-d2)                                        &
                                                                   &*fact(m-2*r+n-2*r1+d2+d-2*f-g+d1-2*f1-g1)/fact(f2)        &
                                                                   &/fact(m-2*r+n-2*r1+d2+d-2*f-g+d1-2*f1-g1-2*f2)            &
