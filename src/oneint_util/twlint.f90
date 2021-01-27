@@ -543,7 +543,7 @@
                     ctmp4(nZeta), ctmp5(nZeta), ctmp6(nZeta), &
                     ctmp7(nZeta)
 !
-      Real*8, external :: fact  ! Function to calculate factorial
+!!      Real*8, external :: fact  ! Function to calculate factorial
 !
 !- Following are parameters in "S29 - S45":
 !
@@ -688,10 +688,12 @@
     Return
 !*************************************************************************
 !*************************************************************************
-  End SubRoutine OAM_xyz
+!  End SubRoutine OAM_xyz
 !*************************************************************************
 ! Function to calculate the factorial
 !------------------------------------
+contains
+
   Function fact(n)
 !
     Implicit None
@@ -699,20 +701,21 @@
     Real*8 :: fact
 !
     If (n .eq. 0) Then
-       fact=1.d0
+       fact = 1.d0
 !!    Else If (n .lt. 0) Then
 !!       Write(*,*) 'n should .ge. 0 ', n
 !!       Stop
     Else
-       fact=1.d0
-       Do i=1,n
-          fact=fact* dble(i)
+       fact = 1.d0
+       Do i = 1,n
+          fact = fact* dble(i)
        End Do
     End If
 !
     Return
   End function fact
 !
+End SubRoutine OAM_xyz
 !=========================================================================
 ! Subroutine to calculate the xy-integral -- M-R Version --
 !=========================================================================
