@@ -607,7 +607,9 @@
                 If ((s+t) .le. (m-2*r)) Then
 !
 !                  ctmp1: The first fraction in equation (S28)
-                   ctmp1 = cone*(1.d0)**dble(r)*fact(m)*cx**dble(s)*cy**dble(t)*cz**dble(m-2*r-s-t) & ! a negative base of type real cannot be raised to a real power:-1.d0-->1.d0
+!                  ( a negative base of type real cannot be raised to a real power:-1.d0-->1.d0 )
+                   ctmp1 = cone*(1.d0)**dble(r)*fact(m)*cx**dble(s) &
+                        &*cy**dble(t)*cz**dble(m-2*r-s-t) &
                         &*2.d0**dble(m-2*r)/fact(r)/fact(s)/fact(t)/fact(m-2*r-s-t)
 !
 !                  Sum over r1(r'), s1(s'), t1(t')
@@ -618,8 +620,8 @@
                             ctmp2 = czero
                             If ((s1+t1) .le. (n-2*r1)) Then
 !
-!                              ctmp2: The 2nd fraction from the first term in (S28)
-                               ctmp2 = cone*(1.d0)**dble(r1)*fact(n)*bx**dble(s1)*by**dble(t1)*bz**dble(n-2*r1-s1-t1) & ! (-1.d0) --> (1.d0)
+!                              ctmp2: The 2nd fraction from the first term in (S28):(-1.d0) --> (1.d0)
+                               ctmp2 = cone*(1.d0)**dble(r1)*fact(n)*bx**dble(s1)*by**dble(t1)*bz**dble(n-2*r1-s1-t1) &
                                     &*2.d0**dble(n-2*r1)/fact(r1)/fact(s1)/fact(t1)/fact(n-2*r1-s1-t1)
 !
 !                              Sum over d, f, g, h
@@ -631,8 +633,8 @@
                                            If ((g+h) .le. (d+s+s1-2*f)) Then
 !
 !                                             The 2nd & 3rd terms of (S28)
-                                              ctmp3 = cone*fact(a1)/fact(d)/fact(a1-d)*                                   &
-                                                   &fact(d+s+s1)/fact(f)/fact(g)/fact(h)/fact(d+s+s1-2*f-g-h)           &
+                                              ctmp3 = cone*fact(a1)/fact(d)/fact(a1-d)                                  &
+                                                   &*fact(d+s+s1)/fact(f)/fact(g)/fact(h)/fact(d+s+s1-2*f-g-h)          &
                                                    &*cdsqrt(pi/(cone*expo+cone*cxx))*(-xp)**dble(a1-d)                  &
                                                    &*2.d0**dble(d+s+s1-2*f)/(4.d0*(cone*expo+cone*cxx))**dble(d+s+s1-f) &
                                                    &*(cone*2.d0*expo*xp-eye*dsin(alpha)*dsin(beta)*k0)**dble(g)         &
@@ -644,10 +646,10 @@
                                                     Do g1 = 0,t+t1+d1+h-2*f1
 !
 !                                                      The 4th and 5th terms of (S28)
-                                                       ctmp4 = cdsqrt(pi/AA)*fact(b)/fact(d1)/fact(b-d1)                  &
+                                                       ctmp4 = cdsqrt(pi/AA)*fact(b)/fact(d1)/fact(b-d1)                &
                                                             &*fact(t+t1+d1+h)/fact(f1)/fact(g1)/fact(t+t1+d1+h-2*f1-g1) &
-                                                            &*(-yp)**dble(b-d1)*                                        &
-                                                            &2.d0**dble(t+t1+d1+h-2*f1)/(4.d0*AA)**dble(t+t1+d1+h-f1)   &
+                                                            &*(-yp)**dble(b-d1)                                         &
+                                                            &*2.d0**dble(t+t1+d1+h-2*f1)/(4.d0*AA)**dble(t+t1+d1+h-f1)  &
                                                             &*BB**dble(g1)*CC**dble(t+t1+d1+h-2*f1-g1)
 !
 !                                                      Sum over d2(d") and f2(f")
@@ -655,7 +657,7 @@
                                                           Do f2 = 0,(m-2*r+n-2*r1+d2+d-2*f-g+d1-2*f1-g1)/2
 !
 !                                                            The last two terms of (S28)
-                                                             ctmp5 = cdsqrt(pi/DD)*fact(c)/fact(d2)/fact(c-d2)                 &
+                                                             ctmp5 = cdsqrt(pi/DD)*fact(c)/fact(d2)/fact(c-d2)               &
                                                                   &*(-zp)**dble(c-d2)                                        &
                                                                   &*fact(m-2*r+n-2*r1+d2+d-2*f-g+d1-2*f1-g1)/fact(f2)        &
                                                                   &/fact(m-2*r+n-2*r1+d2+d-2*f-g+d1-2*f1-g1-2*f2)            &
