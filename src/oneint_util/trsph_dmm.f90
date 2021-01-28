@@ -1,6 +1,6 @@
 Subroutine dmm_transform(l,Fi1,Fi2,Fi3,dmm,lda)
 
-#include "stdalloc.fh"
+!#include "stdalloc.fh"
 
 !  Implicit None
 
