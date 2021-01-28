@@ -8,7 +8,7 @@
 ! For more details see the full text of the license in the file        *
 ! LICENSE or in <http://www.gnu.org/licenses/>.                        *
 !                                                                      *
-! Copyright (C), 2019 Marjan Khamesian and Roland Lindh                *
+! Copyright (C) 2019, Marjan Khamesian and Roland Lindh                *
 !                                                                      *
 !***********************************************************************
 #ifdef _NOT_TO_BE_COMPILED_
