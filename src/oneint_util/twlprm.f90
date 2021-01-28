@@ -9,6 +9,7 @@
 ! LICENSE or in <http://www.gnu.org/licenses/>.                        *
 !                                                                      *
 ! Copyright (C) 2019 Marjan Khamesian and Roland Lindh                 *
+!                                                                      *
 !***********************************************************************
 #ifdef _NOT_TO_BE_COMPILED_
   Subroutine twlprm(Zeta,P_x,P_y,Alpha,Beta,i_x,i_y,j_x,j_y,l,intg)
@@ -114,9 +115,8 @@
      End Do !m
   End Do    !n
 
-!------------------------------------------------------------------
+!==============================================
 contains
-
 
   function factorial (n) result (res)
 
@@ -128,7 +128,7 @@ contains
     res = product ((/(i, i = 1, n)/))
 
   end function factorial
-!!!!!!!!!!!!!!!!!!!!
+!**********************************************
   function choose (n, k) result (res)
 
     implicit none
@@ -140,7 +140,7 @@ contains
 
   end function choose
 
-!!!!!!!!!!!!!!!!!!!!
+!**********************************************
   function integral_gauss (Zeta,p) result (res)
 
     implicit none
@@ -150,7 +150,6 @@ contains
     !    real, intent (out) :: res
 
     res = (0.5) * (-0.5)**p * Zeta**(0.5 - REAL(p))
-
 
   end function integral_gauss
 
