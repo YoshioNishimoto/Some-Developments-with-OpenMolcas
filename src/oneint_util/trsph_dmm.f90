@@ -1,11 +1,13 @@
 Subroutine dmm_transform(l,Fi1,Fi2,Fi3,dmm,lda)
 
-  Implicit None
+#include "stdalloc.fh"
+
+!  Implicit None
 
   Integer, intent(in) :: l, lda
   Real*8, intent(in) :: Fi1, Fi2, Fi3
-  Real*8, intent(out) :: dmm(lda,-l:l)  !Dmm
-!
+  Real*8, intent(out) :: dmm(lda,-l:l)
+
   Integer :: k_min, k_max, k, m, mp, a1, a2
   Real*8 :: fact1, fact2, fact3, fact4
   Real*8 :: coeff, tmp, re1, re3
