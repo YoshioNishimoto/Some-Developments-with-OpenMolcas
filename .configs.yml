@@ -11,6 +11,7 @@
 # - bounds: enable bounds checking (slow)
 # - debug: build with no optimization (no tests)
 # - qcmaquis: default build with QCMaquis and NEVPT2 support (only qcmaquis tests)
+# - mpi: build with Global Arrays, OpenMPI, OpenBLAS
 
 .plain:
   image: ${CI_REGISTRY}/molcas/dockerfiles/gcc-4.8:latest
@@ -53,6 +54,7 @@
     CMAKE_GENERATOR: "Ninja"
     make: "ninja"
     cache_file: |
+      set (CMAKE_BUILD_TYPE "Fast" CACHE STRING "high opt")
       set (BUILD_SHARED_LIBS "ON" CACHE STRING "use shared libmolcas")
       set (BIGOT "ON" CACHE STRING "do not allow any warning")
       set (LINALG "MKL" CACHE STRING "use MKL library")
@@ -142,9 +144,34 @@
       set (HDF5_USE_STATIC_LIBRARIES "ON" CACHE STRING "use static HDF5")
       set (HDF5 "ON" CACHE STRING "turn on HDF5")
       set (DEFMOLCASMEM "256" CACHE STRING "reduce memory to get more speed")
-      set (EXTRA_FFLAGS "-w=obs -w=x77 -unsharedrts -gline" CACHE STRING "extra Fortran flags")
+      # -w=obs : disable fixed source form, statement function
+      # -w=x77 : disable real*8
+      set (EXTRA_FFLAGS "-w=obs -w=x77 -unsharedrts" CACHE STRING "extra Fortran flags")
     pre_compile_script: |
       rm -rf ${install_path}
+    pre_make_script: |
+      mkdir -p ${install_path}
+      $${make} 2>&1 | tee nag.log
+      # Remove CMake and NAG version lines
+      sed -E '/^Scanning dependencies of target [^ ]*/d ; /^\[ *[0-9]+*%\].*/d ; /^\[?NAG Fortran Compiler.*/d' nag.log > nag2.log ; mv nag2.log nag.log
+      # Wrap lines that start with a space
+      sed -E ':a ; $!N ; s/\n\s+/ / ; ta ; P ; D' nag.log > nag2.log ; mv nag2.log nag.log
+      # Remove ignored warnings
+      sed -E '/WrkSpc\.fh.*EQUIVALENCE/d ; /(was not compiled with the -i8 option)/d' nag.log > nag2.log ; mv nag2.log nag.log
+      # More reasonable paths
+      sed -E 's%/[^ ]*OpenMolcas/src%src%' nag.log > nag2.log ; mv nag2.log nag.log
+      cp nag.log ${install_path}
+      # Fail if any warning remains
+      if [ "$$(wc -l < nag.log)" == "0" ] ; then
+        true
+      else
+        echo "***************************************"
+        echo "* Compilation finished with warnings! *"
+        echo "***************************************"
+        cat nag.log
+        echo "***************************************"
+        false
+      fi
     CC: "gcc"
     CXX: "g++"
     FC: "nagfor"
@@ -210,5 +237,27 @@
     CXX: "g++"
     FC: "gfortran"
     tests: "qcmaquis"
+  tags:
+    - docker
+
+.mpi:
+  image: ${CI_REGISTRY}/molcas/dockerfiles/gcc-7:latest
+  variables:
+    cache_file: |
+      set (BIGOT "ON" CACHE STRING "do not allow any warning")
+      set (MPI "ON" CACHE STRING "enable MPI parallelization")
+      set (GA "ON" CACHE STRING "enable Global Arrays")
+      set (GA_BUILD "ON" CACHE STRING "build our own Global Arrays (needs submodule)")
+      set (OPENMP "ON" CACHE STRING "enable OpenMP diagnostics")
+      set (LINALG "OpenBLAS" CACHE STRING "use OpenBLAS library")
+      set (MPI_LAUNCHER "/usr/bin/mpiexec $$MPI_FLAGS -n $$MOLCAS_NPROCS" CACHE STRING "custom MPI launcher command line")
+      set (DEFMOLCASMEM "768" CACHE STRING "reduce memory for 2 processes")
+    CC: "gcc"
+    CXX: "g++"
+    FC: "gfortran"
+    submodules: "External/ga"
+    tests: ".all"
+    MPI_FLAGS: "--allow-run-as-root"
+    MOLCAS_NPROCS: "2"
   tags:
     - docker

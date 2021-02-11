@@ -8,7 +8,7 @@
 # For more details see the full text of the license in the file        *
 # LICENSE or in <http://www.gnu.org/licenses/>.                        *
 #                                                                      *
-# Copyright (C) 2016,2018,2020, Ignacio Fdez. Galván                   *
+# Copyright (C) 2016,2018,2020,2021, Ignacio Fdez. Galván              *
 #               2020, Oskar Weser                                      *
 #***********************************************************************
 
@@ -83,7 +83,7 @@ function (set_module_directory Target)
     set (mod_dir ${MAIN_MOD_DIR}/${Target})
   endif ()
   set_target_properties (${Target} PROPERTIES Fortran_MODULE_DIRECTORY ${mod_dir})
-  target_include_directories (${Target} INTERFACE ${mod_dir})
+  target_include_directories (${Target} PUBLIC ${mod_dir})
 endfunction ()
 
 # Get the specified Properties from Target, and pass them to Files
@@ -107,4 +107,27 @@ function (target_remove_sources Target)
   get_target_property (sources ${Target} SOURCES)
   list (REMOVE_ITEM sources ${ARGN})
   set_target_properties (${Target} PROPERTIES SOURCES "${sources}")
+endfunction ()
+
+# Convert a list of relative paths to absolute paths
+function (set_absolute_paths Output Base_Dir)
+  foreach (file ${ARGN})
+    get_filename_component (file_path "${file}" REALPATH BASE_DIR "${Base_Dir}")
+    if (NOT EXISTS ${file_path})
+      message (FATAL_ERROR "${file_path} does not exist!")
+    endif ()
+    list (APPEND absolute_paths ${file_path})
+  endforeach ()
+  set (${Output} ${absolute_paths} PARENT_SCOPE)
+endfunction ()
+
+# Make a cache variable internal, setting it to its current value
+# or to the optional argument
+function (make_internal Var)
+  get_property (help CACHE ${Var} PROPERTY HELPSTRING)
+  if (${ARGC} GREATER 1)
+    set (${Var} ${ARGV1} CACHE INTERNAL "${help}" FORCE)
+  else ()
+    set (${Var} ${${Var}} CACHE INTERNAL "${help}" FORCE)
+  endif ()
 endfunction ()

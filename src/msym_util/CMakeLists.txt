@@ -9,4 +9,9 @@
 # LICENSE or in <http://www.gnu.org/licenses/>.                        *
 #***********************************************************************
 
-include (${PROJECT_SOURCE_DIR}/cmake/util_template.txt)
+set (sources
+     msymapi.F90
+     msymc.c
+)
+
+include (${PROJECT_SOURCE_DIR}/cmake/util_template.cmake)

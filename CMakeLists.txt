@@ -9,7 +9,7 @@
 # LICENSE or in <http://www.gnu.org/licenses/>.                        *
 #                                                                      *
 # Copyright (C) 2014-2016, Steven Vancoillie                           *
-#               2014-2020, Ignacio Fdez. Galván                        *
+#               2014-2021, Ignacio Fdez. Galván                        *
 #               2015, Stefan Knecht                                    *
 #               2020, Gerardo Raggi                                    *
 #***********************************************************************
@@ -19,10 +19,14 @@
 # Ignacio Fdez. Galván made several improvements / additions
 # Gerardo Raggi - AppleClang
 
-project (OpenMolcas Fortran C)
-
 cmake_minimum_required (VERSION 3.12)
-cmake_policy (VERSION 3.12)
+cmake_policy (VERSION 3.12...3.13)
+
+project (OpenMolcas
+         LANGUAGES Fortran C
+         VERSION ""
+)
+
 #set (CMAKE_VERBOSE_MAKEFILE ON)
 
 include (${PROJECT_SOURCE_DIR}/cmake/cmake_helpers.cmake)
@@ -85,12 +89,17 @@ endif ()
 
 option (MPI "Enable MPI parallellization." OFF)
 option (GA "Use Global Arrays library." OFF)
+if (GA)
+  mark_as_advanced (CLEAR GA_BUILD)
+else ()
+  mark_as_advanced (FORCE GA_BUILD)
+endif ()
 
 option (OPENMP "Enable multi-threading." OFF)
 
 option (BOUNDS "Enable bounds checking (only GNU Fortran)." OFF)
 
-option (EXPERT "Show advanced CMake cache entries in GUI)." OFF)
+option (EXPERT "Show advanced compiler flags in CMake GUI)." OFF)
 
 option (BIGOT "Do not allow any compiler warning (treat them as errors)." OFF)
 
@@ -131,78 +140,17 @@ if (";Debug;Garble;RelWithDebInfo;" MATCHES ";${CMAKE_BUILD_TYPE};" OR
   add_compile_definitions (_WARNING_WORKAROUND_)
 endif ()
 
-
 # External projects
-option (MSYM       "Activate MSYM support (requires External/libmsym submodule)." OFF)
-option (DMRG       "Activate QCMaquis DMRG driver and library."                   OFF)
-option (DMRG_DEBUG "Enable DEBUG print in QCMaquis driver."                       OFF)
-option (MolGUI     "Enable the Molcas Graphical User Interface."                  OFF)
-
-if (DMRG)
-  mark_as_advanced (CLEAR DMRG_DEBUG)
-  # Name and e-mail required for downloading QCMaquis
-  # Try to get the real name from the system account information
-  if (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
-    set (QCMaquis_NAME_GET_CMD "id -F")
-  else ()
-  # should we distinguish other platforms?
-    set (QCMaquis_NAME_GET_CMD "sh" "-c" "getent passwd $USER | awk -F: '{print \$5}'")
-  endif ()
-  execute_process (
-    COMMAND ${QCMaquis_NAME_GET_CMD}
-    OUTPUT_VARIABLE QCMaquis_NAME_
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-  )
-  set (QCMaquis_NAME ${QCMaquis_NAME_} CACHE STRING "Your name (required for downloading QCMaquis)")
-
-  # Update QCMaquis flag. Off by default.
-  # QCMaquis must be updated manually, as there might be QCMaquis upstream changes even when OpenMolcas is not changed,
-  # or vice versa. Running cmake with QCMaquis_UPDATE=ON will force-update QCMaquis.
-  if (NOT QCMaquis_UPDATE)
-    set (QCMaquis_UPDATE OFF CACHE STRING "Trigger QCMaquis update" FORCE)
-  endif ()
-
-  # try to get the e-mail address from git config (TODO: is there a better option?)
-  execute_process (
-    COMMAND ${GIT} "config" "user.email"
-    OUTPUT_VARIABLE QCMaquis_EMAIL_
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-  )
-  set (QCMaquis_EMAIL ${QCMaquis_EMAIL_} CACHE STRING "Your e-mail address (required for downloading QCMaquis)")
-
-  # Prepare variables for QCMaquis: separate name and surname
-  set (QCMaquis_NAME_LIST ${QCMaquis_NAME})
-
-  separate_arguments (QCMaquis_NAME_LIST)
-  list (LENGTH QCMaquis_NAME_LIST qcm_name_len)
-  if (qcm_name_len LESS 2)
-    message (FATAL_ERROR
-             "Your name has been specified as: " ${QCMaquis_NAME} "\n"
-             "Please specify both name and surname. If you have only one name, please specify it twice.")
-  endif ()
-
-  # Separate first name from the last name
-  # Currently, only the first word is treated by QCMaquis as the first name,
-  # all the rest is considered surnames -- to accomodate multiple surnames common in the Spanish-speaking
-  # areas or suffixes as Jr., III etc. Middle names are therefore incorrectly considered parts of
-  # the last name. However, this has no influence on the QCMaquis download.
-  list (GET QCMaquis_NAME_LIST 0 QCMaquis_GIVEN_NAME)
-  list (REMOVE_AT QCMaquis_NAME_LIST 0)
-  foreach (arg ${QCMaquis_NAME_LIST})
-    set (QCMaquis_SURNAME "${QCMaquis_SURNAME} ${arg}")
-  endforeach ()
-
-  # Set QCMaquis download URL and path to the download script
-  set (QCMaquis_URL "https://scine.ethz.ch/download/")
-  set (QCMaquis_dl_SCRIPT "${CMAKE_SOURCE_DIR}/src/QCMaquis/get_qcmaquis.sh")
-else ()
-  mark_as_advanced (FORCE DMRG_DEBUG)
-endif ()
-option (GEN1INT    "Enable Gen1Int library for 1-electron integrals."                                           OFF)
-option (NECI       "Activate NECI support (requires External/NECI submodule)."                                  OFF)
-option (WFA        "Activate extended wavefunction analysis (requires External/libwfa submodule)."              OFF)
-option (NEVPT2     "Activate (DMRG)-NEVPT2 support."                                                            OFF)
+option (DMRG       "Activate QCMaquis DMRG driver and library."                                                 OFF)
+option (DMRG_DEBUG "Enable DEBUG print in QCMaquis driver."                                                     OFF)
 option (EFPLIB     "Enable EFPLib library for effective fragment potentials (requires External/efp submodule)." OFF)
+option (GA_BUILD   "Build Global Arrays (requires External/ga submodule)."                                      OFF)
+option (GEN1INT    "Enable Gen1Int library for 1-electron integrals."                                           OFF)
+option (MolGUI     "Enable the Molcas Graphical User Interface."                                                OFF)
+option (MSYM       "Activate MSYM support (requires External/libmsym submodule)."                               OFF)
+option (NECI       "Activate NECI support (requires External/NECI submodule)."                                  OFF)
+option (NEVPT2     "Activate (DMRG)-NEVPT2 support."                                                            OFF)
+option (WFA        "Activate extended wavefunction analysis (requires External/libwfa submodule)."              OFF)
 
 ################################################################################
 #                                                                              #
@@ -287,20 +235,6 @@ foreach (BASE_DIR ${basedirs})
   list (APPEND source_roots ${source_roots_tmp})
 endforeach ()
 list (REVERSE basedirs)
-
-# set function to insert list
-#============================
-
-function (insert_before _list _item _new)
-  list (GET ${_item} 0 _first)
-  list (FIND ${_list} ${_first} _index)
-  if (_index GREATER -1)
-    list (INSERT ${_list} ${_index} ${_new})
-  else ()
-    list (APPEND ${_list} ${_new})
-  endif ()
-  set (${_list} ${${_list}} PARENT_SCOPE)
-endfunction ()
 
 # get version from git if available, otherwise look in .molcasversion
 #====================================================================
@@ -460,6 +394,11 @@ endif ()
 set (LIBRARY_OUTPUT_PATH ${PROJECT_BINARY_DIR}/lib)
 set (EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin)
 
+# location for external projects (git submodules)
+#================================================
+
+set (extprojsdir "${OPENMOLCAS_DIR}/External")
+
 # global include directory
 #=========================
 
@@ -522,7 +461,7 @@ endif ()
 
 if (NOT PLATFORM)
   if (DEFINED EXTRA_DIR)
-    message (WARNING "unsupported platform")
+    message (WARNING "Unsupported platform.")
   endif ()
 else ()
   message ("-- PLATFORM: ${PLATFORM}")
@@ -583,7 +522,7 @@ set (CFLAGS_GNU_RELEASE "-O2")
 set (CFLAGS_GNU_FAST "-O2")
 # Fortran compiler
 list (APPEND SUPPORTED_Fortran_COMPILERS "GNU")
-set (FFLAGS_GNU_BASIC "-fno-aggressive-loop-optimizations") # It was needed in 4.8 later, maybe not anymore?
+set (FFLAGS_GNU_BASIC "-fno-aggressive-loop-optimizations") # Or Work is assumed to be 8 elements long
 set (FFLAGS_GNU_PREPROCESS "-cpp")
 set (FFLAGS_GNU_OPENMP "-fopenmp")
 set (FFLAGS_GNU_NO_OPENMP "-fmax-stack-var-size=1048576")
@@ -598,7 +537,7 @@ set (FFLAGS_GNU_BOUNDS "-fsanitize=address -fno-omit-frame-pointer")
 
 if (CMAKE_Fortran_COMPILER_ID STREQUAL "GNU" AND
     CMAKE_Fortran_COMPILER_VERSION VERSION_LESS "4.8")
-  message (FATAL_ERROR "At least version 4.8 is required for the GNU Fortran compiler")
+  message (FATAL_ERROR "At least version 4.8 is required for the GNU Fortran compiler.")
 endif ()
 
 # Add runtime checks
@@ -608,6 +547,9 @@ if (CMAKE_Fortran_COMPILER_ID STREQUAL "GNU")
     set (FFLAGS_GNU_GARBLE "${FFLAGS_GNU_GARBLE} -fcheck=array-temps,do,mem,pointer,recursion")
   else ()
     set (FFLAGS_GNU_GARBLE "${FFLAGS_GNU_GARBLE} -fcheck=all,no-bounds")
+  endif ()
+  if (CMAKE_Fortran_COMPILER_VERSION VERSION_GREATER_EQUAL "8")
+    set (FFLAGS_GNU_GARBLE "${FFLAGS_GNU_GARBLE} -finit=derived")
   endif ()
 endif ()
 
@@ -707,13 +649,13 @@ set (FFLAGS_Intel_ILP64 "-i8 -r8 -heap-arrays")
 # build targets
 set (FFLAGS_Intel_DEBUG "-debug -traceback -warn all,nodeclarations")
 set (FFLAGS_Intel_GARBLE "-O2 -debug -traceback -warn all,nodeclarations -check all,nobounds,noarg_temp_created")
-set (FFLAGS_Intel_RELWITHDEBINFO "-O2 -debug -traceback -warn all,nodeclarations")
-set (FFLAGS_Intel_RELEASE "-O2 -traceback")
-set (FFLAGS_Intel_FAST "-fast")
+set (FFLAGS_Intel_RELWITHDEBINFO "-O2 -fno-alias -debug -traceback -warn all,nodeclarations")
+set (FFLAGS_Intel_RELEASE "-O2 -fno-alias -traceback")
+set (FFLAGS_Intel_FAST "-Ofast -fno-alias")
 
 if (CMAKE_Fortran_COMPILER_ID STREQUAL "Intel" AND
     CMAKE_Fortran_COMPILER_VERSION VERSION_LESS "13")
-  message (FATAL_ERROR "At least version 13 is required for the Intel Fortran compiler")
+  message (FATAL_ERROR "At least version 13 is required for the Intel Fortran compiler.")
 endif ()
 
 # Intel versions prior to 15 used -openmp
@@ -839,16 +781,20 @@ set (FFLAGS_PGI_FAST "-fast")
 # defines NAGFOR
 # Fortran compiler
 list (APPEND SUPPORTED_Fortran_COMPILERS "NAG")
-set (FFLAGS_NAG_BASIC "-dusty -dcfuns -kind=byte -ieee=full")
+set (FFLAGS_NAG_BASIC "-dusty -dcfuns -kind=byte")
 set (FFLAGS_NAG_PREPROCESS "-fpp")
 set (FFLAGS_NAG_OPENMP "-openmp")
 set (FFLAGS_NAG_ILP64 "-i8")
 # build targets
-set (FFLAGS_NAG_DEBUG "-O0 -g")
-set (FFLAGS_NAG_GARBLE "-O2 -g -nan")
-set (FFLAGS_NAG_RELWITHDEBINFO "-O2 -g")
-set (FFLAGS_NAG_RELEASE "-O2")
-set (FFLAGS_NAG_FAST "-O4")
+set (FFLAGS_NAG_DEBUG "-O0 -g -gline -ieee=full")
+set (FFLAGS_NAG_GARBLE "-O2 -g -gline -nan")
+set (FFLAGS_NAG_RELWITHDEBINFO "-O2 -g -ieee=full")
+set (FFLAGS_NAG_RELEASE "-O2 -ieee=full")
+set (FFLAGS_NAG_FAST "-O4 -ieee=full")
+
+# Add runtime checks
+# (No boundary checks because of the Work arrays)
+#set (FFLAGS_NAG_GARBLE "${FFLAGS_GNU_GARBLE} -C=alias -C=bits -C=dangling -C=do -C=intovf -C=present -C=pointer -C=recursion")
 
 # Fix for NAG compiler (similar to GNU Fortran)
 if (CMAKE_Fortran_COMPILER_ID STREQUAL "NAG" AND CMAKE_C_COMPILER_ID STREQUAL "GNU")
@@ -857,33 +803,10 @@ endif ()
 
 # The option does not exist, or I cannot find it
 #set (FFLAGS_NAG_BIGOT "???")
-set (NAG_TRAP "-ieee=stop")
+set (NAG_TRAP "-ieee=stop") # not compatible with -ieee=full
 
 # Generate the actual flags used in the build
 #============================================
-
-# Preprocessor
-if (CMAKE_BUILD_TYPE STREQUAL "Garble")
-  add_compile_definitions (_GARBLE_ _FPE_TRAP_)
-  # Disable FPE traps for compilers that do not support IEEE Fortran modules
-  # version check for Fortran doesn't work yet, assume it is the same as the C compiler GCC version
-  if (CMAKE_C_COMPILER_ID STREQUAL "GNU" AND
-      CMAKE_Fortran_COMPILER_ID STREQUAL "GNU" AND
-      CMAKE_C_COMPILER_VERSION VERSION_LESS "5.0")
-    remove_definitions (-D_FPE_TRAP_)
-  elseif (NOT LINALG STREQUAL "Internal")
-    message (WARNING
-             "Garble is active, but an external LINALG library is used! "
-             "The use of an external BLAS/LAPACK can result in floating point "
-             "exceptions handled by the library being trapped instead. "
-             "Please use -DLINALG=Internal for better chances for Garble to work correctly!")
-  else ()
-    message (WARNING
-             "Garble and floating point exception trapping are active! "
-             "It is possible that intended exceptions within BLAS/LAPACK crash the program. "
-             "Be warned!")
-  endif ()
-endif ()
 
 if (DMRG OR WFA)
   # C++ compiler required for DMRG and WFA projects
@@ -996,6 +919,29 @@ if (NOT FCID)
   message (FATAL_ERROR "unsupported Fortran compiler: ${CMAKE_Fortran_COMPILER_ID}")
 endif ()
 
+# Exception trapping
+if (CMAKE_BUILD_TYPE STREQUAL "Garble")
+  add_compile_definitions (_GARBLE_ _FPE_TRAP_)
+  # Disable FPE traps for compilers that do not support IEEE Fortran modules
+  if (CMAKE_Fortran_COMPILER_ID STREQUAL "GNU" AND
+      CMAKE_Fortran_COMPILER_VERSION VERSION_LESS "5.0")
+    remove_definitions (-D_FPE_TRAP_)
+  elseif (NOT LINALG STREQUAL "Internal")
+    message (WARNING
+             "Garble is active, but an external LINALG library is used! "
+             "The use of an external BLAS/LAPACK can result in floating point "
+             "exceptions handled by the library being trapped instead. "
+             "Please use -DLINALG=Internal for better chances for Garble to work correctly!")
+    set (FFLAGS_${FCID}_GARBLE "${FFLAGS_${FCID}_GARBLE} ${${FCID}_TRAP}")
+  else ()
+    message (WARNING
+             "Garble and floating point exception trapping are active! "
+             "It is possible that intended exceptions within BLAS/LAPACK crash the program. "
+             "Be warned!")
+    set (FFLAGS_${FCID}_GARBLE "${FFLAGS_${FCID}_GARBLE} ${${FCID}_TRAP}")
+  endif ()
+endif ()
+
 # overwrite any CMake defaults (some are strange, so we set our own)
 if (NOT CMAKE_Fortran_FLAGS_USER)
   set (CMAKE_Fortran_FLAGS_DEFAULT "$ENV{FFLAGS} ${FFLAGS_${FCID}_BASIC}"
@@ -1076,74 +1022,18 @@ endif ()
 #                                                                              #
 ################################################################################
 
+if ((BLOCK AND CHEMPS2) OR
+    (BLOCK AND DMRG) OR
+    (CHEMPS2 AND DMRG))
+  message (FATAL_ERROR "BLOCK, CHEMPS2 and DMRG options are not compatible.")
+endif ()
+
 # Install directory
 #==================
 if (NOT IS_ABSOLUTE "${CMAKE_INSTALL_PREFIX}")
   set (CMAKE_INSTALL_PREFIX "${PROJECT_BINARY_DIR}/${CMAKE_INSTALL_PREFIX}")
 endif ()
 get_filename_component (CMAKE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}" ABSOLUTE)
-
-# Global Arrays settings
-#=======================
-
-# Global Arrays settings, non-portable!
-if (GA AND MPI)
-  message ("Configuring with external GA library:")
-
-  find_path (GA_INCLUDE_PATH ga.h
-    PATHS ENV GAROOT
-    PATH_SUFFIXES include
-    NO_DEFAULT_PATH
-  )
-  if (NOT GA_INCLUDE_PATH)
-    message (FATAL_ERROR "GA_INCLUDE_PATH not found, make sure GAROOT environment variable is set.")
-  endif ()
-  find_library (LIBGA ga
-    PATHS ENV GAROOT
-    PATH_SUFFIXES lib
-    NO_DEFAULT_PATH
-  )
-  if (NOT LIBGA)
-    message (FATAL_ERROR "LIBGA not found, make sure GAROOT environment variable is set.")
-  else ()
-    list (APPEND GA_LIBRARIES ${LIBGA})
-  endif ()
-  find_library (LIBARMCI armci
-    PATHS ENV GAROOT
-    PATH_SUFFIXES lib
-    NO_DEFAULT_PATH
-  )
-  if (NOT LIBARMCI)
-    message (FATAL_ERROR "LIBARMCI not found, make sure GAROOT environment variable is set.")
-  else ()
-    list (APPEND GA_LIBRARIES ${LIBARMCI})
-  endif ()
-  # Hackish: try to find out if ARMCI needs IBVERBS by looking for ibv_open_device
-  execute_process (
-    COMMAND "nm" "${LIBARMCI}"
-    COMMAND "grep" "-iq" "ibv_open_device"
-    RESULT_VARIABLE FAILURE
-  )
-  if (FAILURE)
-    message ("-> no libibverbs dependency found for GA.")
-  else ()
-    message ("-> detected ibverbs dependency for GA.")
-    find_library (LIBIBVERBS ibverbs)
-    if (NOT LIBARMCI)
-      message (WARNING "LIBIBVERBS not found, but probably needed by GA.")
-    else ()
-      list (APPEND GA_LIBRARIES ${LIBIBVERBS})
-    endif ()
-  endif ()
-
-  add_compile_definitions (_GA_)
-  include_directories (${GA_INCLUDE_PATH})
-
-  message ("-- GA_INCLUDE_PATH: ${GA_INCLUDE_PATH}")
-  message ("-- GA_LIBRARIES: ${GA_LIBRARIES}")
-
-  list (APPEND EXTERNAL_LIBRARIES ${GA_LIBRARIES})
-endif ()
 
 # Parallel settings
 #==================
@@ -1225,7 +1115,7 @@ if (LINALG STREQUAL "MKL")
 
   # quick bypass for 32bit, don't bother with it (for now?)
   if (NOT ADDRMODE EQUAL 64)
-    message (FATAL_ERROR "Use of MKL for 32bit installation not implemented")
+    message (FATAL_ERROR "Use of MKL for 32bit installation not implemented.")
   endif ()
 
   mark_as_advanced (CLEAR MKLROOT)
@@ -1340,7 +1230,7 @@ if (LINALG STREQUAL "MKL")
 
   # generate actual library list with paths
   if (MPI)
-    add_compile_definitions (SCALAPACK)
+    add_compile_definitions (_SCALAPACK_)
     list (APPEND MKL_LIBRARIES ${LIBMKL_SCALAPACK})
   endif ()
   if (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
@@ -1566,7 +1456,7 @@ if (CUBLAS OR NVBLAS)
     list (APPEND CUDA_LIBRARIES ${LIBCUBLAS})
   else ()
     if (NOT LINALG)
-      message (FATAL_ERROR "NVBLAS needs an external linear algebra library such as MKL or ACML")
+      message (FATAL_ERROR "NVBLAS needs an external linear algebra library such as MKL or ACML.")
     endif ()
     find_library (LIBNVBLAS nvblas
       PATHS ${CUDAROOT}
@@ -1587,6 +1477,154 @@ if (CUBLAS OR NVBLAS)
   list (APPEND EXTERNAL_LIBRARIES ${CUDA_LIBRARIES})
 else ()
   mark_as_advanced (FORCE CUDAROOT)
+endif ()
+
+# Global Arrays settings
+#=======================
+
+if (GA AND MPI)
+  # Build from source
+  if (GA_BUILD)
+    message ("Configuring built-in Global Arrays library:")
+
+    set (proj ${extprojsdir}/ga)
+    set (proj_bin ${PROJECT_BINARY_DIR}/External/ga)
+    if (EXISTS ${proj}/CMakeLists.txt)
+      # set default GA options when built from OpenMolcas
+      # and hide them from the OpenMolcas CMake GUI
+      make_internal (ENABLE_FORTRAN               ON)
+      make_internal (ENABLE_CXX                   OFF)
+      make_internal (ENABLE_TESTS                 OFF)
+      if (ADDRMODE EQUAL 64)
+        make_internal (ENABLE_I8                  ON)
+        make_internal (LINALG_REQUIRED_COMPONENTS ilp64)
+      else ()
+        make_internal (ENABLE_I8                  OFF)
+        make_internal (LINALG_REQUIRED_COMPONENTS lp64)
+      endif ()
+      if (LINALG STREQUAL "MKL")
+        make_internal (ENABLE_BLAS                ON)
+        make_internal (LINALG_VENDOR              IntelMKL)
+        make_internal (LINALG_PREFIX              ${MKLROOT})
+      elseif (LINALG STREQUAL "OpenBLAS")
+        make_internal (ENABLE_BLAS                ON)
+        make_internal (LINALG_VENDOR              OpenBLAS)
+        make_internal (LINALG_PREFIX              ${OPENBLASROOT})
+      elseif (";Internal;Runtime;" MATCHES ";${LINALG};")
+        message (FATAL_ERROR "GA_BUILD requires an external LINALG library.")
+      else ()
+        message (FATAL_ERROR "GA_BUILD: unsupported LINALG: ${LINALG}")
+      endif ()
+
+      add_subdirectory (${proj} ${proj_bin} EXCLUDE_FROM_ALL)
+
+      # hide other variables set by GA
+      if (LINALG STREQUAL "MKL")
+        make_internal (IntelMKL_CORE_LIBRARY)
+        make_internal (IntelMKL_ILP64_BLACS_LIBRARY)
+        make_internal (IntelMKL_ILP64_LIBRARY)
+        make_internal (IntelMKL_ILP64_ScaLAPACK_LIBRARY)
+        make_internal (IntelMKL_INCLUDE_DIR)
+        make_internal (IntelMKL_LP64_BLACS_LIBRARY)
+        make_internal (IntelMKL_LP64_LIBRARY)
+        make_internal (IntelMKL_LP64_ScaLAPACK_LIBRARY)
+        make_internal (IntelMKL_THREAD_LIBRARY)
+      elseif (LINALG STREQUAL "OpenBLAS")
+        make_internal (OpenBLAS_INCLUDE_DIR)
+        make_internal (OpenBLAS_LIBRARIES)
+      endif ()
+      make_internal (CHECK_COMPILATION_ONLY)
+      make_internal (COMEX_NETWORK_MPI3)
+      make_internal (COMEX_NETWORK_MPI_MT)
+      make_internal (COMEX_NETWORK_MPI_PR)
+      make_internal (COMEX_NETWORK_MPI_PT)
+      make_internal (COMEX_NETWORK_MPI_TS)
+      make_internal (ENABLE_ARMCI_MEM_OPTION)
+      make_internal (F2C_HIDDEN_STRING_LENGTH_AFTER_ARGS)
+      make_internal (GLOBALARRAYS_TEST_TIMEOUT)
+      make_internal (MPI_TS)
+      make_internal (MSG_COMMS_MPI)
+
+      set (GA_INCLUDE_PATH ${proj_bin}/inc)
+      set (GA_LIBRARIES ga armci)
+      list (APPEND EXTRA_INSTALL_TARGETS ${GA_LIBRARIES})
+
+      # Since we are not "installing" the target, we have to find the include files
+      file (COPY ${proj}/global/src/ga.h          DESTINATION ${GA_INCLUDE_PATH})
+      file (COPY ${proj}/global/src/gacommon.h    DESTINATION ${GA_INCLUDE_PATH})
+      file (COPY ${proj}/ma/macommon.h            DESTINATION ${GA_INCLUDE_PATH})
+      file (COPY ${proj}/pario/eaf/eaf.h          DESTINATION ${GA_INCLUDE_PATH})
+      file (COPY ${proj}/pario/eaf/eaf.fh         DESTINATION ${GA_INCLUDE_PATH})
+      file (COPY ${proj_bin}/global/src/global.fh DESTINATION ${GA_INCLUDE_PATH})
+      file (COPY ${proj_bin}/ma/mafdecls.fh       DESTINATION ${GA_INCLUDE_PATH})
+      file (COPY ${proj_bin}/gaf2c/typesf2c.h     DESTINATION ${GA_INCLUDE_PATH})
+
+    else ()
+      # Note: initial space causes line not to break in output
+      message (FATAL_ERROR " Global Arrays sources not available, run \"${GIT} submodule update --init ${proj}\"")
+    endif ()
+
+  # External precompiled GA library
+  else ()
+    message ("Configuring external Global Arrays library:")
+
+    find_path (GA_INCLUDE_PATH ga.h
+      PATHS ENV GAROOT
+      PATH_SUFFIXES include include/ga
+      NO_DEFAULT_PATH
+    )
+    if (NOT GA_INCLUDE_PATH)
+      message (FATAL_ERROR "GA_INCLUDE_PATH not found, make sure GAROOT environment variable is set.")
+    endif ()
+    find_library (LIBGA ga
+      PATHS ENV GAROOT
+      PATH_SUFFIXES lib
+      NO_DEFAULT_PATH
+    )
+    if (NOT LIBGA)
+      message (FATAL_ERROR "LIBGA not found, make sure GAROOT environment variable is set.")
+    else ()
+      list (APPEND GA_LIBRARIES ${LIBGA})
+    endif ()
+    find_library (LIBARMCI armci
+      PATHS ENV GAROOT
+      PATH_SUFFIXES lib
+      NO_DEFAULT_PATH
+    )
+    if (NOT LIBARMCI)
+      message (FATAL_ERROR "LIBARMCI not found, make sure GAROOT environment variable is set.")
+    else ()
+      list (APPEND GA_LIBRARIES ${LIBARMCI})
+    endif ()
+    # Hackish: try to find out if ARMCI needs IBVERBS by looking for ibv_open_device
+    execute_process (
+      COMMAND "nm" "${LIBARMCI}"
+      COMMAND "grep" "-iq" "ibv_open_device"
+      RESULT_VARIABLE FAILURE
+    )
+    if (FAILURE)
+      message ("-> no libibverbs dependency found for GA.")
+    else ()
+      message ("-> detected ibverbs dependency for GA.")
+      find_library (LIBIBVERBS ibverbs)
+      if (NOT LIBARMCI)
+        message (WARNING "LIBIBVERBS not found, but probably needed by GA.")
+      else ()
+        list (APPEND GA_LIBRARIES ${LIBIBVERBS})
+      endif ()
+    endif ()
+    set (GA_FOUND TRUE)
+  endif ()
+
+  # Final common settings
+
+  add_compile_definitions (_GA_)
+  include_directories (${GA_INCLUDE_PATH})
+
+  message ("-- GA_INCLUDE_PATH: ${GA_INCLUDE_PATH}")
+  message ("-- GA_LIBRARIES: ${GA_LIBRARIES}")
+
+  insert_before (EXTERNAL_LIBRARIES MPI_Fortran_LIBRARIES "${GA_LIBRARIES}")
 endif ()
 
 # Gromacs
@@ -1611,10 +1649,10 @@ if (GROMACS)
   endif ()
 
   # The lib directory is set by Gromacs
-  if (DEFINED ENV{GMXLDLIB})
+  if (DEFINED ENV{GMXLDLIB} AND NOT GROMACS_DIR)
     set (GMX_LIBDIR $ENV{GMXLDLIB})
   else ()
-    set (GMX_LIBDIR "${GROMACS_DIR}/lib/*")
+    set (GMX_LIBDIR "${GROMACS_DIR}/lib")
   endif ()
 
   find_library (LIBGMX
@@ -1659,8 +1697,8 @@ else ()
   message ("Gromacs interface DISABLED")
 endif ()
 
-# Chan group's DMRG (Block code) support
-#=======================================
+# G. Chan group's DMRG (Block code) support
+#==========================================
 
 if (BLOCK)
   mark_as_advanced (CLEAR BLOCK_DIR)
@@ -1699,8 +1737,8 @@ else ()
   message ("BLOCK interface DISABLED")
 endif ()
 
-# S.Wouters' DMRG (CheMPS2 code) support
-#=======================================
+# S. Wouters' DMRG (CheMPS2 code) support
+#========================================
 
 if (CHEMPS2)
   mark_as_advanced (CLEAR CHEMPS2_DIR)
@@ -1708,12 +1746,12 @@ if (CHEMPS2)
   message ("Configuring CheMPS2-DMRG support:")
 
   if (NOT HDF5)
-    message (FATAL_ERROR "CheMPS2 interface requires enabling HDF5")
+    message (FATAL_ERROR "CheMPS2 interface requires enabling HDF5.")
   endif ()
 
   find_program (CHEMPS2_EXE chemps2)
   if (NOT CHEMPS2_EXE)
-    message (WARNING "No CheMPS2 installation found, you will have to make sure it is available at run time")
+    message (WARNING "No CheMPS2 installation found, you will have to make sure it is available at run time.")
   endif ()
 
   foreach (prog
@@ -1729,8 +1767,68 @@ else ()
   message ("CHEMPS2 interface DISABLED")
 endif ()
 
-if (BLOCK AND CHEMPS2)
-  message (FATAL_ERROR "BLOCK and CHEMPS2 options are not compatible.")
+# QCMaquis support
+#=================
+
+if (DMRG)
+  mark_as_advanced (CLEAR DMRG_DEBUG)
+  # Name and e-mail required for downloading QCMaquis
+  # Try to get the real name from the system account information
+  if (${CMAKE_SYSTEM_NAME} STREQUAL "Darwin")
+    set (QCMaquis_NAME_GET_CMD "id -F")
+  else ()
+  # should we distinguish other platforms?
+    set (QCMaquis_NAME_GET_CMD "sh" "-c" "getent passwd $USER | awk -F: '{print \$5}'")
+  endif ()
+  execute_process (
+    COMMAND ${QCMaquis_NAME_GET_CMD}
+    OUTPUT_VARIABLE QCMaquis_NAME_
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+  set (QCMaquis_NAME ${QCMaquis_NAME_} CACHE STRING "Your name (required for downloading QCMaquis)")
+
+  # Update QCMaquis flag. Off by default.
+  # QCMaquis must be updated manually, as there might be QCMaquis upstream changes even when OpenMolcas is not changed,
+  # or vice versa. Running cmake with QCMaquis_UPDATE=ON will force-update QCMaquis.
+  if (NOT QCMaquis_UPDATE)
+    set (QCMaquis_UPDATE OFF CACHE STRING "Trigger QCMaquis update" FORCE)
+  endif ()
+
+  # try to get the e-mail address from git config (TODO: is there a better option?)
+  execute_process (
+    COMMAND ${GIT} "config" "user.email"
+    OUTPUT_VARIABLE QCMaquis_EMAIL_
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+  set (QCMaquis_EMAIL ${QCMaquis_EMAIL_} CACHE STRING "Your e-mail address (required for downloading QCMaquis)")
+
+  # Prepare variables for QCMaquis: separate name and surname
+  set (QCMaquis_NAME_LIST ${QCMaquis_NAME})
+
+  separate_arguments (QCMaquis_NAME_LIST)
+  list (LENGTH QCMaquis_NAME_LIST qcm_name_len)
+  if (qcm_name_len LESS 2)
+    message (FATAL_ERROR
+             "Your name has been specified as: " ${QCMaquis_NAME} "\n"
+             "Please specify both name and surname. If you have only one name, please specify it twice.")
+  endif ()
+
+  # Separate first name from the last name
+  # Currently, only the first word is treated by QCMaquis as the first name,
+  # all the rest is considered surnames -- to accomodate multiple surnames common in the Spanish-speaking
+  # areas or suffixes as Jr., III etc. Middle names are therefore incorrectly considered parts of
+  # the last name. However, this has no influence on the QCMaquis download.
+  list (GET QCMaquis_NAME_LIST 0 QCMaquis_GIVEN_NAME)
+  list (REMOVE_AT QCMaquis_NAME_LIST 0)
+  foreach (arg ${QCMaquis_NAME_LIST})
+    set (QCMaquis_SURNAME "${QCMaquis_SURNAME} ${arg}")
+  endforeach ()
+
+  # Set QCMaquis download URL and path to the download script
+  set (QCMaquis_URL "https://scine.ethz.ch/download/")
+  set (QCMaquis_dl_SCRIPT "${CMAKE_SOURCE_DIR}/src/QCMaquis/get_qcmaquis.sh")
+else ()
+  mark_as_advanced (FORCE DMRG_DEBUG)
 endif ()
 
 # GPerfTools: CPU profiling
@@ -1786,8 +1884,6 @@ if (BIGOT AND CMAKE_Fortran_COMPILER_ID STREQUAL "Intel")
 endif ()
 include_directories (${MAIN_MOD_DIR})
 
-set (extprojsdir "${OPENMOLCAS_DIR}/External")
-
 if (LINALG STREQUAL "Internal" OR LINALG STREQUAL "Runtime")
   set (proj ${extprojsdir}/lapack)
   if (EXISTS ${proj}/BLAS/SRC/ddot.f)
@@ -1805,13 +1901,14 @@ if (MSYM)
   set (proj_bin ${PROJECT_BINARY_DIR}/External/libmsym)
   if (EXISTS ${proj}/CMakeLists.txt)
     set (MSYM_FOUND ON)
+
+    # set and hide from the OpenMolcas CMake GUI
+    make_internal (MSYM_BUILD_EXAMPLES OFF)
+    make_internal (MSYM_BUILD_PYTHON   OFF)
     add_subdirectory (${proj} ${proj_bin} EXCLUDE_FROM_ALL)
-    # hide from the OpenMolcas CMake GUI
-    set (MSYM_BUILD_EXAMPLES OFF CACHE INTERNAL "Build example executables" FORCE)
-    set (MSYM_BUILD_PYTHON   OFF CACHE INTERNAL "Build python binding"      FORCE)
-    set (INSTALL_LIB_DIR     ${INSTALL_LIB_DIR}     CACHE INTERNAL "Installation directory for msym library." FORCE)
-    set (INSTALL_INCLUDE_DIR ${INSTALL_INCLUDE_DIR} CACHE INTERNAL "Installation directory for header files." FORCE)
-    set (INSTALL_CMAKE_DIR   ${INSTALL_CMAKE_DIR}   CACHE INTERNAL "Installation directory for CMake files."  FORCE)
+    make_internal (INSTALL_LIB_DIR)
+    make_internal (INSTALL_INCLUDE_DIR)
+    make_internal (INSTALL_CMAKE_DIR)
 
     set (MSYM_INCLUDE ${proj}/src ${proj_bin})
     set (MSYM_LIBRARIES msym)
@@ -1903,12 +2000,12 @@ if (NECI)
   if (EXISTS ${proj}/CMakeLists.txt)
     # set default NECI options when built from OpenMolcas
     # and hide them from the OpenMolcas CMake GUI
-    set (ENABLE_MOLCAS ON CACHE INTERNAL "Enable Molcas interface.")
-    set (ENABLE_HDF5 ON CACHE INTERNAL "Enable HDF5 popsfiles.")
-    set (WARNINGS OFF CACHE INTERNAL "Enable lots of compile warnings.")
-    set (ENABLE_SHARED_MEMORY ON CACHE INTERNAL "Enable shared memory.")
-    set (ENABLE_SHARED ON CACHE INTERNAL "Enable shared libraries.")
-    # set (ENABLE_BUILD_HDF5 OFF CACHE INTERNAL "Provide precompiled HDF5.")
+    make_internal (ENABLE_MOLCAS        ON)
+    make_internal (ENABLE_HDF5          ON)
+    make_internal (WARNINGS             OFF)
+    make_internal (ENABLE_SHARED_MEMORY ON)
+    make_internal (ENABLE_SHARED        ON)
+    # make_internal (ENABLE_BUILD_HDF5    OFF)
 
     list (APPEND rasscf_defs "_NECI_")
     add_subdirectory (${proj} ${proj_bin} EXCLUDE_FROM_ALL)
@@ -1943,20 +2040,20 @@ if (EFPLIB)
     # Enabling source changes to keep ExternalProject happy
     set (CMAKE_DISABLE_SOURCE_CHANGES OFF)
     ExternalProject_Add (${projname}
-      PREFIX ${PROJECT_BINARY_DIR}/External
-      SOURCE_DIR ${proj}
-      CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${PROJECT_BINARY_DIR}
-                 -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-                 -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
-                 -DCMAKE_INSTALL_LIBDIR=lib
-                 -DBUILD_SHARED_LIBS=${BUILD_SHARED_LIBS}
-                 -DENABLE_OPENMP=OFF  # OMP already in CMAKE_C_FLAGS
-                 -DFRAGLIB_UNDERSCORE_L=ON
-                 -DFRAGLIB_DEEP=ON
-                 -DLAPACK_LIBRARIES=${LINALG_LIBRARIES}
-      CMAKE_CACHE_ARGS -DCMAKE_C_FLAGS:STRING=${CMAKE_C_FLAGS}
-                       -DLIBEFP_FORTRAN_INT64:BOOL=${LIBEFP_FORTRAN_INT64}
-      INSTALL_COMMAND ""
+                         PREFIX ${PROJECT_BINARY_DIR}/External
+                         SOURCE_DIR ${proj}
+                         CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${PROJECT_BINARY_DIR}
+                                    -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+                                    -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+                                    -DCMAKE_INSTALL_LIBDIR=lib
+                                    -DBUILD_SHARED_LIBS=${BUILD_SHARED_LIBS}
+                                    -DENABLE_OPENMP=OFF  # OMP already in CMAKE_C_FLAGS
+                                    -DFRAGLIB_UNDERSCORE_L=ON
+                                    -DFRAGLIB_DEEP=ON
+                                    -DLAPACK_LIBRARIES=${LINALG_LIBRARIES}
+                         CMAKE_CACHE_ARGS -DCMAKE_C_FLAGS:STRING=${CMAKE_C_FLAGS}
+                                          -DLIBEFP_FORTRAN_INT64:BOOL=${LIBEFP_FORTRAN_INT64}
+                         INSTALL_COMMAND ""
     )
     set (CMAKE_DISABLE_SOURCE_CHANGES ON)
 
@@ -2014,7 +2111,7 @@ if (WFA)
     set (WFA_FOUND ON)
     mark_as_advanced (CLEAR ARMADILLO_INC)
     set (ARMADILLO_INC ${ARMADILLO_INC} CACHE PATH "Directory with armadillo header files")
-    set (MOLCAS_LIB ON CACHE INTERNAL "Compile Molcas support")
+    make_internal (MOLCAS_LIB ON)
 
     add_subdirectory (${proj}/libwfa)
     target_include_directories (wfa_molcas PRIVATE ${proj} ${ARMADILLO_INC} ${HDF5_INCLUDE_DIRS})
@@ -2076,14 +2173,14 @@ if (MolGUI)
 
   include (ExternalProject)
   ExternalProject_Add (${projname}
-    GIT_REPOSITORY https://gitlab.com/Molcas/MolGUI.git
-    GIT_TAG f839f89edc9554efb54aa9f7905f0573410baa40
-    PREFIX ${projdir}
-    CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${projinstall}
-               -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
-               -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
-               -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
-               -DMOLCAS=${PROJECT_BINARY_DIR}
+                       GIT_REPOSITORY https://gitlab.com/Molcas/MolGUI.git
+                       GIT_TAG f839f89edc9554efb54aa9f7905f0573410baa40
+                       PREFIX ${projdir}
+                       CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${projinstall}
+                                  -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+                                  -DCMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+                                  -DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}
+                                  -DMOLCAS=${PROJECT_BINARY_DIR}
   )
   message ("-- MolGUI will be downloaded and compiled in ${projdir}")
   message ("-- MolGUI will be installed in ${projinstall}")
@@ -2263,7 +2360,7 @@ foreach (util ${utils})
   find_source (${util} ${source_roots})
   if (NOT DEFINED ${util}_src)
     list (REMOVE_ITEM utils ${util})
-    message (WARNING "\"${util}\" not found in source directories, skipping")
+    message (WARNING "\"${util}\" not found in source directories, skipping.")
   endif ()
 endforeach ()
 
@@ -2273,7 +2370,7 @@ if (FDE)
   if (DEFINED ${util}_src)
     list (APPEND utils ${util})
   else ()
-    message (FATAL_ERROR "\"${util}\" not found in source directories")
+    message (FATAL_ERROR "\"${util}\" not found in source directories.")
   endif ()
   foreach (prog
     gateway_util
@@ -2287,7 +2384,7 @@ endif ()
 
 # If an external GA library is not present, we use the internal
 # DGA code which resides in dga_util:
-if (MPI AND NOT GA)
+if (MPI AND NOT GA AND NOT GA_BUILD)
   set (util dga_util)
   find_source (${util} ${source_roots})
   if (DEFINED ${util}_src)
@@ -2313,7 +2410,7 @@ if (LINALG STREQUAL "Runtime")
   if (DEFINED ${util}_src)
     list (APPEND utils ${util})
   else ()
-    message (FATAL_ERROR "\"${util}\" not found in source directories")
+    message (FATAL_ERROR "\"${util}\" not found in source directories.")
   endif ()
   list (APPEND ${util}_incs ${internal_linalg})
 endif ()
@@ -2330,7 +2427,7 @@ if (HDF5 AND HDF5_FOUND)
     list (APPEND utils ${util})
     list (APPEND ${util}_incs ${HDF5_INCLUDE_DIRS})
   else ()
-    message (FATAL_ERROR "\"${util}\" not found in source directories")
+    message (FATAL_ERROR "\"${util}\" not found in source directories.")
   endif ()
   # additional utilities doing internal HDF5 calls
   foreach (prog
@@ -2393,7 +2490,7 @@ if (MSYM AND MSYM_FOUND)
   if (DEFINED ${util}_src)
     list (APPEND utils ${util})
   else ()
-    message (FATAL_ERROR "\"${util}\" not found in source directories")
+    message (FATAL_ERROR "\"${util}\" not found in source directories.")
   endif ()
   list (APPEND ${util}_incs ${MSYM_INCLUDE})
   list (APPEND progs symmetrize)
@@ -2406,7 +2503,7 @@ if (BLOCK)
     list (APPEND utils ${util})
     list (APPEND ${util}_defs "_ENABLE_BLOCK_DMRG_")
   else ()
-    message (FATAL_ERROR "\"${util}\" not found in source directories")
+    message (FATAL_ERROR "\"${util}\" not found in source directories.")
   endif ()
 endif ()
 
@@ -2418,7 +2515,7 @@ if (CHEMPS2)
     list (APPEND ${util}_incs ${HDF5_INCLUDE_DIRS})
     list (APPEND ${util}_defs "_ENABLE_CHEMPS2_DMRG_")
   else ()
-    message (FATAL_ERROR "\"${util}\" not found in source directories")
+    message (FATAL_ERROR "\"${util}\" not found in source directories.")
   endif ()
 endif ()
 
@@ -2443,7 +2540,7 @@ foreach (prog ${progs})
   find_source (${prog} ${source_roots})
   if (NOT DEFINED ${prog}_src)
     list (REMOVE_ITEM progs ${prog})
-    message (WARNING "\"${prog}\" not found in source directories, skipping")
+    message (WARNING "\"${prog}\" not found in source directories, skipping.")
   endif ()
 endforeach ()
 
@@ -2490,6 +2587,7 @@ endif ()
 list (SORT progs)
 
 # set program dependencies of super modules
+# (note dependencies are not recursive with object libraries, so child dependencies must be explicit)
 set (casvb_deplibs
   rasscf
 )
@@ -2531,6 +2629,7 @@ set (numerical_gradient_deplibs
   scf
   seward
 )
+
 if (BLOCK OR DMRG)
   list (APPEND last_energy_deplibs dmrgscf)
 endif ()
@@ -2656,7 +2755,7 @@ endif ()
 if (LINALG STREQUAL "Internal")
   set (util "LinAlg_internal")
   if (NOT DEFINED ${util}_src)
-    message (FATAL_ERROR "\"${util}\" not found in source directories")
+    message (FATAL_ERROR "\"${util}\" not found in source directories.")
   endif ()
   foreach (lib "lapack" "blas")
     set (source ${${util}_src}/${lib}.f)
@@ -2725,19 +2824,20 @@ if (MPI)
 endif ()
 add_subdirectory (src/${prog} ${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/${prog})
 list (APPEND progs_exe ${prog}.exe)
-list (APPEND ALL_SOURCES ${prog}_sources)
+list (APPEND ALL_SOURCES ${${prog}_sources})
 list (APPEND PROGRAM_EXECUTABLES ${prog}.exe)
 
 # Add custom debug flags per file:
 #   For each file, tries to find out if each definition is used and modify the file's properties
 # Limitation: it will rebuild the whole target (but not the whole OpenMolcas)
 if (DEBUG_DEFS)
+  get_directory_property (subdirs SUBDIRECTORIES)
   foreach (file ${ALL_SOURCES})
     file (READ ${file} contents)
     foreach (def ${DEBUG_DEFS})
       string (REGEX MATCH ${def} result "${contents}")
       if (NOT ${result} STREQUAL "")
-        set_property (SOURCE ${file} APPEND PROPERTY COMPILE_DEFINITIONS ${def})
+        set_property (SOURCE ${file} DIRECTORY ${subdirs} APPEND PROPERTY COMPILE_DEFINITIONS ${def})
       endif ()
     endforeach ()
   endforeach ()
@@ -2765,7 +2865,7 @@ if (TOOLS)
           else ()
             message ("-- ${tool}: ${dir_error}")
             if ("${tool}" STREQUAL "pymolcas" AND (NOT DEFINED EXTRA_DIR))
-              message (FATAL_ERROR "Failed to configure the pymolcas driver")
+              message (FATAL_ERROR "Failed to configure the pymolcas driver.")
             endif ()
           endif ()
         else ()
@@ -2862,7 +2962,7 @@ if (DEFINED EXTRA_DIR)
     RESULT_VARIABLE INSTALL_DRIVER_RC
   )
   if (INSTALL_DRIVER_RC)
-    message (FATAL_ERROR "Failed to install the Molcas driver")
+    message (FATAL_ERROR "Failed to install the Molcas driver.")
   endif ()
 else ()
   set (MOLCAS_DRIVER "${OPENMOLCAS_DIR}/sbin/dummy.driver")
@@ -2876,7 +2976,7 @@ else ()
       message ("-- ${tool}: added to targets")
     else ()
       message ("-- ${tool}: ${dir_error}")
-      message (FATAL_ERROR "Failed to configure the pymolcas driver")
+      message (FATAL_ERROR "Failed to configure the pymolcas driver.")
     endif ()
   endif ()
   if (MolGUI)
