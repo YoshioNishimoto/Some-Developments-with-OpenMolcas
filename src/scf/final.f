@@ -54,6 +54,11 @@
       use EFP_Module
       use EFP
 #endif
+#ifdef _HDF5_
+      Use mh5, Only: mh5_put_dset
+#endif
+      Use Interfaces_SCF, Only: dOne_SCF
+      use OFembed, only: Do_OFemb, FMaux
       Implicit Real*8 (a-h,o-z)
 *
 #include "real.fh"
@@ -72,9 +77,6 @@
      &       Fock(mBT,nD), OccNo(mmB,nD), KntE(mBT), MssVlc(mBT),
      &       Darwin(mBT)
 *
-      Logical Do_OFemb, KEonly, OFE_first
-      COMMON  / OFembed_L / Do_OFemb,KEonly,OFE_first
-      COMMON  / OFembed_I / ipFMaux, ip_NDSD, l_NDSD
       Logical Do_SpinAV
       COMMON  / SPAVE_L  / Do_SpinAV
       COMMON  / SPAVE_I  / ip_DSc
@@ -103,7 +105,6 @@
       Integer nSSh(mxSym), nZero(mxSym)
 #endif
       Integer nFldP
-#include "interfaces_scf.fh"
       Dimension Dummy(1)
 *
 *----------------------------------------------------------------------*
@@ -533,7 +534,7 @@ c make a fix for energies for deleted orbitals
      &     KSDFT.ne.'SCF'        ) Call ClsSew
 *
       If (Do_OFemb) Then
-          Call GetMem('FMaux','Free','Real',ipFMaux,nBT)
+        Call mma_deallocate(FMaux)
 #ifdef _NOT_USED_CODE_
           If (l_NDSD.gt.0)
      &        Call GetMem('NDSD','Free','Real',ip_NDSD,l_NDSD)

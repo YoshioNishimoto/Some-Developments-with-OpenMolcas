@@ -1,3 +1,11 @@
+# Prevent duplicate branch & MR pipelines
+
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_OPEN_MERGE_REQUESTS =~ /(^|,)Molcas\/OpenMolcas!\d+($|,)/'
+      when: never
+    - when: always
+
 # Some useful templates:
 # sources: list of files that require a rebuild
 # compile-jobs: rules for when to run compile jobs
@@ -26,10 +34,13 @@
     - if: '$CI_PROJECT_PATH == "Molcas/OpenMolcas" && $CI_COMMIT_REF_NAME == "master"'
       when: never
     # merge requests
-    - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME'
+    - if: '$CI_MERGE_REQUEST_IID'
       when: on_success
     # api, trigger, web
     - if: '$CI_PIPELINE_SOURCE == "api" || $CI_PIPELINE_SOURCE == "trigger" || $CI_PIPELINE_SOURCE == "web"'
+      when: on_success
+    # manual request on push
+    - if: '$CI_PIPELINE_SOURCE == "push" && $TEST_JOBS == "true"'
       when: on_success
     # branches, if changes in the source
     - if: '$CI_PIPELINE_SOURCE == "push"'
@@ -42,10 +53,13 @@
     - if: '$CI_PROJECT_PATH == "Molcas/OpenMolcas" && $CI_COMMIT_REF_NAME == "master"'
       when: never
     # merge requests
-    - if: '$CI_MERGE_REQUEST_TARGET_BRANCH_NAME'
+    - if: '$CI_MERGE_REQUEST_IID'
       when: on_success
     # api, trigger, web
     - if: '$CI_PIPELINE_SOURCE == "api" || $CI_PIPELINE_SOURCE == "trigger" || $CI_PIPELINE_SOURCE == "web"'
+      when: on_success
+    # manual request on push
+    - if: '$CI_PIPELINE_SOURCE == "push" && $TEST_JOBS == "true"'
       when: on_success
     # dev/external branch, if changes in the source
     - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_REF_NAME == "dev/external"'
@@ -109,9 +123,9 @@ include:
     - cd build
     - >
       cp /license.dat . || true
-    # save the CMake configuration from a variable and add extra path
     - |
       if [ -z "${make}" ] ; then export make="make"; fi
+    # save the CMake configuration from a variable and add extra path
     - |
       echo "${cache_file}" > flags.cmake
       if [ -n "${extra}" ] ; then
@@ -348,16 +362,16 @@ test:pgi:
     - tinker
   parallel: 2
 
-build:sun:
-  extends: .sun
-  <<: *compile
-test:sun:
-  extends: .sun
-  <<: *run-tests
-  needs:
-    - build:sun
-    - tinker
-  parallel: 2
+#build:sun:
+#  extends: .sun
+#  <<: *compile
+#test:sun:
+#  extends: .sun
+#  <<: *run-tests
+#  needs:
+#    - build:sun
+#    - tinker
+#  parallel: 2
 
 build:intel:
   extends: .intel
@@ -379,6 +393,9 @@ test:intel13:
   <<: *run-tests
   needs:
     - build:intel13
+  parallel: 2
+  tags:
+    - docker
 
 build:nag:
   extends: .nag
@@ -431,3 +448,12 @@ test:qcmaquis:
   needs:
     - build:qcmaquis
 
+build:mpi:
+  extends: .mpi
+  <<: *compile
+test:mpi:
+  extends: .mpi
+  <<: *run-tests
+  needs:
+    - build:mpi
+  parallel: 4

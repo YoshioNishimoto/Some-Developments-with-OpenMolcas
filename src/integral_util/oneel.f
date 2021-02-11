@@ -109,7 +109,7 @@ C-tbp-npy-end
 *                                                                      *
 *---- Compute all SO integrals for all components of the operator.
 *
-      Call OneEl_Internal
+      Call OneEl_Inner
      &           (Kernel,KrnlMm,Label,ip,lOper,nComp,CCoor,
      &            nOrdOp,rHrmt,iChO,
      &            opmol,opnuc,ipad,iopadr,idirect,isyop,

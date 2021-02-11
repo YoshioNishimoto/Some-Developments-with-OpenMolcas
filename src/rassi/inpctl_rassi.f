@@ -14,7 +14,7 @@
       use qcmaquis_interface_cfg
       use qcmaquis_interface_environment,
      & only: initialize_dmrg_rassi
-      use qcmaquis_info
+      use qcmaquis_info, only: qcmaquis_info_init
 #endif
       use mspt2_eigenvectors
       IMPLICIT NONE
@@ -29,9 +29,6 @@
 #include "centra.fh"
 #include "rasdef.fh"
 #include "cntrl.fh"
-#ifdef _HDF5_
-#  include "mh5.fh"
-#endif
 
       LOGICAL READ_STATES
       INTEGER JOB, i
