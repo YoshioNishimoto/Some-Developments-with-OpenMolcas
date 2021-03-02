@@ -1252,7 +1252,7 @@ C     task.
           JSTATE=ISTAT(JOB2)-1+JST
           DO IST=1,NSTAT(JOB1)
             ISTATE=ISTAT(JOB1)-1+IST
-            IF(ISTATE.LE.JSTATE) CYCLEs
+            IF(ISTATE.LE.JSTATE) CYCLE
             SIJ=HAM(ISTATE,JSTATE)
             HII=HAM(ISTATE,ISTATE)
             HJJ=HAM(JSTATE,JSTATE)
