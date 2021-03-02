@@ -675,14 +675,14 @@ C Read ISTATE wave function
 C         Transform to bion basis, Split-Guga format
           If (TrOrb) CALL CITRA (WFTP1,ISGSTR1,ICISTR1,IXSTR1,LSYM1,
      &                           TRA1,NCONF1,Work(LCI1))
-          write(6,*) "PREPSD called for JOB1 = ", JOB1
-          write(6,*) "NDET1 = ", NDET1
-          write(6,*) "NDET2 = ", NDET2
+C          write(6,*) "PREPSD called for JOB1 = ", JOB1
+C          write(6,*) "NDET1 = ", NDET1
+C          write(6,*) "NDET2 = ", NDET2
           CALL PREPSD(WFTP1,ISGSTR1,ICISTR1,LSYM1,
      &                IWORK(LCNFTAB1),IWORK(LSPNTAB1),
      &                IWORK(LSSTAB),IWORK(LFSBTAB1),NCONF1,WORK(LCI1),
      &                WORK(LDET1),rdetcoeff,rdetocc,ndt1,norb)
-          write(6,*) "PREPSD passed for JOB1 = ", JOB1, "ndt1=", ndt1
+C          write(6,*) "PREPSD passed for JOB1 = ", JOB1, "ndt1=", ndt1
 
 CC VK/GG 2020 CC
         call mma_allocate(detcoeff1,ndt1)
@@ -862,7 +862,7 @@ C-----------------------------------------------------------------------
 
 C VK/GG 2020 C setup index table for calculation in parallel
 C double loop (jstate,istate>=jstate) -> a set of indices (itask)
-      write(6,*) "Setting up index table"
+C      write(6,*) "Setting up index table"
       if (JOB1==JOB2) then
         nTasks=nstat(JOB1)*(nstat(JOB1)+1)/2
       else
@@ -886,7 +886,7 @@ C double loop (jstate,istate>=jstate) -> a set of indices (itask)
       if (iTask/=nTasks) then
         write(6,*) "Error in number of nTasks"
       else
-        write(6,*)"Index table was successfully set up, nproc ",nProcs
+C        write(6,*)"Index table was successfully set up, nproc ",nProcs
       endif
 
 C-----------------------------------------------------------------------

@@ -100,7 +100,7 @@
       call mh5_fetch_attr (refwfn_id,'NELEC3', ref_nelec3)
       call mh5_fetch_attr (refwfn_id,'NCONF',  ref_nconf)
       call mh5_fetch_attr (refwfn_id,'NSTATES', ref_nstates)
-      If (mh5_exists_dset(refwfn_id, 'NROOTS')) Then
+      If (mh5_exists_attr(refwfn_id, 'NROOTS')) Then
         call mh5_fetch_attr (refwfn_id,'NROOTS', ref_nroots)
       Else
         ref_nroots = ref_nstates
@@ -142,7 +142,7 @@
       If (mh5_exists_attr(refwfn_id, 'ROOT2STATE')) Then
          call mh5_fetch_attr (refwfn_id,'ROOT2STATE', root2state)
       Else
-        Do i=1,ref_nstates
+        Do i=1,ref_nroots
           root2state(i)=i
         End Do
       End if
@@ -158,6 +158,7 @@
         END DO
       end if
       LROT1=ref_nroots
+*VK: remove or edit this check probably needed
       DO I=0,NSTAT(JOB)-1
         NROOT0=root2state(LROOT(ISTAT(JOB)+I))
         IF (NROOT0.LE.0.OR.NROOT0.GT.LROT1) THEN
