@@ -7,10 +7,15 @@ At present, the single-state CASPT2 and RASPT2 can be performed. The density-fit
 As a byproduct, analytic gradients for state-averaged RASSCF can be computed. I implemented diagonal preconditioning for the active--active orbital rotation and fixed several things. However, no symmetry constrains can be employed, again.
 
 Reference:
+
 Nishimoto, Y. "Analytic Gradients for Complete and Restricted Active Space Second-order Perturbation Theory within the Diagonal Approximation" DOI: 10.26434/chemrxiv.14197457
 
+***
+
 Some history:
+
 March 19, 2021: Possibly RASPT2
+
 March 11, 2021: Initial commit (RASPT2-D)
 
 ***
