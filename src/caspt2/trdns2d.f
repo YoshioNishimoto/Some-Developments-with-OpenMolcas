@@ -180,12 +180,12 @@ C
           !! For icase=12/13, lg_V1: T+lambda/2
           !! For the other cases, this is done after configuration
           !! Lagrangian (in clagx.f)
-          if (icase.eq.12.or.icase.eq.13) then
-          CALL RHS_READ_SR(lg_V1,ICASE,ISYM,IVEC)
-          CALL RHS_READ_SR(lg_V2,ICASE,ISYM,JVEC)
-          Call DaXpY_(nIN*nIS,0.5D+00,Work(lg_V2),1,Work(lg_V1),1)
-          Call RHS_Save(nIN,nIS,lg_V1,iCase,iSym,iVec)
-          end if
+C         if (icase.eq.12.or.icase.eq.13) then
+C         CALL RHS_READ_SR(lg_V1,ICASE,ISYM,IVEC)
+C         CALL RHS_READ_SR(lg_V2,ICASE,ISYM,JVEC)
+C         Call DaXpY_(nIN*nIS,0.5D+00,Work(lg_V2),1,Work(lg_V1),1)
+C         Call RHS_Save(nIN,nIS,lg_V1,iCase,iSym,iVec)
+C         end if
 
           CALL RHS_FREE(NIN,NIS,lg_V1)
           IF(IVEC.NE.JVEC) THEN

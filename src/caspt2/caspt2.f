@@ -105,7 +105,7 @@ C
      *                      DerGen=.false.,
      *                      DerICB=.false.
       Integer iOrb,jOrb,iAO,iMO,iVib,ipWRK1,ipWRK2,ipWRK3,indCI,idCI,
-     *        idT,iRoots,jRoots,ijRoots,ipFIMO,nAS,nIN,icase,isym
+     *        idT,iRoots,jRoots,ijRoots,ipFIMO,ipFIFA,nAS,nIN,icase,isym
       Real*8  Delta,EForward,EBackward,EigI,EigJ,SCAL,SLagV
       Real*8, External :: DDot_
 
@@ -256,8 +256,10 @@ C            CALL GETMEM('WRK1','FREE','REAL',ipWRK1,nConf*nRoots)
            CALL GETMEM('WRK2','ALLO','REAL',ipWRK2,nBasT*nBasT)
            CALL GETMEM('LCMO','ALLO','REAL',LCMO,nBasT*nBasT)
            CALL GETMEM('LFMO','ALLO','REAL',ipFIMO,NFIMO)
+           CALL GETMEM('LFMO','ALLO','REAL',ipFIFA,NFIFA)
            Call DCopy_(nBasT*nBasT,0.0D+00,0,Work(ipWRK1),1)
            Call DCopy_(NFIMO,Work(LFIMO),1,Work(ipFIMO),1)
+           Call DCopy_(NFIFA,Work(LFIFA),1,Work(ipFIFA),1)
            Do iMO = nFro(1)+1, nFro(1)+nOrbT
              Do iAO = 1, nBasT
                Do iVib = 1, 2
@@ -273,6 +275,7 @@ C
                  CALL STINI
                  Call TraCtl(0)
 C                Call DCopy_(NFIMO,Work(ipFIMO),1,Work(LFIMO),1)
+                 Call DCopy_(NFIFA,Work(ipFIFA),1,Work(LFIFA),1)
                  Call EqCtl2(iConv)
 C           
                  If (iVib.eq.1) Then
@@ -396,6 +399,7 @@ C
            CALL GETMEM('WRK2','FREE','REAL',ipWRK2,nBasT*nBasT)
            CALL GETMEM('LCMO','FREE','REAL',LCMO,nBasT*nBasT)
            CALL GETMEM('LFMO','FREE','REAL',ipFIMO,NFIMO)
+           CALL GETMEM('LFMO','FREE','REAL',ipFIFA,NFIFA)
            Call AbEnd()
          End If
 

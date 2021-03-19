@@ -187,7 +187,8 @@ C       CALL TRDNS2A(IVEC,IVEC,WORK(LDPT))
       IF (MAXIT.NE.0) THEN
         !! off-diagonal are ignored for CASPT2-D
         CALL DCOPY_(NDPT,[0.0D0],0,WORK(LDPT),1)
-        CALL TRDNS2O(IVEC,IVEC,WORK(LDPT))
+C       CALL TRDNS2O(IVEC,IVEC,WORK(LDPT))
+        CALL TRDNS2O(iVecX,iVecR,WORK(LDPT))
         CALL DAXPY_(NDPT,1.0D00,WORK(LDPT),1,WORK(LDSUM),1)
       END IF
 *     WRITE(*,*)' DPT after TRDNS2O.'
@@ -271,9 +272,9 @@ C
         !! frozen orbitals must be wrong.
 C       call dcopy(ndpt,0.0d+00,0,work(ldpt),1)
         If (nFroT.eq.0) Then
-          Call DCopy_(nOsqT,Work(LDPT),1,Work(ipDPT),1)
+          Call DCopy_(nOsqT,Work(LDSUM),1,Work(ipDPT),1)
         Else
-          Call OLagFro0(Work(LDPT),Work(ipDPT))
+          Call OLagFro0(Work(LDSUM),Work(ipDPT))
         End If
 C
         !! Construct the transformation matrix
@@ -304,6 +305,8 @@ C
         !! Already transformed to natural (CASSCF) orbital basis
         CALL GETMEM('DEPSA ','ALLO','REAL',ipDEPSA,nAshT*nAshT)
         Call DCopy_(nAshT*nAshT,0.0D+00,0,Work(ipDEPSA),1)
+        !! Derivative of off-diagonal H0 of <Psi1|H0|Psi1>
+        IF (MAXIT.NE.0) Call SIGDER(iVecX,iVecR)
         Call CLagX(1,Work(ipCLag),Work(ipTRF),Work(ipDEPSA),
      *             Work(ipRDMSA),Work(ipRDMEIG))
 C       call test3_dens(work(ipclag))
