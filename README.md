@@ -53,7 +53,7 @@ up and running is the following:
     ```
     mkdir build
     cd build
-    cmake ../OpenMolcas
+    cmake ../
     ```
 
 4.  Compile with `make`:
