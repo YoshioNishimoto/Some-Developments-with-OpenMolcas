@@ -46,7 +46,7 @@
       use iSD_data
       use PSO_Stuff
       use k2_arrays, only: ipZeta, ipiZet, Mem_DBLE, Aux, Sew_Scr
-      use Aces_Stuff, only: G_toc
+      use Aces_Stuff, only: G_toc,nSSDM,SSDM
       Implicit Real*8 (A-H,O-Z)
       External Rsv_GTList
 #include "real.fh"
@@ -152,6 +152,7 @@ C#include "caspt2_grad.fh"
         Do iIrrep = 0, nIrrep - 1
           nBasT = nBasT + nBas(iIrrep)
         End Do
+        nSSDM = 0
 C
         !! The two MO indices in the half-transformed amplitude are
         !! not CASSCF but quasi-canonical orbitals.
@@ -181,6 +182,19 @@ C
         Read (LuCMOPT2) nFro(6)
         Read (LuCMOPT2) nFro(7)
         Read (LuCMOPT2) nFro(8)
+        Read (LuCMOPT2) nSSDM
+C
+C       read (lucmopt2) val
+C       write (*,*) "val=",val
+        If (nSSDM.ne.0) Then
+          Call mma_allocate(SSDM,nBas(0)*(nBas(0)+1)/2,2,nSSDM,
+     *                      Label='SSDM')
+          Do iSSDM = 1, nSSDM
+            Do i = 1, nBas(0)*(nBas(0)+1)/2
+              Read (LuCMOPT2) SSDM(i,1,iSSDM),SSDM(i,2,iSSDM)
+            End Do
+          End Do
+        End If
 C       Read (LuCMOPT2) (nOcc(iSym),iSym=1,8)
 C       Read (LuCMOPT2) (nFro(iSym),iSym=1,8)
         Close (LuCMOPT2)
@@ -628,6 +642,7 @@ C    *                  Temp,nGrad,lIrrep,ChDisp,5)
         Close (LuGamma)
         Call mma_deallocate(iOffAO)
         Call mma_deallocate(CMOPT2)
+        If (nSSDM.ne.0) Call mma_deallocate(SSDM)
         Call mma_deallocate(WRK1)
         Call mma_deallocate(WRK2)
       End If

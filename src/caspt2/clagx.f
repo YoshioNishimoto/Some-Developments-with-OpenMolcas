@@ -1567,12 +1567,17 @@ C
 C     write (*,*) "nconf = ", nconf
 C     call dcopy(50,0.0d+00,0,clag,1)
       Do iState = 1, nState
-        Call LoadCI(Work(LCI),iState)
-C       Wgt = Work(LDWgt+iState-1+nState*(iState-1))
-        WGT = 1.0D+00/nState
-        Call DScal_(NLEV*NLEV,WGT,RDMEIG,1)
-        Call Poly1_CLag(Work(LCI),CLag(1,iState),RDMEIG)
-        Call DScal_(NLEV*NLEV,1.0D+00/WGT,RDMEIG,1)
+        If (IFSADREF) Then
+          Call LoadCI(Work(LCI),iState)
+C         Wgt = Work(LDWgt+iState-1+nState*(iState-1))
+          WGT = 1.0D+00/nState
+          Call DScal_(NLEV*NLEV,WGT,RDMEIG,1)
+          Call Poly1_CLag(Work(LCI),CLag(1,iState),RDMEIG)
+          Call DScal_(NLEV*NLEV,1.0D+00/WGT,RDMEIG,1)
+        Else If (iState.eq.jState) Then
+          Call LoadCI(Work(LCI),jState)
+          Call Poly1_CLag(Work(LCI),CLag(1,jState),RDMEIG)
+        End If
       End Do
 C     write (*,*) "clag before projection"
 C     do istate = 1, nstate
