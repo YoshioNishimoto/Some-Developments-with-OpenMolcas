@@ -54,7 +54,7 @@
       use rasscf_data, only : EMY, KSDFT, dftfock, exfac, nac, nacpar,
      &    noneq, potnuc, rfpert,
      &    tot_charge, tot_el_charge, tot_nuc_charge,
-     &    doBlockDMRG
+     &    doBlockDMRG, doDMRG
       use general_data, only : iSpin, nActEl, nSym, nTot1,
      &    nBas, nIsh, nAsh, nFro
       use OFEmbed, only: Do_OFemb, OFE_first, FMaux
@@ -64,6 +64,7 @@
       implicit none
 #include "rasdim.fh"
 #include "output_ras.fh"
+      Character*16 ROUTINE
       Parameter (ROUTINE='SGFCIN  ')
 #include "WrkSpc.fh"
 #include "stdalloc.fh"
@@ -78,10 +79,6 @@
       Character*8 PAMlbl
       Logical First, Dff, Do_DFT, Found
       Logical Do_ESPF
-
-#ifndef _DMRG_
-      logical :: doDMRG = .false.
-#endif
 *
       Character*16 NamRfil
 *

@@ -71,6 +71,7 @@
 #include "general.fh"
 #include "input_ras.fh"
 #include "output_ras.fh"
+      Character*16 ROUTINE
       Parameter (ROUTINE='SXCTL   ')
 #include "WrkSpc.fh"
 #include "wadr.fh"
@@ -80,15 +81,11 @@
       Integer IndType(56)
       Character*80 VecTyp
       Save nCall
-      Logical DoActive,DoQmat,DoCholesky,TraOnly,l_casdft
-      Integer ALGO
+      Logical TraOnly
       Dimension P2act(1),CIDUMMY(1)
 
-      COMMON /CHOTODO /DoActive,DoQmat,ipQmat
-      COMMON /CHLCAS /DoCholesky,ALGO
-#ifndef _DMRG_
-      logical :: doDMRG = .false.
-#endif
+#include "chotodo.fh"
+#include "chlcas.fh"
 
 C PAM01 The SXCI part has been slightly modified by P-AA M Jan 15, 2001:
 C Changes affect several of the subroutines of this part.
@@ -216,20 +213,6 @@ C --------------------------------------
 * reorder the two-body density matrix P
 ************************************************************************
       LP=1
-      l_casdft = KSDFT(1:5).eq.'TLSDA'   .or.
-     &           KSDFT(1:6).eq.'TLSDA5'  .or.
-     &           KSDFT(1:5).eq.'TBLYP'   .or.
-     &           KSDFT(1:6).eq.'TSSBSW'  .or.
-     &           KSDFT(1:5).eq.'TSSBD'   .or.
-     &           KSDFT(1:5).eq.'TS12G'   .or.
-     &           KSDFT(1:4).eq.'TPBE'    .or.
-     &           KSDFT(1:5).eq.'FTPBE'   .or.
-     &           KSDFT(1:5).eq.'TOPBE'   .or.
-     &           KSDFT(1:6).eq.'FTOPBE'  .or.
-     &           KSDFT(1:7).eq.'TREVPBE' .or.
-     &           KSDFT(1:8).eq.'FTREVPBE'.or.
-     &           KSDFT(1:6).eq.'FTLSDA'  .or.
-     &           KSDFT(1:6).eq.'FTBLYP'
       IF(.not.l_casdft) then
 * ISTORP(NSYM+1) represents the size of the 2-body density matrix,d(vwxy), with vwxy all active.
 * the size is computed as NAP*NAQ*NRS (sum over all symmetries). If Sym_R = Sym_S then triangular

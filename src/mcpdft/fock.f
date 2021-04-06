@@ -33,14 +33,13 @@ C
 #include "rasscf.fh"
 #include "general.fh"
 #include "output_ras.fh"
+      Character*16 ROUTINE
       Parameter (ROUTINE='FOCK    ')
 #include "WrkSpc.fh"
-      Logical DoActive,DoQmat,DoCholesky
-      Integer ALGO
       Dimension P2reo(1)
 
-      COMMON /CHOTODO /DoActive,DoQmat,ipQmat
-      COMMON /CHLCAS  /DoCholesky,ALGO
+#include "chotodo.fh"
+#include "chlcas.fh"
 C
       IPRLEV=IPRLOC(4)
       IF(IPRLEV.ge.DEBUG) THEN
@@ -371,13 +370,12 @@ C
 #include "rasscf.fh"
 #include "general.fh"
 #include "output_ras.fh"
+      Character*16 ROUTINE
       Parameter (ROUTINE='FOCK    ')
 #include "WrkSpc.fh"
-      Logical DoActive,DoQmat,DoCholesky
-      Integer ALGO
 
-      COMMON /CHOTODO /DoActive,DoQmat,ipQmat
-      COMMON /CHLCAS  /DoCholesky,ALGO
+#include "chotodo.fh"
+#include "chlcas.fh"
 C
       IPRLEV=IPRLOC(4)
       IF(IPRLEV.ge.DEBUG) THEN

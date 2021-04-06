@@ -12,10 +12,10 @@
 ************************************************************************
       Subroutine Process_Gradients()
       use Slapaf_Info, only: Gx, Gx0, NAC, Energy, Energy0, RootMap
-      use Slapaf_Parameters, only: Request_Alaska, TwoRunFiles, iter
+      use Slapaf_Parameters, only: Request_Alaska, TwoRunFiles, iter,
+     &                             NADC, ApproxNADC, iState
       Implicit None
 #include "real.fh"
-#include "nadc.fh"
 #include "stdalloc.fh"
       Logical Found, Exist
       Integer i,nRoots,RC,Read_Grad,Columbus, nsAtom
@@ -149,7 +149,7 @@
         Else
           Energy0(iter)=E0
           Call dCopy_(3*nsAtom,Grads(1,2),1,Gx0(1,1,iter),1)
-          Gx0(1,1,iter) = -Gx0(1,1,iter)
+          Gx0(:,:,iter) = -Gx0(:,:,iter)
         End If
       End If
 *

@@ -10,7 +10,7 @@
 *                                                                      *
 * Copyright (C) Francesco Aquilante                                    *
 ************************************************************************
-      SUBROUTINE CHO_FOCK_RASSI_X(ipDLT,ipMO1,ipMO2,ipFLT,ipK,ipInt)
+      SUBROUTINE CHO_FOCK_RASSI_X(ipDLT,MO1,MO2,ipFLT,ipK,ipInt)
 
 **********************************************************************
 *  Author : F. Aquilante
@@ -33,34 +33,43 @@ C
 **********************************************************************
       use ChoArr, only: nDimRS
       use ChoSwp, only: InfVec
+      use Data_Structures, only: DSBA_Type, SBA_Type
+      use Data_Structures, only: Allocate_SBA, Deallocate_SBA
+      use Data_Structures, only: twxy_Type
+      use Data_Structures, only: Allocate_twxy, Deallocate_twxy
       Implicit Real*8 (a-h,o-z)
 
-      Integer   rc,ipLxy(8),ipScr(8,8)
-      Integer   ipLab(8,2),ipOrb(8,2),nOrb(8,2)
+      Type (DSBA_Type) MO1(2), MO2(2)
+      Type (SBA_Type), Target:: Laq(2)
+      Type (Twxy_Type) Scr
+
+      Integer   rc
       Integer   iSkip(8)
       Integer   ISTLT(8), ISTSQ(8)
       Real*8    tread(2),tcoul(2),texch(2),tintg(2)
-      Integer   ipAorb(8,2)
 #ifdef _DEBUGPRINT_
       Logical   Debug
 #endif
-      Logical   timings,DoRead,DoReord
+      Logical   DoReord, add
       Character*50 CFmt
-      Character*16 SECNAM
-      Parameter (SECNAM = 'CHO_FOCK_RASSI_X')
-      COMMON    /CHOTIME /timings
+      Character(LEN=16), Parameter:: SECNAM = 'CHO_FOCK_RASSI_X'
+#include "chotime.fh"
+#include "real.fh"
 
-      parameter (DoRead = .false. )
-      parameter (FactCI = 1.0D0, FactXI = -1.0D0)
-      parameter (zero = 0.0D0, one = 1.0D0, two = 2.0D0)
+      Logical, Parameter :: DoRead = .false.
+      Real*8, Parameter ::FactCI = One, FactXI = -One
       Character*6 mode
-      Logical Fake_CMO2
-      COMMON / CHO_JOBS / Fake_CMO2
+#include "cho_jobs.fh"
 
 #include "rassi.fh"
 #include "cholesky.fh"
 #include "choorb.fh"
+#include "stdalloc.fh"
 #include "WrkSpc.fh"
+
+      Real*8, Allocatable:: Lrs(:,:), Drs(:), Frs(:)
+
+      Real*8, Pointer:: VJ(:)
 
 **************************************************
       MulD2h(i,j) = iEOR(i-1,j-1) + 1
@@ -69,7 +78,6 @@ C
 #ifdef _DEBUGPRINT_
       Debug=.false.! to avoid double printing in CASSCF-debug
 #endif
-
       DoReord = .false.
       IREDC = -1  ! unknown reduced set in core
 
@@ -79,12 +87,11 @@ C
 
       CALL CWTIME(TOTCPU1,TOTWALL1) !start clock for total time
 
-      do i=1,2            ! 1 --> CPU   2 --> Wall
-         tread(i) = zero  !time read/transform vectors
-         tcoul(i) = zero  !time for computing Coulomb
-         texch(i) = zero  !time for computing Exchange
-         tintg(i) = zero  !time for computing (tw|xy) integrals
-      end do
+      ! 1 --> CPU   2 --> Wall
+      tread(:) = zero  !time read/transform vectors
+      tcoul(:) = zero  !time for computing Coulomb
+      texch(:) = zero  !time for computing Exchange
+      tintg(:) = zero  !time for computing (tw|xy) integrals
 
 C ==================================================================
 
@@ -99,64 +106,13 @@ c --------------------
         ISTSQ(ISYM)=ISTSQ(ISYM-1)+NB**2 ! Inactive Exch matrix
       END DO
 
-      ipOrb(1,1) = ipMO1
-      ipOrb(1,2) = ipMO2
-
-      DO jDen=1,nDen
-
-         nOrb(1,jDen)  = nIsh(1)
-         ipAorb(1,jDen)= ipOrb(1,jDen)
-     &                 + nOrb(1,jDen)*NBAS(1)
-
-         DO ISYM=2,NSYM
-
-            ipOrb(iSym,jDen) = ipAorb(iSym-1,jDen)
-     &                       + nAsh(iSym-1)*NBAS(iSym-1)
-
-            nOrb(iSym,jDen)  = nIsh(iSym)
-
-            ipAorb(iSym,jDen)= ipOrb(iSym,jDen)
-     &                       + nOrb(iSym,jDen)*NBAS(iSym)
-
-         END DO
-
-      END DO
-
 C *************** BIG LOOP OVER VECTORS SYMMETRY *******************
       DO jSym=1,nSym
 
         If (NumCho(jSym).lt.1) GOTO 1000
 
-C *** memory for the (tw|xy) integrals --- temporary array
-      Mtwxy = 0
-      Do iSymy=1,nSym
-         iSymx=MulD2h(iSymy,JSYM)
-         Do iSymw=iSymy,nSym    ! iSymw.ge.iSymy (particle symmetry)
-            iSymt=MulD2h(isymw,JSYM)
-            Mtwxy=Mtwxy+nAsh(iSymt)*nAsh(iSymw)*nAsh(iSymx)*nAsh(iSymy)
-         End Do
-      End Do
-
-      Call GetMem('Mtmp','ALLO','REAL',ipItmp,Mtwxy)
-      Call Fzero(Work(ipItmp),Mtwxy)
-
-C *** setup pointers to the symmetry blocks of (tw|xy)
-      Do i=1,nSym
-         Do j=1,nSym
-            ipScr(j,i) = ipItmp
-         End Do
-      End Do
-
-      kScr=ipItmp
-      Do iSymy=1,nSym
-         iSymx=MulD2h(iSymy,JSYM)
-         Do iSymw=iSymy,nSym   ! iSymw.ge.iSymy (particle symmetry)
-            iSymt=MulD2h(isymw,JSYM)
-            ipScr(iSymw,iSymy) = kScr
-            kScr=kScr+nAsh(iSymt)*nAsh(iSymw)*nAsh(iSymx)*nAsh(iSymy)
-         End Do
-      End Do
-
+        iCase = 0 ! twxy
+        Call Allocate_twxy(Scr,nAsh,nAsh,JSYM,nSym,iCase)
 
       iLoc = 3 ! use scratch location in reduced index arrays
 
@@ -204,14 +160,13 @@ C ------------------------------------------------------------------
             nRS = nDimRS(JSYM,JRED)
 
             If(JSYM.eq.1)Then
-
-               Call GetMem('rsDtot','Allo','Real',ipDab,nRS)
-               Call GetMem('rsFC','Allo','Real',ipFab,nRS)
-               Call Fzero(Work(ipDab),nRS)
-               Call Fzero(Work(ipFab),nRS)
+               Call mma_allocate(Drs,nRS,Label='Drs')
+               Call mma_allocate(Frs,nRS,Label='Frs')
+               Drs(:)=Zero
+               Frs(:)=Zero
             EndIf
 
-            Call GetMem('MaxM','Max','Real',KDUM,LWORK)
+            Call mma_maxDBLE(LWORK)
 
             nVec  = Min(LWORK/(nRS+mTvec),nVrs)
 
@@ -227,13 +182,15 @@ C ------------------------------------------------------------------
 
             LREAD = nRS*nVec
 
-            Call GetMem('rsL','Allo','Real',ipLrs,LREAD)
-            Call GetMem('ChoT','Allo','Real',ipChoT,mTvec*nVec)
+            Call mma_allocate(Lrs,nRS,nVec,Label='Lrs')
 
             If(JSYM.eq.1)Then
 C --- Transform the density to reduced storage
                mode = 'toreds'
-               Call swap_sto(irc,iLoc,ipDLT,ISTLT,ipDab,mode)
+               add = .False.
+               mDen=1
+               Call swap_rs2full(irc,iLoc,nRS,mDen,JSYM,[ipDLT],Drs,
+     &                           mode,add)
             EndIf
 
 C --- BATCH over the vectors ----------------------------
@@ -248,12 +205,18 @@ C --- BATCH over the vectors ----------------------------
                   JNUM = nVec
                endif
 
+               iSwap = 2  ! LpJ,b are returned
+               Do jDen = 1, nDen
+                  Call Allocate_SBA(Laq(jDen),nIsh,nBas,nVec,JSYM,nSym,
+     &                              iSwap)
+               End Do
+
                JVEC = nVec*(iBatch-1) + iVrs
                IVEC2 = JVEC - 1 + JNUM
 
                CALL CWTIME(TCR1,TWR1)
 
-               CALL CHO_VECRD(Work(ipLrs),LREAD,JVEC,IVEC2,JSYM,
+               CALL CHO_VECRD(Lrs,LREAD,JVEC,IVEC2,JSYM,
      &                        NUMV,IREDC,MUSED)
 
                If (NUMV.le.0 .or.NUMV.ne.JNUM ) then
@@ -276,11 +239,11 @@ C==========================================================
 C
                   CALL CWTIME(TCC1,TWC1)
 
-                  ipVJ = ipChoT
+                  VJ(1:JNUM) => Laq(1)%A0(1:JNUM)
 
                   CALL DGEMV_('T',nRS,JNUM,
-     &                 ONE,Work(ipLrs),nRS,
-     &                 Work(ipDab),1,ZERO,Work(ipVJ),1)
+     &                 ONE,Lrs,nRS,
+     &                 Drs,1,ZERO,VJ,1)
 
 C --- FI(rs){#J} <- FI(rs){#J} + FactCI * sum_J L(rs,{#J})*V{#J}
 C===============================================================
@@ -288,37 +251,20 @@ C===============================================================
                   Fact = dble(min(jVec-iVrs,1))
 
                   CALL DGEMV_('N',nRS,JNUM,
-     &                 FactCI,Work(ipLrs),nRS,
-     &                 Work(ipVJ),1,Fact,Work(ipFab),1)
+     &                 FactCI,Lrs,nRS,
+     &                 VJ,1,Fact,Frs,1)
 
 
                   CALL CWTIME(TCC2,TWC2)
                   tcoul(1) = tcoul(1) + (TCC2 - TCC1)
                   tcoul(2) = tcoul(2) + (TWC2 - TWC1)
 
+                  VJ=>Null()
+
                EndIf  ! Coulomb contribution
 
 
 C *************** EXCHANGE CONTRIBUTIONS  ***********************
-
-C --- Set pointers to the half-transformed Cholesky vectors
-               lChoT=0
-               Do iSymb=1,nSym
-
-                  iSymp = MulD2h(JSYM,iSymb)
-
-                  Do jDen=1,nDen
-
-                     ipLab(iSymp,jDen) = ipChoT + lChoT  ! LpJ,b
-
-                     lChoT = lChoT + nIsh(iSymp)*nBas(iSymb)*JNUM
-
-                  End Do
-
-               End Do
-
-
-               iSwap = 2  ! LpJ,b are returned
 
                CALL CWTIME(TCR3,TWR3)
 
@@ -330,7 +276,7 @@ C -------------------------------------------------------------
                Do i=1,nSym
 
                   k = Muld2h(i,JSYM)
-                  iSkip(k) = Min(1,NBAS(i)*nIsh(k))
+                  iSkip(k) = Min(1,nIsh(k)*NBAS(i))
 
                End Do
 C -------------------------------------------------------------
@@ -338,9 +284,9 @@ C -------------------------------------------------------------
 
 C *********************** HALF-TRANSFORMATION  ****************
 
-               CALL CHO_X_getVtra(irc,Work(ipLrs),LREAD,jVEC,JNUM,
-     &                            JSYM,iSwap,IREDC,nMOs,kMOs,ipOrb,nOrb,
-     &                            ipLab,iSkip,DoRead)
+               CALL CHO_X_getVtra(irc,Lrs,LREAD,jVEC,JNUM,
+     &                            JSYM,iSwap,IREDC,nMOs,kMOs,MO1,
+     &                            Laq,DoRead)
 
 
                CALL CWTIME(TCR4,TWR4)
@@ -371,11 +317,9 @@ C ---------------------------------------------------------------------
                      ISFI = ipK + ISTSQ(iSyma)
 
                      CALL DGEMM_('T','N',NBAS(iSyma),NBAS(iSyma),
-     &                         NK*JNUM,FactXI,Work(ipLab(iSymk,kDen)),
-     &                         NK*JNUM,Work(ipLab(iSymk,1)),NK*JNUM,
+     &                         NK*JNUM,FactXI,Laq(kDen)%SB(iSymk)%A3,
+     &                         NK*JNUM,Laq(1)%SB(iSymk)%A3,NK*JNUM,
      &                             One,Work(ISFI),NBAS(iSyma))
-
-
 
                   EndIf
 
@@ -386,9 +330,15 @@ C --------------------------------------------------------------------
                texch(1) = texch(1) + (TCX2 - TCX1)
                texch(2) = texch(2) + (TWX2 - TWX1)
 
+               Do jDen = 1, nDen
+                  Call Deallocate_SBA(Laq(jDen))
+               End Do
 
 C ************  END EXCHANGE CONTRIBUTION  ****************
 
+               iSwap = 0  ! Lvb,J are returned
+               Call Allocate_SBA(Laq(1),nAsh,nBas,nVec,JSYM,nSym,iSwap)
+               Call Allocate_SBA(Laq(2),nAsh,nAsh,nVec,JSYM,nSym,iSwap)
 
 C --------------------------------------------------------------------
 C --- First half Active transformation  Lvb,J = sum_a  C1(v,a) * Lab,J
@@ -396,38 +346,21 @@ C --------------------------------------------------------------------
 
                CALL CWTIME(TCR7,TWR7)
 
-C --- Set pointers to the half-transformed Cholesky vectors
-               lChoa=0
-               Do iSymb=1,nSym
-
-                  iSymp = MulD2h(JSYM,iSymb)
-
-                  ipLab(iSymp,1) = ipChoT + lChoa  ! Lvb,J
-                  ipLab(iSymp,2) = ipLab(iSymp,1)
-     &                           + nAsh(iSymp)*nBas(iSymb)*JNUM
-
-                  lChoa = lChoa
-     &                  + nAsh(iSymp)*(nBas(iSymb)+nAsh(iSymb))*JNUM
-
-               End Do
-
 C --- Set up the skipping flags
 C -------------------------------------------------------------
                Do i=1,nSym
 
                   k = Muld2h(i,JSYM)
-                  iSkip(k) = Min(1,
-     &                 NBAS(i)*nAsh(k))
+                  iSkip(k) = Min(1,NBAS(i)*nAsh(k))
 
                End Do
 
-               iSwap = 0  ! Lvb,J are returned
                kMOs = 1  !
                nMOs = 1  ! Active MOs (1st set)
 
-               CALL CHO_X_getVtra(irc,Work(ipLrs),LREAD,jVEC,JNUM,
-     &                           JSYM,iSwap,IREDC,nMOs,kMOs,ipAorb,nAsh,
-     &                           ipLab,iSkip,DoRead)
+               CALL CHO_X_getVtra(irc,Lrs,LREAD,jVEC,JNUM,
+     &                           JSYM,iSwap,IREDC,nMOs,kMOs,MO2,
+     &                           Laq,DoRead)
 
                if (irc.ne.0) then
                   rc = irc
@@ -448,14 +381,10 @@ C --------------------------------------------------------------------
 
                       Do JVC=1,JNUM
 
-                       ipLvb = ipLab(iSymv,1) + NAv*NBAS(iSymb)*(JVC-1)
-                       ipLvw = ipLab(iSymv,2)
-     &                       + nAsh(iSymv)*nAsh(iSymb)*(JVC-1)
-
                        CALL DGEMM_('N','T',NAv,NAw,NBAS(iSymb),
-     &                            One,Work(ipLvb),NAv,
-     &                                Work(ipAorb(iSymb,kDen)),NAw,
-     &                           Zero,Work(ipLvw),NAv)
+     &                            One,Laq(1)%SB(iSymv)%A3(:,:,JVC),NAv,
+     &                                MO2(kDen)%SB(iSymb)%A2,NAw,
+     &                           Zero,Laq(2)%SB(iSymv)%A3(:,:,JVC),NAv)
 
                       End Do
 
@@ -472,12 +401,7 @@ C *************** EVALUATION OF THE (TW|XY) INTEGRALS ***********
 
                DoReord = JRED.eq.JRED2.and.iBatch.eq.nBatch
 
-               Do iSym=1,nSym
-                  ksym = mulD2h(iSym,JSYM)
-                  ipLxy(kSym) = ipLab(iSym,2) ! switch to column storage
-               End Do
-
-               CALL CHO_rassi_twxy(irc,ipScr,ipLxy,ipInt,nAsh,
+               CALL CHO_rassi_twxy(irc,Scr,Laq(2),ipInt,nAsh,
      &                                 JSYM,JNUM,DoReord)
 
                CALL CWTIME(TCINT2,TWINT2)
@@ -492,22 +416,26 @@ C *************** EVALUATION OF THE (TW|XY) INTEGRALS ***********
 C ---------------- END (TW|XY) EVALUATION -----------------------
 
 
+               Call Deallocate_SBA(Laq(2))
+               Call Deallocate_SBA(Laq(1))
             END DO  ! end batch loop
 
 
             If(JSYM.eq.1)Then
 c --- backtransform fock matrix to full storage
                mode = 'tofull'
-               Call swap_sto(irc,iLoc,ipFLT,ISTLT,ipFab,mode)
+               add = .True.
+               mDen=1
+               Call swap_rs2full(irc,iLoc,nRS,mDen,JSYM,[ipFLT],Frs,
+     &                           mode,add)
             EndIf
 
 C --- free memory
-            Call GetMem('ChoT','Free','Real',ipChoT,mTvec*nVec)
-            Call GetMem('rsL','Free','Real',ipLrs,LREAD)
+            Call mma_deallocate(Lrs)
 
             If(JSYM.eq.1)Then
-              Call GetMem('rsFC','Free','Real',ipFab,nRS)
-              Call GetMem('rsDtot','Free','Real',ipDab,nRS)
+              Call mma_deallocate(Frs)
+              Call mma_deallocate(Drs)
             EndIf
 
 
@@ -515,7 +443,7 @@ C --- free memory
 
          END DO   ! loop over red sets
 
-         Call GetMem('Mtmp','Free','REAL',ipItmp,Mtwxy)
+         Call Deallocate_twxy(Scr)
 
 1000  CONTINUE
 

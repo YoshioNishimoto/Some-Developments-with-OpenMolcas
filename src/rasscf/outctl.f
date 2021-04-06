@@ -29,7 +29,7 @@
 #ifdef _DMRG_
 !     module dependencies
       use qcmaquis_interface_cfg
-      use qcmaquis_interface_environment, only: print_dmrg_info
+      use qcmaquis_interface_utility_routines, only: print_dmrg_info
 #endif
 
       Implicit Real*8 (A-H,O-Z)
@@ -39,6 +39,7 @@
 #include "general.fh"
 #include "gas.fh"
 #include "output_ras.fh"
+      Character*16 ROUTINE
       Parameter (ROUTINE='OUTCTL  ')
 #include "ciinfo.fh"
 #include "rctfld.fh"
@@ -65,9 +66,7 @@
 
       Integer  Cho_X_GetTol
       External Cho_X_GetTol
-#ifndef _DMRG_
-      logical :: doDMRG = .false.
-#else
+#ifdef _DMRG_
       character(len=100) :: dmrg_start_guess
 #endif
       Dimension Dum(1),iDum(56)

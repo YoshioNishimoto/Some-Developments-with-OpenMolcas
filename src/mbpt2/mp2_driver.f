@@ -59,7 +59,6 @@
 #include "chomp2_cfg.fh"
 #include "mp2grad.fh"
 #include "namact.fh"
-      Common /ctimt/cpubas
       Real*8 E2BJAI, ESCF, REFC, Seconds
       Integer nIsh(8), nAsh(8), nFro_tra(8), nDel_tra(8)
       Logical Ready, Direct, Debug, Exist
@@ -70,7 +69,10 @@
 *                                                                      *
 ************************************************************************
 *                                                                      *
+* Note seconds() is impure
+#include "macros.fh"
       cpubas=seconds()
+      unused_var(cpubas)
       Call Set_Data
 *
 ************************************************
@@ -348,9 +350,7 @@
            End If
          EndIf
 *
-CGG         Call TraCtl
          iType=1  ! Means that TraCtl_Drv is called by MP2
-CGG      DoExch2=.True. ! Do generate Exch-2 integrals (not really used).
          Call TraCtl_Drv(iType,.True.,8)
 *
          Call DaClos(LuHlf1)

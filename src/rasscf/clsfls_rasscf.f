@@ -35,7 +35,6 @@
 #include "rasscf.fh"
 #include "general.fh"
 #include "output_ras.fh"
-      Parameter (ROUTINE='ClsFls  ')
 
 #include "davctl.fh"
 #include "qnctl.fh"
@@ -57,7 +56,10 @@ C Local print level (if any)
         JOBIPH=-1
       End If
 #ifdef _HDF5_
-      call mh5_close_file(wfn_fileid)
+      if (wfn_fileid.ne.0) then
+        call mh5_close_file(wfn_fileid)
+        wfn_fileid=0
+      end if
 #endif
 *---  close the ORDINT file -------------------------------------------*
       CALL DecideOnCholesky(DoCholesky)

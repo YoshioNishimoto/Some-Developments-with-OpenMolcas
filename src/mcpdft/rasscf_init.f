@@ -26,31 +26,25 @@
       Character*100 ProgName, Get_SuperName
 #include "rasdim.fh"
 #include "output_ras.fh"
-      Parameter (ROUTINE='RasScf_Init')
 #include "rasscf.fh"
 #include "casvb.fh"
 #include "general.fh"
 #include "gas.fh"
 #include "timers.fh"
 #include "lucia_ini.fh"
-#include "orthonormalize.fh"
+#include "orthonormalize_mcpdft.fh"
 #include "WrkSpc.fh"
 #include "ksdft.fh"
       Integer IPRGLB_IN, IPRLOC_IN(7)
 * What to do with Cholesky stuff?
-      Logical DoCholesky,timings,DensityCheck
-      Logical DoLocK,Deco
-      Logical Estimate,Update
-      Integer ALGO,Nscreen
-      Real*8  dmpk,ChFracMem
       Logical, External :: Is_First_Iter
 
-      Common /CHLCAS / DoCholesky,ALGO
-      COMMON /CHODENSITY/ DensityCheck
-      COMMON /CHOTIME / timings
-      Common /CHOLK / DoLocK,Deco,dmpk,Nscreen
-      COMMON /CHOSCREEN/ Estimate,Update
-      COMMON /CHOPAR/ ChFracMem
+#include "chlcas.fh"
+#include "chodensity.fh"
+#include "chotime.fh"
+#include "cholk.fh"
+#include "choscreen.fh"
+#include "chopar.fh"
 *----------------------------------------------------------------------*
       ProgName=Get_SuperName()
 *----------------------------------------------------------------------*

@@ -12,10 +12,13 @@
 #if defined (_MOLCAS_MPP_)
       USE Para_Info, ONLY: nProcs
 #endif
+      use Data_structures, only: DSBA_Type, Allocate_DSBA,
+     &                           Deallocate_DSBA
       IMPLICIT REAL*8 (A-H,O-Z)
       DIMENSION CMO1(NCMO),CMO2(NCMO),FOCKMO(NGAM1),TUVX(NGAM2)
-      DIMENSION KEEP(8),NBSX(8),ipAsh(2)
+      DIMENSION KEEP(8),NBSX(8)
       LOGICAL   ISQARX
+      Type (DSBA_Type) Ash(2), MO1(2), MO2(2)
 #include "rassi.fh"
 #include "symmul.fh"
 #include "Molcas.fh"
@@ -25,13 +28,10 @@
 #include "stdalloc.fh"
       Logical IfTest,FoundTwoEls,DoCholesky
 
-      Integer ALGO,Nscreen
-      Real*8  dmpk
-      Logical Fake_CMO2
       Real*8, Dimension(:), Allocatable:: Prod, FAO, DInAO
 
-      COMMON / CHO_JOBS / Fake_CMO2
-      COMMON /CHORASSI / ALGO,Nscreen,dmpk
+#include "cho_jobs.fh"
+#include "chorassi.fh"
 
 *****************************************************************
 *  CALCULATE AND RETURN ECORE, FOCKMO, AND TUVX. ECORE IS THE
@@ -190,7 +190,7 @@ C Note: CHO_GETH1 also adds the reaction field contribution to the
 C 1-electron hamiltonian, and the variable ERFNuc in common /general/,
 C which is the RF contribution to the nuclear repulsion
 
-         CALL CHO_GETH1(nBtri,ipFLT,RFpert,ERFNuc)
+         CALL CHO_GETH1(nBtri,Work(ipFLT),RFpert,ERFNuc)
 
          ECORE1=DDOT_(nBtri,WORK(ipFLT),1,WORK(ipDLT),1)
          If ( IfTest ) Write (6,*) '      ECore1=',ECORE1,ALGO
@@ -209,12 +209,10 @@ C --- to avoid double counting when using gadsum
          If (ALGO.eq.1) Then
 c --- reorder the MOs to fit Cholesky needs
 
-           nKB=0
-           Do iSym=1,nSym
-            nKB = nKB + (nIsh(iSym)+nAsh(iSym))*nBasF(iSym)
-           End Do
-           Call GetMem('Cka','Allo','Real',ipMO1,nKB)
-           Call GetMem('Ckb','Allo','Real',ipMO2,nKB)
+           Call Allocate_DSBA(MO1(1),nIsh,nBasF,nSym)
+           Call Allocate_DSBA(MO1(2),nIsh,nBasF,nSym)
+           Call Allocate_DSBA(MO2(1),nAsh,nBasF,nSym)
+           Call Allocate_DSBA(MO2(2),nAsh,nBasF,nSym)
 
            ioff=0
            Do iSym=1,nSym
@@ -223,11 +221,11 @@ c --- reorder the MOs to fit Cholesky needs
 
                ioff1=ioff+nBasF(iSym)*(ikk-1)
 
-               call dcopy_(nBasF(iSym),CMO1(ioff1+1),1,
-     &                    Work(ipMO1+ioff+ikk-1),nIsh(iSym))
+               MO1(1)%SB(iSym)%A2(ikk,:) =
+     &            CMO1(ioff1+1:ioff1+nBasF(iSym))
 
-               call dcopy_(nBasF(iSym),CMO2(ioff1+1),1,
-     &                    Work(ipMO2+ioff+ikk-1),nIsh(iSym))
+               MO1(2)%SB(iSym)%A2(ikk,:) =
+     &            CMO2(ioff1+1:ioff1+nBasF(iSym))
             end do
 
             ioff2=ioff+nBasF(iSym)*nIsh(iSym)
@@ -236,11 +234,11 @@ c --- reorder the MOs to fit Cholesky needs
 
                ioff3=ioff2+nBasF(iSym)*(ikk-1)
 
-               call dcopy_(nBasF(iSym),CMO1(ioff3+1),1,
-     &                    Work(ipMO1+ioff2+ikk-1),nAsh(iSym))
+               MO2(1)%SB(iSym)%A2(ikk,:) =
+     &            CMO1(ioff3+1:ioff3+nBasF(iSym))
 
-               call dcopy_(nBasF(iSym),CMO2(ioff3+1),1,
-     &                    Work(ipMO2+ioff2+ikk-1),nAsh(iSym))
+               MO2(2)%SB(iSym)%A2(ikk,:) =
+     &            CMO2(ioff3+1:ioff3+nBasF(iSym))
             end do
 
             ioff=ioff+nBasF(iSym)*(nIsh(iSym)+nAsh(iSym))
@@ -252,13 +250,15 @@ c --- Add the two-electron contribution to the Fock matrix
 c ---     and compute the (tu|vx) integrals
 
            If (Fake_CMO2) Then
-              CALL CHO_FOCK_RASSI(ipDLT,ipMO1,ipMO2,ipFLT,LTUVX)
+              CALL CHO_FOCK_RASSI(ipDLT,MO1,MO2,ipFLT,LTUVX)
            Else
-              CALL CHO_FOCK_RASSI_X(ipDLT,ipMO1,ipMO2,ipFLT,LFAO,LTUVX)
+              CALL CHO_FOCK_RASSI_X(ipDLT,MO1,MO2,ipFLT,LFAO,LTUVX)
            EndIf
 
-           Call GetMem('Ckb','Free','Real',ipMO2,nKB)
-           Call GetMem('Cka','Free','Real',ipMO1,nKB)
+           Call Deallocate_DSBA(MO2(2))
+           Call Deallocate_DSBA(MO2(1))
+           Call Deallocate_DSBA(MO1(2))
+           Call Deallocate_DSBA(MO1(1))
 
          Else  ! algo=2 (local exchange algorithm)
 
@@ -266,15 +266,10 @@ c ---     and compute the (tu|vx) integrals
            ipMO2 = ip_of_Work(CMO2(1))
 
 C *** Only the active orbitals MO coeff need reordering
-           nVB=0
-           Do iSym=1,nSym
-            nVB = nVB + nAsh(iSym)*nBasF(iSym)
-           End Do
-           Call GetMem('Cva','Allo','Real',ipAsh(1),nVB)
-           Call GetMem('Cvb','Allo','Real',ipAsh(2),nVB)
+           Call Allocate_DSBA(Ash(1),nAsh,nBasF,nSym)
+           Call Allocate_DSBA(Ash(2),nAsh,nBasF,nSym)
 
            ioff=0
-           ioff1=0
            Do iSym=1,nSym
 
             ioff2 = ioff + nBasF(iSym)*nIsh(iSym)
@@ -283,16 +278,16 @@ C *** Only the active orbitals MO coeff need reordering
 
                ioff3=ioff2+nBasF(iSym)*(ikk-1)
 
-               call dcopy_(nBasF(iSym),CMO1(ioff3+1),1,
-     &                 Work(ipAsh(1)+ioff1+ikk-1),nAsh(iSym))
+               Ash(1)%SB(iSym)%A2(ikk,:) =
+     &             CMO1(ioff3+1:ioff3+nBasF(iSym))
 
-               call dcopy_(nBasF(iSym),CMO2(ioff3+1),1,
-     &                    Work(ipAsh(2)+ioff1+ikk-1),nAsh(iSym))
+               Ash(2)%SB(iSym)%A2(ikk,:) =
+     &             CMO2(ioff3+1:ioff3+nBasF(iSym))
 
             end do
 
             ioff=ioff+(nIsh(iSym)+nAsh(iSym))*nBasF(iSym)
-            ioff1=ioff1+nAsh(iSym)*nBasF(iSym)
+*           ioff1=ioff1+nAsh(iSym)*nBasF(iSym)
 
            End Do
 
@@ -302,20 +297,20 @@ c ---     and compute the (tu|vx) integrals
            If (Fake_CMO2) Then
 
              CALL CHO_LK_RASSI(ipDLT,ipMO1,ipMO2,ipFLT,LFAO,LTUVX,
-     &                         ipAsh,nScreen,dmpk)
+     &                         Ash,nScreen,dmpk)
            Else
 
              CALL GetMem('K-mat','Allo','Real',ipK,NBSQ)
              Call FZero(Work(ipK),NFAO)
 
              CALL CHO_LK_RASSI_X(ipDLT,ipMO1,ipMO2,ipFLT,ipK,LFAO,LTUVX,
-     &                         ipAsh,nScreen,dmpk)
+     &                         Ash,nScreen,dmpk)
 
              CALL GetMem('K-mat','Free','Real',ipK,NBSQ)
            EndIf
 
-           Call GetMem('Cva','Free','Real',ipAsh(1),nVB)
-           Call GetMem('Cvb','Free','Real',ipAsh(2),nVB)
+           Call Deallocate_DSBA(Ash(2))
+           Call Deallocate_DSBA(Ash(1))
 
          EndIf
 

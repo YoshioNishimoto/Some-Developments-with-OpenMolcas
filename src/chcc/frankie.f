@@ -11,20 +11,19 @@
 
         subroutine frankie(nfro,no,nv,printkey)
 c
+        use Data_Structures, only: DSBA_Type
+        use Data_Structures, only: Allocate_DSBA, Deallocate_DSBA
         implicit none
-c
-#include "WrkSpc.fh"
 c
         integer nbas,norb,nocc,nfro,ndel
         integer no,nv
         integer printkey
 c
-        integer ipCmo
+        Type (DSBA_Type) CMO
         integer rc
 c
         real*8  FracMem
-        Logical timings
-        COMMON /CHOTIME /timings
+#include "chotime.fh"
         integer idum(1)
 c
 c.1 - get the info on  nBas, nOrb, nOcc. Use nFro from input
@@ -63,13 +62,13 @@ c
 c.2 - allocate space for CMO with removed SCF deleted and frozen orbitals
 c     final ordering of indexes : (o+v,nbas)
 c
-        Call GetMem('CMO','Allo','Real',ipCmo,((no+nv)*nbas))
+        Call Allocate_DSBA(CMO,[no+nv],[nbas],1)
         if (printkey.ge.10) then
         write (6,*) 'Dopice 1 - Allo'
         end if
 c
 c.3 - read CMO
-        call read_mo(ipCmo,nfro,no,nv,ndel,nbas,nOrb)
+        call read_mo(Cmo,nfro,no,nv,ndel,nbas,nOrb)
 c.3 - invert the CMO matrix
         FracMem=0.0d0 ! in a parallel run set it to a sensible value
         rc=0
@@ -78,7 +77,7 @@ c.3 - invert the CMO matrix
         write (6,*) 'Dopice 2 ',rc
         end if
 
-        call CHO_CC_drv(rc,(/no/),(/0/),(/nv/),ipCmo)
+        call CHO_CC_drv(rc,CMO)
         if (printkey.ge.10) then
         write (6,*) 'Dopice 3 '
         end if
@@ -94,23 +93,24 @@ c
         end if
 c
 c.  -  deallocate CMO
-        Call GetMem('CMO','Free','Real',ipCmo,((no+nv)*nbas))
+        Call Deallocate_DSBA(CMO)
 c
         return
         end
 c
 c -------------------------------------
 c
-      Subroutine read_mo (ipCmo,nfro,no,nv,ndel,nbas,nOrb)
+      Subroutine read_mo (CMO,nfro,no,nv,ndel,nbas,nOrb)
+      use Data_Structures, only: DSBA_Type
       Implicit Real*8 (A-H,O-Z)
 
 *     declaration of calling arguments
-      Integer ipCMO,lthCMO
+      Type (DSBA_Type) CMO
+      Integer lthCMO
       integer nfro_scf(8)
       integer nfro
 #include "real.fh"
 #include "stdalloc.fh"
-#include "WrkSpc.fh"
       Real*8, Allocatable:: CMO_t(:,:)
 
 #include "SysDef.fh"
@@ -129,7 +129,7 @@ c
 c
 c - transpose MO matrix, skip the frozen occupied orbitals
 c
-      call mo_transp(Work(ipCMO),CMO_t(:,1+nfro:nOrb),no,nv,ndel,nbas)
+      call mo_transp(CMO%A0,CMO_t(:,1+nfro:nOrb),no,nv,ndel,nbas)
 c
       Call mma_deallocate(CMO_t)
 c
@@ -159,7 +159,7 @@ c
 c
 c -------------------------------------
 c
-      SUBROUTINE CHO_CC_drv(rc,nIsh,nAsh,nSsh,ipPorb)
+      SUBROUTINE CHO_CC_drv(rc,CMO)
 
 **********************************************************************
 C
@@ -169,46 +169,39 @@ C
 **********************************************************************
       use ChoArr, only: nDimRS
       use ChoSwp, only: InfVec
+      use Data_Structures, only: DSBA_Type, SBA_Type
+      use Data_Structures, only: Allocate_SBA, Deallocate_SBA
       Implicit Real*8 (a-h,o-z)
 
-      Integer   rc,nIsh(*),nAsh(*),nSsh(*)
+      Integer   rc
+      Type (DSBA_Type) CMO
 
       Real*8    tread(2),tmotr1(2),tmotr2(2)
-      Logical   timings,DoRead
-      Integer   nPorb(8),ipOrb(8)
-      Integer   ipLpb(8)
-cmp
-      integer   iskip(8)
-cmp
+      Logical   DoRead
+      Integer   nPorb(8)
 
       Character*50 CFmt
-      Character*10 SECNAM
-      Parameter (SECNAM = 'CHO_CC_drv')
+      Character(LEN=10), Parameter:: SECNAM = 'CHO_CC_drv'
 
-      COMMON    /CHOTIME /timings
-
-      parameter (zero = 0.0D0, one = 1.0D0)
-
+#include "real.fh"
+#include "chotime.fh"
 #include "cholesky.fh"
 #include "choorb.fh"
-#include "WrkSpc.fh"
+#include "stdalloc.fh"
 
-      parameter ( N2 = InfVec_N2 )
-
-      integer isfreeunit
+      Type (SBA_Type) Laq(1)
+      Real*8, Allocatable:: Lrs(:,:)
+      Real*8, Allocatable,Target:: Lpq(:)
+      Real*8, Pointer:: pLpq(:,:,:)=>Null()
 
 ************************************************************************
       MulD2h(i,j) = iEOR(i-1,j-1) + 1
 ************************************************************************
 
-cmp
-cmp!<new 21/04/09
-        LunChVF = 80
-        LunChVF = isfreeunit(LunChVF)
-cmp!>
-        call DaName_mf_wa (LunChVF,'CD1tmp')
-        idisk=1
-cmp
+      LunChVF = 80
+      LunChVF = isfreeunit(LunChVF)
+      call DaName_mf_wa (LunChVF,'CD1tmp')
+      idisk=1
       DoRead  = .false.
       IREDC = -1  ! unknown reduced set in core
 
@@ -228,7 +221,7 @@ cmp
 c --- Define MOs used in CC
 c -----------------------------------
         do i=1,nSym
-           nPorb(i) = nIsh(i) + nAsh(i) + nSsh(i)
+           nPorb(i) = SIZE(CMO%SB(i)%A2,1)
         end do
 
 
@@ -236,14 +229,6 @@ C ==================================================================
 
 c --- Various offsets & pointers
 c ------------------------------
-      ipOrb(1)=ipPorb
-      DO ISYM=2,NSYM
-        NB=NBAS(ISYM-1)
-        NP=NPORB(ISYM-1)
-        NP2=NB*NP
-        ipOrb(ISYM)=ipOrb(ISYM-1)+NP2 !  MO coeff. symm pointers
-      END DO
-
 
       iLoc = 3 ! use scratch location in reduced index arrays
 
@@ -254,15 +239,6 @@ c
 
          If (NumCho(jSym).lt.1) GOTO 1000
 
-C --- Set up the skipping flags + some initializations --------
-C -------------------------------------------------------------
-         Do i=1,nSym
-
-            k = Muld2h(i,JSYM)
-            iSkip(i) = Min(1,nBas(i)*nBas(k)) ! skip Lik vector
-
-            ipLpb(i) = -6666
-         End Do
 C -------------------------------------------------------------
 
 
@@ -276,8 +252,8 @@ C ------------------------------------------------------------------
 
          do l=1,nSym
             k=Muld2h(l,JSYM)
-            mTvec = mTvec + nPorb(k)*nBas(l)
-            mTTvec = Max(mTTvec,nPorb(k)*nPorb(l))
+            mTvec = mTvec + nPorb(l)*nBas(k)
+            mTTvec = Max(mTTvec,nPorb(l)*nPorb(k))
          end do
 
          mvec = mTvec + mTTvec
@@ -301,8 +277,6 @@ C ------------------------------------------------------------------
 
             Call Cho_X_SetRed(irc,iLoc,JRED) !set index arrays at iLoc
             if(irc.ne.0)then
-cmp!              Write(6,*)SECNAM//'cho_X_setred non-zero return code.
-cmp!     &                           rc= ',irc
               Write(6,*)SECNAM//'cho_X_setred non-zero return code.',
      &                         ' rc= ',irc
               call abend()
@@ -312,7 +286,7 @@ cmp!     &                           rc= ',irc
 
             nRS = nDimRS(JSYM,JRED)
 
-            Call GetMem('MaxM','Max','Real',KDUM,LWORK)
+            Call mma_maxDBLE(LWORK)
 
             nVec  = Min(LWORK/(nRS+mvec),nVrs)
 
@@ -329,8 +303,9 @@ cmp!     &                           rc= ',irc
 
             LREAD = nRS*nVec
 
-            Call GetMem('rsL','Allo','Real',ipLrs,LREAD)
-            Call GetMem('ChoT','Allo','Real',ipChoT,mvec*nVec)
+            Call mma_allocate(Lrs,nRS,nVec,Label='Lrs')
+            Call Allocate_SBA(Laq(1),nPorb,nBas,nVec,jSym,nSym,iSwap)
+            Call mma_allocate(Lpq,mTTVec*nVec,Label='Lpq')
 
 C --- BATCH over the vectors ----------------------------
 
@@ -349,7 +324,7 @@ C --- BATCH over the vectors ----------------------------
 
                CALL CWTIME(TCR1,TWR1)
 
-               CALL CHO_VECRD(Work(ipLrs),LREAD,JVEC,IVEC2,JSYM,
+               CALL CHO_VECRD(Lrs,LREAD,JVEC,IVEC2,JSYM,
      &                        NUMV,IREDC,MUSED)
 
                If (NUMV.le.0 .or.NUMV.ne.JNUM) then
@@ -361,27 +336,15 @@ C --- BATCH over the vectors ----------------------------
                tread(1) = tread(1) + (TCR2 - TCR1)
                tread(2) = tread(2) + (TWR2 - TWR1)
 
-               lChoT=0
-               Do iSymp=1,nSym
-
-                  iSymb = MulD2h(jSym,iSymp)
-
-                  ipLpb(iSymp) = ipChoT + lChoT
-                  lChoT = lChoT + nPorb(iSymp)*nBas(iSymb)*JNUM
-
-               End Do
-
-               ipLpq = ipChoT + lChot
-
 C --------------------------------------------------------------------
 C --- First half MO transformation  Lpb,J = sum_a  C(p,a) * Lab,J
 C --------------------------------------------------------------------
 
                CALL CWTIME(TCM1,TWM1)
 
-               CALL CHO_X_getVtra(irc,Work(ipLrs),LREAD,jVEC,JNUM,
-     &                           JSYM,iSwap,IREDC,nMOs,kMOs,ipOrb,nPorb,
-     &                           ipLpb,iSkip,DoRead)
+               CALL CHO_X_getVtra(irc,Lrs,LREAD,jVEC,JNUM,
+     &                           JSYM,iSwap,IREDC,nMOs,kMOs,[CMO],
+     &                           Laq(1),DoRead)
 
                if (irc.ne.0) then
                   rc = irc
@@ -400,22 +363,21 @@ C --------------------------------------------------------------------
                   iSymp = MulD2h(JSYM,iSymb)
                   NAp = nPorb(iSymp)
                   NAq = nPorb(iSymb) ! iSymb=iSymq
+                  iS = 1
+                  iE = NAp * NAq * JNUM
+
+                  pLpq(1:NAp,1:NAq,1:JNUM) => Lpq(iS:iE)
 
                   CALL CWTIME(TCM3,TWM3)
 
                   If(NAp*NAq.ne.0)Then
 
-                   Do JVC=1,JNUM
+                    Do JVC=1,JNUM
 
-                    ipLJpb = ipLpb(iSymp)
-     &                     + nPorb(iSymp)*nBas(iSymb)*(JVC-1)
-                    ipLJpq = ipLpq
-     &                     + nPorb(iSymp)*nPorb(iSymb)*(JVC-1)
-
-                    CALL DGEMM_('N','T',NAp,NAq,nBas(iSymb),
-     &                         One,Work(ipLJpb),NAp,
-     &                             Work(ipOrb(iSymb)),NAq,
-     &                        Zero,Work(ipLJpq),NAp)
+                      CALL DGEMM_('N','T',NAp,NAq,nBas(iSymb),
+     &                           One,Laq(1)%SB(iSymb)%A3(:,:,JVC),NAp,
+     &                               CMO%SB(iSymb)%A2,NAq,
+     &                          Zero,pLpq(:,:,JVC),NAp)
 
                       End Do
 
@@ -431,14 +393,15 @@ C     I can help you with that
                   CALL CWTIME(TCR3,TWR3)
 C --- WRITE transformed vectors to disk (each Jsym on a separate file!)
 c
-                call ddafile (LunChVF,1,Work(ipLpq),NAp*NAp*JNUM,idisk)
-cmp                  idisk=idisk+NAp*NAp*JNUM
+                  call ddafile (LunChVF,1,Lpq,NAp*NAq*JNUM,idisk)
 c
 C --- remember that this is inside a batch over J, the vector index
 
                   CALL CWTIME(TCR4,TWR4)
                   tread(1) = tread(1) + (TCR4 - TCR3)
                   tread(2) = tread(2) + (TWR4 - TWR3)
+
+                  pLpq => Null()
 
                End Do
 
@@ -448,8 +411,9 @@ C --------------------------------------------------------------------
             END DO  ! end batch loop
 
 C --- free memory
-            Call GetMem('ChoT','Free','Real',ipChoT,mTvec*nVec)
-            Call GetMem('rsL','Free','Real',ipLrs,LREAD)
+            Call mma_deallocate(Lpq)
+            Call Deallocate_SBA(Laq(1))
+            Call mma_deallocate(Lrs)
 
 999         CONTINUE
 
@@ -491,12 +455,7 @@ C --- free memory
 
       endif
 
-
       rc  = 0
-
 
       Return
       END
-
-**************************************************************
-**************************************************************

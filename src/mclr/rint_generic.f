@@ -18,6 +18,8 @@
 *     Constructs  F  = <0|[E  ,H]|0> ( + <0|[[E  , Kappa],H]|0> )
 *                  pq       pq                 pq
 *
+      use Data_Structures, only: DSBA_Type
+      use Data_Structures, only: Allocate_DSBA, Deallocate_DSBA
       Implicit Real*8(a-h,o-z)
 
 #include "real.fh"
@@ -28,22 +30,24 @@
       Real*8 Fock(nDens2),focka(nDens2),rkappa(nDens2),
      &       Focki(ndens2),Q(ndens2),rMOs(*),rmoa(*)
       Logical Fake_CMO2,DoAct
-      Integer ipAsh(2)
       Real*8, Allocatable:: MT1(:), MT2(:), MT3(:), QTemp(:), DI(:),
      &                      DLT(:), Dens2(:), DA(:), G2x(:),
-     &                      CoulExch(:,:), CVa(:,:)
+     &                      CoulExch(:,:)
+      Type (DSBA_Type) CVa(2)
 *                                                                      *
 ************************************************************************
 *                                                                      *
       Interface
         SUBROUTINE CHO_LK_MCLR(ipDLT,ipDI,ipDA,ipG2,ipkappa,
      &                         ipJI,ipK,ipJA,ipKA,ipFkI,ipFkA,
-     &                         ipMO1,ipQ,ipAsh,ipCMO,ip_CMO_inv,
+     &                         ipMO1,ipQ,Ash,ipCMO,ip_CMO_inv,
      &                         nOrb,nAsh,nIsh,doAct,Fake_CMO2,
      &                         LuAChoVec,LuIChoVec,iAChoVec)
+        use Data_Structures, only: DSBA_Type
         Integer ipDLT,ipDI,ipDA,ipG2,ipkappa,
      &          ipJI,ipK,ipJA,ipKA,ipFkI,ipFkA,
-     &          ipMO1,ipQ,ipAsh(2),ipCMO,ip_CMO_inv
+     &          ipMO1,ipQ,ipCMO,ip_CMO_inv
+        Type (DSBA_Type) Ash(2)
         Integer nOrb(8),nAsh(8),nIsh(8)
         Logical doAct,Fake_CMO2
         Integer LuAChoVec(8),LuIChoVec(8)
@@ -70,8 +74,17 @@
 *
       Fact=-One
       call dcopy_(ndens2,[0.0d0],0,Fock,1)
-*
-      If (.not.newCho) Then
+*                                                                      *
+************************************************************************
+*                                                                      *
+      Select Case (NewCho)
+*                                                                      *
+************************************************************************
+*                                                                      *
+      Case (.FALSE.)   ! Cho-MO
+*                                                                      *
+************************************************************************
+*                                                                      *
         Call mma_allocate(MT1,nmba,Label='MT1')
         Call mma_allocate(MT2,nmba,Label='MT2')
         MT1(:)=Zero
@@ -102,12 +115,12 @@
            call daxpy_(ndens2,One,QTemp,1,Q,1)
            Call mma_deallocate(QTemp)
         End If
-*************************************************************************
-*                                                                       *
-*        Cholesky code                                                  *
-*                                                                       *
-*************************************************************************
-      Else
+*                                                                      *
+************************************************************************
+*                                                                      *
+      Case (.TRUE.)   ! Cho-Fock
+*                                                                      *
+************************************************************************
         Fake_CMO2=.false.
         DoAct=.true.
 *
@@ -126,7 +139,9 @@
 **      Form AO 1-index transform inactive density
 *
         Call mma_allocate(Dens2,nDens2,Label='Dens2')
+        Dens2(:)=Zero
         Call mma_allocate(DLT,nDens2,Label='DLT')
+        DLT(:)=Zero
         Do iS=1,nSym
           If (nOrb(iS).ne.0) Then
             Do jS=1,nSym
@@ -146,14 +161,13 @@
      &                         Zero,Dens2(ipMat(iS,jS)),nOrb(jS))
 
                    Call DGEMM_('T','T',nOrb(jS),nOrb(iS),nOrb(iS),
-     &                         One,DI(ipCM(js)),
-     &                         nOrb(iS),CMO(ipCM(is)),
-     &                         nOrb(iS),Zero,
-     &                         DLT(ipMat(jS,iS)),nOrb(jS))
-                   Call DGEMM_('T','T',nOrb(jS),nOrb(jS),nOrb(iS),One,
-     &                         DLT(ipMat(jS,iS)),nOrb(iS),
-     &                         CMO(ipCM(js)),nOrb(jS),Zero,
-     &                         DI(ipCM(js)),nOrb(jS))
+     &                         One,DI(ipCM(js)),nOrb(iS),
+     &                             CMO(ipCM(is)),nOrb(iS),
+     &                         Zero,DLT(ipMat(jS,iS)),nOrb(jS))
+                   Call DGEMM_('T','T',nOrb(jS),nOrb(jS),nOrb(iS),
+     &                         One, DLT(ipMat(jS,iS)),nOrb(iS),
+     &                              CMO(ipCM(js)),nOrb(jS),
+     &                         Zero,DI(ipCM(js)),nOrb(jS))
               EndIf
             End Do
           EndIf
@@ -163,13 +177,11 @@
 *
 **      Form active density and MO coefficients
 *
-        nVB=0
         If (iMethod.eq.2) Then
           na2=0
           nAct=0
           nG2=0
           Do iSym=1,nSym
-            nVB = nVB + nAsh(iSym)*nOrb(iSym)
             na2 = na2+nAsh(iSym)**2
             nact=nact+nAsh(iSym)
             nAG2=0
@@ -181,11 +193,12 @@
           End Do
           nAtri=nact*(nact+1)/2
           nAtri=nAtri*(nAtri+1)/2
-          Call mma_allocate(CVa,nVB,2,Label='CVa')
+
+          Call Allocate_DSBA(CVa(1),nAsh,nOrb,nSym)
+          Call Allocate_DSBA(CVa(2),nAsh,nOrb,nSym)
           Call mma_allocate(DA,na2,Label='DA')
 *
           ioff=0
-          ioff1=1
           ioff4=1
           ioffD=0
           Do iS=1,nSym
@@ -193,8 +206,8 @@
             ioff5 = ioff4+ nOrb(iS)*nIsh(iS)
             Do iB=1,nAsh(iS)
               ioff3=ioff2+nOrb(iS)*(iB-1)
-              call dcopy_(nOrb(iS),CMO(1+ioff3),1,
-     &                  CVa(ioff1-1+iB,1),nAsh(iS))
+              CVa(1)%SB(iS)%A2(iB,:) =
+     &           CMO(ioff3+1:ioff3+nOrb(iS))
              Do jB=1,nAsh(iS)
               ip=ioffD+ib+(jB-1)*nAsh(is)
               iA=nA(is)+ib
@@ -204,12 +217,11 @@
              End Do
             End Do
 *MGD to check
-            Call DGEMM_('T','T',nAsh(iS),nOrb(iS),nOrb(iS),1.0d0,
-     &                  rkappa(ioff5),nOrb(iS),
-     &                  CMO(1+ioff),nOrb(iS),
-     &                  0.0d0,CVa(ioff1,2),nAsh(iS))
+            Call DGEMM_('T','T',nAsh(iS),nOrb(iS),nOrb(iS),
+     &                  1.0d0,rkappa(ioff5),nOrb(iS),
+     &                        CMO(1+ioff),nOrb(iS),
+     &                  0.0d0,CVa(2)%SB(iS)%A2,nAsh(iS))
             ioff=ioff+(nIsh(iS)+nAsh(iS))*nOrb(iS)
-            ioff1=ioff1+nAsh(iS)*nOrb(iS)
             ioffD=ioffD+nAsh(iS)**2
             ioff4=ioff4+nOrb(iS)**2
           End Do
@@ -248,6 +260,14 @@
         call dcopy_(ndens2,[0.0d0],0,FockA,1)
         call dcopy_(ndens2,[0.0d0],0,FockI,1)
         call dcopy_(nATri,[0.0d0],0,rMOs,1)
+*#define _DEBUGPRINT_
+#ifdef _DEBUGPRINT_
+        Call RecPrt('DLT',' ',DLT,1,SIZE(DLT))
+        Call RecPrt('DI ',' ',DI ,1,SIZE(DI ))
+        Call RecPrt('DA ',' ',DA ,1,SIZE(DA ))
+        Call RecPrt('G2x',' ',G2x,1,SIZE(G2x))
+        Call RecPrt('rKappa ',' ',rKappa ,1,SIZE(rKappa))
+#endif
 *
 **      Compute the whole thing
 *
@@ -264,17 +284,34 @@
         ipFkA     = ip_of_Work(FockA(1))
         ipMO1     = ip_of_Work(rMOs(1))
         ipQ       = ip_of_Work(Q(1))
-        ipAsh(1)  = ip_of_Work(CVa(1,1))
-        ipAsh(2)  = ip_of_Work(CVa(1,2))
         ipCMO     = ip_of_Work(CMO(1))
         ip_CMO_inv= ip_of_Work(CMO_inv(1))
         iread=2 ! Asks to read the half-transformed Cho vectors
                                                                                *
         Call CHO_LK_MCLR(ipDLT,ipDI,ipDA,ipG2,ipkappa,
      &                   ipJI,ipK,ipJA,ipKA,ipFkI,ipFkA,
-     &                   ipMO1,ipQ,ipAsh,ipCMO,ip_CMO_inv,
+     &                   ipMO1,ipQ,CVa,ipCMO,ip_CMO_inv,
      &                   nIsh, nAsh,nIsh,DoAct,Fake_CMO2,
      &                   LuAChoVec,LuIChoVec,iread)
+
+        Call GADSum(FockI,nDens2)
+        Call GADSum(FockA,nDens2)
+*#define _DEBUGPRINT_
+#ifdef _DEBUGPRINT_
+      nas=0
+      Do iSym = 1, nSym
+        Write (6,*) 'iSym=',iSym
+*       Call RecPrt('FIMO ',' ', FIMO(ipCM(iSym)),nOrb(iSym),nIsh(iSym))
+*       Call RecPrt('FAMO ',' ', FAMO(ipCM(iSym)),nOrb(iSym),nIsh(iSym))
+        Call RecPrt('FockI',' ',FockI(ipCM(iSym)),nOrb(iSym),nIsh(iSym))
+        Call RecPrt('FockA',' ',FockA(ipCM(iSym)),nOrb(iSym),nIsh(iSym))
+*       Call RecPrt('Q',' ',Q(ipMatba(iSym,iSym)),nOrb(iSym),nAsh(iSym))
+        nas = nas + nAsh(iSym)
+      End Do
+      nAtri=nas*(nas+1)/2
+      nAtri=nAtri*(nAtri+1)/2
+*     Call RecPrt('MO1',' ',rMOs,1,nAtri)
+#endif
 *
 **      Calculate contribution from uncontracted indexes
 *
@@ -307,18 +344,45 @@
 *
         Call mma_deallocate(Dens2)
         Call mma_deallocate(CoulExch)
+
         If (iMethod.eq.2) Then
-          Call mma_deallocate(Dens2)
-          Call mma_deallocate(CVa)
-          Call mma_deallocate(Dens2)
+          Call mma_deallocate(G2x)
+          Call Deallocate_DSBA(CVa(2))
+          Call Deallocate_DSBA(CVa(1))
+          Call mma_deallocate(DA)
         EndIf
+
         Call mma_deallocate(DLT)
         Call mma_deallocate(DI)
-      EndIf
+
+        Call GADSum(    Q,nDens2)
+        Call GADSum( rMOs,nAtri)
+*                                                                      *
+************************************************************************
+*                                                                      *
+      End Select
 *                                                                      *
 ************************************************************************
 *                                                                      *
 *
+*#define _DEBUGPRINT_
+#ifdef _DEBUGPRINT_
+      If (NewCho) Then
+      nas=0
+      Do iSym = 1, nSym
+        Write (6,*) 'iSym=',iSym
+        Call RecPrt('FockI',' ',FockI(ipCM(iSym)),nOrb(iSym),nIsh(iSym))
+        Call RecPrt('FockA',' ',FockA(ipCM(iSym)),nOrb(iSym),nIsh(iSym))
+        Call RecPrt('Q',' ',Q(ipMatba(iSym,iSym)),nOrb(iSym),nAsh(iSym))
+        nas = nas + nAsh(iSym)
+      End Do
+      nAtri=nas*(nas+1)/2
+      nAtri=nAtri*(nAtri+1)/2
+      Call RecPrt('MO1',' ',rMOs,1,nAtri)
+      Call abend()
+      End If
+#endif
+
       Do iS=1,nSym
          jS=iEOr(iS-1,idsym-1)+1
 *

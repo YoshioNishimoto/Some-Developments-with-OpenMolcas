@@ -32,7 +32,6 @@
 #include "general.fh"
 #include "gas.fh"
 #include "output_ras.fh"
-      Parameter (ROUTINE='INPPRI  ')
 #include "ciinfo.fh"
 #include "rctfld.fh"
 #include "WrkSpc.fh"
@@ -41,11 +40,9 @@
       Character*8   Fmt1,Fmt2, Label
       Character*120  Line,BlLine,StLine
       Character*3 lIrrep(8)
-      Logical DoCholesky,DoDMRG
-      Logical DoLocK,Deco, lOPTO
-      Real*8  dmpK
-      Integer nScreen
-      COMMON /CHOLK / DoLocK,Deco,dmpk,Nscreen
+      Logical DoCholesky
+      Logical lOPTO
+#include "cholk.fh"
 
 * Print level:
       IPRLEV=IPRLOC(1)

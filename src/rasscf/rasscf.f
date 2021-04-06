@@ -50,11 +50,9 @@
 
 #ifdef _DMRG_
 !     module dependencies
-      use qcmaquis_interface_wrapper, only: dmrg_interface_ctl
       use qcmaquis_interface_cfg
-      use qcmaquis_interface_version
-      use qcmaquis_interface_environment, only:
-     &    finalize_dmrg, dump_dmrg_info
+      use qcmaquis_interface
+      use qcmaquis_interface_mpssi, only: qcmaquis_mpssi_transform
 #endif
       use stdalloc, only: mma_allocate, mma_deallocate
       use write_orbital_files, only : OrbFiles, putOrbFile
@@ -63,8 +61,12 @@
       use CC_CI_mod, only: Do_CC_CI, CC_CI_solver_t
       use fcidump, only : make_fcidumps, transform, DumpOnly
       use orthonormalization, only : ON_scheme
+#ifdef _FDE_
+      use Embedding_global, only: Eemb, embInt, embPot, embPotInBasis,
+     &    embWriteEsp
+#endif
 #ifdef _HDF5_
-      use mh5, only: mh5_put_attr, mh5_put_dset_array_real
+      use mh5, only: mh5_put_attr, mh5_put_dset
 #endif
       use OFembed, only: Do_OFemb, FMaux
 
@@ -82,7 +84,6 @@
 #include "splitcas.fh"
 #include "bk_approx.fh"
 #include "output_ras.fh"
-      Parameter (ROUTINE='RASSCF  ')
 #include "rctfld.fh"
 #include "timers.fh"
 #include "casvb.fh"
@@ -95,9 +96,6 @@
 #include "qnctl.fh"
 #include "orthonormalize.fh"
 #include "ciinfo.fh"
-#ifdef _FDE_
-#include "embpotdata.fh"
-#endif
 #include "raswfn.fh"
 
       Logical DSCF
@@ -107,22 +105,19 @@
 #endif
       Character*80 Line
       Character*1 CTHRE, CTHRSX, CTHRTE
-      Logical DoQmat,DoActive, l_casdft
       Logical IfOpened
 #ifdef _DMRG_
       Logical Do_ESPF
+      ! function defined in misc_util/pcm_on.f
+      Logical, External :: PCM_On
 #endif
 
 * --------- Cholesky stuff:
-      Integer ALGO
-      Logical DoCholesky
-      Logical timings,DoLock,Deco
-      Integer Nscreen
-      COMMON /CHOTODO /DoActive,DoQmat,ipQmat
-      COMMON /CHLCAS /DoCholesky,ALGO
-      COMMON /CHOPAR/ ChFracMem
-      COMMON /CHOTIME / timings
-      Common /CHOLK / DoLocK,Deco,dmpk,Nscreen
+#include "chotodo.fh"
+#include "chlcas.fh"
+#include "chopar.fh"
+#include "chotime.fh"
+#include "cholk.fh"
 * --------- End Cholesky stuff
       Character*8 EMILOOP
 * --------- FCIDUMP stuff:
@@ -142,9 +137,7 @@
       External RasScf_Init
       External Scan_Inp
       External Proc_Inp
-#ifndef _DMRG_
-      logical :: doDMRG = .false.
-#else
+#ifdef _DMRG_
       integer :: maxtrR
       real*8  :: maxtrW
 #include "nevptp.fh"
@@ -158,10 +151,17 @@
       ITERM  = 0
       IRETURN=_RC_ALL_IS_WELL_
 
+* Set the HDF5 file id (a proper id will never be 0)
+      wfn_fileid = 0
+
 * Set some Cholesky stuff
       DoActive=.true.
       DoQmat=.false.
       lOPTO=.False.
+* Initialise doDMRG if compiled without QCMaquis
+#ifndef _DMRG_
+      DoDMRG = .false.
+#endif
 
 * Set variable IfVB to check if this is a VB job.
       ProgName=Get_ProgName()
@@ -278,27 +278,16 @@
 
 * If the ORBONLY option was chosen, then Proc_Inp just generated
 *  orbitals from the JOBIPH file. Nothing more to do:
-      IF(KeyORBO.or.(MAXIT.eq.0)) GOTO 9989
-*                                                                 *
-*******************************************************************
-* Initialize global variable for mcpdft method                    *
-       l_casdft = KSDFT(1:5).eq.'TLSDA'   .or.
-     &            KSDFT(1:6).eq.'TLSDA5'  .or.
-     &            KSDFT(1:5).eq.'TBLYP'   .or.
-     &            KSDFT(1:6).eq.'TSSBSW'  .or.
-     &            KSDFT(1:5).eq.'TSSBD'   .or.
-     &            KSDFT(1:5).eq.'TS12G'   .or.
-     &            KSDFT(1:4).eq.'TPBE'    .or.
-     &            KSDFT(1:5).eq.'FTPBE'   .or.
-     &            KSDFT(1:5).eq.'TOPBE'   .or.
-     &            KSDFT(1:6).eq.'FTOPBE'  .or.
-     &            KSDFT(1:7).eq.'TREVPBE' .or.
-     &            KSDFT(1:8).eq.'FTREVPBE'.or.
-     &            KSDFT(1:6).eq.'FTLSDA'  .or.
-     &            KSDFT(1:6).eq.'FTBLYP'
-*******************************************************************
+      IF(KeyORBO) GOTO 9989
+      IF(MAXIT.eq.0) GOTO 2009
 #ifdef _DMRG_
-      if(l_casdft .and. doDMRG) domcpdftDMRG = .true.
+      ! delete old checkpoints, unless requested otherwise
+      ! this flag is set in proc_inp
+      if (.not.DoDelChk) then
+        do kroot=1,nroots
+          call qcmaquis_interface_delete_chkp(iroot(kroot))
+        end do
+      end if
 #endif
 *
 * Allocate various matrices
@@ -311,6 +300,15 @@
       Call GetMem('OCCN','Allo','Real',LOCCN,NTOT)
       Call GetMem('LCMO','Allo','Real',LCMO,NTOT2)
       Call GetMem('DIAF','Allo','Real',LDIAF,NTOT)
+#ifdef _DMRG_
+* Allocate RDMs for the reaction field reference root in QCMaquis calculations
+      if (doDMRG.and.PCM_On()) then
+        Call GetMem('D1RF','Allo','Real',LW_RF1,NACPAR)
+        if (twordm_qcm) then
+          Call GetMem('D2RF','Allo','Real',LW_RF2,NACPR2)
+        end if
+      end if
+#endif
       lfi_cvb=lfi
       lfa_cvb=lfa
       ld1i_cvb=ld1i
@@ -374,7 +372,7 @@
       if (embpot) then
        ! I have no idea why i need memory for x+4 entries
        ! and not just x...
-       Call GetMem('Emb','ALLO','REAL',ipEmb,NTOT1+4)
+       call mma_allocate(embInt,NTOT1+4,label='Emb')
        if (embPotInBasis) then
         ! If the potential is given in basis set representation it
         ! has not been calculated with a OneEl call and is just read
@@ -382,14 +380,14 @@
         iunit = isFreeUnit(1)
         call molcas_open(iunit, embPotPath)
         do iEmb=1, NTOT1
-         read(iunit,*) Work(ipEmb+iEmb-1)
+         read(iunit,*) embInt(iEmb)
         end do
        else
         ! Read in the embedding potential one-electron integrals
         Label='embpot  '
         iRC=-1
         iOpt=0
-        Call RdOne(iRC,iOpt,Label,1,Work(ipEmb),iSyLbl)
+        Call RdOne(iRC,iOpt,Label,1,embInt,iSyLbl)
         If (iRC.ne.0) then
          Call WarningMessage(2,
      &                'Drv1El: Error reading ONEINT;'
@@ -510,11 +508,6 @@ c At this point all is ready to potentially dump MO integrals... just do it if r
      &        'Please cite for the QCMaquis DMRG software:',
      &        'S. Keller, M. Dolfi, M. Troyer, M. Reiher,',
      &        'J. Chem. Phys. 143, 244118 (2015)',
-     &        '------------------------------------------------'//
-     &        '---------------',
-     &        trim(qcmaquis_interface_v),
-     &        'git reference SHA        : ',
-     &        trim(qcmaquis_interface_g(1:12)),
      &        '------------------------------------------------'//
      &        '---------------'
        end if
@@ -847,11 +840,11 @@ c         write(6,*) (WORK(LTUVX+ind),ind=0,NACPR2-1)
 #ifdef _FDE_
           !Thomas Dresselhaus
           if (embpot) then
-            !Eemb=DDot_(NACPAR,Work(ipEmb),1,Work(LDMAT),1)
-!           Eemb=embPotEne(Work(LD1I), Work(LD1A), Work(ipEmb),
+            !Eemb=DDot_(NACPAR,embInt,1,Work(LDMAT),1)
+!           Eemb=embPotEne(Work(LD1I), Work(LD1A), embInt,
 !    &                   Work(LCMO), nBasFunc, nFrozenOrbs, .true.)
             Eemb=embPotEneMODensities(Work(LD1I), Work(LD1A),
-     &            Work(ipEmb), nBas, nTot2, nFrozenOrbs, nSym)
+     &            embInt, nBas, nTot2, nSym)
             Write(LF,*) "Energy from embedding potential with the"
             Write(LF,*) "initial CI vectors: ", Eemb
           end if
@@ -1327,8 +1320,8 @@ cGLM        write(6,*) 'CASDFT energy :', CASDFT_Funct
       CALL DDAFILE(JOBIPH,1,ENER,mxRoot*mxIter,IAD15)
       CALL DDAFILE(JOBIPH,1,CONV,6*mxIter,IAD15)
 #ifdef _HDF5_
-      call mh5_put_attr (wfn_iter, Iter)
-      call mh5_put_dset_array_real(wfn_energy, ENER(1,Iter))
+      call mh5_put_attr(wfn_iter, Iter)
+      call mh5_put_dset(wfn_energy, ENER(1,Iter))
 #endif
 *
 * Print output of energies and convergence parameters
@@ -1426,8 +1419,8 @@ cGLM        write(6,*) 'CASDFT energy :', CASDFT_Funct
 #ifdef _FDE_
       ! Embedding
       if (embpot) then
-       Eemb=embPotEneMODensities(Work(LD1I), Work(LD1A), Work(ipEmb),
-     &                nBas, nTot2, nFrozenOrbs, nSym)
+       Eemb=embPotEneMODensities(Work(LD1I), Work(LD1A), embInt,
+     &                nBas, nTot2, nSym)
        Write(LF,*)"E from embedding potential (<Psi|v_emb|Psi>): ",Eemb
       end if
 #endif
@@ -1806,10 +1799,10 @@ c Clean-close as much as you can the CASDFT stuff...
 *              Compute TDM and store in h5 file
                Call Lucia_Util('Densi',iVecR,iDummy,Dummy)
                idx=(jRoot-2)*(jRoot-1)/2+kRoot
-               Call mh5_put_dset_array_real(wfn_transdens, Work(LW6),
+               Call mh5_put_dset(wfn_transdens,Work(LW6:LW6+NAC*NAC-1),
      &              [NAC,NAC,1], [0,0,idx-1])
                If (iSpin.gt.1)
-     &         Call mh5_put_dset_array_real(wfn_transsdens, Work(LW7),
+     &         Call mh5_put_dset(wfn_transsdens,Work(LW7:LW7+NAC*NAC-1),
      &              [NAC,NAC,1], [0,0,idx-1])
             End Do
          End Do
@@ -1869,13 +1862,14 @@ c      write(6,*) 'I am in RASSCF before call to PutRlx!'
 #ifdef _FDE_
       ! Embedding
       if (embpot) then
-       Eemb=embPotEneMODensities(Work(LD1I), Work(LD1A), Work(ipEmb),
-     &                nBas, nTot2, nFrozenOrbs, nSym)
+       Eemb=embPotEneMODensities(Work(LD1I), Work(LD1A), embInt,
+     &                nBas, nTot2, nSym)
        Write(LF,*) "Final energy from embedding potential: ", Eemb
        ! Write out ESP on grid if requested
        if (embWriteEsp) then
         Call Get_iScalar('Unique atoms',nNuc)
-        Call embPotOutputMODensities(nNuc,nSym,LD1I,LD1A,nBas,nTot2)
+        Call embPotOutputMODensities(nNuc,nSym,Work(LD1I),Work(LD1A),
+     &                               nBas,nTot2)
        end if
       end if
 #endif
@@ -1902,7 +1896,7 @@ c  i_root>0 gives natural spin orbitals for that root
       End Do
 
 * Create output orbital files:
-      Call OrbFiles(JOBIPH,IPRLEV)
+2009      Call OrbFiles(JOBIPH,IPRLEV)
 
 ************************************************************************
 ******************           Closing up RASSCF       *******************
@@ -1956,6 +1950,15 @@ c deallocating TUVX memory...
       Call GetMem('D1tot','Free','Real',lD1tot,NTOT1)
       Call GetMem('OCCN','Free','Real',LOCCN,NTOT)
       Call GetMem('LCMO','Free','Real',LCMO,NTOT2)
+#ifdef _DMRG_
+* Free RDMs for the reaction field reference root in QCMaquis calculations
+      if (doDMRG.and.PCM_On()) then
+        Call GetMem('D1RF','FREE','Real',LW_RF1,NACPAR)
+        if (twordm_qcm) then
+          Call GetMem('D2RF','FREE','Real',LW_RF2,NACPR2)
+        end if
+      end if
+#endif
       If (iClean.eq.1) Call Free_iWork(ipCleanMask)
 
 *
@@ -2024,36 +2027,50 @@ c      End If
 #ifdef _DMRG_
         !Leon: Generate 4-RDM evaluation templates for NEVPT2
 
+        !In the new interface the EvRDM keyword will be ignored.
+        !Instead, NEVPT2Prep will always generate the template.
+        !RDM evaluation will now happen in the NEVPT2 module
+        !where NEVPT2 either can attempt to compute it directly
+        !with the new interface or read from QCMaquis HDF5 result
+        !file.
         if (DoNEVPT2Prep) then
+          if (NACTEL.gt.3) then ! Ignore 4-RDM if we have <4 electrons
           do i=1,NROOTS
-            if (DoEvaluateRDM) then
-              Write (6,'(a,i4)') 'Evaluating 4-RDM for state ', i
-            else
-        Write (6,'(a,i4)') 'Writing 4-RDM QCMaquis template'//
-     &   ' for state ', i
-            end if
-            call dmrg_interface_ctl(task='w 4rdmin',state=i-1,
-     &       msproj=MPSCompressM,rdm4=DoEvaluateRDM)
-      !> MPSCompressM is passed to dmrg_interface_ctl via msproj,
-      !> if it is > 0, then MPS compression is triggered there
+              Write (6,'(a)') 'Writing 4-RDM QCMaquis template'//
+     &   ' for state '//trim(str(i))
+              call qcmaquis_interface_prepare_hirdm_template(
+     &        filename="meas-4rdm."//trim(str(i-1))//".in",
+     &        state=i-1,
+     &        tpl=TEMPLATE_4RDM)
+              call qcmaquis_mpssi_transform(
+     &             trim(qcmaquis_param%currdir)//'/'//
+     &             trim(qcmaquis_param%project_name), i)
           end do
+          else
+            write(6,*) "Skipping 4-RDM QCMaquis template generation "//
+     &        "since we have less than 4 electrons."
+          end if
           ! Generate 3-TDM templates
+          if(NACTEL.gt.2) then ! but only if we have more than 3 el.
           do i=1,NROOTS
             do j=i+1,NROOTS
-              if (DoEvaluateRDM) then
-            Write (6,'(a,i4,i4)') 'Evaluating 3-TDM for states ', i,j
-            else
-        Write (6,'(a,i4,i4)') 'Writing 3-TDM QCMaquis'//
-     &   ' template for state ', i,j
-            end if
-
-              call dmrg_interface_ctl(task='w 3tdmin',state=i-1,
-     &         stateL=j-1,rdm3=DoEvaluateRDM)
+              Write (6,'(a)') 'Writing 3-TDM QCMaquis template'//
+     &   ' for states '//trim(str(i))//" and "//trim(str(j))
+              call qcmaquis_interface_prepare_hirdm_template(
+     &        filename="meas-3tdm."//trim(str(i-1))//"."//
+     &         trim(str(j-1))//".in",
+     &        state=i-1,
+     &        state_j=j-1,
+     &        tpl=TEMPLATE_TRANSITION_3RDM)
             end do
           end do
+          else
+            write(6,*) "Skipping 3-RDM QCMaquis template generation "//
+     &        "since we have less than 3 electrons."
+          end if
         end if
-!       call dump_dmrg_info()
-        call finalize_dmrg()
+        ! is it really needed in the times of Fortran 2008?
+        call qcmaquis_interface_deinit
 #endif
       end if
 ! ==========================================================
