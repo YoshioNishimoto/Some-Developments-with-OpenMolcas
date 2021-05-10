@@ -30,7 +30,10 @@ integer(kind=iwp), allocatable :: IPIV(:)
 real(kind=wp), allocatable :: B(:), A(:,:)
 real(kind=r8), external :: dDot_
 
-! Prediagonalize the part of the matrix corresponing to the value-value block
+
+
+
+! Prediagonalize the part of the correlation matrix corresponing to the value-value block
 
 #define _PREDIAG_
 #ifdef _PREDIAG_
@@ -39,15 +42,15 @@ real(kind=wp), allocatable :: U(:,:), HTri(:), UBIG(:,:), C(:,:), D(:)
 real(kind=wp) :: temp
 #endif
 
-call mma_Allocate(B,m_t,label='B')
-call mma_Allocate(A,m_t,m_t,label='A')
+call mma_Allocate(B,m_t,label='B')            ! the f vector
+call mma_Allocate(A,m_t,m_t,label='A')        ! the correlation matrix
 call mma_Allocate(IPIV,m_t,label='IPIV')
 
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-!      Code with prediagonalization of the value-value block
+!      Code with prediagonalization of the value-value block the correlation matrix
 
 #ifdef _PREDIAG_
 
@@ -76,7 +79,7 @@ call RecPrt('U',' ',U,nPoints,nPoints)
 call nidiag_new(HTri,U,nPoints,nPoints)
 call Jacord(HTri,U,nPoints,nPoints)
 
-! Introduce canonical phase factor
+! Introduce the canonical phase factor
 
 do i=1,nPoints
   Temp = DDot_(nPoints,[One],0,U(1,i),1)
@@ -97,12 +100,12 @@ do i=nPoints+1,m_t
 end do
 !call RecPrt('UBIG',' ',UBig,m_t,m_t)
 
-! Transform the covariance matrix to this basis
+! Transform the correlation matrix to this basis
 
 call mma_Allocate(C,m_t,m_t,label='C')
 C = Zero
-call dgemm_('N','N',m_t,m_t,m_t,One,Full_R,m_t,UBIG,m_t,Zero,C,m_t)
-call dgemm_('T','N',m_t,m_t,m_t,One,UBIG,m_t,C,m_t,Zero,A,m_t)
+call dgemm_('N','N',  m_t,m_t,m_t,  One,Full_R,m_t,  UBIG,m_t,  Zero,C,m_t)
+call dgemm_('T','N',  m_t,m_t,m_t,  One,UBIG,m_t,    C,m_t,     Zero,A,m_t)
 
 ! For safety measures set the value-value to zero and then reintroduce the
 ! eigenvalues from the previous diagonalization.
@@ -115,13 +118,13 @@ end do
 call RecPrt('U^TAU',' ',A,m_t,m_t)
 #endif
 
-! Set up the F-vector with ones and zeros
+! Set up the f-vector with ones and zeros
 
 call mma_allocate(D,m_t,label='D')
 D(1:nPoints) = One
 D(nPoints+1:) = Zero
 
-! Transform the vector to the new basis
+! Transform the f vector to the new basis
 
 B(:) = Zero
 call dgemm_('T','N',m_t,1,m_t,One,UBIG,m_t,D,m_t,Zero,B,m_t)
@@ -142,9 +145,9 @@ call mma_deallocate(U)
 !
 ! here we do the same stuff but without prediagonalization
 
-B(1:nPoints) = One
-B(nPoints+1:) = Zero
-A(:,:) = full_r(:,:)
+B(1:nPoints) = One       ! the f vector, the value part
+B(nPoints+1:) = Zero     ! the f vector, the gradient part
+A(:,:) = full_r(:,:)     ! the correlation matrix
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -153,6 +156,8 @@ A(:,:) = full_r(:,:)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
 
 
 #ifdef _DEBUGPRINT_
@@ -161,7 +166,7 @@ call RecPrt('f',' ',B,1,m_t)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !
-!  Now form A_1 B (to be used for the computation of the dispersion)
+!  Now form (A^{-1} f) (to be used for the computation of the dispersion)
 
 #ifdef _DPOSV_
 call DPOSV_('U',m_t,1,A,m_t,B,m_t,INFO)
@@ -177,9 +182,9 @@ end if
 write(u6,*) 'Info=',Info
 call RecPrt('PSI^{-1}',' ',A,m_t,m_t)
 call RecPrt('X=PSI^{-1}f',' ',B,1,m_t)
-call RecPrt('rones',' ',rones,1,m_t)
 write(u6,*) 'nPoints=',nPoints
 #endif
+
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -206,7 +211,7 @@ call mma_deAllocate(UBIG)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-rones(:) = B(:)     ! Move result over to storage for later use, R^-1F
+rones(:) = B(:)     ! Move result over to storage for later use, (R^{-1} f)
 
 ! Compute contribution to the expression for the liklihood function.
 !
@@ -223,29 +228,42 @@ do i=1,m_t
 #endif
 end do
 
+
+
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !
-!  Now work on the vector with the values and gradients, the generalized y vector
+!  Now work on the trend function and the vector with the values and gradients, the generalized y vector
 !
-! Trend Function (baseline)
+
+
+! 1) Establish the trend function (baseline), mu.
 
 if (blaAI) then
 
-  ! Make sure the base line is above any data point
+  ! Make sure the base line is above any data point, this to make sure the surrogate model is bound.
 
   sb = -huge(sb)
   do i=1,nPoints
     sb = max(sb,y(i)+blavAI)
   end do
+
 else if (mblAI) then
+
   sb = sbmev
+
 else if (blAI) then
+
   sb = blvAI
+
 else
+
+  ! Derived according to ordinary kriging
+
   ordinary = .true.
 
   ! Note dy only containes gradients for the set of points which we are considering
   ! B(:) = [y(:),dy(:)]  original code before PGEK implementation
+
   B(1:nPoints) = y(1:nPoints)
   do i_eff=1,nInter_eff
     i = Index_PGEK(i_eff)
@@ -255,19 +273,23 @@ else
     iee = ise+(nPoints-nD)-1
     B(ise:iee) = dy(is:ie)
   end do
+
 #ifdef _DEBUGPRINT_
   write(u6,*) DDot_(m_t,rones,1,B,1),DDot_(nPoints,rones,1,[One],0)
 #endif
-  ! sbO:  FR^-1y/(FR^-1F)
+  ! mu =  (f R^{-1} y) /(f R^{-1} f)
   sbO = DDot_(m_t,rones,1,B,1)/DDot_(nPoints,rones,1,[One],0)
+
   sb = sbO
 end if
 
+
 !**********************************************************************
 !
-! form the actual value vector (y-b_0F)
+! 2) form the actual value vector ( y - mu f)
 
 !B(1:m_t) = [y(1:nPoints)-sb,dy(1:nInter*(nPoints-nD))]
+
 B(1:nPoints) = y(1:nPoints)-sb
 do i_eff=1,nInter_eff
   i = Index_PGEK(i_eff)
@@ -283,10 +305,16 @@ write(u6,*) 'sb,ln(det|PSI|)=',sb,detR
 call RecPrt('[y-sb,dy]','(12(2x,E9.3))',B,1,m_t)
 #endif
 
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 !#undef _PREDIAG_
 #ifdef _PREDIAG_
 
 ! Diagonalize the energy block of Psi
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 call mma_allocate(U,nPoints,nPoints,label='U')
 U(:,:) = Zero
@@ -353,20 +381,39 @@ call RecPrt('U^TKv',' ',Kv,1,m_t)
 call mma_deallocate(HTri)
 call mma_deAllocate(C)
 call mma_deallocate(U)
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 #else
-Kv(:) = B(:)
-A(:,:) = full_r(:,:)
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+Kv(:) = B(:)             ! The value vector
+A(:,:) = full_r(:,:)     ! The correlation matrix
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 #endif
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 #ifdef _DEBUGPRINT_
 call RecPrt('A',' ',A,m_t,m_t)
 call RecPrt('Kv',' ',Kv,1,m_t)
 #endif
+
+! Solve R x = (y - mu f), i.e. x = R^{-1} (y - mu f)
+
 #ifdef _DPOSV_
 call DPOSV_('U',m_t,1,A,m_t,Kv,m_t,INFO)
 #else
 call DGESV_(m_t,1,A,m_t,IPIV,Kv,m_t,INFO)
 #endif
+
 #ifdef _PREDIAG_
 #ifdef _DEBUGPRINT_
 call RecPrt('(U^TAU)^{-1}U^TKv',' ',Kv,1,m_t)
