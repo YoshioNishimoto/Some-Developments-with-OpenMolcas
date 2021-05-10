@@ -27,7 +27,7 @@ use Constants, only: Two
 implicit none
 integer(kind=iwp) :: i_eff, is, ie, ise, iee, i, INFO ! ipiv the pivot indices that define the permutation matrix
 integer(kind=iwp), allocatable :: IPIV(:)
-real(kind=wp), allocatable :: B(:), A(:,:)
+real(kind=wp), allocatable :: B(:), A(:,:), A_Inv(:,:)
 real(kind=r8), external :: dDot_
 
 
@@ -168,10 +168,13 @@ call RecPrt('f',' ',B,1,m_t)
 !
 !  Now form (A^{-1} f) (to be used for the computation of the dispersion)
 
+Call mma_Allocate(A_Inv,m_t,m_t,Label='A_Inv')
+A_Inv(:,:) = A(:,:)
+
 #ifdef _DPOSV_
-call DPOSV_('U',m_t,1,A,m_t,B,m_t,INFO)
+call DPOSV_('U',m_t,1,A_Inv,m_t,B,m_t,INFO)
 #else
-call DGESV_(m_t,1,A,m_t,IPIV,B,m_t,INFO)
+call DGESV_(m_t,1,A_Inv,m_t,IPIV,B,m_t,INFO)
 #endif
 if (INFO /= 0) then
   write(u6,*) 'kriging_model: INFO.ne.0'
@@ -180,7 +183,7 @@ if (INFO /= 0) then
 end if
 #ifdef _DEBUGPRINT_
 write(u6,*) 'Info=',Info
-call RecPrt('PSI^{-1}',' ',A,m_t,m_t)
+call RecPrt('PSI^{-1}',' ',A_Inv,m_t,m_t)
 call RecPrt('X=PSI^{-1}f',' ',B,1,m_t)
 write(u6,*) 'nPoints=',nPoints
 #endif
@@ -201,7 +204,7 @@ B(:) = Zero
 call DGEMM_('N','N',m_t,1,m_t,One,UBIG,m_t,D,m_t,Zero,B,m_t)
 !call RecPrt('B',' ',B,1,m_t)
 call mma_deallocate(D)
-call mma_deAllocate(UBIG)
+!call mma_deAllocate(UBIG)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -222,11 +225,12 @@ rones(:) = B(:)     ! Move result over to storage for later use, (R^{-1} f)
 detR = Zero
 do i=1,m_t
 #ifdef _DPOSV_
-  detR = detR+Two*log(A(i,i))
+  detR = detR+Two*log(A_Inv(i,i))
 #else
-  detR = detR+log(abs(A(i,i)))
+  detR = detR+log(abs(A_Inv(i,i)))
 #endif
 end do
+Call mma_Deallocate(A_Inv)
 
 
 
@@ -308,79 +312,14 @@ call RecPrt('[y-sb,dy]','(12(2x,E9.3))',B,1,m_t)
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
-!#undef _PREDIAG_
 #ifdef _PREDIAG_
 
-! Diagonalize the energy block of Psi
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-call mma_allocate(U,nPoints,nPoints,label='U')
-U(:,:) = Zero
-do i=1,nPoints
-  U(i,i) = One
-end do
-call mma_allocate(HTri,nPoints*(nPoints+2)/2,label='HTri')
-do i=1,nPoints
-  do j=1,i
-    ij = i*(i-1)/2+j
-    HTri(ij) = Full_R(i,j)
-  end do
-end do
-call nidiag_new(HTri,U,nPoints,nPoints)
-call Jacord(HTri,U,nPoints,nPoints)
-! Standardized phase factor
-do i=1,nPoints
-  Temp = DDot_(nPoints,[One],0,U(1,i),1)
-  U(1:nPoints,i) = U(1:nPoints,i)*sign(One,Temp)
-end do
-#ifdef _DEBUGPRINT_
-call RecPrt('U',' ',U,nPoints,nPoints)
-call TriPrt('HTri',' ',HTri,nPoints)
-#endif
-
-! Construct a transformation which will transform the
-! covariance  matrix to this new basis.
-
-call mma_Allocate(UBIG,m_t,m_t,label='UBig')
-UBIG(:,:) = Zero
-UBIG(1:nPoints,1:nPoints) = U(:,:)
-do i=nPoints+1,m_t
-  UBIG(i,i) = One
-end do
-! Call RecPrt('UBIG',' ',UBig,m_t,m_t)
-!
-! Transform the covariance matrix to the new basis.
-
-call mma_Allocate(C,m_t,m_t,label='C')
-C(:,:) = Zero
-call dgemm_('N','N',m_t,m_t,m_t,One,Full_R,m_t,UBIG,m_t,Zero,C,m_t)
-call dgemm_('T','N',m_t,m_t,m_t,One,UBIG,m_t,C,m_t,Zero,A,m_t)
-
-! Cleanup the first block - should be prefectly diagonal.
-
-A(1:nPoints,1:nPoints) = Zero
-do i=1,nPoints
-  A(i,i) = HTri(i*(i+1)/2)
-end do
-#ifdef _DEBUGPRINT_
-call RecPrt('U^TAU',' ',A,m_t,m_t)
-#endif
-
-! transform Kv to the new basis (y-F)
+! transform (y -i mu f)  to the new basis
 
 call mma_allocate(D,m_t,label='D')
 D(:) = B(:)
 Kv = Zero
 call dgemm_('T','N',m_t,1,m_t,One,UBIG,m_t,D,m_t,Zero,Kv,m_t)
-#ifdef _DEBUGPRINT_
-call RecPrt('U^TKv',' ',Kv,1,m_t)
-#endif
-
-call mma_deallocate(HTri)
-call mma_deAllocate(C)
-call mma_deallocate(U)
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -406,6 +345,7 @@ call RecPrt('A',' ',A,m_t,m_t)
 call RecPrt('Kv',' ',Kv,1,m_t)
 #endif
 
+
 ! Solve R x = (y - mu f), i.e. x = R^{-1} (y - mu f)
 
 #ifdef _DPOSV_
@@ -414,14 +354,12 @@ call DPOSV_('U',m_t,1,A,m_t,Kv,m_t,INFO)
 call DGESV_(m_t,1,A,m_t,IPIV,Kv,m_t,INFO)
 #endif
 
+
 #ifdef _PREDIAG_
-#ifdef _DEBUGPRINT_
-call RecPrt('(U^TAU)^{-1}U^TKv',' ',Kv,1,m_t)
-#endif
+
 D(:) = Kv(:)
 Kv(:) = Zero
 call DGEMM_('N','N',m_t,1,m_t,One,UBIG,m_t,D,m_t,Zero,Kv,m_t)
-!call RecPrt('Kv',' ',Kv,1,m_t)
 call mma_deallocate(D)
 call mma_deAllocate(UBIG)
 #endif
