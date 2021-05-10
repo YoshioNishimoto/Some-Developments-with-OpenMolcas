@@ -35,7 +35,7 @@ real(kind=r8), external :: dDot_
 
 ! Prediagonalize the part of the correlation matrix corresponing to the value-value block
 
-#define _PREDIAG_
+!#define _PREDIAG_
 #ifdef _PREDIAG_
 integer(kind=iwp) :: j, ij
 real(kind=wp), allocatable :: U(:,:), HTri(:), UBIG(:,:), C(:,:), D(:)
