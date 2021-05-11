@@ -198,8 +198,7 @@ variance = dot_product(B,Kv)/real(m_t,kind=wp)
 
 ! compute the value of the likelihood function
 
-!lh = variance*exp(detR/real(m_t,kind=wp)) ?
-lh = ( -real(m_t,kind=wp) * Log (variance) - Log(detR) ) / Two
+lh = variance*exp(detR/real(m_t,kind=wp))
 
 #ifdef _DEBUGPRINT_
 write(u6,*) 'Variance=',Variance
