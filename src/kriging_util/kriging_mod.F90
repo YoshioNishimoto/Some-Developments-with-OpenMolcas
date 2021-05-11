@@ -50,7 +50,7 @@ real(kind=wp), allocatable, protected :: x(:,:), y(:,:), dy(:,:)
 integer(kind=iwp), protected :: nInter = 0, nPoints = 0, nD = 0, nSet = 0
 integer(kind=iwp) :: nInter_Eff = 0
 
-real(kind=wp), allocatable :: rl(:,:), dl(:), full_Rinv(:,:), full_R(:,:), x0(:), Kv(:,:), cv(:,:,:), Rones(:,:), l(:), gpred(:), &
+real(kind=wp), allocatable :: rl(:,:), dl(:), full_Rinv(:,:), full_R(:,:), x0(:), Kv(:,:), cv(:,:,:), Rones(:), l(:), gpred(:), &
                               hpred(:,:), ll(:), cvMatFder(:), cvMatSder(:), cvMatTder(:)
 integer(kind=iwp), allocatable :: Index_PGEK(:)
 real(kind=wp) :: pred, sigma, var, sb, variance, detR, lh, sbO, sbmev

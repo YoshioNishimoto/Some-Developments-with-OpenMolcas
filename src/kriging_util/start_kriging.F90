@@ -84,7 +84,7 @@ call mma_Allocate(x0,nInter,label='nx')
 
 call mma_Allocate(rl,nPoints,nInter,label='rl')
 call mma_Allocate(dl,nPoints,label='dl')
-call mma_Allocate(Rones,m_t,nSet,label='Rones')
+call mma_Allocate(Rones,m_t,label='Rones')
 
 !kv is the vector that contains the dot product of the inverse of Grad-Psi and
 !Grad-y minus the dot product of the inverse of Grad-Psi and f-ones multiplied

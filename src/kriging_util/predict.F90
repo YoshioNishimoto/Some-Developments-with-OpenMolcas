@@ -43,9 +43,8 @@ if (gh == 0) then ! calculate the energy and dispersion
   var    = One-dot_product(B,cv(:,1,1))
 
   if (ordinary) then
-    tsum = sum(rones(1:m_t,1))
-    B(:) = cv(:,1,1)
-    var = max(var+(One-dot_product(B,rones(:,1)))**2/tsum,Zero)
+    tsum = sum(rones(1:m_t))
+    var = max(var+(One-dot_product(cv(:,1,1),rones))**2/tsum,Zero)
   end if
 
   sigma = sqrt(var*variance)

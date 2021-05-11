@@ -69,7 +69,7 @@ call RecPrt('PSI^{-1}',' ',A,m_t,m_t)
 call RecPrt('X=PSI^{-1}f',' ',B,1,m_t)
 #endif
 
-rones(:,1) = B(:)     ! Move result over to storage for later use, (R^{-1} f)
+rones(:) = B(:)     ! Move result over to storage for later use, (R^{-1} f)
 
 !
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -139,10 +139,10 @@ else
   end do
 
 #ifdef _DEBUGPRINT_
-  write(u6,*) DDot_(m_t,rones(:,1),1,B,1),DDot_(nPoints,rones(:,1),1,[One],0)
+  write(u6,*) DDot_(m_t,rones,1,B,1),DDot_(nPoints,rones,1,[One],0)
 #endif
   ! mu =  (f R^{-1} y) /(f R^{-1} f)
-  sbO = DDot_(m_t,rones(:,1),1,B,1)/DDot_(nPoints,rones(:,1),1,[One],0)
+  sbO = DDot_(m_t,rones,1,B,1)/DDot_(nPoints,rones,1,[One],0)
 
   sb = sbO
 end if
