@@ -172,10 +172,10 @@ write(u6,*) 'sb,ln(det|PSI|)=',sb,detR
 call RecPrt('[y-sb,dy]','(12(2x,E9.3))',B,1,m_t)
 #endif
 
-Kv(:) = B(:)             ! The value vector
+Kv(:,1) = B(:)             ! The value vector
 
 #ifdef _DEBUGPRINT_
-call RecPrt('Kv',' ',Kv,1,m_t)
+call RecPrt('Kv',' ',Kv(:,1),1,m_t)
 #endif
 
 A(:,:) = full_R(:,:)
@@ -185,16 +185,16 @@ A(:,:) = full_R(:,:)
 !
 
 #ifdef _DPOSV_
-call DPOSV_('U',m_t,1,A,m_t,Kv,m_t,INFO)
+call DPOSV_('U',m_t,1,A,m_t,Kv(:,1),m_t,INFO)
 #else
-call DGESV_(m_t,1,A,m_t,IPIV,Kv,m_t,INFO)
+call DGESV_(m_t,1,A,m_t,IPIV,Kv(:,1),m_t,INFO)
 #endif
 
 !   Compute the dispersion
 !
 !   s^2 = (y - mu f) R^{-1} (y - mu f) / n
 
-variance = dot_product(B,Kv)/real(m_t,kind=wp)
+variance = dot_product(B,Kv(:,1))/real(m_t,kind=wp)
 
 ! compute the value of the likelihood function
 
@@ -204,7 +204,7 @@ lh = variance*exp(detR/real(m_t,kind=wp))
 write(u6,*) 'Variance=',Variance
 write(u6,*) 'Info=',Info
 write(u6,*) 'lh=',lh
-call RecPrt('X=A^{-1}Kv','(5(E15.7,2X))',Kv,1,m_t)
+call RecPrt('X=A^{-1}Kv','(5(E15.7,2X))',Kv(:,1),1,m_t)
 #endif
 
 call mma_Deallocate(B)

@@ -103,7 +103,7 @@ call mma_Allocate(Rones,m_t,nSet,label='Rones')
 
 ! Allocate additional variables needed for the kriging.
 
-call mma_allocate(kv,m_t,label='kv')
+call mma_allocate(kv,m_t,nSet,label='kv')
 call mma_allocate(gpred,nInter,label='gpred')
 call mma_allocate(hpred,nInter,nInter,label='hpred')
 call mma_allocate(l,nInter,label='l')

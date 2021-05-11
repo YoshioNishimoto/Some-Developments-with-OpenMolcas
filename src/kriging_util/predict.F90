@@ -35,7 +35,7 @@ if (gh == 0) then ! calculate the energy and dispersion
   ! calculations of Energy and dispersion
   A(:,:) = full_R(:,:)
   B(:)   = cv(:,1,1)    ! the covariance vector
-  pred   = sb+dot_product(B,Kv)   ! compute the energy
+  pred   = sb+dot_product(B,Kv(:,1))   ! compute the energy
 
 ! solve R x = c,  x = R^{-1} c
   call DGESV_(m_t,1,A,m_t,IPIV,B,m_t,INFO)
@@ -56,7 +56,7 @@ else if (gh == 1) then ! calculate the gradient
 
   do k=1,nInter
     B(:) = cv(:,k,1)
-    gpred(k) = dot_product(B,Kv)
+    gpred(k) = dot_product(B,Kv(:,1))
   end do
 
 else if (gh == 2) then ! calculate the Hessian
@@ -64,7 +64,7 @@ else if (gh == 2) then ! calculate the Hessian
   do k=1,nInter
     do i=k,nInter
       B(:) = cv(:,i,k)
-      hpred(k,i) = dot_product(B,Kv)
+      hpred(k,i) = dot_product(B,Kv(:,1))
       if (i /= k) hpred(i,k) = hpred(k,i)
     end do
   end do
