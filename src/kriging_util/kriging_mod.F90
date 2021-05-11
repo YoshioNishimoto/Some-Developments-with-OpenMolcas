@@ -49,6 +49,7 @@ real(kind=wp), allocatable, protected :: x(:,:), y(:), dy(:)
 
 integer(kind=iwp), protected :: nInter = 0, nPoints = 0, nD = 0
 integer(kind=iwp) :: nInter_Eff = 0
+integer(kind=iwp) :: nSet = 0
 
 real(kind=wp), allocatable :: rl(:,:), dl(:), full_Rinv(:,:), full_R(:,:), x0(:), Kv(:), cv(:,:,:), Rones(:), l(:), gpred(:), &
                               hpred(:,:), ll(:), cvMatFder(:), cvMatSder(:), cvMatTder(:)
@@ -70,18 +71,19 @@ public :: Deallocate_Protected, Prep_Kriging
 
 contains
 
-subroutine Prep_Kriging(nPoints_In,nInter_In,x_,dy_,y_)
+subroutine Prep_Kriging(nPoints_In,nInter_In,nSet_In,x_,dy_,y_)
 
   use stdalloc, only: mma_allocate
 
-  integer(kind=iwp), intent(in) :: nPoints_In, nInter_In
-  real(kind=wp), intent(in) :: x_(nInter_In,nPoints_In), y_(nPoints_In), dy_(nInter_In,nPoints_In)
+  integer(kind=iwp), intent(in) :: nPoints_In, nInter_In, nSet_In
+  real(kind=wp), intent(in) :: x_(nInter_In,nPoints_In), y_(nPoints_In,nSet_In), dy_(nInter_In,nPoints_In,nSet_In)
   integer(kind=iwp) :: i, j
 
-  nInter = nInter_In
+  nInter     = nInter_In
   nInter_Eff = nInter
-  nPoints = nPoints_In
-  nD = max(0,min(nD_In,nPoints-nD_In))
+  nPoints    = nPoints_In
+  nSet       = nSet_In
+  nD         = max(0,min(nD_In,nPoints-nD_In))
 
   ! Allocate arrays for data or energies, coordinates, and gradients
 
@@ -101,7 +103,7 @@ subroutine Prep_Kriging(nPoints_In,nInter_In,x_,dy_,y_)
   x(:,:) = x_(:,:)
   !write(u6,*) 'x',x
   ! y is the energy
-  y(:) = y_(:)
+  y(:) = y_(:,1)
   !write(u6,*) 'y',y
   ! dy is a vector of Grad-y (eq. (5) ref. gradients of
   ! the energy with respect to the internal coordinates
@@ -116,7 +118,7 @@ subroutine Prep_Kriging(nPoints_In,nInter_In,x_,dy_,y_)
 
   do i=1,nInter
     do j=1,nPoints-nD
-      dy(j+(i-1)*(nPoints-nD)) = dy_(i,j+nD)
+      dy(j+(i-1)*(nPoints-nD)) = dy_(i,j+nD,1)
     end do
   end do
 

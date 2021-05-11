@@ -11,7 +11,7 @@
 ! Copyright (C) 2019, Gerardo Raggi                                    *
 !***********************************************************************
 
-subroutine Start_Kriging(nPoints_In,nInter_In,x_,dy_,y_)
+subroutine Start_Kriging(nPoints_In,nInter_In,nSet_In,x_,dy_,y_)
 
 use kriging_mod, only: cv, cvMatFder, cvMatSder, cvMatTder, dl, full_R, full_RInv, gpred, hpred, Kv, l, lb, ll, m_t, mblAI, nD, &
                        nInter, nInter_Eff, nPoints, PGEK_On, rl, Rones, sbmev, x0, y, Prep_Kriging
@@ -28,18 +28,21 @@ use Definitions, only: u6
 ! x_: the coordinates of the sample points
 
 implicit none
-integer(kind=iwp), intent(in) :: nInter_In, nPoints_In
-real(kind=wp), intent(in) :: x_(nInter_In,nPoints_In), y_(nPoints_In), dy_(nInter_In,nPoints_In)
+integer(kind=iwp), intent(in) :: nInter_In, nPoints_In, nSet_In
+real(kind=wp), intent(in) :: x_(nInter_In,nPoints_In), y_(nPoints_In,nSet_In), dy_(nInter_In,nPoints_In,nSet_In)
+integer(kind=iwp) :: i
 
 #ifdef _DEBUGPRINT_
 call RecPrt('Start_Kriging: x',' ',x_,nInter_In,nPoints_In)
-call RecPrt('Start_Kriging: y',' ',y_,1,nPoints_In)
-call RecPrt('Start_Kriging: dy',' ',dy_,nInter_In,nPoints_In)
+Do i = 1, nSet_In
+   call RecPrt('Start_Kriging: y',' ',y_(:,i),1,nPoints_In)
+   call RecPrt('Start_Kriging: dy',' ',dy_(:,:,i),nInter_In,nPoints_In)
+End Do
 #endif
 
 ! Call Setup_Kriging to store the data in some internally protected arrays and scalars.
 
-call Prep_Kriging(nPoints_In,nInter_In,x_,dy_,y_)
+call Prep_Kriging(nPoints_In,nInter_In,nSet_In,x_,dy_,y_)
 
 ! Development code for partial gradient enhanced Kriging (PGEK) based on Mutual Information between
 ! the coordinates and the energy.
