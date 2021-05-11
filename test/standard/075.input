@@ -39,7 +39,7 @@
 
 &ALASKA
 
->>> COPY $Project.RunFile RUNFILE2
+>>> COPY $Project.RunFile $Project.RunFile2
 
 &RASSCF
   Spin = 1

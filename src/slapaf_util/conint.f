@@ -39,8 +39,9 @@ c     iOpt=3 -> Absolute value
 *     gradients!
 *
 *     For a true conical intersection the storage is done a bit
-*     differently (see init2.f). Here the average energy is stored
-*     in E1 and the energy difference in E0. Ditto for the gradients.
+*     differently (see process_gradients.f). Here the average energy is
+*     stored in E1 and the energy difference in E0. Ditto for the
+*     gradients.
 *
       dE=Zero
       If (iOpt.eq.1) Then
