@@ -27,17 +27,18 @@ real(kind=wp), allocatable :: B(:), A(:,:)
 
 call mma_allocate(B,m_t,label='B')
 
-if (gh == 0) then
+if (gh == 0) then ! calculate the energy and dispersion
 
   !A contains the factors L and U from the factorization A = P*L*U as computed by DGETRF
   call mma_allocate(A,m_t,m_t,label='A')
   call mma_allocate(IPIV,m_t,label='IPIV')
   ! calculations of Energy and dispersion
   A(:,:) = full_R
-  B(:) = cv(:,1,1)
-  pred = sb+dot_product(B,Kv)
+  B(:)   = cv(:,1,1)    ! the covariance vector
+  pred   = sb+dot_product(B,Kv)   ! compute the energy
+
   call DGESV_(m_t,1,A,m_t,IPIV,B,m_t,INFO)
-  var = One-dot_product(B,CV(:,1,1))
+  var    = One-dot_product(B,CV(:,1,1))
 
   if (ordinary) then
     tsum = sum(rones(1:m_t))
@@ -49,14 +50,14 @@ if (gh == 0) then
   call mma_deallocate(A)
   call mma_deallocate(IPIV)
 
-else if (gh == 1) then
+else if (gh == 1) then ! calculate the gradient
 
   do k=1,nInter
     B(:) = cv(:,k,1)
     gpred(k) = dot_product(B,Kv)
   end do
 
-else if (gh == 2) then
+else if (gh == 2) then ! calculate the Hessian
 
   do k=1,nInter
     do i=k,nInter
