@@ -16,7 +16,7 @@ Private
 Public:: Cx, Gx, Gx0, NAC, Q_nuclear, dMass, Coor, Grd, ANr, Weights, Shift, GNrm, Lambda, &
          Energy, Energy0, DipM, MF, qInt, dqInt, nSup, Atom, RefGeo, BMx, Degen, jStab, nStab, iCoSet, &
          BM, dBM, iBM, idBM, nqBM, R12, GradRef, KtB, AtomLbl, Smmtrc, Lbl, mRowH, RootMap, &
-         Free_Slapaf, Get_Slapaf, Dmp_Slapaf
+         Free_Slapaf, Get_Slapaf, Dmp_Slapaf, dqInt_Aux
 !
 ! Arrays always allocated
 !
@@ -36,6 +36,7 @@ Real*8, Allocatable:: MF(:,:)       ! list of Cartesian mode following vectors f
 Real*8, Allocatable:: DipM(:,:)     ! list of dipole moments for each iteration
 Real*8, Allocatable:: qInt(:,:)     ! internal coordinates for each iteration
 Real*8, Allocatable:: dqInt(:,:)    ! derivatives of internal coordinates for each iteration
+Real*8, Allocatable:: dqInt_Aux(:,:,:)    ! derivatives of internal coordinates for each iteration, of state 2 and NAC
 Real*8, Allocatable, Target:: RefGeo(:,:)   ! Reference geometry in Cartesian coordinates
 Real*8, Allocatable, Target:: R12(:,:)      ! Reference geometry in R-P calculation (not used right now)
 Real*8, Allocatable, Target:: GradRef(:,:)  ! Reference gradient
@@ -113,6 +114,7 @@ Contains
   If (Allocated(NAC)) Call mma_deallocate(NAC)
   If (Allocated(qInt)) Call mma_deallocate(qInt)
   If (Allocated(dqInt)) Call mma_deallocate(dqInt)
+  If (Allocated(dqInt_Aux)) Call mma_deallocate(dqInt_Aux)
   If (Allocated(mRowH)) Call mma_deallocate(mRowH)
   If (Allocated(RootMap)) Call mma_deallocate(RootMap)
   End Subroutine Free_Slapaf
