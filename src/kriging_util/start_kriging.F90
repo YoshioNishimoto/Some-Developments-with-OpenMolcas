@@ -67,7 +67,7 @@ m_t = nPoints+nInter_Eff*(nPoints-nD)
 call mma_Allocate(full_R,m_t,m_t,label='full_R')
 call mma_Allocate(full_RInv,m_t,m_t,label='full_RInv')
 
-if (mblAI) sbmev = y(maxloc(y,dim=1))
+if (mblAI) sbmev = y(maxloc(y(:,1),dim=1),1)
 
 ! Allocate x0, which is a n-dimensional vector of the coordinats of the last iteration computed
 

@@ -108,7 +108,7 @@ if (blaAI) then    ! This is the default.
 
   sb = -huge(sb)
   do i=1,nPoints
-    sb = max(sb,y(i)+blavAI)
+    sb = max(sb,y(i,1)+blavAI)
   end do
 
 else if (mblAI) then
@@ -128,14 +128,14 @@ else
   ! Note dy only containes gradients for the set of points which we are considering
   ! B(:) = [y(:),dy(:)]  original code before PGEK implementation
 
-  B(1:nPoints) = y(1:nPoints)
+  B(1:nPoints) = y(1:nPoints,1)
   do i_eff=1,nInter_eff
     i = Index_PGEK(i_eff)
     is = (i-1)*(nPoints-nD)+1
     ise = nPoints+(i_eff-1)*(nPoints-nD)+1
     ie = is+(nPoints-nD)-1
     iee = ise+(nPoints-nD)-1
-    B(ise:iee) = dy(is:ie)
+    B(ise:iee) = dy(is:ie,1)
   end do
 
 #ifdef _DEBUGPRINT_
@@ -156,7 +156,7 @@ end if
 !     B(1:m_t) = [y(1:nPoints)-sb,dy(1:nInter*(nPoints-nD))]
 
 ! the values
-B(1:nPoints) = y(1:nPoints)-sb
+B(1:nPoints) = y(1:nPoints,1)-sb
 ! the gradients
 do i_eff=1,nInter_eff
   i = Index_PGEK(i_eff)
@@ -164,7 +164,7 @@ do i_eff=1,nInter_eff
   ise = nPoints+(i_eff-1)*(nPoints-nD)+1
   ie = is+(nPoints-nD)-1
   iee = ise+(nPoints-nD)-1
-  B(ise:iee) = dy(is:ie)
+  B(ise:iee) = dy(is:ie,1)
 end do
 
 #ifdef _DEBUGPRINT_

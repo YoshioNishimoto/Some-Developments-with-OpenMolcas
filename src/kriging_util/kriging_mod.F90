@@ -37,7 +37,7 @@ real(kind=wp) :: lb(3) = [20.0_wp,20.0_wp,1.0_wp], &
 ! Memory for coordinates, value and gradients of the
 ! sample points.
 
-real(kind=wp), allocatable, protected :: x(:,:), y(:), dy(:)
+real(kind=wp), allocatable, protected :: x(:,:), y(:,:), dy(:,:)
 
 ! Inter  : the dimension of the coordinate vector
 ! nPoints: the total number of sample points for which the value is
@@ -88,8 +88,8 @@ subroutine Prep_Kriging(nPoints_In,nInter_In,nSet_In,x_,dy_,y_)
   ! Allocate arrays for data or energies, coordinates, and gradients
 
   call mma_Allocate(x,nInter,nPoints,label='x')
-  call mma_Allocate(y,nPoints,label='y')
-  call mma_Allocate(dy,nInter*(nPoints-nD),label='dy')
+  call mma_Allocate(y,nPoints,nSet,label='y')
+  call mma_Allocate(dy,nInter*(nPoints-nD),nSet,label='dy')
 
   ! The code will use partial GEK with indirect addressing. However,
   ! here we defaults the index array so that it behaves as conventional GEK.
@@ -103,7 +103,7 @@ subroutine Prep_Kriging(nPoints_In,nInter_In,nSet_In,x_,dy_,y_)
   x(:,:) = x_(:,:)
   !write(u6,*) 'x',x
   ! y is the energy
-  y(:) = y_(:,1)
+  y(:,:) = y_(:,:)
   !write(u6,*) 'y',y
   ! dy is a vector of Grad-y (eq. (5) ref. gradients of
   ! the energy with respect to the internal coordinates
@@ -118,7 +118,7 @@ subroutine Prep_Kriging(nPoints_In,nInter_In,nSet_In,x_,dy_,y_)
 
   do i=1,nInter
     do j=1,nPoints-nD
-      dy(j+(i-1)*(nPoints-nD)) = dy_(i,j+nD,1)
+      dy(j+(i-1)*(nPoints-nD),:) = dy_(i,j+nD,:)
     end do
   end do
 
