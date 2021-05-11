@@ -33,12 +33,14 @@ if (gh == 0) then ! calculate the energy and dispersion
   call mma_allocate(A,m_t,m_t,label='A')
   call mma_allocate(IPIV,m_t,label='IPIV')
   ! calculations of Energy and dispersion
-  A(:,:) = full_R
+  A(:,:) = full_R(:,:)
   B(:)   = cv(:,1,1)    ! the covariance vector
   pred   = sb+dot_product(B,Kv)   ! compute the energy
 
+! solve R x = c,  x = R^{-1} c
   call DGESV_(m_t,1,A,m_t,IPIV,B,m_t,INFO)
-  var    = One-dot_product(B,CV(:,1,1))
+
+  var    = One-dot_product(B,cv(:,1,1))
 
   if (ordinary) then
     tsum = sum(rones(1:m_t))

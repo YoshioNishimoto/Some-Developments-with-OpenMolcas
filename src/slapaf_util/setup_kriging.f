@@ -17,6 +17,7 @@
 #include "stdalloc.fh"
 #include "real.fh"
       Integer nRaw, nInter,i,iInter,jInter,ij
+      Integer :: nSet=1
       Real*8 qInt(nInter,nRaw), Grad(nInter,nRaw), Energy(nRaw),
      &       Hessian_HMF(nInter,nInter)
       Real*8 Value_l
@@ -93,7 +94,7 @@
       Call RecPrt('Setup_kriging: qInt_s',' ',qInt_s,nInter,nRaw)
       Call RecPrt('Setup_kriging: Grad_s',' ',Grad_s,nInter,nRaw)
 #endif
-      Call Start_Kriging(nRaw,nInter,qInt_s,Grad_s,Energy)
+      Call Start_Kriging(nRaw,nInter,nSet,qInt_s,Grad_s,Energy)
 *
       Call mma_deAllocate(qInt_s)
       Call mma_deAllocate(Grad_s)
