@@ -11,13 +11,13 @@
 ! Copyright (C) 2017, Roland Lindh                                     *
 !***********************************************************************
 
+subroutine Virt_Space(C_Occ,C_Virt,Ovrlp,nBas,nOcc,nVirt)
 !***********************************************************************
 !     The generation of starting orbitals suffers from the fact that   *
 !     the virtual orbitals are not well defined. This routine is       *
 !     supposed to generate a set of well-defined virtual orbitals from *
 !     a set of well-defined occupied orbitals.                         *
 !***********************************************************************
-subroutine Virt_Space(C_Occ,C_Virt,Ovrlp,nBas,nOcc,nVirt)
 
 use stdalloc, only: mma_allocate, mma_deallocate
 use Constants, only: Zero, One
@@ -73,7 +73,7 @@ call mma_allocate(EVe,nBas,nBas,Label='EVe')
 call FZero(EVe,nBas**2)
 call DCopy_(nBas,[One],0,EVe,nBas+1)
 call DCopy_(nBas*(nBas+1)/2,Ovrlp,1,EVa,1)
-call NIdiag(EVa,EVe,nBas,nBas,0)
+call NIdiag(EVa,EVe,nBas,nBas)
 
 do iBas=2,nBas
   EVa(iBas) = EVa(iBas*(iBas+1)/2)
@@ -215,7 +215,7 @@ kBas_1_nBas: do kBas=1,nBas
 
       if (tmp > thr) then
         if (mVirt+1 > nVirt) then
-          write(u6,*) 'mVirt.gt.nVirt'
+          write(u6,*) 'mVirt > nVirt'
           write(u6,*) 'mVirt=',mVirt
           write(u6,*) 'nVirt=',nVirt
           call Abend()
@@ -242,7 +242,7 @@ end do kBas_1_nBas
 call mma_deallocate(C_tmp)
 
 if (mVirt /= nVirt) then
-  write(u6,*) 'mVirt.ne.nVirt'
+  write(u6,*) 'mVirt /= nVirt'
   write(u6,*) 'mVirt,nVirt=',mVirt,nVirt
   call Abend()
 end if
