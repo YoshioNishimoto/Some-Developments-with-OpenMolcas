@@ -14,7 +14,7 @@
 subroutine Start_Kriging(nPoints_In,nInter_In,nSet_In,x_,dy_,y_)
 
 use kriging_mod, only: cv, cvMatFder, cvMatSder, cvMatTder, dl, full_R, full_RInv, gpred, hpred, Kv, l, lb, ll, m_t, mblAI, nD, &
-                       nInter, nInter_Eff, nPoints, PGEK_On, rl, Rones, sbmev, x0, y, Prep_Kriging
+                       nInter, nInter_Eff, nPoints, PGEK_On, rl, Rones, sbmev, x0, y, Prep_Kriging, nSet
 use stdalloc, only: mma_allocate
 use Definitions, only: wp, iwp
 #ifdef _DEBUGPRINT_
@@ -84,7 +84,7 @@ call mma_Allocate(x0,nInter,label='nx')
 
 call mma_Allocate(rl,nPoints,nInter,label='rl')
 call mma_Allocate(dl,nPoints,label='dl')
-call mma_Allocate(Rones,m_t,label='Rones')
+call mma_Allocate(Rones,m_t,nSet,label='Rones')
 
 !kv is the vector that contains the dot product of the inverse of Grad-Psi and
 !Grad-y minus the dot product of the inverse of Grad-Psi and f-ones multiplied

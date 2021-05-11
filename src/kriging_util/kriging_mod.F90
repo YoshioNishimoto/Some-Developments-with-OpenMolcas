@@ -47,11 +47,10 @@ real(kind=wp), allocatable, protected :: x(:,:), y(:,:), dy(:,:)
 !
 ! We will assume that nD >= 0
 
-integer(kind=iwp), protected :: nInter = 0, nPoints = 0, nD = 0
+integer(kind=iwp), protected :: nInter = 0, nPoints = 0, nD = 0, nSet = 0
 integer(kind=iwp) :: nInter_Eff = 0
-integer(kind=iwp) :: nSet = 0
 
-real(kind=wp), allocatable :: rl(:,:), dl(:), full_Rinv(:,:), full_R(:,:), x0(:), Kv(:), cv(:,:,:), Rones(:), l(:), gpred(:), &
+real(kind=wp), allocatable :: rl(:,:), dl(:), full_Rinv(:,:), full_R(:,:), x0(:), Kv(:), cv(:,:,:), Rones(:,:), l(:), gpred(:), &
                               hpred(:,:), ll(:), cvMatFder(:), cvMatSder(:), cvMatTder(:)
 integer(kind=iwp), allocatable :: Index_PGEK(:)
 real(kind=wp) :: pred, sigma, var, sb, variance, detR, lh, sbO, sbmev
@@ -66,7 +65,7 @@ real(kind=wp), allocatable :: layer_U(:,:)
 public :: anMd, blaAI, blAI, blavAI, blvAI, cv, cvMatFder, cvMatSder, cvMatTder, detR, dl, dy, eps, eps2, full_R, full_RInv, &
           gpred, h, hpred, Index_PGEK, Kriging, kv, l, layer_U, lb, lh, ll, Max_MicroIterations, m_t, mblAI, nD, nD_In, nInter, &
           nInter_Eff, nPoints, nspAI, ordinary, pAI, PGEK_On, pred, rl, Rones, sb, sbmev, sbO, set_l, sigma, Thr_MicroIterations, &
-          var, variance, x, x0, y
+          var, variance, x, x0, y, nSet
 public :: Deallocate_Protected, Prep_Kriging
 
 contains
