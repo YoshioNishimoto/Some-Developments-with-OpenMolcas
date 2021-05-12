@@ -52,7 +52,7 @@
       Real*8 Dum(1)
       Logical, Save:: g12K=.False.
       Real*8, Allocatable:: Proj(:), Temp2(:), KtM(:,:), Degen2(:),
-     &                      EVal(:), G(:), GxR(:,:), qVal(:,:),
+     &                      EVal(:), G(:), GxR(:), qVal(:,:),
      &                      F_c(:), K(:), GRef(:), Mult(:)
       Real*8, Allocatable:: KtBu(:), KtBt(:,:)
       Character(LEN=14), Allocatable:: qLbl(:)
@@ -386,26 +386,12 @@
 *     2) only the last if in transformation from internal to
 *        cartesian
 *
+      Call mma_allocate(GxR,nDimBC,Label='GxR')
+
       If (BSet) Then
-*------- Produce list of compressed cartesian gradients.
-         Call mma_allocate(GxR,nDimBC,nIter,Label='GxR')
-         Do jIter = 1, nIter
-            Call NRed(Gx(:,:,jIter),GxR(:,jIter),3*nsAtom,nDimBC,Smmtrc)
-         End Do
-*
          iSt = nIter
          iEnd = iSt - Min(nIter,nWndw+1) + 1
-C        iEnd = 1
-         iOff = nIter
       Else
-         If (Numerical) Then
-            Call mma_allocate(GxR,nDimBC,1,Label='GxR')
-            iOff = 1
-            Call NRed(Gx(:,:,nIter),GxR(:,1),3*nsAtom,nDimBC,Smmtrc)
-         Else
-            Call mma_allocate(GxR,1,1,Label='GxR')
-            iOff = 1
-         End If
          iEnd=nIter
          iSt =nIter
       End If
@@ -549,13 +535,13 @@ C        iEnd = 1
             M = nDimBC
             N = nQQ
             NRHS=1
+            Call NRed(Gx(:,:,jIter),GxR(:),3*nsAtom,nDimBC,Smmtrc)
             Call Eq_Solver('N',M,N,NRHS,KtBt,.False.,
-     &                     Degen2,GxR(:,iOff),dqInt(:,jIter))
-*           Call RecPrt('GxR(:,iSt',' ',GxR(:,iOff),nDimBC,1)
+     &                     Degen2,GxR(:),dqInt(:,jIter))
+*           Call RecPrt('GxR   ',' ',GxR,nDimBC,1)
 *           Call RecPrt('KtB   ',' ',KtBt,nQQ,nDimBC)
-*           Call RecPrt('drInt',' ',dqInt(:,jIter),nQQ,1)
+*           Call RecPrt('drInt ',' ',dqInt(:,jIter),nQQ,1)
 
-            iOff = iOff - 1
 *                                                                      *
 ************************************************************************
 *                                                                      *
