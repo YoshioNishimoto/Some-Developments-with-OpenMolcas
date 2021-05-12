@@ -30,9 +30,9 @@ use Definitions, only: u6
 implicit none
 integer(kind=iwp), intent(in) :: nInter_In, nPoints_In, nSet_In
 real(kind=wp), intent(in) :: x_(nInter_In,nPoints_In), y_(nPoints_In,nSet_In), dy_(nInter_In,nPoints_In,nSet_In)
+#ifdef _DEBUGPRINT_
 integer(kind=iwp) :: i
 
-#ifdef _DEBUGPRINT_
 call RecPrt('Start_Kriging: x',' ',x_,nInter_In,nPoints_In)
 Do i = 1, nSet_In
    call RecPrt('Start_Kriging: y',' ',y_(:,i),1,nPoints_In)
