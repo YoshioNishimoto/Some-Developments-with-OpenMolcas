@@ -10,6 +10,7 @@
 ************************************************************************
       Subroutine NACInt(xyz,nCent,H12,Bf,lWrite_,Label,dBf,ldB)
       use Slapaf_Info, only: NAC
+      use Slapaf_Parameters, only: iter
       Implicit Real*8  (a-h,o-z)
 #include "real.fh"
 #include "constants.fh"
@@ -27,12 +28,12 @@
 *
 *---- Compute the WDC B-matrix
 *
-C     Call RecPrt('NAC',' ',NAC,3,nCent)
+C     Call RecPrt('NAC',' ',NAC(1,1,iter),3,nCent)
       Do iCent = 1, nCent
          Fact=DBLE(iDeg(xyz(1,iCent)))
 C        Write (6,*) 'Fact=',Fact
          Do iCar = 1, 3
-            Bf(iCar,iCent)=Fact*NAC(iCar,iCent)
+            Bf(iCar,iCent)=Fact*NAC(iCar,iCent,iter)
          End Do
       End Do
 C     Call RecPrt('Bf',' ',Bf,3,nCent)

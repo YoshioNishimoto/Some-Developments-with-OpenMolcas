@@ -256,8 +256,7 @@ C     Call RecPrt('Ref_Geom',' ',RefGeo,3,SIZE(Coor,2))
 *
          End If
          If (iMode.eq.3) Then
-            Call mma_allocate(NAC,3,Length/3,Label='NAC')
-            Call Get_dArray('NADC',NAC,Length)
+            Call Get_dArray('NADC',NAC(1,1,iter),Length)
          End If
 *
       Else

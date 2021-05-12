@@ -23,6 +23,7 @@ Public:: Cx, Gx, Gx0, NAC, Q_nuclear, dMass, Coor, Grd, ANr, Weights, Shift, GNr
 Real*8, Allocatable:: Cx(:,:,:)     ! list of Cartesian coordinates
 Real*8, Allocatable:: Gx(:,:,:)     ! list of Cartesian Gradients, State 1
 Real*8, Allocatable:: Gx0(:,:,:)    ! list of Cartesian Gradients, State 2 for optimization of conical intersections
+Real*8, Allocatable:: NAC(:,:,:)    ! list of Cartesian non-adiabatic coupling vector
 Real*8, Allocatable:: Q_nuclear(:)  ! list nuclear charges
 Real*8, Allocatable:: dmass(:)      ! list atomic mass in units of (C=12)
 Real*8, Allocatable:: Coor(:,:)     ! Cartesian coordinates of the last iteraction
@@ -59,7 +60,6 @@ Integer, Allocatable:: ANr(:)       ! list of atomic numbers
 !
 ! Arrays optionally allocated
 !
-Real*8, Allocatable:: NAC(:,:)      ! list of Cartesian non-adiabatic coupling vector
 Real*8, Allocatable:: Lambda(:,:)   ! list of the Lagrange multipiers
 Integer, Allocatable:: mRowH(:)     ! rows of the Hessian to be explicitly computed
 Integer, Allocatable:: RootMap(:)   ! Array to map the roots between iterations
@@ -82,6 +82,7 @@ Contains
   If (Allocated(Cx)) Call mma_deallocate(Cx)
   If (Allocated(Gx)) Call mma_deallocate(Gx)
   If (Allocated(Gx0)) Call mma_deallocate(Gx0)
+  If (Allocated(NAC)) Call mma_deallocate(NAC)
   If (Allocated(MF)) Call mma_deallocate(MF)
   If (Allocated(Lambda)) Call mma_deallocate(Lambda)
   If (Allocated(Degen)) Call mma_deallocate(Degen)
@@ -111,7 +112,6 @@ Contains
   If (Allocated(R12)) Call mma_deallocate(R12)
   If (Allocated(R12)) Call mma_deallocate(GradRef)
 
-  If (Allocated(NAC)) Call mma_deallocate(NAC)
   If (Allocated(qInt)) Call mma_deallocate(qInt)
   If (Allocated(dqInt)) Call mma_deallocate(dqInt)
   If (Allocated(dqInt_Aux)) Call mma_deallocate(dqInt_Aux)
@@ -176,6 +176,8 @@ Contains
   Gx(:,:,:) = Zero
   Call mma_allocate(Gx0,    3,nsAtom,MaxItr+1,Label='Gx0')
   Gx0(:,:,:) = Zero
+  Call mma_allocate(NAC,    3,nsAtom,MaxItr+1,Label='NAC')
+  NAC(:,:,:) = Zero
   Call mma_allocate(MF,     3,nsAtom,         Label='MF')
   MF(:,:) = Zero
   If (mLambda>0) Then
@@ -191,7 +193,7 @@ Contains
   If (SuperName.ne.'numerical_gradient') Then
 
      Lngth=SIZE(Energy)+SIZE(Energy0)+SIZE(DipM)+SIZE(GNrm)+SIZE(Cx)+SIZE(Gx)  &
-          +SIZE(Gx0)+SIZE(MF)+SIZE(Lambda)
+          +SIZE(Gx0)+SIZE(NAC)+SIZE(MF)+SIZE(Lambda)
      Call mma_allocate(Relax,Lngth,Label='Relax')
      Call Get_dArray('Slapaf Info 2',Relax,Lngth)
 
@@ -210,6 +212,8 @@ Contains
      iOff=iOff+SIZE(Gx     )
      Call DCopy_(SIZE(Gx0    ),Relax(iOff),1,Gx0    ,1)
      iOff=iOff+SIZE(Gx0    )
+     Call DCopy_(SIZE(NAC    ),Relax(iOff),1,NAC    ,1)
+     iOff=iOff+SIZE(NAC    )
      Call DCopy_(SIZE(MF     ),Relax(iOff),1,MF     ,1)
      iOff=iOff+SIZE(MF     )
      If (Allocated(Lambda)) Then
@@ -291,7 +295,7 @@ Contains
      Call Put_iArray('Slapaf Info 1',Information,7)
 
      Lngth=SIZE(Energy)+SIZE(Energy0)+SIZE(DipM)+SIZE(GNrm)+SIZE(Cx)+SIZE(Gx)  &
-          +SIZE(Gx0)+SIZE(MF)+SIZE(Lambda)
+          +SIZE(Gx0)+SIZE(NAC)+SIZE(MF)+SIZE(Lambda)
      Call mma_allocate(Relax,Lngth,Label='Relax')
      iOff = 1
      Call DCopy_(SIZE(Energy ),Energy ,1,Relax(iOff),1)
@@ -308,6 +312,8 @@ Contains
      iOff = iOff + SIZE(Gx     )
      Call DCopy_(SIZE(Gx0    ),Gx0    ,1,Relax(iOff),1)
      iOff = iOff + SIZE(Gx0    )
+     Call DCopy_(SIZE(NAC    ),NAC    ,1,Relax(iOff),1)
+     iOff = iOff + SIZE(NAC    )
      Call DCopy_(SIZE(MF     ),MF     ,1,Relax(iOff),1)
      iOff = iOff + SIZE(MF     )
      If (Allocated(Lambda)) Then
