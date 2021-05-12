@@ -10,19 +10,35 @@
 *                                                                      *
 * Copyright (C) 2020, Roland Lindh                                     *
 ************************************************************************
-      Subroutine SetUp_Kriging(nRaw,nInter,qInt,Grad,Energy,
-     &                         Hessian_HMF)
+      Subroutine SetUp_Kriging(nRaw,nInter,qInt,dqInt,Energy)
       Use kriging_mod, only: blavAI, set_l, layer_U
       Implicit None
+      Integer nRaw, nInter
+      Real*8 qInt(nInter,nRaw), dqInt(nInter,nRaw), Energy(nRaw)
+
 #include "stdalloc.fh"
 #include "real.fh"
-      Integer nRaw, nInter,i,iInter,jInter,ij
-      Integer :: nSet=1
-      Real*8 qInt(nInter,nRaw), Grad(nInter,nRaw), Energy(nRaw),
-     &       Hessian_HMF(nInter,nInter)
+      Integer i,iInter,jInter,ij
       Real*8 Value_l
+      Integer :: nSet=1
       Real*8, Allocatable:: Array_l(:), HTri(:), Hessian(:,:),
-     &                      qInt_s(:,:), Grad_s(:,:)
+     &                      qInt_s(:,:), dqInt_s(:,:),
+     &                      Hessian_HMF(:,:), Energy_s(:)
+*#define _DEBUGPRINT_
+#ifdef _DEBUGPRINT_
+      Call RecPrt('Setup_kriging: Energy',' ',Energy,1,nRaw)
+      Call RecPrt('Setup_kriging: qInt',' ',qInt,nInter,nRaw)
+      Call RecPrt('Setup_kriging: dqInt',' ',dqInt,nInter,nRaw)
+#endif
+*                                                                      *
+************************************************************************
+*                                                                      *
+*     Pick up the HMF Hessian, used to set the characteristic lengths
+*
+      Call mma_Allocate(Hessian_HMF,nInter,nInter,Label='Hessian_HMF')
+      Call Mk_Hss_Q()
+      Call Get_dArray('Hss_Q',Hessian_HMF,nInter**2)
+*     Call RecPrt('HMF Hessian',' ',Hessian,nInter,nInter)
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -42,6 +58,9 @@
             HTri(ij)=Hessian_HMF(iInter,jInter)
          End Do
       End Do
+
+      Call mma_deallocate(Hessian_HMF)
+
 *     Call TriPrt('HTri(raw)',' ',HTri,nInter)
       Call NIDiag_new(HTri,layer_U,nInter,nInter)
 *     layer_U(:,:)=Zero
@@ -63,12 +82,6 @@
 *     the kriging hessian reproduce the diagonal value of the HMF
 *     Hessian of the current structure.
 *
-*#define _DEBUGPRINT_
-#ifdef _DEBUGPRINT_
-      Call RecPrt('Setup_kriging: Energy',' ',Energy,1,nRaw)
-      Call RecPrt('Setup_kriging: qInt',' ',qInt,nInter,nRaw)
-      Call RecPrt('Setup_kriging: Grad',' ',Grad,nInter,nRaw)
-#endif
       Call mma_Allocate(Array_l,nInter,Label='Array_l')
       If (Set_l) Then
          Call Get_dScalar('Value_l',Value_l)
@@ -81,23 +94,31 @@
 ************************************************************************
 *                                                                      *
       Call mma_Allocate(qInt_s,nInter,nRaw,Label="qInt_s")
-      Call mma_Allocate(Grad_s,nInter,nRaw,Label="Grad_s")
-*
+      Call mma_Allocate(dqInt_s,nInter,nRaw,Label="dqInt_s")
+      Call mma_Allocate(Energy_s,nRaw,Label="Energy_s")
+*                                                                      *
+************************************************************************
+*                                                                      *
 *     Transform to the basis which diagonalizes the HMF Hessian.
 *
       Call Trans_K(qInt,qInt_s,nInter,nRaw)
-      Call Trans_K(Grad,Grad_s,nInter,nRaw)
+      Call Trans_K(dqInt,dqInt_s,nInter,nRaw)
+
+      Energy_s(:)=Energy(:)
 *                                                                      *
 ************************************************************************
 *                                                                      *
 #ifdef _DEBUGPRINT_
       Call RecPrt('Setup_kriging: qInt_s',' ',qInt_s,nInter,nRaw)
-      Call RecPrt('Setup_kriging: Grad_s',' ',Grad_s,nInter,nRaw)
+      Call RecPrt('Setup_kriging: Grad_s',' ',dqInt_s,nInter,nRaw)
 #endif
-      Call Start_Kriging(nRaw,nInter,nSet,qInt_s,Grad_s,Energy)
-*
+      Call Start_Kriging(nRaw,nInter,nSet,qInt_s,dqInt_s,Energy_s)
+*                                                                      *
+************************************************************************
+*                                                                      *
+      Call mma_deAllocate(Energy_s)
+      Call mma_deAllocate(dqInt_s)
       Call mma_deAllocate(qInt_s)
-      Call mma_deAllocate(Grad_s)
 *                                                                      *
 ************************************************************************
 *                                                                      *

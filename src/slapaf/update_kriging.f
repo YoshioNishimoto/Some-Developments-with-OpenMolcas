@@ -83,12 +83,6 @@
 *                                                                      *
 ************************************************************************
 *                                                                      *
-*     Pick up the HMF Hessian
-*
-      Call mma_Allocate(Hessian,nQQ,nQQ,Label='Hessian')
-      Call Mk_Hss_Q()
-      Call Get_dArray('Hss_Q',Hessian,nQQ**2)
-*     Call RecPrt('HMF Hessian',' ',Hessian,nQQ,nQQ)
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -107,7 +101,7 @@
       Call DScal_(nQQ*nRaw,-One,dqInt(1,iFirst),1)
       Call Setup_Kriging(nRaw,nQQ,qInt(:,iFirst),
      &                               dqInt(1,iFirst),
-     &                               Energy(iFirst),Hessian)
+     &                               Energy(iFirst))
       Call DScal_(nQQ*nRaw,-One,dqInt(1,iFirst),1)
 *                                                                      *
 ************************************************************************
@@ -164,10 +158,12 @@
          Beta_=0.03D0
       End If
 #endif
+      Call mma_Allocate(Hessian,nQQ,nQQ,Label='Hessian')
 *                                                                      *
 ************************************************************************
+************************************************************************
 *                                                                      *
-*     Start the Kriging loop.
+*     Start the Kriging loop.   The micro iterations
 *
       Not_Converged = .True.
       Step_Trunc='N'  ! not defined
