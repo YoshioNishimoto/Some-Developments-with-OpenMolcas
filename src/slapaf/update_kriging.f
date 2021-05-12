@@ -80,29 +80,12 @@
       Call RecPrt('dqInt(0)',  ' ',dqInt(1,iFirst),nQQ,nRaw)
       Call RecPrt('Shift',  ' ',Shift(1,iFirst),nQQ,nRaw)
 #endif
-*                                                                      *
-************************************************************************
-*                                                                      *
-*                                                                      *
-************************************************************************
-*                                                                      *
-*     Select the data points to pass to the GEK routine. Remember to
-*     change the sign of the gradients.
-*                                                                      *
-************************************************************************
-*                                                                      *
-*     Note that we could have some kind of sorting here if we like!
 *
 ************************************************************************
 *                                                                      *
-*     Pass the sample points to the GEK procedure and deallocate the
-*     memory -- to be reused for another purpose later.
+*     Pass the sample points to the GEK procedure
 *
-      Call DScal_(nQQ*nRaw,-One,dqInt(1,iFirst),1)
-      Call Setup_Kriging(nRaw,nQQ,qInt(:,iFirst),
-     &                               dqInt(1,iFirst),
-     &                               Energy(iFirst))
-      Call DScal_(nQQ*nRaw,-One,dqInt(1,iFirst),1)
+      Call Setup_Kriging(nRaw,iFirst)
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -111,7 +94,7 @@
 *     the micro iterations to still reduce the gradient
 *
       FAbs_ini=Sqrt(DDot_(nQQ,dqInt(1,iter),1,
-     &                           dqInt(1,iter),1)/DBLE(nQQ))
+     &                        dqInt(1,iter),1)/DBLE(nQQ))
       GrdMx_ini=Zero
       Do iInter = 1, nQQ
          GrdMx_ini=Max(GrdMx_ini,Abs(dqInt(iInter,iterAI)))

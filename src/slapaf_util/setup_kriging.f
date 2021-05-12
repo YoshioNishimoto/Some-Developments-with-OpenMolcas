@@ -10,25 +10,34 @@
 *                                                                      *
 * Copyright (C) 2020, Roland Lindh                                     *
 ************************************************************************
-      Subroutine SetUp_Kriging(nRaw,nInter,qInt,dqInt,Energy)
+      Subroutine SetUp_Kriging(nRaw,iFirst)
       Use kriging_mod, only: blavAI, set_l, layer_U
+      use Slapaf_Info, only: qInt, dqInt, Energy
       Implicit None
-      Integer nRaw, nInter
-      Real*8 qInt(nInter,nRaw), dqInt(nInter,nRaw), Energy(nRaw)
+      Integer nRaw, iFirst
 
 #include "stdalloc.fh"
 #include "real.fh"
-      Integer i,iInter,jInter,ij
-      Real*8 Value_l
       Integer :: nSet=1
+      Integer i,iInter,jInter,ij, iS, iE, nInter
+      Real*8 Value_l
       Real*8, Allocatable:: Array_l(:), HTri(:), Hessian(:,:),
      &                      qInt_s(:,:), dqInt_s(:,:,:),
      &                      Hessian_HMF(:,:), Energy_s(:,:)
+*                                                                      *
+************************************************************************
+*                                                                      *
+      nInter=Size(qInt,1)
+      iS = iFirst
+      iE = iFirst + nRaw - 1
+*                                                                      *
+************************************************************************
+*                                                                      *
 *#define _DEBUGPRINT_
 #ifdef _DEBUGPRINT_
-      Call RecPrt('Setup_kriging: Energy',' ',Energy,1,nRaw)
-      Call RecPrt('Setup_kriging: qInt',' ',qInt,nInter,nRaw)
-      Call RecPrt('Setup_kriging: dqInt',' ',dqInt,nInter,nRaw)
+      Call RecPrt('Setup_kriging: Energy',' ',Energy(iS:iE),1,nRaw)
+      Call RecPrt('Setup_kriging: qInt',' ',qInt(:,iS:iE),nInter,nRaw)
+      Call RecPrt('Setup_kriging: dqInt',' ',dqInt(:,iS:iE),nInter,nRaw)
 #endif
 *                                                                      *
 ************************************************************************
@@ -95,17 +104,18 @@
 *                                                                      *
       Call mma_Allocate(qInt_s,nInter,nRaw,Label="qInt_s")
       Call mma_Allocate(dqInt_s,nInter,nRaw,nSet,Label="dqInt_s")
-      Call mma_Allocate(Energy_s,nRaw,,nSet,Label="Energy_s")
+      Call mma_Allocate(Energy_s,nRaw,nSet,Label="Energy_s")
 *                                                                      *
 ************************************************************************
 *                                                                      *
 *     Transform to the basis which diagonalizes the HMF Hessian.
 *
-      Call Trans_K(qInt,qInt_s,nInter,nRaw)
+      Call Trans_K(qInt(:,iS:iE),qInt_s,nInter,nRaw)
 
-      Call Trans_K(dqInt,dqInt_s(:,:,1),nInter,nRaw)
+      Call Trans_K(dqInt(:,iS:iE),dqInt_s(:,:,1),nInter,nRaw)
+      dqInt_s(:,:,:) = - dqInt_s(:,:,:)
 
-      Energy_s(:,1)=Energy(:)
+      Energy_s(1:nRaw,1)=Energy(iS:iE)
 *                                                                      *
 ************************************************************************
 *                                                                      *
