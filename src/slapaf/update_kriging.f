@@ -65,9 +65,6 @@
       iOpt_RS=1   ! Activate restricted variance.
       iterAI=iter
       dEner=Thr_microiterations
-      nRaw=Min(iter,nWndw/2)
-*     nRaw=1 ! Force HMF Hessian
-      iFirst = iter - nRaw + 1
       iterK=0
       dqdq=Zero
       qBeta=Beta
@@ -85,6 +82,9 @@
 *                                                                      *
 *     Pass the sample points to the GEK procedure
 *
+      nRaw=Min(iter,nWndw/2)
+      iFirst = iter - nRaw + 1
+
       Call Setup_Kriging(nRaw,iFirst)
 *                                                                      *
 ************************************************************************
@@ -246,12 +246,7 @@
 *        Compute the energy and gradient according to the
 *        surrogate model for the new coordinates.
 *
-         Call Energy_Kriging_layer(qInt(1,iterAI+1),Energy(iterAI+1),
-     &                             nQQ)
-         Call Dispersion_Kriging_Layer(qInt(1,iterAI+1),E_Disp,nQQ)
-         Call Gradient_Kriging_layer(qInt(1,iterAI+1),
-     &                               dqInt(1,iterAI+1),nQQ)
-         Call DScal_(nQQ,-One,dqInt(1,iterAI+1),1)
+         Call Kriging_Update(nQQ,iterAI+1,qInt(:,iterAI+1),E_Disp)
 *                                                                      *
 ************************************************************************
 *                                                                      *
