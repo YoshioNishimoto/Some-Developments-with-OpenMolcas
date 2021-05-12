@@ -11,7 +11,7 @@
       Subroutine BMtrx_Cartesian(nsAtom,nDimBC,nIter,mTtAtm,
      &                           mTR,TRVec,EVal,Hss_x,nQQ,nWndw)
       use Slapaf_Info, only: Cx, Gx, qInt, dqInt, KtB, BMx, Degen,
-     &                       AtomLbl, Smmtrc, dqInt_Aux
+     &                       AtomLbl, Smmtrc, dqInt_Aux, NAC
       use Slapaf_Parameters, only: Redundant, MaxItr, BSet, HSet, PrQ,
      &                             lOld, NADC, iState
       Implicit Real*8 (a-h,o-z)
@@ -222,6 +222,13 @@
             Call mma_allocate(dqInt,nQQ,MaxItr,Label='dqInt')
             qInt(:,:) = Zero
             dqInt(:,:) = Zero
+            If (iState(2)/=0) Then
+               n = 1
+               If (NADC) n=2
+               Call mma_allocate(dqInt_aux,nQQ,MaxItr,n,
+     &                           Label='dqInt_Aux')
+               dqInt_aux(:,:,:)=Zero
+            End If
          End If
 *
 *------- Project the model Hessian with respect to rotations and
@@ -375,8 +382,24 @@
 *---- Compute the value and gradient vectors in the new basis.
 *
       Call ValANM(nsAtom,nQQ,nIter,BMx,Degen,qInt,Cx,'Values',nWndw)
-      If (BSet) Call ValANM(nsAtom,nQQ,nIter,BMx,Degen,
-     &                      dqInt,Gx,'Gradients',nWndw)
+      If (BSet) Then
+         Call ValANM(nsAtom,nQQ,nIter,BMx,Degen,dqInt,Gx,'Gradients',
+     &               nWndw)
+
+*
+*    We transform the energy difference gradient vector and the
+*    non-adiabatic coupling vector to the selected internal coordinates
+*    since the GPR is performed in this basis.
+
+         n=0
+         If (Allocated(dqInt_Aux)) n=Size(dqInt_Aux,3)
+         If (n>0) Call ValANM(nsAtom,nQQ,nIter,BMx,Degen,
+     &                        dqInt_Aux(:,:,1),Gx0,
+     &                        'Gradients,Gx0',nWndw)
+*        If (n>1) Call ValANM(nsAtom,nQQ,nIter,BMx,Degen,
+*    &                        dqInt_Aux(:,:,2),NAC,
+*    &                        'Gradients,Gx0',nWndw)
+      End If
 *                                                                      *
 ************************************************************************
 *                                                                      *
