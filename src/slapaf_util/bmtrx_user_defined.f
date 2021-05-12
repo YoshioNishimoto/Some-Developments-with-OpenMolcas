@@ -10,7 +10,7 @@
 ************************************************************************
       Subroutine BMtrx_User_Defined(nsAtom,Coor,nDim,nIter,mTR,nQQ)
       use Slapaf_Info, only: Gx, qInt, dqInt, KtB, BMx, Degen, Smmtrc,
-     &                       Lbl, dqInt_Aux
+     &                       Lbl, dqInt_Aux, NAC, Gx0
       use Slapaf_Parameters, only: iInt, nFix, nBVec, Analytic_Hessian,
      &                             MaxItr, iOptC, BSet, HSet, lOld,
      &                             Numerical, NADC, iState
@@ -73,8 +73,16 @@
 *                                                                      *
 *     Compute the gradient
 *
-      If (BSet) Call Force(nFix,Gx(:,:,nIter),nsAtom,nQQ,BMx,
+      If (BSet) Then
+         Call Force(nFix,Gx(:,:,nIter),nsAtom,nQQ,BMx,
      &                     nIter,dqInt,Lbl,Degen)
+         n = 0
+         If (Allocated(dqInt_Aux)) n = SIZE(dqInt_Aux,3)
+         If (n>0)  Call Force(nFix,Gx0(:,:,nIter),nsAtom,nQQ,BMx,
+     &                     nIter,dqInt_Aux(:,:,1),Lbl,Degen)
+         If (n>1)  Call Force(nFix,NAC(:,:,nIter),nsAtom,nQQ,BMx,
+     &                     nIter,dqInt_Aux(:,:,2),Lbl,Degen)
+      End If
 *                                                                      *
 ************************************************************************
 *                                                                      *

@@ -23,7 +23,8 @@
 *              2004                                                    *
 ************************************************************************
       use Slapaf_Info, only: qInt, dqInt, BM, dBM, iBM, idBM, nqBM, KtB,
-     &                       Cx, Gx, BMx, Degen, Smmtrc, dqInt_Aux
+     &                       Cx, Gx, BMx, Degen, Smmtrc, dqInt_Aux, NAC,
+     &                       Gx0
       use Slapaf_Parameters, only: HWRS, Analytic_Hessian, MaxItr,
      &                             iOptC, BSet, HSet, PrQ, lOld,
      &                             Numerical, mB_Tot, mdB_Tot, mq,
@@ -116,7 +117,7 @@
          If (iState(2)/=0) Then
             n = 1
             If (NADC) n=2
-            Call mma_allocate(dqInt_aux,nQQ,MaxItr,n,
+            Call mma_allocate(dqInt_Aux,nQQ,MaxItr,n,
      &                        Label='dqInt_Aux')
             dqInt_aux(:,:,:)=Zero
          End If
@@ -395,6 +396,8 @@
          iEnd=nIter
          iSt =nIter
       End If
+      nAux = 0
+      If (Allocated(dqInt_Aux)) nAux = SIZE(dqInt_Aux,3)
 *
 *     Note that the loop is in reverse order.
 *
@@ -535,9 +538,22 @@
             M = nDimBC
             N = nQQ
             NRHS=1
+
             Call NRed(Gx(:,:,jIter),GxR(:),3*nsAtom,nDimBC,Smmtrc)
             Call Eq_Solver('N',M,N,NRHS,KtBt,.False.,
      &                     Degen2,GxR(:),dqInt(:,jIter))
+*
+            If (nAux>0) Then
+               Call NRed(Gx0(:,:,jIter),GxR(:),3*nsAtom,nDimBC,Smmtrc)
+               Call Eq_Solver('N',M,N,NRHS,KtBt,.False.,
+     &                        Degen2,GxR(:),dqInt_Aux(:,jIter,1))
+            End If
+            If (nAux>0) Then
+               Call NRed(NAC(:,:,jIter),GxR(:),3*nsAtom,nDimBC,Smmtrc)
+               Call Eq_Solver('N',M,N,NRHS,KtBt,.False.,
+     &                        Degen2,GxR(:),dqInt_Aux(:,jIter,2))
+
+            End If
 *           Call RecPrt('GxR   ',' ',GxR,nDimBC,1)
 *           Call RecPrt('KtB   ',' ',KtBt,nQQ,nDimBC)
 *           Call RecPrt('drInt ',' ',dqInt(:,jIter),nQQ,1)
