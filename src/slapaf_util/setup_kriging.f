@@ -22,8 +22,8 @@
       Real*8 Value_l
       Integer :: nSet=1
       Real*8, Allocatable:: Array_l(:), HTri(:), Hessian(:,:),
-     &                      qInt_s(:,:), dqInt_s(:,:),
-     &                      Hessian_HMF(:,:), Energy_s(:)
+     &                      qInt_s(:,:), dqInt_s(:,:,:),
+     &                      Hessian_HMF(:,:), Energy_s(:,:)
 *#define _DEBUGPRINT_
 #ifdef _DEBUGPRINT_
       Call RecPrt('Setup_kriging: Energy',' ',Energy,1,nRaw)
@@ -94,23 +94,28 @@
 ************************************************************************
 *                                                                      *
       Call mma_Allocate(qInt_s,nInter,nRaw,Label="qInt_s")
-      Call mma_Allocate(dqInt_s,nInter,nRaw,Label="dqInt_s")
-      Call mma_Allocate(Energy_s,nRaw,Label="Energy_s")
+      Call mma_Allocate(dqInt_s,nInter,nRaw,nSet,Label="dqInt_s")
+      Call mma_Allocate(Energy_s,nRaw,,nSet,Label="Energy_s")
 *                                                                      *
 ************************************************************************
 *                                                                      *
 *     Transform to the basis which diagonalizes the HMF Hessian.
 *
       Call Trans_K(qInt,qInt_s,nInter,nRaw)
-      Call Trans_K(dqInt,dqInt_s,nInter,nRaw)
 
-      Energy_s(:)=Energy(:)
+      Call Trans_K(dqInt,dqInt_s(:,:,1),nInter,nRaw)
+
+      Energy_s(:,1)=Energy(:)
 *                                                                      *
 ************************************************************************
 *                                                                      *
 #ifdef _DEBUGPRINT_
       Call RecPrt('Setup_kriging: qInt_s',' ',qInt_s,nInter,nRaw)
-      Call RecPrt('Setup_kriging: Grad_s',' ',dqInt_s,nInter,nRaw)
+      Do i = 1, nSet
+         Call RecPrt('Setup_kriging: Energy_s',' ',Energy_s(:,i),1,nRaw)
+         Call RecPrt('Setup_kriging: Grad_s',' ',dqInt_s(:,:,i),nInter,
+     &                                                             nRaw)
+      End Do
 #endif
       Call Start_Kriging(nRaw,nInter,nSet,qInt_s,dqInt_s,Energy_s)
 *                                                                      *
