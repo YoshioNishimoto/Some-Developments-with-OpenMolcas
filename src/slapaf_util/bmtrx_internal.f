@@ -23,10 +23,11 @@
 *              2004                                                    *
 ************************************************************************
       use Slapaf_Info, only: qInt, dqInt, BM, dBM, iBM, idBM, nqBM, KtB,
-     &                       Cx, Gx, BMx, Degen, Smmtrc
+     &                       Cx, Gx, BMx, Degen, Smmtrc, dqInt_Aux
       use Slapaf_Parameters, only: HWRS, Analytic_Hessian, MaxItr,
      &                             iOptC, BSet, HSet, PrQ, lOld,
-     &                             Numerical, mB_Tot, mdB_Tot, mq
+     &                             Numerical, mB_Tot, mdB_Tot, mq,
+     &                             NADC, iState
       Implicit Real*8 (a-h,o-z)
 #include "Molcas.fh"
 #include "warnings.fh"
@@ -105,12 +106,20 @@
       If (Allocated(qInt).and.SIZE(qInt,1)/=nQQ) Then
          Call mma_deallocate(qInt)
          Call mma_deallocate(dqInt)
+         If (Allocated(dqInt_Aux)) Call mma_deallocate(dqInt_aux)
       End If
       If (.NOT.Allocated(qInt)) Then
          Call mma_allocate( qInt,nQQ,MaxItr,Label=' qInt')
          Call mma_allocate(dqInt,nQQ,MaxItr,Label='dqInt')
           qInt(:,:)=Zero
          dqInt(:,:)=Zero
+         If (iState(2)/=0) Then
+            n = 1
+            If (NADC) n=2
+            Call mma_allocate(dqInt_aux,nQQ,MaxItr,n,
+     &                        Label='dqInt_Aux')
+            dqInt_aux(:,:,:)=Zero
+         End If
       End If
 *
       Call mma_allocate(Degen2,nDimBC)

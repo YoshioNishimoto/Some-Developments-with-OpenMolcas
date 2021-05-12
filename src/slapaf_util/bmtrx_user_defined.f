@@ -10,10 +10,10 @@
 ************************************************************************
       Subroutine BMtrx_User_Defined(nsAtom,Coor,nDim,nIter,mTR,nQQ)
       use Slapaf_Info, only: Gx, qInt, dqInt, KtB, BMx, Degen, Smmtrc,
-     &                       Lbl
+     &                       Lbl, dqInt_Aux
       use Slapaf_Parameters, only: iInt, nFix, nBVec, Analytic_Hessian,
      &                             MaxItr, iOptC, BSet, HSet, lOld,
-     &                             Numerical
+     &                             Numerical, NADC, iState
       Implicit Real*8 (a-h,o-z)
 #include "Molcas.fh"
 #include "real.fh"
@@ -36,12 +36,20 @@
       If (Allocated(qInt).and.SIZE(qInt,1)/=nQQ) Then
          Call mma_deallocate(qInt)
          Call mma_deallocate(dqInt)
+         If (Allocated(dqInt_Aux)) Call mma_deallocate(dqInt_Aux)
       End If
       If (.NOT.Allocated(qInt)) Then
          Call mma_allocate(qInt,nQQ,MaxItr,Label='qInt')
          Call mma_allocate(dqInt,nQQ,MaxItr,Label='dqInt')
          qInt(:,:) = Zero
          dqInt(:,:) = Zero
+        If (iState(2)/=0) Then
+           n = 1
+           If (NADC) n=2
+           Call mma_allocate(dqInt_aux,nQQ,MaxItr,n,
+     &                       Label='dqInt_Aux')
+           dqInt_aux(:,:,:)=Zero
+        End If
       End If
       Call mma_allocate(BMx,3*nsAtom,nQQ,Label='BMx')
       BMx(:,:)=Zero

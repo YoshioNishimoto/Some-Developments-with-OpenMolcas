@@ -58,6 +58,7 @@
                If (NADC) n=2
                Call mma_allocate(dqInt_aux,nQQ,MaxItr,n,
      &                           Label='dqInt_Aux')
+               dqInt_aux(:,:,:)=Zero
             End If
          End If
          Call mma_allocate(EVec,nDimBC**2,Label='EVec')
