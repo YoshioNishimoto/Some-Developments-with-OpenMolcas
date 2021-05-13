@@ -281,7 +281,7 @@ c
        Call dDaFile(LuTemp,2,Work(ipK1),nDensC,iDisk) ! Read \bar{kappa}
        Call Uncompress(work(ipK1),Work(ipK2),1)
 C      write (*,*) "uncompressed kappa in out_pt2"
-C      call sqprt(work(ipk2),12)
+C      call sqprt(work(ipk2),nbas(1))
 c
 c If we want to estimate the error
 c
@@ -376,7 +376,7 @@ c Mult all terms that are not diag by 2
 !      gives \tilde{D}
        Call OITD(Work(ipK2),1,Work(ipD_K),Work(ipDtmp),.True.)
 C      write (*,*) "orbital density in MO"
-C      call sqprt(work(ipD_k),12)
+C      call sqprt(work(ipD_k),nbas(1))
 *
        Do iS=1,nsym
 c

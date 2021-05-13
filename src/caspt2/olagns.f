@@ -141,8 +141,8 @@ C
       If (PM) Then
         nINP = nINDEP(iSym,iCase)
         nASP = nASup(iSym,iCase)
+        nISP = nISup(iSym,iCase)
         If (nINP.ne.0) Then
-          nISP = nISup(iSym,iCase)
           nVec = nINP*nISP
           If (nVec.ne.0) Then
             Call RHS_ALLO(nINP,nISP,ipTP)
@@ -151,8 +151,8 @@ C
         End If
         nINM = nINDEP(iSym,iCase+1)
         nASM = nASup(iSym,iCase+1)
+        nISM = nISup(iSym,iCase+1)
         If (nINM.ne.0) Then
-          nISM = nISup(iSym,iCase+1)
           nVec = nINM*nISM
           If (nVec.ne.0) Then
             Call RHS_ALLO(nINM,nISM,ipTM)
@@ -170,8 +170,8 @@ C
       Else
         nIN = nINDEP(iSym,iCase)
         nAS = nASup(iSym,iCase)
+        nIS = nISup(iSym,iCase)
         If (nIN.ne.0) Then
-          nIS = nISup(iSym,iCase)
           nVec = nIN*nIS
           If (nVec.ne.0) Then
             Call RHS_ALLO(nIN,nIS,ipT)

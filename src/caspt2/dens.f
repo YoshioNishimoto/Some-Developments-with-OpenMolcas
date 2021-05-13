@@ -1095,14 +1095,18 @@ C
         !! SA density-contribution will be added and should be
         !! subtracted
         If (.not.IFSADREF.and.nState.ne.1.and..not.IFXMS) Then
+          If (.not.INVAR) Then
+            Write (*,*) "SS density matrix with BSHIFT is not yet"
+            Call abend()
+          End If
      *                 
           !! Subtract the SA-RDM (inactive part is later)
           Call DCopy_(nDRef,0.0D+00,0,Work(ipWRK1),1)
           Do iState = 1, nState
-C             Wgt  = Work(LDWgt+iState-1+nState*(iState-1))
-              Wgt  = 1.0D+00/nState
-              Call DaXpY_(nDRef,Wgt,Work(LDMix+nDRef*(iState-1)),1,
-     *                    Work(ipWRK1),1)
+C           Wgt  = Work(LDWgt+iState-1+nState*(iState-1))
+            Wgt  = 1.0D+00/nState
+            Call DaXpY_(nDRef,Wgt,Work(LDMix+nDRef*(iState-1)),1,
+     *                  Work(ipWRK1),1)
           End Do
           Call SQUARE(Work(ipWRK1),Work(ipWRK2),1,nAshT,nAshT)
           Call DaXpY_(nAshT**2,-1.0D+00,Work(ipWRK2),1,Work(ipRDMSA),1)

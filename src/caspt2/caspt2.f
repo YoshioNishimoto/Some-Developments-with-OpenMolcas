@@ -244,6 +244,11 @@ C            CALL GETMEM('WRK1','FREE','REAL',ipWRK1,nConf*nRoots)
      &                               MSTATE(JSTATE)
          Call StatusLine('CASPT2:',TRIM(STLNE2))
          CALL EQCTL2(ICONV)
+C
+C     if (.not.ifdens) then
+C     write (*,*) "quit for numerical derivatives"
+C     call abend()
+C     end if
          
         DoPT2NUM = .false.
          If (DerMO.and.iRLXroot.eq.jstate) Then
@@ -954,7 +959,7 @@ C End of long loop over groups
 
 C Free resources, close files
       CALL PT2CLS
-
+C     If (nRoots.ne.lRoots) Call ModDip
        
       CALL MMA_DEALLOCATE(HEFF)
       CALL MMA_DEALLOCATE(H0)

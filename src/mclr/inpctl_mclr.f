@@ -183,7 +183,7 @@ C        Call RecPrt('CI vector',' ',Work(ipin(ipcii)),1,nConf)
          If (PT2) Then
          If (PT2) Call Molcas_Open(LuPT2,'PT2_Lag')
 C          write (*,*) "pt2 = ", pt2
-           Read (LuPT2,*) BSHIFT
+C          Read (LuPT2,*) BSHIFT
 C          write (*,*) "bshift = ", bshift
 C          If (BSHIFT.ne.0.0D+00) ActRot=.True.
 C          write (*,*) "actrot=" ,actrot
