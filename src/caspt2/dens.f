@@ -38,6 +38,7 @@ C
 #include "chocaspt2.fh"
       DIMENSION DMAT(*)
       Logical   INVAR
+      Character*4096 RealName
 
       CALL QENTER('DENS')
         CALL GETMEM('G1','ALLO','REAL',LG1,NG1)
@@ -187,7 +188,8 @@ C       CALL TRDNS2A(IVEC,IVEC,WORK(LDPT))
       IF (MAXIT.NE.0) THEN
         !! off-diagonal are ignored for CASPT2-D
         CALL DCOPY_(NDPT,[0.0D0],0,WORK(LDPT),1)
-        CALL TRDNS2O(IVEC,IVEC,WORK(LDPT))
+C       CALL TRDNS2O(IVEC,IVEC,WORK(LDPT))
+        CALL TRDNS2O(iVecX,iVecR,WORK(LDPT))
         CALL DAXPY_(NDPT,1.0D00,WORK(LDPT),1,WORK(LDSUM),1)
       END IF
 *     WRITE(*,*)' DPT after TRDNS2O.'
@@ -198,8 +200,8 @@ C
         IF (.not.IFSADREF.and.nState.ge.2) Then
           write (*,*)
      *      "Please add SADREF keyword in CASPT2 section",
-     *      "This keyword is required with state-averaged reference"
-          call abend
+     *      "This keyword is recommended with state-averaged reference"
+C         call abend
         End If
         IF (.not.IFDORTHO.and.BSHIFT.ne.0.0D+00) Then
           write (*,*)
@@ -271,9 +273,9 @@ C
         !! frozen orbitals must be wrong.
 C       call dcopy(ndpt,0.0d+00,0,work(ldpt),1)
         If (nFroT.eq.0) Then
-          Call DCopy_(nOsqT,Work(LDPT),1,Work(ipDPT),1)
+          Call DCopy_(nOsqT,Work(LDSUM),1,Work(ipDPT),1)
         Else
-          Call OLagFro0(Work(LDPT),Work(ipDPT))
+          Call OLagFro0(Work(LDSUM),Work(ipDPT))
         End If
 C
         !! Construct the transformation matrix
@@ -290,10 +292,15 @@ C
         !! Construct state-averaged density matrix
         Call DCopy_(nDRef,0.0D+00,0,Work(ipWRK1),1)
         Do iState = 1, nState
-          Wgt  = Work(LDWgt+iState-1+nState*(iState-1))
-          Wgt  = 1.0D+00/nState
-          Call DaXpY_(nDRef,Wgt,Work(LDMix+nDRef*(iState-1)),1,
-     *                Work(ipWRK1),1)
+          If (IFSADREF) Then
+C           Wgt  = Work(LDWgt+iState-1+nState*(iState-1))
+            Wgt  = 1.0D+00/nState
+            Call DaXpY_(nDRef,Wgt,Work(LDMix+nDRef*(iState-1)),1,
+     *                  Work(ipWRK1),1)
+          Else If (iState.eq.jState) Then
+            Call DaXpY_(nDRef,1.0D+00,Work(LDMix+nDRef*(iState-1)),1,
+     *                  Work(ipWRK1),1)
+          End If
         End Do
         Call SQUARE(Work(ipWRK1),Work(ipRDMSA),1,nAshT,nAshT)
 C       write (*,*) "state-averaged density matrix"
@@ -304,6 +311,8 @@ C
         !! Already transformed to natural (CASSCF) orbital basis
         CALL GETMEM('DEPSA ','ALLO','REAL',ipDEPSA,nAshT*nAshT)
         Call DCopy_(nAshT*nAshT,0.0D+00,0,Work(ipDEPSA),1)
+        !! Derivative of off-diagonal H0 of <Psi1|H0|Psi1>
+        IF (MAXIT.NE.0) Call SIGDER(iVecX,iVecR)
         Call CLagX(1,Work(ipCLag),Work(ipTRF),Work(ipDEPSA),
      *             Work(ipRDMSA),Work(ipRDMEIG))
 C       call test3_dens(work(ipclag))
@@ -1078,6 +1087,54 @@ C
           iBasTr = iBasTr + nBasI*(nBasI+1)/2
           iBasSq = iBasSq + nBasI*nBasI
         End Do
+C
+        !! If SS density matrix is used, we need an additional term for
+        !! electron-repulsion integral. Here prepares such densities.
+        !! The first one is just DPT2AO, while the second one is the
+        !! difference between the SS and SA density matrix. because the
+        !! SA density-contribution will be added and should be
+        !! subtracted
+        If (.not.IFSADREF.and.nState.ne.1.and..not.IFXMS) Then
+          If (.not.INVAR) Then
+            Write (*,*) "SS density matrix with BSHIFT is not yet"
+            Call abend()
+          End If
+     *                 
+          !! Subtract the SA-RDM (inactive part is later)
+          Call DCopy_(nDRef,0.0D+00,0,Work(ipWRK1),1)
+          Do iState = 1, nState
+C           Wgt  = Work(LDWgt+iState-1+nState*(iState-1))
+            Wgt  = 1.0D+00/nState
+            Call DaXpY_(nDRef,Wgt,Work(LDMix+nDRef*(iState-1)),1,
+     *                  Work(ipWRK1),1)
+          End Do
+          Call SQUARE(Work(ipWRK1),Work(ipWRK2),1,nAshT,nAshT)
+          Call DaXpY_(nAshT**2,-1.0D+00,Work(ipWRK2),1,Work(ipRDMSA),1)
+          !! Construct the SS density matrix in Work(ipWRK1)
+          Call OLagFroD(Work(ipWRK1),Work(ipWRK2),Work(ipRDMSA),
+     *                  Work(ipTrf))
+          !! Subtract the inactive part
+          Call DaXpY_(nBasT**2,-1.0D+00,Work(ipWRK2),1,Work(ipWRK1),1)
+          !! Save
+          If (IfChol) Then
+            Call CnstAB_SSDM(Work(ipDPTAO),Work(ipWRK1))
+          Else
+            Call PrgmTranslate('CMOPT2',RealName,lRealName)
+            Open (Unit=LuCMOPT2,
+     *            File=RealName(1:lRealName),
+     *            Position='APPEND',
+     *            Status='OLD',
+     *            Form='UNFORMATTED')
+            Do iBasI = 1, nBasT
+              Do jBasI = 1, iBasI
+                Write (LuCMOPT2) Work(ipDPTAO+iBasI-1+nBasT*(jBasI-1)),
+     *                           Work(ipWRK1 +iBasI-1+nBasT*(jBasI-1))
+              End Do
+            End Do
+C
+            Close (LuCMOPT2)
+          End If
+        End If
 C       write (*,*) "pt2ao"
 C       call sqprt(Work(ipDPTAO),12)
 C       call prtril(Work(ipDPT2AO),12)
@@ -1492,22 +1549,23 @@ C     write (*,*) "nbast = ", nbast
         nVir  = nSshI + nDelI
         ipTrfL = ipTrf + iSQ
         !! frozen + inactive
-        Do iIsh = 1, nFroI + nIshI
-          Trf(ipTrfL+iIsh+nBasI*(iIsh-1)) = 1.0D+00
-C         Work(ipTrfL+iIsh-1+nBasI*(iIsh-1)) = 1.0D+00
-        End Do
-C       Do iIsh = 1, nFroI
+C       Do iIsh = 1, nFroI + nIshI
 C         Trf(ipTrfL+iIsh+nBasI*(iIsh-1)) = 1.0D+00
 C       End Do
-C       Do I = 1, nIshI
-C         iIsh = nFroI + I
-C         Do J = 1, nIshI
-C           jIsh = nFroI + J
-C           IJ=I-1+nIshI*(J-1)
-C           Trf(ipTrfL+iAsh+nBasI*(jAsh-1))
-C    *        = Trf0(iTOrb+IJ)
-C         End Do
-C       End Do
+        !! frozen
+        Do iIsh = 1, nFroI
+          Trf(ipTrfL+iIsh+nBasI*(iIsh-1)) = 1.0D+00
+        End Do
+        !! inactive
+        Do I = 1, nIshI
+          iIsh = nFroI + I
+          Do J = 1, nIshI
+            jIsh = nFroI + J
+            IJ=I-1+nIshI*(J-1)
+            Trf(ipTrfL+iIsh+nBasI*(jIsh-1))
+     *        = Trf0(iTOrb+IJ)
+          End Do
+        End Do
         iTOrb = iTOrb + nIshI*nIshI
         !! RAS1 space
         Do I = 1, NR1
@@ -1556,19 +1614,18 @@ C    *!       = Work(iTOrb+nIshI*nIshI+iAsh0-1+nAshI*(jAsh0-1))
       ! End Do
 C       call sqprt(trf,12)
         !! virtual + deleted (deleted is not needed, though)
-        Do iSsh = nOcc+1, nOcc+nVir
-C         Work(ipTrfL+iSsh-1+nBasI*(iSsh-1)) = 1.0D+00
-          Trf(ipTrfL+iSsh+nBasI*(iSsh-1)) = 1.0D+00
-        End Do
-C       Do I = 1, nVir
-C         iAsh = nCor + nAshI + I
-C         Do J = 1, nVir
-C           jAsh = nCor + nAshI + J
-C           IJ=I-1+nVir*(J-1)
-C           Trf(ipTrfL+iAsh+nBasI*(jAsh-1))
-C    *        = Trf0(iTOrb+IJ)
-C         End Do
+C       Do iSsh = nOcc+1, nOcc+nVir
+C         Trf(ipTrfL+iSsh+nBasI*(iSsh-1)) = 1.0D+00
 C       End Do
+        Do I = 1, nVir
+          iSsh = nCor + nAshI + I
+          Do J = 1, nVir
+            jSsh = nCor + nAshI + J
+            IJ=I-1+nVir*(J-1)
+            Trf(ipTrfL+iSsh+nBasI*(jSsh-1))
+     *        = Trf0(iTOrb+IJ)
+          End Do
+        End Do
         iTOrb = iTOrb + nSshI*nSshI
 C       call sqprt(trf,12)
         iSQ = iSQ + nBasI*nBasI
@@ -4266,3 +4323,251 @@ C
       End Do
 C
       end subroutine test3_dens
+C
+C-----------------------------------------------------------------------
+C
+      Subroutine CnstAB_SSDM(DPT2AO,SSDM)
+C
+      USE CHOVEC_IO
+C
+      Implicit Real*8 (A-H,O-Z)
+C
+#include "rasdim.fh"
+#include "caspt2.fh"
+#include "WrkSpc.fh"
+#include "caspt2_grad.fh"
+C
+#include "warnings.fh"
+#include "chocaspt2.fh"
+#include "choptr.fh"
+#include "choglob.fh"
+C
+      Dimension DPT2AO(*),SSDM(*)
+      Character*4096 RealName
+      Integer iSkip(8)
+      integer nnbstr(8,3)
+C
+      INFVEC(I,J,K)=IWORK(ip_INFVEC-1+MAXVEC*N2*(K-1)+MAXVEC*(J-1)+I)
+      call getritrfinfo(nnbstr,maxvec,n2)
+      iSym = 1 !! iSym0
+      nVec = NVLOC_CHOBATCH(1)
+C
+      NumChoTot = 0
+      Do jSym = 1, nSym
+        NumChoTot = NumChoTot + NumCho_PT2(jSym)
+      End Do
+      NumCho=NumChoTot
+      Do jSym = 1, nSym
+        iSkip(jSym) = 1
+      End Do
+C
+      nBasI  = nBas(iSym)
+C
+      Call GetMem('A_PT2 ','ALLO','REAL',ipA_PT2,NumChoTot**2)
+      !! Read A_PT2
+      Call PrgmTranslate('CMOPT2',RealName,lRealName)
+      Open (Unit=LuCMOPT2,
+     *      File=RealName(1:lRealName),
+     *      Status='OLD',
+     *      Form='UNFORMATTED')
+      Do i = 1, NumChoTot*NumChoTot
+        Read (LuCMOPT2) Work(ipA_PT2+i-1)
+      End Do
+C
+      CALL GETMEM('CHSPC','ALLO','REAL',IP_CHSPC,NCHSPC)
+      CALL GETMEM('HTVEC','ALLO','REAL',ipHTVec,nBasT*nBasT)
+      CALL GETMEM('WRK  ','ALLO','REAL',ipWRK,nBasT*nBasT)
+      !! V(P) = (mu nu|P)*D_{mu nu}
+      CALL GETMEM('V1   ','ALLO','REAL',ipV1,NumCho)
+      CALL GETMEM('V2   ','ALLO','REAL',ipV2,NumCho)
+      !! B_SSDM(mu,nu,P) = D_{mu rho}*D_{nu sigma}*(rho sigma|P)
+      Call GetMem('B_SSDM','ALLO','REAL',ipB_SSDM,nBasT**2*NumChoTot)
+C
+      !! Prepare density matrix
+      !! subtract the state-averaged density matrix
+C
+      IBATCH_TOT=NBTCHES(iSym)
+
+      IF(NUMCHO_PT2(iSym).EQ.0) Return
+
+      ipnt=ip_InfVec+MaxVec_PT2*(1+InfVec_N2_PT2*(iSym-1))
+      JRED1=iWork(ipnt)
+      JRED2=iWork(ipnt-1+NumCho_PT2(iSym))
+
+* Loop over JRED
+      DO JRED=JRED1,JRED2
+
+        CALL Cho_X_nVecRS(JRED,iSym,JSTART,NVECS_RED)
+        IF(NVECS_RED.EQ.0) Cycle
+
+        ILOC=3
+        CALL CHO_X_SETRED(IRC,ILOC,JRED)
+* For a reduced set, the structure is known, including
+* the mapping between reduced index and basis set pairs.
+* The reduced set is divided into suitable batches.
+* First vector is JSTART. Nr of vectors in r.s. is NVECS_RED.
+        JEND=JSTART+NVECS_RED-1
+
+* Determine batch length for this reduced set.
+* Make sure to use the same formula as in the creation of disk
+* address tables, etc, above:
+        NBATCH=1+(NVECS_RED-1)/MXNVC
+
+* Loop over IBATCH
+        JV1=JSTART
+        DO IBATCH=1,NBATCH
+C         write (*,*) "ibatch,nbatch = ", ibatch,nbatch
+          IBATCH_TOT=IBATCH_TOT+1
+  
+          JNUM=NVLOC_CHOBATCH(IBATCH_TOT)
+          JV2=JV1+JNUM-1
+
+          JREDC=JRED
+* Read a batch of reduced vectors
+          CALL CHO_VECRD(WORK(IP_CHSPC),NCHSPC,JV1,JV2,iSym,
+     &                            NUMV,JREDC,MUSED)
+          IF(NUMV.ne.JNUM) THEN
+            write(6,*)' Rats! CHO_VECRD was called, assuming it to'
+            write(6,*)' read JNUM vectors. Instead it returned NUMV'
+            write(6,*)' vectors: JNUM, NUMV=',JNUM,NUMV
+            write(6,*)' Back to the drawing board?'
+            CALL QUIT(_RC_INTERNAL_ERROR_)
+          END IF
+          IF(JREDC.NE.JRED) THEN
+            write(6,*)' Rats! It was assumed that the Cholesky vectors'
+            write(6,*)' in HALFTRNSF all belonged to a given reduced'
+            write(6,*)' set, but they don''t!'
+            write(6,*)' JRED, JREDC:',JRED,JREDC
+            write(6,*)' Back to the drawing board?'
+            write(6,*)' Let the program continue and see what happens.'
+          END IF
+C
+          ipVecL = ip_CHSPC
+          Do iVec = JV1, JV2
+C
+            !! reduced form -> squared AO vector (mu nu|iVec)
+            jVref = 1 !! only for iSwap=1
+            lscr  = nBasI*(nBasI+1)/2
+            If (l_NDIMRS.LT.1) Then
+              lscr  = NNBSTR(iSym,3)
+            Else
+              JREDL = INFVEC(iVec,2,iSym)
+              lscr  = iWork(ip_nDimRS+iSym-1+nSym*(JREDL-1)) !! JRED?
+            End If
+            JVEC1 = 1
+            JNUM  = 1
+            NUMV  = 1
+            iSwap = 2
+            Call DCopy_(nBasI**2,0.0D+00,0,Work(ipWRK),1)
+            Call Cho_ReOrdr(irc,Work(ipVecL),lscr,jVref,
+     *                      JVEC1,JNUM,NUMV,iSym,JREDC,iSwap,ipWRK,
+     *                      iSkip)
+            ipVecL = ipVecL + lscr
+C
+            Work(ipV1+iVec-1) = DDot_(nBasI**2,DPT2AO,1,Work(ipWRK),1)
+            Work(ipV2+iVec-1) = DDot_(nBasI**2,SSDM  ,1,Work(ipWRK),1)
+C
+            Call DGemm_('N','N',nBasI,nBasI,nBasI,
+     *                  1.0D+00,DPT2AO,nBasI,Work(ipWRK),nBasI,
+     *                  0.0D+00,Work(ipHTVec),nBasI)
+            Call DGemm_('N','N',nBasI,nBasI,nBasI,
+     *                  1.0D+00,Work(ipHTVec),nBasI,SSDM,nBasI,
+     *                  0.0D+00,Work(ipB_SSDM+nBasT**2*(iVec-1)),nBasI)
+            do i = 1, nBasT
+              do j = 1, i-1
+                Val = (Work(ipB_SSDM+i-1+nBasT*(j-1)+nBasT**2*(iVec-1))
+     *                +Work(ipB_SSDM+j-1+nBasT*(i-1)+nBasT**2*(iVec-1)))
+     *                *0.5d+00
+                Work(ipB_SSDM+i-1+nBasT*(j-1)+nBasT**2*(iVec-1)) = Val
+                Work(ipB_SSDM+j-1+nBasT*(i-1)+nBasT**2*(iVec-1)) = Val
+              end do
+            end do
+          End Do
+C
+          ipVecL = ip_CHSPC
+          Do iVec = JV1, JV2
+C
+            !! reduced form -> squared AO vector (mu nu|iVec)
+            jVref = 1 !! only for iSwap=1
+            lscr  = nBasI*(nBasI+1)/2
+            If (l_NDIMRS.LT.1) Then
+              lscr  = NNBSTR(iSym,3)
+            Else
+              JREDL = INFVEC(iVec,2,iSym)
+              lscr  = iWork(ip_nDimRS+iSym-1+nSym*(JREDL-1)) !! JRED?
+            End If
+            JVEC1 = 1
+            JNUM  = 1
+            NUMV  = 1
+            iSwap = 2
+            Call DCopy_(nBasI**2,0.0D+00,0,Work(ipWRK),1)
+            Call Cho_ReOrdr(irc,Work(ipVecL),lscr,jVref,
+     *                      JVEC1,JNUM,NUMV,iSym,JREDC,iSwap,ipWRK,
+     *                      iSkip)
+            ipVecL = ipVecL + lscr
+C
+            !! Exchange part of A_PT2
+            Do jVec = 1, NumCho
+              Work(ipA_PT2+iVec-1+NumCho*(jVec-1))
+     *          = Work(ipA_PT2+iVec-1+NumCho*(jVec-1))
+     *          - DDot_(nBasT**2,Work(ipWRK),1,
+     *                  Work(ipB_SSDM+nBasT**2*(jVec-1)),1)
+            End Do
+          End Do
+        End Do
+      End Do
+C
+      !! Coulomb
+      Call DGEMM_('N','T',NumCho,NumCho,1,
+     *            2.0D+00,Work(ipV1),NumCho,Work(ipV2),NumCho,
+     *            1.0D+00,Work(ipA_PT2),NumCho)
+      Do i = 1, NumCho
+        Do j = 1, i-1
+          Val = (Work(ipA_PT2+i-1+NumCho*(j-1))
+     *          +Work(ipA_PT2+j-1+NumCho*(i-1)))*0.5d+00
+          Work(ipA_PT2+i-1+NumCho*(j-1)) = Val
+          Work(ipA_PT2+j-1+NumCho*(i-1)) = Val
+        End Do
+      End Do
+      !! Write A_PT2
+      REWIND LuCMOPT2
+      Do i = 1, NumCho*NumCho
+        Write (LuCMOPT2) Work(ipA_PT2+i-1)
+      End Do
+      Close (LuCMOPT2)
+      Call GetMem('A_PT2 ','FREE','REAL',ipA_PT2,NumChoTot**2)
+C
+C     Call GetMem('B_PT2 ','ALLO','REAL',ipB_PT2,nBasT**2*NumChoTot)
+      !! Read B_PT2
+      Call PrgmTranslate('GAMMA',RealName,lRealName)
+      Open (Unit=LuGamma,
+     *      File=RealName(1:lRealName),
+     *      Status='OLD',
+     *      Form='UNFORMATTED',
+     *      Access='DIRECT',
+     *      Recl=nBas(iSym)*nBas(iSym)*8)
+      Do iVec = 1, NumCho
+        Read  (Unit=LuGAMMA,Rec=iVec) (Work(ipWRK+i-1),i=1,nBasT**2)
+        !! The contributions are doubled, because halved in PGet1_RI3?
+        !! Coulomb
+        Call DaXpY_(nBasT**2,Work(ipV2+iVec-1)*2.D+00,
+     *              DPT2AO,1,Work(ipWRK),1)
+        Call DaXpY_(nBasT**2,Work(ipV1+iVec-1)*2.D+00,
+     *              SSDM  ,1,Work(ipWRK),1)
+        !! Exchange
+        Call DaXpY_(nBasT**2,-2.0D+00,
+     *              Work(ipB_SSDM+nBasT**2*(iVec-1)),1,
+     *              Work(ipWRK),1)
+        Write (Unit=LuGAMMA,Rec=iVec) (Work(ipWRK+i-1),i=1,nBasT**2)
+      End Do
+      Close (LuGamma)
+C     Call GetMem('B_PT2 ','FREE','REAL',ipB_PT2,nBasT**2*NumChoTot)
+C
+      CALL GETMEM('CHSPC','FREE','REAL',IP_CHSPC,NCHSPC)
+      CALL GETMEM('HTVEC','FREE','REAL',ipHTVec,nBasT*nBasT)
+      CALL GETMEM('WRK  ','FREE','REAL',ipWRK,nBasT*nBasT)
+      CALL GETMEM('V1   ','FREE','REAL',ipV1,NCHSPC)
+      CALL GETMEM('V2   ','FREE','REAL',ipV2,NCHSPC)
+      Call GetMem('B_SSDM','FREE','REAL',ipB_SSDM,nBasT**2*NumChoTot)
+C
+      End Subroutine CnstAB_SSDM

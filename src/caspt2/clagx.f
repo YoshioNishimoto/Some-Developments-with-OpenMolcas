@@ -250,7 +250,7 @@ C
      *          DG1(*),DG2(*),DG3(*),DF1(*),DF2(*),DF3(*),
      *          DEPSA(*)
 
-      Do iCase = 1, 11
+      Do iCase = 1, 13
 C       cycle
 C       If (icase.ne.10.and.icase.ne.11) cycle ! G
 C       If (icase.ne.10)                 cycle ! GP
@@ -275,17 +275,21 @@ C         write (*,*) "# of     active pairs:", nas
 C         write (*,*) "dimension for Vec = ", nin*nis
           !! lg_V1 = T (solution; not quasi-variational)
           Call RHS_ALLO(nIN,nIS,lg_V1)
+          Call RHS_READ_SR(lg_V1,iCase,iSym,iVecX)
           !! lg_V2 = lambda (shift correction)
           Call RHS_ALLO(nIN,nIS,lg_V2)
-          !! lg_V3 = RHS (in IC basis)
-          Call RHS_ALLO(nIN,nIS,lg_V3)
-          !! lg_V4 = RHS (in MO basis)
-          Call RHS_ALLO(nAS,nIS,lg_V4)
-C
-          Call RHS_READ_SR(lg_V1,iCase,iSym,iVecX)
           CALL RHS_READ_SR(lg_V2,iCase,iSym,iVecR)
-          Call RHS_READ_SR(lg_V3,iCase,iSym,iRHS)
-          Call RHS_READ_C (lg_V4,iCase,iSym,iVecW)
+C
+          If (iCase.ne.12.and.iCase.ne.13) Then
+            !! lg_V3 = RHS (in IC basis)
+            Call RHS_ALLO(nIN,nIS,lg_V3)
+            Call RHS_READ_SR(lg_V3,iCase,iSym,iRHS)
+            !! lg_V4 = RHS (in MO basis)
+            Call RHS_ALLO(nAS,nIS,lg_V4)
+            Call RHS_READ_C (lg_V4,iCase,iSym,iVecW)
+          Else
+            Go To 100
+          End If
 C         write (*,*) "vec1-4"
 C         do i = 1, nin*nis
 C           write (*,'(i4,4f20.10)') i,work(lg_v1+i-1),work(lg_v2+i-1),
@@ -416,6 +420,7 @@ C
             Call GETMEM('LID','FREE','REAL',LID,nIS)
           End If
 C
+ 100      Continue
           !! for non-separable density/derivative
           CALL RHS_READ_SR(lg_V1,ICASE,ISYM,iVecX)
           CALL RHS_READ_SR(lg_V2,ICASE,ISYM,iVecR)
@@ -424,8 +429,10 @@ C
 
           CALL RHS_FREE(nIN,nIS,lg_V1)
           CALL RHS_FREE(nIN,nIS,lg_V2)
-          CALL RHS_FREE(nIN,nIS,lg_V3)
-          CALL RHS_FREE(nAS,nIS,lg_V4)
+          If (iCase.ne.12.and.iCase.ne.13) Then
+            CALL RHS_FREE(nIN,nIS,lg_V3)
+            CALL RHS_FREE(nAS,nIS,lg_V4)
+          End If
         End Do
       End Do
 C     do i = 1, 625
@@ -455,6 +462,7 @@ C
 #include "sigma.fh"
 #include "pt2_guga.fh"
 #include "SysDef.fh"
+#include "caspt2_grad.fh"
 C
       DIMENSION VEC1(*),VEC2(*),VEC3(*),VEC4(*),LIST(*)
       DIMENSION G1(nAshT,nAshT),G2(nAshT,nAshT,nAshT,nAshT),G3(*),
@@ -576,11 +584,11 @@ C
 C     write (*,*) "3"
 C     call sqprt(Work(lWRK1),nin)
 C
-      !! Explicit derivative of the overlap in the IC basis.
+      !! Derivative of the overlap in the IC basis.
       !! WRK1(o,p) = WRK1(o,p) - T_{o,i}^{ab}*RHS(p,i,a,b)
       !! This contribution should not be done for the imaginary
       !! shift-specific term
-      !  1) explicit overlap derivative
+      !  1) Implicit overlap derivative
       If (Mode.eq.0) Then
         !! Work(LWRK1) = -RHS*T
         Call DGEMM_('N','T',nIN,nIN,nIS,
@@ -607,7 +615,7 @@ C
      *            1.0D+00,Work(LWRK2),nAS,Work(LTRANS),nAS,
      *            0.0D+00,Work(LWRK1),nAS)
 C
-      !  2) implicit overlap derivative
+      !  2) Explicit overlap derivative
       !     Again, not for imaginary shift-specific terms
       If (Mode.eq.0) Then
         !! E = 2<0|H|1> - <1|H0-E0|1>
@@ -622,6 +630,15 @@ C
         Call DGEMM_('N','T',nAS,nAS,nIS,
      *              2.0D+00,Work(LWRK2),nAS,VEC4,nAS,
      *              1.0D+00,Work(LWRK1),nAS)
+      End If
+C
+      !! Add the contributions from the off-diagonal coupling
+      !! (i.e., CASPT2-N). Of course, this is not for imaginary shift-
+      !! specific terms.
+      If (MAXIT.NE.0.and.Mode.eq.0) Then
+        CALL DDAFILE(LuSTD,2,Work(LWRK2),nAS*nAS,idSDMat(iSym,iCase))
+        !! T*(T+lambda) + (T+lambda)*T is saved, so 1/2
+        Call DaXpY_(nAS*nAS,0.5D+00,Work(LWRK2),1,Work(LWRK1),1)
       End If
 C
       !! Now, convert the above contributions to derivatives of RDM,
@@ -1550,12 +1567,17 @@ C
 C     write (*,*) "nconf = ", nconf
 C     call dcopy(50,0.0d+00,0,clag,1)
       Do iState = 1, nState
-        Call LoadCI(Work(LCI),iState)
-C       Wgt = Work(LDWgt+iState-1+nState*(iState-1))
-        WGT = 1.0D+00/nState
-        Call DScal_(NLEV*NLEV,WGT,RDMEIG,1)
-        Call Poly1_CLag(Work(LCI),CLag(1,iState),RDMEIG)
-        Call DScal_(NLEV*NLEV,1.0D+00/WGT,RDMEIG,1)
+        If (IFSADREF) Then
+          Call LoadCI(Work(LCI),iState)
+C         Wgt = Work(LDWgt+iState-1+nState*(iState-1))
+          WGT = 1.0D+00/nState
+          Call DScal_(NLEV*NLEV,WGT,RDMEIG,1)
+          Call Poly1_CLag(Work(LCI),CLag(1,iState),RDMEIG)
+          Call DScal_(NLEV*NLEV,1.0D+00/WGT,RDMEIG,1)
+        Else If (iState.eq.jState) Then
+          Call LoadCI(Work(LCI),jState)
+          Call Poly1_CLag(Work(LCI),CLag(1,jState),RDMEIG)
+        End If
       End Do
 C     write (*,*) "clag before projection"
 C     do istate = 1, nstate

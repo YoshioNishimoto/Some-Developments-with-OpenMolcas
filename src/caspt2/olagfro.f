@@ -18,11 +18,11 @@ C
           nAshI = nAsh(iSym)
           nSshI = nSsh(iSym)
 C
-          !! Inactive orbitals
-          Do iOrb = 1, nIshI
+          !! Do for all orbitals
+          Do iOrb = 1, nOrbI1
             iOrb1 = iOrb
             iOrb2 = iOrb+nFroI
-            Do jOrb = 1, nIshI
+            Do jOrb = 1, nOrbI1
               jOrb1 = jOrb
               jOrb2 = jOrb+nFroI
               DPT2(iMO2+iOrb2-1+nOrbI2*(jOrb2-1))
@@ -32,19 +32,33 @@ C
             End Do
           End Do
 C
-          !! External orbitals
-          Do iOrb = 1, nSshI
-            iOrb1 = iOrb+nIshI+nAshI
-            iOrb2 = iOrb+nFroI+nIshI+nAshI
-            Do jOrb = 1, nSshI
-              jOrb1 = jOrb+nIshI+nAshI
-              jOrb2 = jOrb+nFroI+nIshI+nAshI
-              DPT2(iMO2+iOrb2-1+nOrbI2*(jOrb2-1))
-     *          = DPT2_ori(iMO1+iOrb1-1+nOrbI1*(jOrb1-1))
-              DPT2(iMO2+jOrb2-1+nOrbI2*(iOrb2-1))
-     *          = DPT2_ori(iMO1+jOrb1-1+nOrbI1*(iOrb1-1))
-            End Do
-          End Do
+          !! Inactive orbitals
+        ! Do iOrb = 1, nIshI
+        !   iOrb1 = iOrb
+        !   iOrb2 = iOrb+nFroI
+        !   Do jOrb = 1, nIshI
+        !     jOrb1 = jOrb
+        !     jOrb2 = jOrb+nFroI
+        !     DPT2(iMO2+iOrb2-1+nOrbI2*(jOrb2-1))
+     *  !       = DPT2_ori(iMO1+iOrb1-1+nOrbI1*(jOrb1-1))
+        !     DPT2(iMO2+jOrb2-1+nOrbI2*(iOrb2-1))
+     *  !       = DPT2_ori(iMO1+jOrb1-1+nOrbI1*(iOrb1-1))
+        !   End Do
+        ! End Do
+C
+        ! !! External orbitals
+        ! Do iOrb = 1, nSshI
+        !   iOrb1 = iOrb+nIshI+nAshI
+        !   iOrb2 = iOrb+nFroI+nIshI+nAshI
+        !   Do jOrb = 1, nSshI
+        !     jOrb1 = jOrb+nIshI+nAshI
+        !     jOrb2 = jOrb+nFroI+nIshI+nAshI
+        !     DPT2(iMO2+iOrb2-1+nOrbI2*(jOrb2-1))
+     *  !       = DPT2_ori(iMO1+iOrb1-1+nOrbI1*(jOrb1-1))
+        !     DPT2(iMO2+jOrb2-1+nOrbI2*(iOrb2-1))
+     *  !       = DPT2_ori(iMO1+jOrb1-1+nOrbI1*(iOrb1-1))
+        !   End Do
+        ! End Do
         End If
         iMO1 = iMO1 + nOrbI1*nOrbI1
         iMO2 = iMO2 + nOrbI2*nOrbI2

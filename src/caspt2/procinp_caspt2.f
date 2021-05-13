@@ -517,6 +517,7 @@ C        DoGrdt=.false.
       End If
       IFSADREF = Input%SADREF
       IFDORTHO = Input%DORTHO
+      IFINVAR  = Input%INVAR
 *---  Exit
       CALL QEXIT('PROC_INP')
       Return

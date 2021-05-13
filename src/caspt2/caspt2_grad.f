@@ -66,41 +66,55 @@ C
 #include "caspt2_grad.fh"
 C
       Character(Len=16) mstate1
+      LOGICAL DEBUG
 C
+      DEBUG = .TRUE.
       Call Molcas_Open(LuPT2,'PT2_Lag')
-      Write (LuPT2,*) BSHIFT
+C     Write (LuPT2,*) BSHIFT
       !! configuration Lagrangian (read in RHS_PT2)
+      If (DEBUG) Write (*,*) "CLag"
       Do i = 1, nCLag
 C       if (abs(work(ipclag+i-1)).le.1.0d-10) work(ipclag+i-1)=0.0d+00
         Write (LuPT2,*) Work(ipClag+i-1)
+        If (DEBUG) Write (*,'(I6,F20.10)') i,Work(ipClag+i-1)
       End Do
       !! orbital Lagrangian (read in RHS_PT2)
+      If (DEBUG) Write (*,*) "OLag"
       Do i = 1, nOLag
 C       if (abs(work(ipolag+i-1)).le.1.0d-10) work(ipolag+i-1)=0.0d+00
         Write (LuPT2,*) Work(ipOlag+i-1)
+        If (DEBUG) Write (*,'(I6,F20.10)') i,Work(ipOlag+i-1)
       End Do
       !! state Lagrangian (read in RHS_PT2)
+      If (DEBUG) Write (*,*) "SLag"
       Do i = 1, nSLag
         Write (LuPT2,*) Work(ipSlag+i-1)
+        If (DEBUG) Write (*,'(I6,F20.10)') i,Work(ipSlag+i-1)
       End Do
 C
 C
 C
       !! renormalization contributions (read in OUT_PT2)
+      If (DEBUG) Write (*,*) "WLag"
       Do i = 1, nbast*(nbast+1)/2 !! nWLag
         Write (LuPT2,*) Work(ipWlag+i-1)
+        If (DEBUG) Write (*,'(I6,F20.10)') i,Work(ipWlag+i-1)
       End Do
 C     write (*,*) "dpt2"
       !! D^PT2 in MO (read in OUT_PT2)
+      If (DEBUG) Write (*,*) "DPT2"
       Do i = 1, nBasSq
 C       write (*,*) i,work(ipdpt2+i-1)
         Write (LuPT2,*) Work(ipDPT2+i-1)
+        If (DEBUG) Write (*,'(I6,F20.10)') i,Work(ipDPT2+i-1)
       End Do
 C     write (*,*) "dpt2c"
       !! D^PT2(C) in MO (read in OUT_PT2)
+      If (DEBUG) Write (*,*) "DPT2C"
       Do i = 1, nBasSq
 C       write (*,*) i,work(ipdpt2c+i-1)
         Write (LuPT2,*) Work(ipDPT2C+i-1)
+        If (DEBUG) Write (*,'(I6,F20.10)') i,Work(ipDPT2C+i-1)
       End Do
 C
 C
@@ -137,6 +151,33 @@ C     write (*,*) "LuGamma is ", LuGamma
 C     write (*,*) "bshift =", bshift
 C     Call Put_dScalar('BSHIFT',BSHIFT)
 C
+C
       Return
 C
       End Subroutine GrdCls
+C
+C-----------------------------------------------------------------------
+C
+      Subroutine ModDip
+C
+      IMPLICIT REAL*8 (A-H,O-Z)
+C
+#include "rasdim.fh"
+#include "caspt2.fh"
+#include "WrkSpc.fh"
+C
+      CALL GETMEM('DMs1   ','ALLO','REAL',ipDMs1,3*nRoots)
+      CALL GETMEM('DMs2   ','ALLO','REAL',ipDMs2,3*lRoots)
+      Call Get_dArray('Last Dipole Moments',Work(ipDMs2),3*LROOTS)
+      Do i = 1, lRoots
+        j = Root2State(i)
+        If (j.eq.0) Cycle
+        Call DCopy_(3,Work(ipDMs2+3*(i-1)),1,Work(ipDMs1+3*(j-1)),1)
+      End Do
+      Call Put_dArray('Last Dipole Moments',Work(ipDMs1),3*nROOTS)
+      CALL GETMEM('DMs1   ','FREE','REAL',ipDMs1,3*nRoots)
+      CALL GETMEM('DMs2   ','FREE','REAL',ipDMs2,3*lRoots)
+C
+      Return
+C
+      End Subroutine ModDip

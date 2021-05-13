@@ -132,6 +132,26 @@ C         Write (LuCMOPT2) Work(LCMO+i-1)
         write (LuCMOPT2) (nFro(6))
         write (LuCMOPT2) (nFro(7))
         write (LuCMOPT2) (nFro(8))
+        !! Number of state-specific density matrix
+        !! It is needed, because the separable contribution to the
+        !! electron repulsion integral is different
+        nSSDM = 0
+        If (.not.IFSADREF) Then
+          If (nState.eq.1) Then
+            nSSDM = 0
+          Else If (IFXMS) Then
+            !! For XMS, use SA density matrix
+            nSSDM = 0
+          Else If (IFMSCOUP) Then
+            !! For MS, use nState density matrix
+            nSSDM = nState
+          Else
+            !! Otherwise, use one SS density matrix
+            nSSDM = 1
+          End If
+        End If
+        write (LuCMOPT2) nSSDM
+C
         !! Write the number of occupied orbitals
 C       write (LuCMOPT2) (dble(nIsh(iSym)+nAsh(iSym)),iSym=1,8)
 C       write (LuCMOPT2) (dble(nFro(iSym)),iSym=1,8)
