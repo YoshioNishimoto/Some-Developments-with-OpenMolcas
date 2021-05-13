@@ -68,7 +68,7 @@ C
       Character(Len=16) mstate1
       LOGICAL DEBUG
 C
-      DEBUG = .TRUE.
+      DEBUG = .FALSE.
       Call Molcas_Open(LuPT2,'PT2_Lag')
 C     Write (LuPT2,*) BSHIFT
       !! configuration Lagrangian (read in RHS_PT2)
