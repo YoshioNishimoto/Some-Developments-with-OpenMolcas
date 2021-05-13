@@ -383,8 +383,9 @@
 *
       Call ValANM(nsAtom,nQQ,nIter,BMx,Degen,qInt,Cx,'Values',nWndw)
       If (BSet) Then
-         Call ValANM(nsAtom,nQQ,nIter,BMx,Degen,dqInt,Gx,'Gradients',
-     &               nWndw)
+         Call ValANM(nsAtom,nQQ,nIter,BMx,Degen,
+     &               dqInt(:,:),Gx,
+     &               'Gradients,Gx',nWndw)
 
 *
 *    We transform the energy difference gradient vector and the
@@ -396,9 +397,9 @@
          If (n>0) Call ValANM(nsAtom,nQQ,nIter,BMx,Degen,
      &                        dqInt_Aux(:,:,1),Gx0,
      &                        'Gradients,Gx0',nWndw)
-*        If (n>1) Call ValANM(nsAtom,nQQ,nIter,BMx,Degen,
-*    &                        dqInt_Aux(:,:,2),NAC,
-*    &                        'Gradients,Gx0',nWndw)
+         If (n>1) Call ValANM(nsAtom,nQQ,nIter,BMx,Degen,
+     &                        dqInt_Aux(:,:,2),NAC,
+     &                        'Gradients,NAC',nWndw)
       End If
 *                                                                      *
 ************************************************************************
