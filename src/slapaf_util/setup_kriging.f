@@ -12,13 +12,14 @@
 ************************************************************************
       Subroutine SetUp_Kriging(nRaw,iFirst)
       Use kriging_mod, only: blavAI, set_l, layer_U
-      use Slapaf_Info, only: qInt, dqInt, Energy
+      use Slapaf_Info, only: qInt, dqInt, Energy, dqInt_Aux,
+     &                       Energy0
       Implicit None
       Integer nRaw, iFirst
 
 #include "stdalloc.fh"
 #include "real.fh"
-      Integer :: nSet=1
+      Integer :: nSet, nAux
       Integer i,iInter,jInter,ij, iS, iE, nInter
       Real*8 Value_l
       Real*8, Allocatable:: Array_l(:), HTri(:), Hessian(:,:),
@@ -103,6 +104,10 @@
 ************************************************************************
 *                                                                      *
       Call mma_Allocate(qInt_s,nInter,nRaw,Label="qInt_s")
+
+      nAux = 0
+      If (Allocated(dqInt_Aux)) nAux = Size(dqInt_Aux,3)
+      nSet = 1 + nAux
       Call mma_Allocate(dqInt_s,nInter,nRaw,nSet,Label="dqInt_s")
       Call mma_Allocate(Energy_s,nRaw,nSet,Label="Energy_s")
 *                                                                      *
@@ -113,9 +118,23 @@
       Call Trans_K(qInt(:,iS:iE),qInt_s,nInter,nRaw)
 
       Call Trans_K(dqInt(:,iS:iE),dqInt_s(:,:,1),nInter,nRaw)
-      dqInt_s(:,:,:) = - dqInt_s(:,:,:)
+      dqInt_s(:,:,1) = - dqInt_s(:,:,1)
 
       Energy_s(1:nRaw,1)=Energy(iS:iE)
+
+      If (nAux>0) Then
+         Call Trans_K(dqInt_Aux(:,iS:iE,1),dqInt_s(:,:,2),nInter,nRaw)
+         dqInt_s(:,:,2) = - dqInt_s(:,:,2)
+
+         Energy_s(1:nRaw,2)=Energy0(iS:iE)
+      End If
+
+      If (nAux>1) Then
+         Call Trans_K(dqInt_Aux(:,iS:iE,2),dqInt_s(:,:,3),nInter,nRaw)
+         dqInt_s(:,:,3) = - dqInt_s(:,:,3)
+
+         Energy_s(1:nRaw,3)=Zero
+      End If
 *                                                                      *
 ************************************************************************
 *                                                                      *
