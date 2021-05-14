@@ -381,7 +381,9 @@
 *
 *---- Compute the value and gradient vectors in the new basis.
 *
-      Call ValANM(nsAtom,nQQ,nIter,BMx,Degen,qInt,Cx,'Values',nWndw)
+      Call ValANM(nsAtom,nQQ,nIter,BMx,Degen,
+     &            qInt(:,:),Cx,
+     &            'Values',nWndw)
       If (BSet) Then
          Call ValANM(nsAtom,nQQ,nIter,BMx,Degen,
      &               dqInt(:,:),Gx,
