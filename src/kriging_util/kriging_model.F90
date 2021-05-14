@@ -16,7 +16,7 @@ subroutine kriging_model()
 use kriging_mod, only: blAI, blaAI, blavAI, blvAI, detR, dy, full_R, Index_PGEK, Kv, lh, m_t, mblAI, nPoints, nD, nInter_Eff, &
                        ordinary, Rones, sb, sbmev, sbO, variance, y
 use stdalloc, only: mma_allocate, mma_deallocate
-use Constants, only: Zero, One, Two
+use Constants, only: Zero, One
 use Definitions, only: wp, iwp, r8, u6
 
 !#define _DPOSV_

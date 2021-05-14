@@ -10,7 +10,7 @@
 ************************************************************************
       Subroutine BMtrx_Cartesian(nsAtom,nDimBC,nIter,mTtAtm,
      &                           mTR,TRVec,EVal,Hss_x,nQQ,nWndw)
-      use Slapaf_Info, only: Cx, Gx, qInt, dqInt, KtB, BMx, Degen,
+      use Slapaf_Info, only: Cx, Gx, Gx0, qInt, dqInt, KtB, BMx, Degen,
      &                       AtomLbl, Smmtrc, dqInt_Aux, NAC
       use Slapaf_Parameters, only: Redundant, MaxItr, BSet, HSet, PrQ,
      &                             lOld, NADC, iState
