@@ -53,7 +53,7 @@ integer(kind=iwp) :: nInter_Eff = 0
 real(kind=wp), allocatable :: rl(:,:), dl(:), full_Rinv(:,:), full_R(:,:), x0(:), Kv(:,:), cv(:,:,:), Rones(:), l(:), gpred(:), &
                               hpred(:,:), ll(:), cvMatFder(:), cvMatSder(:), cvMatTder(:)
 integer(kind=iwp), allocatable :: Index_PGEK(:)
-real(kind=wp) :: pred, sigma, var, sb(3)= [0.0_wp,0.0_wp,0.0_wp], variance, detR, lh, sbO, sbmev
+real(kind=wp) :: pred, sigma, var, sb(3)= [0.0_wp,0.0_wp,0.0_wp], variance(3), detR, lh(3), sbO, sbmev
 integer(kind=iwp) :: m_t
 real(kind=wp), parameter :: h = 1e-5, eps = 1e-13, eps2 = 1e-10
 ! eps avoid to become singular in 1st der & eps2 in 2nd der

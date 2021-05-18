@@ -12,9 +12,12 @@
 !***********************************************************************
 Subroutine Kriging_Update(nQQ,iter,qInt,E_Disp)
 Use Slapaf_Info, only: Energy, dqInt
+Use Kriging_Mod, only: nSet
 Implicit None
 Integer nQQ, iter
 Real*8  qInt(nQQ), E_Disp
+
+Integer iSet
 !                                                                      *
 !***********************************************************************
 !                                                                      *
@@ -30,6 +33,7 @@ Real*8  qInt(nQQ), E_Disp
 !
 !  The default case
 !
+iSet = 1
 Call Energy_Kriging_layer(qInt(:),Energy(iter),nQQ)
 
 Call Dispersion_Kriging_Layer(qInt(:),E_Disp,nQQ)
@@ -37,14 +41,21 @@ Call Dispersion_Kriging_Layer(qInt(:),E_Disp,nQQ)
 Call Gradient_Kriging_layer(qInt(:),dqInt(:,iter),nQQ)
 
 dqInt(:,iter) = - dqInt(:,iter)
+
+If (nSet==1) Return
 !                                                                      *
 !***********************************************************************
 !                                                                      *
 !  For the energy difference
+!
+iSet = 2
+If (nSet==2) Return
 !                                                                      *
 !***********************************************************************
 !                                                                      *
 !  For the non-adiabatic vector
+!
+iSet = 3
 !                                                                      *
 !***********************************************************************
 !                                                                      *

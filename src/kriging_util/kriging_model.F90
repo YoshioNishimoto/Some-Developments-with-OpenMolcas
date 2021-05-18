@@ -206,14 +206,14 @@ call DGESV_(m_t,1,A,m_t,IPIV,Kv(:,iSet),m_t,INFO)
 !
 !   s^2 = (y - mu f) R^{-1} (y - mu f) / n
 
-variance = dot_product(B,Kv(:,iSet))/real(m_t,kind=wp)
+variance(iSet) = dot_product(B,Kv(:,iSet))/real(m_t,kind=wp)
 
 ! compute the value of the likelihood function
 
-lh = variance*exp(detR/real(m_t,kind=wp))
+lh(iSet) = variance(iSet)*exp(detR/real(m_t,kind=wp))
 
 #ifdef _DEBUGPRINT_
-write(u6,*) 'Variance=',Variance
+write(u6,*) 'Variance=',Variance(iSet)
 write(u6,*) 'Info=',Info
 write(u6,*) 'lh=',lh
 call RecPrt('X=A^{-1}Kv','(5(E15.7,2X))',Kv(:,iSet),1,m_t)

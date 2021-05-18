@@ -47,7 +47,7 @@ if (gh == 0) then ! calculate the energy and dispersion
     var = max(var+(One-dot_product(cv(:,1,1),rones))**2/tsum,Zero)
   end if
 
-  sigma = sqrt(var*variance)
+  sigma = sqrt(var*variance(1))
   call mma_deallocate(A)
   call mma_deallocate(IPIV)
 
