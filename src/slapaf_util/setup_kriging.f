@@ -11,7 +11,7 @@
 * Copyright (C) 2020, Roland Lindh                                     *
 ************************************************************************
       Subroutine SetUp_Kriging(nRaw,iFirst)
-      Use kriging_mod, only: blavAI, set_l, layer_U
+      Use kriging_mod, only: blavAI, set_l, layer_U, iter_actual
       use Slapaf_Info, only: qInt, dqInt, Energy, dqInt_Aux,
      &                       Energy0
       Implicit None
@@ -31,6 +31,8 @@
       nInter=Size(qInt,1)
       iS = iFirst
       iE = iFirst + nRaw - 1
+
+      iter_actual = iE  ! Store away the actual iteration count.
 *                                                                      *
 ************************************************************************
 *                                                                      *
