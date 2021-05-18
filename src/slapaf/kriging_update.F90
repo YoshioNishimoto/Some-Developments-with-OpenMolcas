@@ -11,14 +11,16 @@
 ! Copyright (C) 2021, Roland Lindh                                     *
 !***********************************************************************
 Subroutine Kriging_Update(nQQ,iter,qInt,E_Disp)
-Use Slapaf_Info, only: Energy, dqInt, Energy0, BMx_Save
+Use Slapaf_Info, only: Energy, dqInt, Energy0, BMx_Save, Gx0, Degen
 Use Kriging_Mod, only: nSet, iter_actual
+Use Slapaf_Parameters, only: Curvilinear
 Implicit None
 Integer nQQ, iter
 Real*8  qInt(nQQ), E_Disp
 
+#include "real.fh"
 #include "stdalloc.fh"
-Integer iSet
+Integer iSet, nAtoms, iAtom, ixyz
 Real*8  Temp(3), Demp(3)
 Real*8, Allocatable:: Aux(:,:)
 
@@ -75,6 +77,30 @@ Energy0(iter_actual+1) = Temp(iSet)
 ! Cartesians and store them at the correct place, that is, in Gx0.
 
 If (.NOT.Allocated(BMx_Save)) Call Abend()
+
+!
+! dE/dx = dq/dx dE/dq
+!
+
+nAtoms = Size(Gx0,2)
+
+call DGEMM_('N','N',                                  &
+            3*nAtoms,1,nQQ,                           &
+            One,BMx_Save,3*nAtoms,                    &
+                Aux(:,iSet),nQQ,                      &
+           Zero,Gx0(:,:,iter_actual+1),3*nAtoms)
+
+
+! Modify with degeneracy factors.
+
+if (Curvilinear) then
+   do iAtom=1,nAtoms
+      do ixyz=1,3
+         Gx0(ixyz,iAtom,iter_actual+1) = Gx0(ixyz,iAtom,iter_actual+1)/Degen(ixyz,iAtom)
+      end do
+   end do
+end if
+
 
 If (nSet==2) Then
    Call mma_deallocate(Aux)
