@@ -25,7 +25,7 @@ use Definitions, only: wp, iwp, r8, u6
 !#endif
 
 implicit none
-integer(kind=iwp) :: i_eff, is, ie, ise, iee, i, INFO ! ipiv the pivot indices that define the permutation matrix
+integer(kind=iwp) :: i_eff, is, ie, ise, iee, i, iSet, INFO ! ipiv the pivot indices that define the permutation matrix
 integer(kind=iwp), allocatable :: IPIV(:)
 real(kind=wp), allocatable :: B(:), A(:,:)
 real(kind=r8), external :: dDot_
@@ -155,14 +155,15 @@ end if
 
 !**********************************************************************
 !
-! 2) form the value vector, (y - mu f)
+! 2) form the value vector, kv = (y - mu f)
 !
 !**********************************************************************
-
+!
 !     B(1:m_t) = [y(1:nPoints)-sb,dy(1:nInter*(nPoints-nD))]
 
+Do iSet = 1, nSet
 ! the values
-B(1:nPoints) = y(1:nPoints,1)-sb(1)
+B(1:nPoints) = y(1:nPoints,iSet)-sb(iSet)
 ! the gradients
 do i_eff=1,nInter_eff
   i = Index_PGEK(i_eff)
@@ -170,7 +171,7 @@ do i_eff=1,nInter_eff
   ise = nPoints+(i_eff-1)*(nPoints-nD)+1
   ie = is+(nPoints-nD)-1
   iee = ise+(nPoints-nD)-1
-  B(ise:iee) = dy(is:ie,1)
+  B(ise:iee) = dy(is:ie,iSet)
 end do
 
 #ifdef _DEBUGPRINT_
@@ -178,29 +179,34 @@ write(u6,*) 'sb(1),ln(det|PSI|)=',sb(1),detR
 call RecPrt('[y-sb,dy]','(12(2x,E9.3))',B,1,m_t)
 #endif
 
-Kv(:,1) = B(:)             ! The value vector
+Kv(:,iSet) = B(:)             ! The value vector
 
 #ifdef _DEBUGPRINT_
-call RecPrt('Kv',' ',Kv(:,1),1,m_t)
+write (u6,*) 'iSet=',iSet
+call RecPrt('Kv',' ',Kv(:,iSet),1,m_t)
 #endif
 
-A(:,:) = full_R(:,:)
-
+!
+!**********************************************************************
+!
 !
 ! Solve R x = (y - mu f), i.e. x = R^{-1} (y - mu f)
 !
 
+A(:,:) = full_R(:,:)
+
+
 #ifdef _DPOSV_
-call DPOSV_('U',m_t,1,A,m_t,Kv(:,1),m_t,INFO)
+call DPOSV_('U',m_t,1,A,m_t,Kv(:,iSet),m_t,INFO)
 #else
-call DGESV_(m_t,1,A,m_t,IPIV,Kv(:,1),m_t,INFO)
+call DGESV_(m_t,1,A,m_t,IPIV,Kv(:,iSet),m_t,INFO)
 #endif
 
 !   Compute the dispersion
 !
 !   s^2 = (y - mu f) R^{-1} (y - mu f) / n
 
-variance = dot_product(B,Kv(:,1))/real(m_t,kind=wp)
+variance = dot_product(B,Kv(:,iSet))/real(m_t,kind=wp)
 
 ! compute the value of the likelihood function
 
@@ -210,8 +216,10 @@ lh = variance*exp(detR/real(m_t,kind=wp))
 write(u6,*) 'Variance=',Variance
 write(u6,*) 'Info=',Info
 write(u6,*) 'lh=',lh
-call RecPrt('X=A^{-1}Kv','(5(E15.7,2X))',Kv(:,1),1,m_t)
+call RecPrt('X=A^{-1}Kv','(5(E15.7,2X))',Kv(:,iSet),1,m_t)
 #endif
+
+End Do
 
 call mma_Deallocate(B)
 call mma_Deallocate(A)
