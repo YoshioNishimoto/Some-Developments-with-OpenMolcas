@@ -17,7 +17,12 @@ Implicit None
 Integer nQQ, iter
 Real*8  qInt(nQQ), E_Disp
 
+#include "stdalloc.fh"
 Integer iSet
+Real*8  Temp
+Real*8, Allocatable:: Aux(:)
+
+Call mma_allocate(Aux,nQQ,Label='Aux')
 !                                                                      *
 !***********************************************************************
 !                                                                      *
@@ -34,22 +39,29 @@ Integer iSet
 !  The default case
 !
 iSet = 1
-Call Energy_Kriging_layer(qInt(:),Energy(iter),nQQ)
+Call Energy_Kriging_layer(qInt(:),Temp,nQQ)
+Energy(iter) = Temp
 
-Call Dispersion_Kriging_Layer(qInt(:),E_Disp,nQQ)
+Call Dispersion_Kriging_Layer(qInt(:),Temp,nQQ)
+E_Disp = Temp
 
-Call Gradient_Kriging_layer(qInt(:),dqInt(:,iter),nQQ)
+Call Gradient_Kriging_layer(qInt(:),Aux(:),nQQ)
+dqInt(:,iter) = - Aux(:)
 
-dqInt(:,iter) = - dqInt(:,iter)
-
-If (nSet==1) Return
+If (nSet==1) Then
+   Call mma_deallocate(Aux)
+   Return
+End If
 !                                                                      *
 !***********************************************************************
 !                                                                      *
 !  For the energy difference
 !
 iSet = 2
-If (nSet==2) Return
+If (nSet==2) Then
+   Call mma_deallocate(Aux)
+   Return
+End If
 !                                                                      *
 !***********************************************************************
 !                                                                      *
@@ -59,5 +71,7 @@ iSet = 3
 !                                                                      *
 !***********************************************************************
 !                                                                      *
+Call mma_deallocate(Aux)
+!
 End Subroutine Kriging_Update
 
