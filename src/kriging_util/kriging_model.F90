@@ -14,7 +14,7 @@
 subroutine kriging_model()
 
 use kriging_mod, only: blAI, blaAI, blavAI, blvAI, detR, dy, full_R, Index_PGEK, Kv, lh, m_t, mblAI, nPoints, nD, nInter_Eff, &
-                       ordinary, Rones, sb, sbmev, sbO, variance, y
+                       ordinary, Rones, sb, sbmev, sbO, variance, y, nSet
 use stdalloc, only: mma_allocate, mma_deallocate
 use Constants, only: Zero, One
 use Definitions, only: wp, iwp, r8, u6
@@ -106,21 +106,27 @@ if (blaAI) then    ! This is the default.
 
   ! Make sure the base line is above any data point, this to make sure the surrogate model is bound.
 
-  sb = -huge(sb)
+  sb(1) = -huge(sb(1))
   do i=1,nPoints
-    sb = max(sb,y(i,1)+blavAI)
+    sb(1) = max(sb(1),y(i,1)+blavAI)
   end do
+
+  If (nSet>1) sb(2)=Zero
+  If (nSet>2) sb(3)=Zero
 
 else if (mblAI) then
 
-  sb = sbmev
+  If (nSet>1) Call Abend()
+  sb(1) = sbmev
 
 else if (blAI) then
 
-  sb = blvAI
+  If (nSet>1) Call Abend()
+  sb(1) = blvAI
 
 else
 
+  If (nSet>1) Call Abend()
   ! Derived according to ordinary kriging
 
   ordinary = .true.
@@ -144,7 +150,7 @@ else
   ! mu =  (f R^{-1} y) /(f R^{-1} f)
   sbO = DDot_(m_t,rones,1,B,1)/DDot_(nPoints,rones,1,[One],0)
 
-  sb = sbO
+  sb(1) = sbO
 end if
 
 !**********************************************************************
@@ -156,7 +162,7 @@ end if
 !     B(1:m_t) = [y(1:nPoints)-sb,dy(1:nInter*(nPoints-nD))]
 
 ! the values
-B(1:nPoints) = y(1:nPoints,1)-sb
+B(1:nPoints) = y(1:nPoints,1)-sb(1)
 ! the gradients
 do i_eff=1,nInter_eff
   i = Index_PGEK(i_eff)
@@ -168,7 +174,7 @@ do i_eff=1,nInter_eff
 end do
 
 #ifdef _DEBUGPRINT_
-write(u6,*) 'sb,ln(det|PSI|)=',sb,detR
+write(u6,*) 'sb(1),ln(det|PSI|)=',sb(1),detR
 call RecPrt('[y-sb,dy]','(12(2x,E9.3))',B,1,m_t)
 #endif
 
