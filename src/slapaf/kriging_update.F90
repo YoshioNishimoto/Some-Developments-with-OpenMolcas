@@ -19,7 +19,7 @@ Real*8  qInt(nQQ), E_Disp
 
 #include "stdalloc.fh"
 Integer iSet
-Real*8  Temp
+Real*8  Temp(3)
 Real*8, Allocatable:: Aux(:)
 
 Call mma_allocate(Aux,nQQ,Label='Aux')
@@ -40,10 +40,10 @@ Call mma_allocate(Aux,nQQ,Label='Aux')
 !
 iSet = 1
 Call Energy_Kriging_layer(qInt(:),Temp,nQQ)
-Energy(iter) = Temp
+Energy(iter) = Temp(1)
 
 Call Dispersion_Kriging_Layer(qInt(:),Temp,nQQ)
-E_Disp = Temp
+E_Disp = Temp(1)
 
 Call Gradient_Kriging_layer(qInt(:),Aux(:),nQQ)
 dqInt(:,iter) = - Aux(:)

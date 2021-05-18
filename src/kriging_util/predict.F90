@@ -63,9 +63,11 @@ End Do
 
 else if (gh == 1) then ! calculate the gradient
 
+  do iSet = 1, nSet
   do k=1,nInter
     B(:) = cv(:,k,1)
-    gpred(k) = dot_product(B,Kv(:,1))
+    gpred(k,iSet) = dot_product(B,Kv(:,iSet))
+  end do
   end do
 
 else if (gh == 2) then ! calculate the Hessian

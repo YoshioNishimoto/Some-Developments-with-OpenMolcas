@@ -13,7 +13,7 @@
 
 subroutine Gradient_Kriging(x0_,dy_,ndimx)
 
-use kriging_mod, only: gpred, x0
+use kriging_mod, only: gpred, x0, nSet
 use Definitions, only: wp, iwp
 
 !#define _Grad_Test
@@ -24,7 +24,7 @@ use Constants, only: Two, u6
 implicit none
 integer(kind=iwp), intent(in) :: ndimx
 real(kind=wp), intent(in) :: x0_(ndimx)
-real(kind=wp), intent(out) :: dy_(ndimx)
+real(kind=wp), intent(out) :: dy_(ndimx,*)
 #ifdef _Grad_Test
 integer(kind=iwp) :: i
 real(kind=wp) :: Delta, tpred, thpred
@@ -38,10 +38,11 @@ x0(:) = x0_(:)
 ! Write(u6,*) 'Entro grad'
 call covarvector(1) ! for: 0-GEK, 1-Gradient of GEK, 2-Hessian of GEK
 call predict(1)
-dy_(:) = gpred(:)
+dy_(:,1:nSet) = gpred(:,1:nSet)
 
 #ifdef _Grad_Test
 ! Numerical Gradient of GEK
+If (nSet/=1) Call abend()
 write(u6,*) 'Begining Numerical Gradient'
 Delta = 1.0e-4_wp !max(abs(x_(i,1)),1.0e-5_wp)*Scale
 do i=1,nInter

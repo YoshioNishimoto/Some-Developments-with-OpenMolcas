@@ -14,20 +14,26 @@
 subroutine Gradient_Kriging_Layer(qInt,Grad,nInter)
 
 use stdalloc, only: mma_allocate, mma_deallocate
+use kriging_mod, only: nSet
 use Definitions, only: wp, iwp
 
 implicit none
 integer(kind=iwp), intent(in) :: nInter
 real(kind=wp), intent(in) :: qInt(nInter)
-real(kind=wp), intent(out) :: Grad(nInter)
-real(kind=wp), allocatable :: qInt_s(:), Grad_s(:)
+real(kind=wp), intent(out) :: Grad(nInter,*)
+real(kind=wp), allocatable :: qInt_s(:), Grad_s(:,:)
+
+integer(kind=iwp) :: iSet
 
 call mma_allocate(qInt_s,nInter,label='qInt_s')
-call mma_allocate(Grad_s,nInter,label='Grad_s')
+call mma_allocate(Grad_s,nInter,nSet,label='Grad_s')
 
 call Trans_K(qInt,qInt_s,nInter,1)
 call Gradient_Kriging(qInt_s,Grad_s,nInter)
-call BackTrans_K(Grad_s,Grad,nInter,1)
+
+Do iSet = 1, nSet
+call BackTrans_K(Grad_s(:,iSet),Grad(:,iSet),nInter,1)
+End Do
 
 call mma_deallocate(Grad_s)
 call mma_deallocate(qInt_s)
