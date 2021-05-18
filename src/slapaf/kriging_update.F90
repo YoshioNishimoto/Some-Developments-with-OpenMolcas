@@ -11,7 +11,7 @@
 ! Copyright (C) 2021, Roland Lindh                                     *
 !***********************************************************************
 Subroutine Kriging_Update(nQQ,iter,qInt,E_Disp)
-Use Slapaf_Info, only: Energy, dqInt, Energy0
+Use Slapaf_Info, only: Energy, dqInt, Energy0, BMx_Save
 Use Kriging_Mod, only: nSet, iter_actual
 Implicit None
 Integer nQQ, iter
@@ -21,6 +21,7 @@ Real*8  qInt(nQQ), E_Disp
 Integer iSet
 Real*8  Temp(3), Demp(3)
 Real*8, Allocatable:: Aux(:,:)
+
 
 Call mma_allocate(Aux,nQQ,nSet,Label='Aux')
 !                                                                      *
@@ -72,6 +73,8 @@ Energy0(iter_actual+1) = Temp(iSet)
 ! We should not have the gradient of the energy difference with respect
 ! to the internal coordinates. We now need to transform those to
 ! Cartesians and store them at the correct place, that is, in Gx0.
+
+If (.NOT.Allocated(BMx_Save)) Call Abend()
 
 If (nSet==2) Then
    Call mma_deallocate(Aux)

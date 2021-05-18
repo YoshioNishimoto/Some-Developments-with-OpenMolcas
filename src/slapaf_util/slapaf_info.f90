@@ -16,7 +16,7 @@ Private
 Public:: Cx, Gx, Gx0, NAC, Q_nuclear, dMass, Coor, Grd, ANr, Weights, Shift, GNrm, Lambda, &
          Energy, Energy0, DipM, MF, qInt, dqInt, nSup, Atom, RefGeo, BMx, Degen, jStab, nStab, iCoSet, &
          BM, dBM, iBM, idBM, nqBM, R12, GradRef, KtB, AtomLbl, Smmtrc, Lbl, mRowH, RootMap, &
-         Free_Slapaf, Get_Slapaf, Dmp_Slapaf, dqInt_Aux
+         Free_Slapaf, Get_Slapaf, Dmp_Slapaf, dqInt_Aux, BMx_Save
 !
 ! Arrays always allocated
 !
@@ -42,6 +42,7 @@ Real*8, Allocatable, Target:: RefGeo(:,:)   ! Reference geometry in Cartesian co
 Real*8, Allocatable, Target:: R12(:,:)      ! Reference geometry in R-P calculation (not used right now)
 Real*8, Allocatable, Target:: GradRef(:,:)  ! Reference gradient
 Real*8, Allocatable, Target:: Bmx(:,:)      ! the B matrix
+Real*8, Allocatable, Target:: Bmx_Save(:,:) ! the B matrix as saved in NewCar_Kriging
 Real*8, Allocatable:: Degen(:,:)    ! list of degeneracy numbers of the unique atoms (three identical entries)
 Integer, Allocatable:: jStab(:,:), iCoset(:,:), nStab(:) ! stabilizer and cosets information for the indivudual centers
 #include "LenIn.fh"
@@ -101,6 +102,7 @@ Contains
   If (Allocated(Weights)) Call mma_deallocate(Weights)
   If (Allocated(Shift)) Call mma_deallocate(Shift)
   If (Allocated(BMx)) Call mma_deallocate(BMx)
+  If (Allocated(BMx_Save)) Call mma_deallocate(BMx_Save)
 
   If (Allocated(BM)) Call mma_deallocate(BM)
   If (Allocated(dBM)) Call mma_deallocate(dBM)

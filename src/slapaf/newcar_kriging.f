@@ -11,7 +11,7 @@
 * Copyright (C) 2019, Ignacio Fdez. Galvan                             *
 ************************************************************************
       Subroutine NewCar_Kriging(kIter,SaveBMx,Error)
-      use Slapaf_Info, only: Cx, BMx
+      use Slapaf_Info, only: Cx, BMx, BMx_Save
       use Slapaf_Parameters, only: PrQ, Numerical, mTtAtm, Force_dB
       Implicit None
 #include "stdalloc.fh"
@@ -41,6 +41,14 @@
       PrQ=PrQ_Save
       Force_dB=.False.
       Call mma_deallocate(Coor)
+
+*     Stash away this B-matrix for later us with conical intersection
+*     optimization.
+
+      If (Allocated(BMX_save)) Call mma_deallocate(BMx_Save)
+      Call mma_allocate(BMx_Save,SIZE(BMx_tmp,1),SIZE(BMx_Tmp,2),
+     &                  Label='BMx_Save')
+      BMx_Save(:,:) = BMx_tmp(:,:)
 
       If (.NOT.SaveBMx) Then
          Call mma_deallocate(BMx)
