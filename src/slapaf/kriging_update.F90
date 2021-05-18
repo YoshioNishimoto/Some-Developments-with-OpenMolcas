@@ -11,7 +11,7 @@
 ! Copyright (C) 2021, Roland Lindh                                     *
 !***********************************************************************
 Subroutine Kriging_Update(nQQ,iter,qInt,E_Disp)
-Use Slapaf_Info, only: Energy, dqInt, Energy0, BMx_Save, Gx0, Degen
+Use Slapaf_Info, only: Energy, dqInt, Energy0, BMx_Save, Gx0, Degen, NAC
 Use Kriging_Mod, only: nSet, iter_actual
 Use Slapaf_Parameters, only: Curvilinear
 Implicit None
@@ -114,6 +114,23 @@ End If
 iSet = 3
 ! The code will assume that the value is Zero by convention.
 ! ?? = Temp(iSet)
+
+call DGEMM_('N','N',                                  &
+            3*nAtoms,1,nQQ,                           &
+            One,BMx_Save,3*nAtoms,                    &
+                Aux(:,iSet),nQQ,                      &
+           Zero,NAC(:,:,iter_actual+1),3*nAtoms)
+
+
+! Modify with degeneracy factors.
+
+if (Curvilinear) then
+   do iAtom=1,nAtoms
+      do ixyz=1,3
+         NAC(ixyz,iAtom,iter_actual+1) = NAC(ixyz,iAtom,iter_actual+1)/Degen(ixyz,iAtom)
+      end do
+   end do
+end if
 
 ! Right now we do not use the dispersion for the constraints
 
