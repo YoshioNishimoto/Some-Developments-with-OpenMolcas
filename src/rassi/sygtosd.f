@@ -19,6 +19,7 @@
 C     INTEGER KFSB,IBLK,ISPD,I,IPOS,IORB,ISYM
       INTEGER KFSB,IBLK,ISPD,I,IPOS,IORB
       INTEGER ISPN,NO,IOSTA,IOEND,IMORS,ISBSTR
+#include "Molcas.fh"
 #include "WrkSpc.fh"
 #include "stdalloc.fh"
       INTEGER ICNF,IEL,IEL1,IEL2,IFORM,IFSB,IOCC
@@ -35,9 +36,9 @@ C     INTEGER IERR,ICPL,KSBSMRS,JMORS,NFSB
       INTEGER OCC2MRS
       EXTERNAL OCC2MRS
 CC VK/GG 2020 CC add an occupation array in the usual 0,u,d,2 format
-      character(1), allocatable :: occ(:)
-      character(99) :: rdetocc(10000000)
-      real(8) :: rdetcoeff(10000000)
+      character(len=1), allocatable :: occ(:)
+      character(len=99) :: rdetocc(ndetmax)
+      real(8) :: rdetcoeff(ndetmax)
       integer :: idet, ndet, norbback
 CC CC
 

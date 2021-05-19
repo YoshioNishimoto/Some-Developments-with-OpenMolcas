@@ -19,8 +19,9 @@
       INTEGER IMODE,LCTMP
       CHARACTER*8 WFTP
 CC VK/GG 2020 CC
-      real*8 :: rdetcoeff(100000)
-      character*99 :: rdetocc(100000)
+#include "Molcas.fh"
+      real*8 :: rdetcoeff(ndetmax)
+      character*99 :: rdetocc(ndetmax)
       integer :: ndet, norb
 CC CC
 #include "WrkSpc.fh"

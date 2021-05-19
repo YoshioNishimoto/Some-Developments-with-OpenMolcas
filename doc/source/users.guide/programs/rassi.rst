@@ -737,6 +737,14 @@ Keywords
   .. xmldoc:: %%Keyword: CIPrint <advanced>
               Print out the CI coefficients read from JOBIPH.
 
+:kword:`CIH5`
+  Add CI coefficients, determinant occupations and molecular orbitals (both original and transformed) only for two spin manifolds.
+  Needed for Auger-SCI program.
+
+:kword:`NOTDm`
+  Works only coupled to keyword CIH5. Disable calculations of transition density matrices to accelerate program if one needs only
+  wavefunction decomposition.
+
 :kword:`THRS`
   The next line gives the threshold for printing CI coefficients. The
   default value is 0.05.

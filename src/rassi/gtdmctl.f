@@ -63,12 +63,12 @@ C     parallelization
       logical :: Rsv_Tsk
       integer :: itask, ltask, ltaski, ltaskj, ntasks, ID
 C     transformed CI expansion in determinant basis
-      real*8 :: rdetcoeff(10000000)
+      real*8 :: rdetcoeff(ndetmax)
       real*8, allocatable :: detcoeff1(:), detcoeff2(:)
-      character*99 :: rdetocc(10000000)
+      character*99 :: rdetocc(ndetmax)
       character*99, allocatable :: detocc1(:), detocc2(:)
       character*38 :: fomt
-      integer :: ndt1, ndt2, ocsp, norb, icnftab1(10), icnftab2(10)
+      integer :: ndt1, ndt2, ocsp, norb
 CC CC
 CC    NTO section
       Logical DoNTO
@@ -260,7 +260,7 @@ C Transform to biorthonormal orbital system
         CALL FINDT(CMO1,CMO2,TRA1,TRA2)
 CC VK/GG 2020 CC
 C put the pair of transformed orbitals to hdf5 file
-        if (PRCI) then
+        if (CIH5) then
         call mh5_put_dset_array_real(wfn_cmo,CMO1,
      &                               [nCMO,1],[0,JOB1-1])
         call mh5_put_dset_array_real(wfn_cmo,CMO2,
@@ -271,7 +271,7 @@ CC CC
       else
 CC VK/GG 2020 CC
 C put original orbitals to hdf5 file
-        if (PRCI) call mh5_put_dset_array_real(wfn_cmo_or,CMO1,
+        if (CIH5) call mh5_put_dset_array_real(wfn_cmo_or,CMO1,
      &                               [nCMO,1],[0,JOB1-1])
 CC CC
         TRORB = .false.
@@ -689,43 +689,48 @@ CC VK/GG 2020 CC
         call mma_allocate(detocc1,ndt1)
         call dcopy_(ndt1,rdetcoeff,1,detcoeff1,1)
         detocc1(:) = rdetocc(1:ndt1)
-        if (PRCI .and. JOB1/=JOB2) then
-          write(6,*) ' ******* TRANSFORMED CI COEFFICIENTS *******'
-          write(6,*) ' READCI called for state ', ISTATE
-          write(6,*) ' This is on JobIph nr.', JOB1
-          write(6,*) ' Its length NCI=', NCONF1
-          write(6,*) ' Its length NDET=', ndt1
-          if (ndt1>1) then
-            ocsp=MAX(9,NORB)
-C          write(6,'(A,I18)')'OCSP = ',ocsp
-            write(fomt,'(A,I2,A)')'(I7,A16,A',ocsp,
+        if (JOB1/=JOB2) then
+          if (PRCI) then
+            write(6,*) ' ******* TRANSFORMED CI COEFFICIENTS *******'
+            write(6,*) ' READCI called for state ', ISTATE
+            write(6,*) ' This is on JobIph nr.', JOB1
+            write(6,*) ' Its length NCI=', NCONF1
+            write(6,*) ' Its length NDET=', ndt1
+            if (ndt1>1) then
+              ocsp=MAX(9,NORB)
+C             write(6,'(A,I18)')'OCSP = ',ocsp
+               write(fomt,'(A,I2,A)')'(I7,A16,A',ocsp,
      &                 ',A5,G17.10,A5,G17.10)'
-            write(6,*)' Occupation of active orbitals, and spin'
-            write(6,*)' of open shells. (u,d: Spin up or down).'
-            write(6,'(A,A,A)')'    Det  ','                       ',
+              write(6,*)' Occupation of active orbitals, and spin'
+              write(6,*)' of open shells. (u,d: Spin up or down).'
+              write(6,'(A,A,A)')'    Det  ','                       ',
      &              '       Coef       Weight'
-            do i=1,ndt1
-              write(6,fomt)i,'                 ',
+              do i=1,ndt1
+                write(6,fomt)i,'                 ',
      &          trim(detocc1(i)),
      &          '     ',detcoeff1(i),'     ',detcoeff1(i)**2
-            enddo
-            write(6,*)('*',i=1,80)
+              enddo
+              write(6,*)('*',i=1,80)
           endif
 C put them to hdf5
-          call mh5_put_dset_array_real(wfn_detcoeff,detcoeff1,
+          if (CIH5) then
+            call mh5_put_dset_array_real(wfn_detcoeff,detcoeff1,
      &                               [ndt1,1,1],[0,istate-1,JOB1-1])
-          do i=1,ndt1
-            call mh5_put_dset_array_str(wfn_detocc,
+            do i=1,ndt1
+              call mh5_put_dset_array_str(wfn_detocc,
      &           trim(detocc1(i)),[1,1],[i-1,JOB1-1])
-          enddo
+            enddo
+          endif
         else
-C put original coefficents to hdf5
-          call mh5_put_dset_array_real(wfn_detcoeff_or,detcoeff1,
+C JOB1=JOB2, put original coefficents to hdf5
+          if (CIH5) then
+            call mh5_put_dset_array_real(wfn_detcoeff_or,detcoeff1,
      &                               [ndt1,1,1],[0,istate-1,JOB1-1])
-          do i=1,ndt1
-            call mh5_put_dset_array_str(wfn_detocc_or,
+            do i=1,ndt1
+              call mh5_put_dset_array_str(wfn_detocc_or,
      &           trim(detocc1(i)),[1,1],[i-1,JOB1-1])
-          enddo
+            enddo
+          endif
         endif
 
         call mma_deallocate(detcoeff1)
@@ -795,34 +800,38 @@ CC VK/GG 2020 CC
           call mma_allocate(detocc2,ndt2)
           call dcopy_(ndt2,rdetcoeff,1,detcoeff2,1)
           detocc2(:) = rdetocc(1:ndt2)
-          if (PRCI .and. JOB1/=JOB2) then
-            write(6,*) ' ******* TRANSFORMED CI COEFFICIENTS *******'
-            write(6,*) ' READCI called for state ',JSTATE
-            write(6,*) ' This is on JobIph nr.',JOB2
-            write(6,*) ' Its length NCI=',NCONF2
-            write(6,*) ' Its length NDET=', ndt2
-            if (ndt2>1) then
-              ocsp=MAX(9,NORB)
-              WRITE(fomt,'(A,I2,A)')'(I7,A16,A',ocsp,
+          if (JOB1/=JOB2) then
+            if (PRCI) then
+              write(6,*) ' ******* TRANSFORMED CI COEFFICIENTS *******'
+              write(6,*) ' READCI called for state ',JSTATE
+              write(6,*) ' This is on JobIph nr.',JOB2
+              write(6,*) ' Its length NCI=',NCONF2
+              write(6,*) ' Its length NDET=', ndt2
+              if (ndt2>1) then
+                ocsp=MAX(9,NORB)
+                write(fomt,'(A,I2,A)')'(I7,A16,A',ocsp,
      &                 ',A5,G17.10,A5,G17.10)'
-              WRITE(6,*)' Occupation of active orbitals, and spin'
-              WRITE(6,*)' of open shells. (u,d: Spin up or down).'
-              WRITE(6,'(A,A,A)')'    Det  ','                       ',
+                write(6,*)' Occupation of active orbitals, and spin'
+                write(6,*)' of open shells. (u,d: Spin up or down).'
+                write(6,'(A,A,A)')'    Det  ','                       ',
      &              '       Coef       Weight'
-              do i=1,ndt2
-                write(6,fomt) i,'                 ',
-     &          detocc2(i),
-     &          '     ',detcoeff2(i),'     ',detcoeff2(i)**2
-              enddo
-              write(6,*)('*',i=1,80)
+                do i=1,ndt2
+                  write(6,fomt) i,'                 ',
+     &            detocc2(i),
+     &            '     ',detcoeff2(i),'     ',detcoeff2(i)**2
+                enddo
+                write(6,*)('*',i=1,80)
+              endif
             endif
 C put them to hdf5
-            call mh5_put_dset_array_real(wfn_detcoeff,detcoeff2,
+            if (CIH5) then
+              call mh5_put_dset_array_real(wfn_detcoeff,detcoeff2,
      &                               [ndt2,1,1],[0,jstate-1,JOB2-1])
-            do i=1,ndt2
-              call mh5_put_dset_array_str(wfn_detocc,
+              do i=1,ndt2
+                call mh5_put_dset_array_str(wfn_detocc,
      &             detocc2(i),[1,1],[i-1,JOB2-1])
-            enddo
+              enddo
+            endif
           endif
           call mma_deallocate(detcoeff2)
           call mma_deallocate(detocc2)
@@ -901,7 +910,7 @@ C to avoid double counting
         PROP=PROP/dble(nProcs)
         HAM=HAM/dble(nProcs)
         if (DYSO) SFDYS=SFDYS/dble(nProcs)
-        DYSAMPS=DYSAMPS/dble(nProcs)
+        if (DYSO) DYSAMPS=DYSAMPS/dble(nProcs)
       EndIf
  400  if (.not. Rsv_Tsk(ID,iTask)) goto 401
 C recovers (jstate,istate) indicies as in serial calc

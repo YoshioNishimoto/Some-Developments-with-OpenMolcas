@@ -34,7 +34,6 @@
       integer :: nData, nIJ
       integer, allocatable :: state_irreps(:), state_mult(:)
       integer :: nbast, njobpairs
-*      integer, parameter :: ndetmax = 1000
       Character*(LENIN8) Clean_BName
       External Clean_BName
 
@@ -179,7 +178,7 @@
      $        'Molecular orbital coefficients in original basis')
       do i=1,nbasf(1)
         call mh5_put_dset_array_str(wfn_baslab,
-     $           Clean_BName(name(i),Lenin),[1],[i-1])
+     $         Clean_BName(name(i),Lenin),[1],[i-1])
       enddo
 ** **
 
