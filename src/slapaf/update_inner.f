@@ -51,6 +51,7 @@
      &                      Scr1(:), Scr2(:), Value(:), Value0(:),
      &                      Mult(:), dBVec(:), Tmp(:)
       Character(LEN=8), Allocatable:: Lbl_Tmp(:)
+      Real*8 Disp(3)
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -284,12 +285,12 @@ C           Write (6,*) 'tBeta=',tBeta
                Call Dispersion_Kriging_Layer(qInt(1,kIter+1),Disp,
      &                                       nQQ)
 #ifdef _DEBUGPRINT_
-               Write (6,*) 'Disp,Beta_Disp=',Disp,Beta_Disp
+               Write (6,*) 'Disp,Beta_Disp=',Disp(1),Beta_Disp
 #endif
                fact=Half*fact
                qBeta=Half*qBeta
-               If (One-disp/Beta_Disp.gt.1.0D-3) Exit
-               If ((fact.lt.1.0D-5) .or. (disp.lt.Beta_Disp)) Exit
+               If (One-disp(1)/Beta_Disp.gt.1.0D-3) Exit
+               If ((fact.lt.1.0D-5) .or. (disp(1).lt.Beta_Disp)) Exit
                Step_Trunc='*'
             End Do
 #ifdef _DEBUGPRINT_
