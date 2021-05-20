@@ -931,7 +931,6 @@ C           Write (6,*) 'gBeta=',gBeta
             If (First_MicroIteration) Then
                Beta_Disp_Save=Max(Beta_Disp_+tmp*Beta_Disp,
      &                            Beta_Disp_Min)
-               Write (6,*) 'Set Beta_Disp_Save=',Beta_Disp_Save
             End If
             Beta_Disp_=Beta_Disp_Save
 #ifdef _DEBUGPRINT_
@@ -968,7 +967,6 @@ C           Write (6,*) 'gBeta=',gBeta
             q(:,nIter+1)=q(:,nIter)+dq_xy(:)
 *
             Call Dispersion_Kriging_Layer(q(1,nIter+1),disp,nInter)
-            Write (6,*) 'disp=',disp
             Disp_Save=disp(1)
 #ifdef _DEBUGPRINT_
             Write (6,*) 'disp=',disp
