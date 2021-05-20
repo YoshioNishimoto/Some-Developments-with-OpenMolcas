@@ -35,23 +35,29 @@
 *                                                                      *
 ************************************************************************
 *                                                                      *
-*#define _DEBUGPRINT_
-#ifdef _DEBUGPRINT_
-      Write (6,*) 'setup_Kriging, iter_actual=',iter_actual
-      Call RecPrt('Setup_kriging: Energy',' ',Energy(iS:iE),1,nRaw)
-      Call RecPrt('Setup_kriging: Energy0',' ',Energy0(iS:iE),1,nRaw)
-      Call RecPrt('Setup_kriging: qInt',' ',qInt(:,iS:iE),nInter,nRaw)
-      Call RecPrt('Setup_kriging: dqInt',' ',dqInt(:,iS:iE),nInter,nRaw)
-#endif
-*                                                                      *
-************************************************************************
-*                                                                      *
 *     Pick up the HMF Hessian, used to set the characteristic lengths
 *
       Call mma_Allocate(Hessian_HMF,nInter,nInter,Label='Hessian_HMF')
       Call Mk_Hss_Q()
       Call Get_dArray('Hss_Q',Hessian_HMF,nInter**2)
-*     Call RecPrt('HMF Hessian',' ',Hessian,nInter,nInter)
+*                                                                      *
+************************************************************************
+*                                                                      *
+*#define _DEBUGPRINT_
+#ifdef _DEBUGPRINT_
+      Write (6,*) 'setup_Kriging, iter_actual=',iter_actual
+      Call RecPrt('Setup_kriging: Energy',' ',Energy(iS:iE),1,nRaw)
+      Call RecPrt('Setup_kriging: qInt',' ',qInt(:,iS:iE),nInter,nRaw)
+      Call RecPrt('Setup_kriging: dqInt',' ',dqInt(:,iS:iE),nInter,nRaw)
+      Call RecPrt('HMF Hessian',' ',Hessian_HMF,nInter,nInter)
+      If (nSet>=2) Then
+         Call RecPrt('Setup_kriging: Energy0',' ',Energy0(iS:iE),1,nRaw)
+         Call RecPrt('Setup_kriging: dqInt_Aux(:,:,1)',' ',
+     &               dqInt_Aux(:,iS:iE,1),nInter,nRaw)
+      End If
+      If (nSet==3) Call RecPrt('Setup_kriging: dqInt_Aux(:,:,2)',' ',
+     &               dqInt_Aux(:,iS:iE,2),nInter,nRaw)
+#endif
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -107,7 +113,6 @@
 ************************************************************************
 *                                                                      *
       Call mma_Allocate(qInt_s,nInter,nRaw,Label="qInt_s")
-
       Call mma_Allocate(dqInt_s,nInter,nRaw,nSet,Label="dqInt_s")
       Call mma_Allocate(Energy_s,nRaw,nSet,Label="Energy_s")
 *                                                                      *

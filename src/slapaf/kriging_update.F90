@@ -46,8 +46,10 @@ Call Dispersion_Kriging_Layer(qInt(:),Demp,nQQ)
 
 Call Gradient_Kriging_layer(qInt(:),Aux,nQQ)
 
+!#define _DEBUGPRINT_
 #ifdef _DEBUGPRINT_
 Write (6,*) 'Kriging_Update, iter, iter_actual=', iter, iter_actual
+Call RecPrt('Kriging_Update: qInt',' ',qInt,nQQ,1)
 Call RecPrt('Kriging_Update: Temp',' ',Temp,1,nSet)
 Call RecPrt('Kriging_Update: Demp',' ',Demp,1,nSet)
 Call RecPrt('Kriging_Update: Aux',' ',Aux,nQQ,nSet)
@@ -143,6 +145,9 @@ if (Curvilinear) then
       end do
    end do
 end if
+#ifdef _DEBUGPRINT_
+Call RecPrt('Kriging_Update: NAC',' ',NAC(:,:,iter+iter_actual-1),3,nAtoms)
+#endif
 
 ! Right now we do not use the dispersion for the constraints
 
