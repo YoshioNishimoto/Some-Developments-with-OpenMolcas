@@ -46,6 +46,14 @@ Call Dispersion_Kriging_Layer(qInt(:),Demp,nQQ)
 
 Call Gradient_Kriging_layer(qInt(:),Aux,nQQ)
 
+#ifdef _DEBUGPRINT_
+Write (6,*) 'Kriging_Update, iter, iter_actual=', iter, iter_actual
+Call RecPrt('Kriging_Update: Temp',' ',Temp,1,nSet)
+Call RecPrt('Kriging_Update: Demp',' ',Demp,1,nSet)
+Call RecPrt('Kriging_Update: Aux',' ',Aux,nQQ,nSet)
+#endif
+
+Aux(:,:) = - Aux(:,:) ! Change the sign of the gradient
 !                                                                      *
 !***********************************************************************
 !
@@ -56,7 +64,7 @@ Energy(iter) = Temp(iSet)
 
 E_Disp = Demp(iSet)
 
-dqInt(:,iter) = - Aux(:,iSet)
+dqInt(:,iter) = Aux(:,iSet)
 
 If (nSet==1) Then
    Call mma_deallocate(Aux)
@@ -68,7 +76,7 @@ End If
 !  For the energy difference
 !
 iSet = 2
-Energy0(iter_actual+1) = Temp(iSet)
+Energy0(iter+iter_actual-1) = Temp(iSet)
 
 ! Right now we do not use the dispersion for the constraints
 
@@ -88,7 +96,7 @@ call DGEMM_('N','N',                                  &
             3*nAtoms,1,nQQ,                           &
             One,BMx_Save,3*nAtoms,                    &
                 Aux(:,iSet),nQQ,                      &
-           Zero,Gx0(:,:,iter_actual+1),3*nAtoms)
+           Zero,Gx0(:,:,iter+iter_actual-1),3*nAtoms)
 
 
 ! Modify with degeneracy factors.
@@ -96,10 +104,14 @@ call DGEMM_('N','N',                                  &
 if (Curvilinear) then
    do iAtom=1,nAtoms
       do ixyz=1,3
-         Gx0(ixyz,iAtom,iter_actual+1) = Gx0(ixyz,iAtom,iter_actual+1)/Degen(ixyz,iAtom)
+         Gx0(ixyz,iAtom,iter+iter_actual-1) = Gx0(ixyz,iAtom,iter+iter_actual-1)/Degen(ixyz,iAtom)
       end do
    end do
 end if
+#ifdef _DEBUGPRINT_
+Call RecPrt('Kriging_Update: Gx0',' ',Gx0(:,:,iter+iter_actual-1),3,nAtoms)
+#endif
+
 
 
 If (nSet==2) Then
@@ -119,7 +131,7 @@ call DGEMM_('N','N',                                  &
             3*nAtoms,1,nQQ,                           &
             One,BMx_Save,3*nAtoms,                    &
                 Aux(:,iSet),nQQ,                      &
-           Zero,NAC(:,:,iter_actual+1),3*nAtoms)
+           Zero,NAC(:,:,iter+iter_actual-1),3*nAtoms)
 
 
 ! Modify with degeneracy factors.
@@ -127,7 +139,7 @@ call DGEMM_('N','N',                                  &
 if (Curvilinear) then
    do iAtom=1,nAtoms
       do ixyz=1,3
-         NAC(ixyz,iAtom,iter_actual+1) = NAC(ixyz,iAtom,iter_actual+1)/Degen(ixyz,iAtom)
+         NAC(ixyz,iAtom,iter+iter_actual-1) = NAC(ixyz,iAtom,iter+iter_actual-1)/Degen(ixyz,iAtom)
       end do
    end do
 end if

@@ -27,8 +27,8 @@
      &                       Gx0
       use Slapaf_Parameters, only: HWRS, Analytic_Hessian, MaxItr,
      &                             iOptC, BSet, HSet, PrQ, lOld,
-     &                             Numerical, mB_Tot, mdB_Tot, mq,
-     &                             NADC, iState
+     &                             Numerical, mB_Tot, mdB_Tot, mq
+      use Kriging_Mod, only: nSet
       Implicit Real*8 (a-h,o-z)
 #include "Molcas.fh"
 #include "warnings.fh"
@@ -114,10 +114,8 @@
          Call mma_allocate(dqInt,nQQ,MaxItr,Label='dqInt')
           qInt(:,:)=Zero
          dqInt(:,:)=Zero
-         If (iState(2)/=0) Then
-            n = 1
-            If (NADC) n=2
-            Call mma_allocate(dqInt_Aux,nQQ,MaxItr,n,
+         If (nSet>1) Then
+            Call mma_allocate(dqInt_Aux,nQQ,MaxItr,nSet,
      &                        Label='dqInt_Aux')
             dqInt_aux(:,:,:)=Zero
          End If

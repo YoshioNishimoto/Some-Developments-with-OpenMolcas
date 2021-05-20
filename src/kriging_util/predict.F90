@@ -37,7 +37,7 @@ if (gh == 0) then ! calculate the energy and dispersion
 
 Do iSet = 1, nSet
 
-  pred   = sb(iSet)+dot_product(cv(:,1,1),Kv(:,iSet))   ! compute the energy
+  pred(iSet)   = sb(iSet)+dot_product(cv(:,1,1),Kv(:,iSet))   ! compute the energy
 
 End Do
 
@@ -55,7 +55,7 @@ End Do
   end if
 
 Do iSet = 1, nSet
-  sigma = sqrt(var*variance(iSet))
+  sigma(iSet) = sqrt(var*variance(iSet))
 End Do
 
   call mma_deallocate(A)

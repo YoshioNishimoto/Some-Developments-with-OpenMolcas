@@ -47,8 +47,8 @@ real(kind=wp), allocatable, protected :: x(:,:), y(:,:), dy(:,:)
 !
 ! We will assume that nD >= 0
 
-integer(kind=iwp), protected :: nInter = 0, nPoints = 0, nD = 0, nSet = 0
-integer(kind=iwp) :: nInter_Eff = 0
+integer(kind=iwp), protected :: nInter = 0, nPoints = 0, nD = 0
+integer(kind=iwp) :: nInter_Eff = 0, nSet = 1
 
 real(kind=wp), allocatable :: rl(:,:), dl(:), full_Rinv(:,:), full_R(:,:), x0(:), Kv(:,:), cv(:,:,:), Rones(:), l(:), gpred(:,:), &
                               hpred(:,:), ll(:), cvMatFder(:), cvMatSder(:), cvMatTder(:)

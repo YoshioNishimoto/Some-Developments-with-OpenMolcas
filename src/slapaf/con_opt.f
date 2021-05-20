@@ -77,7 +77,8 @@
       Real*8, Allocatable:: RT(:,:), RTInv(:,:), RRR(:,:), RRInv(:,:),
      &                      RR(:,:), Tdy(:), Tr(:), WTr(:),
      &                      Hessian(:,:)
-      Real*8, Save:: Beta_Disp_Save=Zero,disp_Save=Zero
+      Real*8, Save:: Beta_Disp_Save=Zero,Disp_Save=Zero
+      Real*8 Disp(3)
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -700,7 +701,7 @@ C           Write (6,*) 'gBeta=',gBeta
             Beta_Disp_=Max(Beta_Disp_Min,
      &                     tmp*CnstWght/(CnstWght+One)*Beta_Disp)
             If (.Not.First_MicroIteration) Then
-               Beta_Disp_=Min(disp_Save+Beta_Disp_,Beta_Disp_Save)
+               Beta_Disp_=Min(Disp_Save+Beta_Disp_,Beta_Disp_Save)
             End If
 *
 #ifdef _DEBUGPRINT_
@@ -709,7 +710,7 @@ C           Write (6,*) 'gBeta=',gBeta
             Write (6,*) 'Start: dy(:)=',dy(:)
 #endif
 *
-            If (disp_Save/Beta_Disp_.gt.0.99D0) Go To 667
+            If (Disp_Save/Beta_Disp_.gt.0.99D0) Go To 667
             dydy=DDot_(nLambda,dy,1,dy,1)
             If (dydy.lt.1.0D-12) Go To 667
 *           Restrict dy step during micro iterations
@@ -728,15 +729,15 @@ C           Write (6,*) 'gBeta=',gBeta
 *
                If (iCount.eq.1) Then
                   Fact_long=Fact
-                  disp_long=disp
+                  disp_long=disp(1)
                   Fact_short=Zero
                   disp_short=disp_long+One
                End If
 #ifdef _DEBUGPRINT_
-               Write (6,*) 'disp,Fact,iCount=', disp,Fact,iCount
+               Write (6,*) 'disp(1),Fact,iCount=', disp(1),Fact,iCount
 #endif
-               If (disp.gt.Beta_Disp_ .or. iCount.gt.1) Then
-                  If (Abs(Beta_Disp_-disp).lt.Thr_RS) Go To 667
+               If (disp(1).gt.Beta_Disp_ .or. iCount.gt.1) Then
+                  If (Abs(Beta_Disp_-disp(1)).lt.Thr_RS) Go To 667
                   iCount=iCount+1
                   If (iCount.gt.iCount_Max) Then
                      Write (6,*) 'iCount.gt.iCount_Max'
@@ -744,7 +745,7 @@ C           Write (6,*) 'gBeta=',gBeta
                   End If
                   Call Find_RFO_Root(Fact_long,disp_long,
      &                               Fact_short,disp_short,
-     &                               Fact,disp,Beta_Disp_)
+     &                               Fact,disp(1),Beta_Disp_)
                   Step_Trunc='*'
                   Go To 666
                End If
@@ -930,6 +931,7 @@ C           Write (6,*) 'gBeta=',gBeta
             If (First_MicroIteration) Then
                Beta_Disp_Save=Max(Beta_Disp_+tmp*Beta_Disp,
      &                            Beta_Disp_Min)
+               Write (6,*) 'Set Beta_Disp_Save=',Beta_Disp_Save
             End If
             Beta_Disp_=Beta_Disp_Save
 #ifdef _DEBUGPRINT_
@@ -966,14 +968,15 @@ C           Write (6,*) 'gBeta=',gBeta
             q(:,nIter+1)=q(:,nIter)+dq_xy(:)
 *
             Call Dispersion_Kriging_Layer(q(1,nIter+1),disp,nInter)
-            disp_Save=disp
+            Write (6,*) 'disp=',disp
+            Disp_Save=disp(1)
 #ifdef _DEBUGPRINT_
             Write (6,*) 'disp=',disp
 #endif
             fact=Half*fact
             tBeta=Half*tBeta
-            If (One-disp/Beta_Disp_.gt.1.0D-3) Exit
-            If ((fact.lt.1.0D-5) .or. (disp.lt.Beta_Disp_)) Exit
+            If (One-disp(1)/Beta_Disp_.gt.1.0D-3) Exit
+            If ((fact.lt.1.0D-5) .or. (disp(1).lt.Beta_Disp_)) Exit
             Step_Trunc='*'
          End Do
 #ifdef _DEBUGPRINT_
@@ -1042,8 +1045,10 @@ C           Write (6,*) 'gBeta=',gBeta
 *     Compute q for the next iteration
 *
       q(:,nIter+1) = q(:,nIter) + dq(:,nIter)
-      If (Recompute_disp)
-     &   Call Dispersion_Kriging_Layer(q(1,nIter+1),disp_Save,nInter)
+      If (Recompute_disp) Then
+         Call Dispersion_Kriging_Layer(q(1,nIter+1),Disp,nInter)
+         Disp_Save=Disp(1)
+      End If
 *
 #ifdef _DEBUGPRINT_
       Call RecPrt('Con_Opt: q',' ',q,nInter,nIter+1)
@@ -1079,6 +1084,9 @@ C           Write (6,*) 'gBeta=',gBeta
 *                                                                      *
       Call mma_deallocate(dq_xy)
       Call mma_deallocate(Hessian)
+
+      ! Just to be on the safe side
+      Beta_Disp_Save = Max(Beta_Disp_Save,Beta_Disp_Min)
       Return
 *                                                                      *
 ************************************************************************

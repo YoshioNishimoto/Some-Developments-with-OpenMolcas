@@ -11,9 +11,10 @@
       Subroutine Init2()
       use Slapaf_Info, only: Cx, Gx, Gx0, NAC, Coor, Grd,
      &                       Energy, Energy0, DipM, qInt, dqInt,
-     &                       RefGeo, Get_Slapaf
+     &                       RefGeo, Get_Slapaf, dqInt_Aux
       use Slapaf_Parameters, only: MaxItr, mTROld, lOld_Implicit,
      &                             TwoRunFiles, iter
+      use Kriging_Mod, only: nSet
       Implicit Real*8 (a-h,o-z)
 #include "real.fh"
 #include "stdalloc.fh"
@@ -45,31 +46,6 @@
 *
       Call Get_Slapaf(iter, MaxItr, mTROld, lOld_Implicit,SIZE(Coor,2),
      &                mLambda)
-*                                                                      *
-************************************************************************
-************************************************************************
-*                                                                      *
-*---  Pick up information from previous iterations
-*
-*                                                                      *
-************************************************************************
-*                                                                      *
-      If (iter/=1) Then
-*                                                                      *
-************************************************************************
-*                                                                      *
-         Call qpg_dArray('qInt',Found,nqInt)
-         If (Found) Then
-            nQQ=nqInt/MaxItr
-            Call mma_allocate( qInt,nQQ,MaxItr,Label= 'qInt')
-            Call mma_allocate(dqInt,nQQ,MaxItr,Label='dqInt')
-            Call Get_dArray( 'qInt', qInt,nQQ*MaxItr)
-            Call Get_dArray('dqInt',dqInt,nQQ*MaxItr)
-         End If
-*                                                                      *
-************************************************************************
-*                                                                      *
-      End If
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -252,10 +228,12 @@ C     Call RecPrt('Ref_Geom',' ',RefGeo,3,SIZE(Coor,2))
      &                          'Grad State2')
             End If
             Call Get_dArray('Grad State2',Gx0(1,1,iter),Length)
+            nSet = nSet + 1
             Gx0(:,:,iter) = -Gx0(:,:,iter)
 *
          End If
          If (iMode.eq.3) Then
+            nSet = nSet + 1
             Call Get_dArray('NADC',NAC(1,1,iter),Length)
          End If
 *
@@ -292,10 +270,39 @@ C              Write (6,*) 'iRoot=',iRoot
             nGrad=3*SIZE(Coor,2)
             Call Get_Grad(Gx0(1,1,iter),nGrad)
             Gx0(:,:,iter) = -Gx0(:,:,iter)
+            nSet = nSet + 1
 *
             Call NameRun('RUNFILE')
             TwoRunFiles = .True.
          End If
+      End If
+*                                                                      *
+************************************************************************
+************************************************************************
+*                                                                      *
+*---  Pick up information from previous iterations
+*
+*                                                                      *
+************************************************************************
+*                                                                      *
+      If (iter/=1) Then
+*                                                                      *
+************************************************************************
+*                                                                      *
+         Call qpg_dArray('qInt',Found,nqInt)
+         If (Found) Then
+            nQQ=nqInt/MaxItr
+            Call mma_allocate( qInt,nQQ,MaxItr,Label= 'qInt')
+            Call mma_allocate(dqInt,nQQ,MaxItr,Label='dqInt')
+            Call Get_dArray( 'qInt', qInt,nQQ*MaxItr)
+            Call Get_dArray('dqInt',dqInt,nQQ*MaxItr)
+
+            If (nSet>1) Call mma_allocate(dqInt_Aux,nQQ,MaxItr,nSet,
+     &                                    Label='dqInt_Aux')
+         End If
+*                                                                      *
+************************************************************************
+*                                                                      *
       End If
 *                                                                      *
 ************************************************************************

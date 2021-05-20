@@ -111,8 +111,9 @@ if (blaAI) then    ! This is the default.
     sb(1) = max(sb(1),y(i,1)+blavAI)
   end do
 
-  If (nSet>1) sb(2)=Zero
-  If (nSet>2) sb(3)=Zero
+  If (nSet==1) sb(2)=sb(1)
+
+  If (nSet==2) sb(2:3)=Zero
 
 else if (mblAI) then
 

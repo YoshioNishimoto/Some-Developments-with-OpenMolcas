@@ -13,7 +13,8 @@
       use Slapaf_Info, only: Cx, Gx, Gx0, qInt, dqInt, KtB, BMx, Degen,
      &                       AtomLbl, Smmtrc, dqInt_Aux, NAC
       use Slapaf_Parameters, only: Redundant, MaxItr, BSet, HSet, PrQ,
-     &                             lOld, NADC, iState
+     &                             lOld
+      use Kriging_Mod, only: nSet
       Implicit Real*8 (a-h,o-z)
 #include "Molcas.fh"
 #include "real.fh"
@@ -53,10 +54,8 @@
             Call mma_allocate(dqInt,nQQ,MaxItr,Label='dqInt')
             qInt(:,:) = Zero
             dqInt(:,:) = Zero
-            If (iState(2)/=0) Then
-               n = 1
-               If (NADC) n=2
-               Call mma_allocate(dqInt_aux,nQQ,MaxItr,n,
+            If (nSet>1) Then
+               Call mma_allocate(dqInt_aux,nQQ,MaxItr,nSet,
      &                           Label='dqInt_Aux')
                dqInt_aux(:,:,:)=Zero
             End If
@@ -222,10 +221,8 @@
             Call mma_allocate(dqInt,nQQ,MaxItr,Label='dqInt')
             qInt(:,:) = Zero
             dqInt(:,:) = Zero
-            If (iState(2)/=0) Then
-               n = 1
-               If (NADC) n=2
-               Call mma_allocate(dqInt_aux,nQQ,MaxItr,n,
+            If (nSet>1) Then
+               Call mma_allocate(dqInt_aux,nQQ,MaxItr,nSet,
      &                           Label='dqInt_Aux')
                dqInt_aux(:,:,:)=Zero
             End If

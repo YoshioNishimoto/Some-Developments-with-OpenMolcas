@@ -14,6 +14,7 @@
       use Slapaf_Info, only: Gx, Gx0, NAC, Energy, Energy0, RootMap
       use Slapaf_Parameters, only: Request_Alaska, TwoRunFiles, iter,
      &                             NADC, ApproxNADC, iState
+      use Kriging_Mod, only: nSet
       Implicit None
 #include "real.fh"
 #include "stdalloc.fh"
@@ -146,10 +147,12 @@
      &                                    3*nsAtom,iter)
             End If
           End If
+          nSet = 3
         Else
           Energy0(iter)=E0
           Call dCopy_(3*nsAtom,Grads(1,2),1,Gx0(1,1,iter),1)
           Gx0(:,:,iter) = -Gx0(:,:,iter)
+          nSet = 2
         End If
       End If
 *
