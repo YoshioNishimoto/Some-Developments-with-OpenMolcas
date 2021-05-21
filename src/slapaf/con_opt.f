@@ -632,6 +632,9 @@ C           Write (6,*) 'gBeta=',gBeta
 *        priority. This step is only reduced if it is larger than
 *        half the overall step restriction.
 *
+#ifdef _DEBUGPRINT_
+         Write (6,*) 'Start: dy(:)=',dy(:)
+#endif
          If (iOpt_RS.eq.0) Then
 *
 *           Compute dq step in the y subspace
@@ -649,13 +652,17 @@ C           Write (6,*) 'gBeta=',gBeta
 *
             dydymax=CnstWght*max(dxdx,Half*Beta)
             If (dydy.gt.dydymax) Then
-*              Write (6,*) 'Reduce dydy!',dydy,' -> ',dydymax
+#ifdef _DEBUGPRINT_
+               Write (6,*) 'Reduce dydy!',dydy,' -> ',dydymax
+               Write(6,*) 'Factor=',(dydymax/dydy)
+#endif
                dy(:) = (dydymax/dydy) * dy(:)
-*              Write(6,*) 'Factor=',(dydymax/dydy)
                dydy=dydymax
                Step_Trunc='*'
             Else
-*              Write (6,*) 'No reduce dydy!',dydy,' < ',dydymax
+#ifdef _DEBUGPRINT_
+               Write (6,*) 'No reduce dydy!',dydy,' < ',dydymax
+#endif
                Step_Trunc=' '
             End If
 *
@@ -707,11 +714,17 @@ C           Write (6,*) 'gBeta=',gBeta
 #ifdef _DEBUGPRINT_
             Write (6,*) 'Step_trunc=',Step_trunc
             Write (6,*) 'Beta_Disp_=',Beta_Disp_
-            Write (6,*) 'Start: dy(:)=',dy(:)
 #endif
 *
             If (Disp_Save/Beta_Disp_.gt.0.99D0) Go To 667
-            dydy=DDot_(nLambda,dy,1,dy,1)
+
+            du(:)=Zero
+            du(1:nLambda)=dy(:)
+            Call Backtrans_T(du,dq_xy)
+            dydy=DDot_(nInter,dq_xy,1,dq_xy,1)
+
+*           dydy=DDot_(nLambda,dy,1,dy,1)
+
             If (dydy.lt.1.0D-12) Go To 667
 *           Restrict dy step during micro iterations
             Fact=Max(Sqrt(dydy)/(CnstWght/(CnstWght+One)*Beta),One)
@@ -750,6 +763,9 @@ C           Write (6,*) 'gBeta=',gBeta
                   Go To 666
                End If
  667        Continue
+#ifdef _DEBUGPRINT_
+            Write (6,*) 'Scaling Factor:', (One/Fact)
+#endif
             dy(:)=(One/Fact)*dy(:)
 #ifdef _FindTS_
 *
@@ -758,7 +774,12 @@ C           Write (6,*) 'gBeta=',gBeta
 *           find the constrained structure.
 *
             If (iAnd(iOptC,4096).eq.4096) Then
-               dydy=DDot_(nLambda,dy,1,dy,1)
+! If we are to be consistent dydy should be computed as above
+               du(:)=Zero
+               du(1:nLambda)=dy(:)
+               Call Backtrans_T(du,dq_xy)
+               dydy=DDot_(nInter,dq_xy,1,dq_xy,1)
+*              dydy=DDot_(nLambda,dy,1,dy,1)
                Thrdy=0.075D0
                If (dydy.gt.Thrdy**2) Then
                   dy(:) = (Thrdy/Sqrt(dydy)) * dy(:)
@@ -770,6 +791,15 @@ C           Write (6,*) 'gBeta=',gBeta
             Write (6,*) 'Step_trunc=',Step_trunc
             Write (6,*) 'Final: dy(:)=',dy(:)
 #endif
+            du(:)=Zero
+            du(1:nLambda)=dy(:)
+            Call Backtrans_T(du,dq_xy)
+            dydy=Sqrt(DDot_(nInter,dq_xy,1,dq_xy,1))
+            If (dydy.lt.0.75D0*dydy_last.or.dydy.lt.1.0D-2) Then
+               yBeta=Min(Two,yBeta*Sf)
+            Else If (dydy.gt.1.25D0*dydy_last.and.dydy.ge.1.0D-5) Then
+               yBeta=Max(One/Ten,yBeta/Sf)
+            End If
 *
 *                                                                      *
 ************************************************************************
@@ -947,6 +977,8 @@ C           Write (6,*) 'gBeta=',gBeta
          Thr_RS=1.0D-7
 #ifdef _DEBUGPRINT_
          Write (6,*) 'Step_Trunc(0)=',Step_Trunc
+         Write (6,*)  Beta,yBeta,xBeta,gBeta
+         Write (6,*) 'tBeta=',tBeta
 #endif
          Do
             Step_Trunc_=Step_Trunc
@@ -966,6 +998,7 @@ C           Write (6,*) 'gBeta=',gBeta
             Call Backtrans_T(du,dq_xy)
             q(:,nIter+1)=q(:,nIter)+dq_xy(:)
 *
+            Disp=Zero
             Call Dispersion_Kriging_Layer(q(1,nIter+1),disp,nInter)
             Disp_Save=disp(1)
 #ifdef _DEBUGPRINT_
