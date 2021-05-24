@@ -43,7 +43,7 @@
 *                                                                      *
 ************************************************************************
 *                                                                      *
-*#define _DEBUGPRINT_
+!#define _DEBUGPRINT_
 #ifdef _DEBUGPRINT_
       Write (6,*) 'setup_Kriging, iter_actual=',iter_actual
       Call RecPrt('Setup_kriging: Energy',' ',Energy(iS:iE),1,nRaw)

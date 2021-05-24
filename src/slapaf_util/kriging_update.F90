@@ -11,7 +11,7 @@
 ! Copyright (C) 2021, Roland Lindh                                     *
 !***********************************************************************
 Subroutine Kriging_Update(nQQ,iter,qInt,E_Disp)
-Use Slapaf_Info, only: Energy, dqInt, Energy0, BMx_Save, Gx0, Degen, NAC
+Use Slapaf_Info, only: Energy, dqInt, Energy0, BMx_Save, Gx, Gx0, Degen, NAC
 Use Kriging_Mod, only: nSet, iter_actual
 Use Slapaf_Parameters, only: Curvilinear
 Implicit None
@@ -39,6 +39,11 @@ Call mma_allocate(Aux,nQQ,nSet,Label='Aux')
 !                                                                      *
 !***********************************************************************
 !
+!#define _DEBUGPRINT_
+#ifdef _DEBUGPRINT_
+Write (6,*) 'Kriging_Update, iter, iter_actual=', iter, iter_actual
+Call RecPrt('Kriging_Update: qInt',' ',qInt,nQQ,1)
+#endif
 
 Call Energy_Kriging_layer(qInt(:),Temp,nQQ)
 
@@ -46,10 +51,7 @@ Call Dispersion_Kriging_Layer(qInt(:),Demp,nQQ)
 
 Call Gradient_Kriging_layer(qInt(:),Aux,nQQ)
 
-!#define _DEBUGPRINT_
 #ifdef _DEBUGPRINT_
-Write (6,*) 'Kriging_Update, iter, iter_actual=', iter, iter_actual
-Call RecPrt('Kriging_Update: qInt',' ',qInt,nQQ,1)
 Call RecPrt('Kriging_Update: Temp',' ',Temp,1,nSet)
 Call RecPrt('Kriging_Update: Demp',' ',Demp,1,nSet)
 Call RecPrt('Kriging_Update: Aux',' ',Aux,nQQ,nSet)
@@ -82,9 +84,17 @@ Energy0(iter+iter_actual-1) = Temp(iSet)
 
 ! Right now we do not use the dispersion for the constraints
 
-! We should not have the gradient of the energy difference with respect
-! to the internal coordinates. We now need to transform those to
-! Cartesians and store them at the correct place, that is, in Gx0.
+! The computation of the gradients of the constraints are always done in
+! Cartesian coordinates. The GEK, however, predict them in internal coordinates.
+! Thus, we need to transfrom the GEK predicted gradients to Cartesian and put
+! them at the place where the code to compute the value and the Cartesian gradient
+! find them, that is, in Gx, Gx0, and NAC.
+
+! Note, in the case of nSet==3 we are directly working with GEK predictions of the
+! energy difference, the corresponding gradient is  stored in Gx0,
+! while for nSet==2 we will have GEK predictions for the individual
+! energies and gradients. Hence, for nSet==2 we will put the estimates of the individual
+! states into both Gx and Gx0.
 
 If (.NOT.Allocated(BMx_Save)) Call Abend()
 
@@ -92,8 +102,15 @@ If (.NOT.Allocated(BMx_Save)) Call Abend()
 ! dE/dx = dq/dx dE/dq
 !
 
-nAtoms = Size(Gx0,2)
+nAtoms = Size(Gx,2)
 
+
+If (nSet==2)                                          &
+call DGEMM_('N','N',                                  &
+            3*nAtoms,1,nQQ,                           &
+            One,BMx_Save,3*nAtoms,                    &
+                Aux(:,iSet-1),nQQ,                    &
+           Zero,Gx (:,:,iter+iter_actual-1),3*nAtoms)
 call DGEMM_('N','N',                                  &
             3*nAtoms,1,nQQ,                           &
             One,BMx_Save,3*nAtoms,                    &
@@ -106,11 +123,14 @@ call DGEMM_('N','N',                                  &
 if (Curvilinear) then
    do iAtom=1,nAtoms
       do ixyz=1,3
+         If (nSet==2)    &
+         Gx (ixyz,iAtom,iter+iter_actual-1) = Gx (ixyz,iAtom,iter+iter_actual-1)/Degen(ixyz,iAtom)
          Gx0(ixyz,iAtom,iter+iter_actual-1) = Gx0(ixyz,iAtom,iter+iter_actual-1)/Degen(ixyz,iAtom)
       end do
    end do
 end if
 #ifdef _DEBUGPRINT_
+Call RecPrt('Kriging_Update: Gx ',' ',Gx (:,:,iter+iter_actual-1),3,nAtoms)
 Call RecPrt('Kriging_Update: Gx0',' ',Gx0(:,:,iter+iter_actual-1),3,nAtoms)
 #endif
 

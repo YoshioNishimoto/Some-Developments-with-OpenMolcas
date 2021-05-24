@@ -19,6 +19,13 @@
       Character(LEN=8) Label
 *
 *
+!#define _DEBUGPRINT_
+#ifdef _DEBUGPRINT_
+      nAtoms = SIZE(Gx,2)
+      Write (6,*) 'ConInt, lIter=',lIter
+      Call RecPrt('ConInt: Gx ',' ',Gx (:,:,lIter),3,nAtoms)
+      Call RecPrt('ConInt: Gx0',' ',Gx0(:,:,lIter),3,nAtoms)
+#endif
       E1 = Energy (lIter)
       E0 = Energy0(lIter)
 *
@@ -90,8 +97,6 @@ C------- Absolute value ----------
 *
 *---- Compute the WDC B-matrix
 *
-C     Call RecPrt('Grad1',' ',Gx(1,1,lIter),3,nCent)
-C     Call RecPrt('Grad0',' ',Gx0(1,1,lIter),3,nCent)
       Do iCent = 1, nCent
          Fact=DBLE(iDeg(xyz(1,iCent)))
 C        Write (6,*) 'Fact=',Fact
@@ -144,7 +149,9 @@ C------------- Absolute value ----------
             Bf(iCar,iCent)=Fact*Bf(iCar,iCent)
          End Do
       End Do
-*     Call RecPrt('Bf',' ',Bf,3,nCent)
+#ifdef _DEBUGPRINT_
+      Call RecPrt('Bf',' ',Bf,3,nCent)
+#endif
       If (lWrite_.and.iOpt.eq.1) Then
          XX=Sqrt(DDot_(3*nCent,Bf,1,Bf,1))
          If (XX.le.1.0D-3) Then

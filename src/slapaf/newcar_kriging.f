@@ -48,7 +48,7 @@
       If (Allocated(BMX_save)) Call mma_deallocate(BMx_Save)
       Call mma_allocate(BMx_Save,SIZE(BMx_tmp,1),SIZE(BMx_Tmp,2),
      &                  Label='BMx_Save')
-      BMx_Save(:,:) = BMx_tmp(:,:)
+      BMx_Save(:,:) = BMx(:,:)
 
       If (.NOT.SaveBMx) Then
          Call mma_deallocate(BMx)

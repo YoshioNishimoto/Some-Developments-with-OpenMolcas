@@ -503,6 +503,9 @@
                   End Do
                End If
             End Do
+#ifdef _DEBUGPRINT_
+            Call RecPrt('BMtrx_internal: BMx',' ',BMx,nX,nX)
+#endif
 
          End If
 *                                                                      *
