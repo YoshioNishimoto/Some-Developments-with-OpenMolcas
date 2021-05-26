@@ -78,11 +78,11 @@
      &                      RR(:,:), Tdy(:), Tr(:), WTr(:),
      &                      Hessian(:,:)
       Real*8, Save:: Beta_Disp_Save=Zero,Disp_Save=Zero
-      Real*8 Disp(3)
+      Real*8 :: Disp(3)=[Zero,Zero,Zero]
 *                                                                      *
 ************************************************************************
 *                                                                      *
-*#define _DEBUGPRINT_
+!#define _DEBUGPRINT_
 #ifdef _DEBUGPRINT_
       Write (6,*)
       Write (6,*) '****************************************************'
@@ -195,7 +195,7 @@
 *     Do iIter = iOff_Iter+1, nIter
 #ifdef _DEBUGPRINT_
          Write (6,*)
-         Write (6,*) '>>>>>> iIter=',iIter
+         Write (6,*) '>>>>>> iIter,nIter=',iIter,nIter
          Write (6,*)
 #endif
 *                                                                      *
@@ -633,7 +633,10 @@ C           Write (6,*) 'gBeta=',gBeta
 *        half the overall step restriction.
 *
 #ifdef _DEBUGPRINT_
+         Write (6,*)
+         Write (6,*) 'Restrict actual dy step.'
          Write (6,*) 'Start: dy(:)=',dy(:)
+         Write (6,*)
 #endif
          If (iOpt_RS.eq.0) Then
 *
@@ -654,7 +657,7 @@ C           Write (6,*) 'gBeta=',gBeta
             If (dydy.gt.dydymax) Then
 #ifdef _DEBUGPRINT_
                Write (6,*) 'Reduce dydy!',dydy,' -> ',dydymax
-               Write(6,*) 'Factor=',(dydymax/dydy)
+               Write(6,*) 'Scaling Factor=',(dydymax/dydy)
 #endif
                dy(:) = (dydymax/dydy) * dy(:)
                dydy=dydymax
@@ -694,6 +697,9 @@ C           Write (6,*) 'gBeta=',gBeta
 *           We only need this for the last point.
 *
             Fact=One
+#ifdef _DEBUGPRINT_
+            If (iIter.ne.nIter) Write (6,*) 'Go to 667'
+#endif
             If (iIter.ne.nIter) Go to 667
 *
             tmp=Zero
@@ -714,20 +720,26 @@ C           Write (6,*) 'gBeta=',gBeta
 #ifdef _DEBUGPRINT_
             Write (6,*) 'Step_trunc=',Step_trunc
             Write (6,*) 'Beta_Disp_=',Beta_Disp_
+            Write (6,*) 'Beta=',Beta
 #endif
 *
+#ifdef _DEBUGPRINT_
+            If (Disp_Save/Beta_Disp_.gt.0.99D0)
+     &         Write (6,*) 'Go to 667'
+#endif
             If (Disp_Save/Beta_Disp_.gt.0.99D0) Go To 667
 
             du(:)=Zero
             du(1:nLambda)=dy(:)
             Call Backtrans_T(du,dq_xy)
-            dydy=DDot_(nInter,dq_xy,1,dq_xy,1)
+            dydy=Sqrt(DDot_(nInter,dq_xy,1,dq_xy,1))
 
-*           dydy=DDot_(nLambda,dy,1,dy,1)
-
-            If (dydy.lt.1.0D-12) Go To 667
-*           Restrict dy step during micro iterations
-            Fact=Max(Sqrt(dydy)/(CnstWght/(CnstWght+One)*Beta),One)
+            If (dydy.lt.1.0D-6) Go To 667
+*           Restrict dy step during micro iterations based on the
+*           variance only. Hence, initially we will try to take the full
+*           step. The code below will reduce the step until it is within
+*           the limit of the restricted variance.
+            Fact=One
 *
             iCount=1
             iCount_Max=100
@@ -739,18 +751,22 @@ C           Write (6,*) 'gBeta=',gBeta
                q(:,iIter+1)=q(:,iIter)+dq_xy(:)
 *
                Call Dispersion_Kriging_Layer(q(1,iIter+1),disp,nInter)
+               Disp_T=Disp(1)+Disp(2)+Disp(3)
 *
                If (iCount.eq.1) Then
                   Fact_long=Fact
-                  disp_long=disp(1)
+                  disp_long=disp_T
                   Fact_short=Zero
                   disp_short=disp_long+One
                End If
 #ifdef _DEBUGPRINT_
-               Write (6,*) 'disp(1),Fact,iCount=', disp(1),Fact,iCount
+               Write (6,*) 'disp_T,Fact,iCount=', disp_T,Fact,iCount
+               Write (6,*) 'disp(1)=', disp(1)
+               Write (6,*) 'disp(2)=', disp(2)
+               Write (6,*) 'disp(3)=', disp(3)
 #endif
-               If (disp(1).gt.Beta_Disp_ .or. iCount.gt.1) Then
-                  If (Abs(Beta_Disp_-disp(1)).lt.Thr_RS) Go To 667
+               If (disp_T.gt.Beta_Disp_ .or. iCount.gt.1) Then
+                  If (Abs(Beta_Disp_-disp_T).lt.Thr_RS) Go To 667
                   iCount=iCount+1
                   If (iCount.gt.iCount_Max) Then
                      Write (6,*) 'iCount.gt.iCount_Max'
@@ -758,7 +774,7 @@ C           Write (6,*) 'gBeta=',gBeta
                   End If
                   Call Find_RFO_Root(Fact_long,disp_long,
      &                               Fact_short,disp_short,
-     &                               Fact,disp(1),Beta_Disp_)
+     &                               Fact,disp_T,Beta_Disp_)
                   Step_Trunc='*'
                   Go To 666
                End If
@@ -774,15 +790,13 @@ C           Write (6,*) 'gBeta=',gBeta
 *           find the constrained structure.
 *
             If (iAnd(iOptC,4096).eq.4096) Then
-! If we are to be consistent dydy should be computed as above
                du(:)=Zero
                du(1:nLambda)=dy(:)
                Call Backtrans_T(du,dq_xy)
-               dydy=DDot_(nInter,dq_xy,1,dq_xy,1)
-*              dydy=DDot_(nLambda,dy,1,dy,1)
+               dydy=Sqrt(DDot_(nInter,dq_xy,1,dq_xy,1))
                Thrdy=0.075D0
-               If (dydy.gt.Thrdy**2) Then
-                  dy(:) = (Thrdy/Sqrt(dydy)) * dy(:)
+               If (dydy.gt.Thrdy) Then
+                  dy(:) = (Thrdy/dydy) * dy(:)
                   Step_Trunc='*'
                End If
             End If
@@ -998,16 +1012,17 @@ C           Write (6,*) 'gBeta=',gBeta
             Call Backtrans_T(du,dq_xy)
             q(:,nIter+1)=q(:,nIter)+dq_xy(:)
 *
-            Disp=Zero
+            Disp(:)=Zero
             Call Dispersion_Kriging_Layer(q(1,nIter+1),disp,nInter)
-            Disp_Save=disp(1)
+            Disp_T=disp(1)+Disp(2)+Disp(3)
+            Disp_Save=disp_T
 #ifdef _DEBUGPRINT_
-            Write (6,*) 'disp=',disp
+            Write (6,*) 'disp_T=',disp_T
 #endif
             fact=Half*fact
             tBeta=Half*tBeta
-            If (One-disp(1)/Beta_Disp_.gt.1.0D-3) Exit
-            If ((fact.lt.1.0D-5) .or. (disp(1).lt.Beta_Disp_)) Exit
+            If (One-disp_T/Beta_Disp_.gt.1.0D-3) Exit
+            If ((fact.lt.1.0D-5) .or. (disp_T.lt.Beta_Disp_)) Exit
             Step_Trunc='*'
          End Do
 #ifdef _DEBUGPRINT_
@@ -1077,8 +1092,10 @@ C           Write (6,*) 'gBeta=',gBeta
 *
       q(:,nIter+1) = q(:,nIter) + dq(:,nIter)
       If (Recompute_disp) Then
+         Disp(:)=Zero
          Call Dispersion_Kriging_Layer(q(1,nIter+1),Disp,nInter)
-         Disp_Save=Disp(1)
+         Disp_T=Disp(1)+Disp(2)+Disp(3)
+         Disp_Save=Disp_T
       End If
 *
 #ifdef _DEBUGPRINT_

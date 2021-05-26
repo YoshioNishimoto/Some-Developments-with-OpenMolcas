@@ -35,6 +35,9 @@
       Character GrdLbl_Save*8
       Real*8 Dummy(1)
       Real*8, Allocatable:: Hessian(:,:), Temp(:,:,:)
+#ifdef _OVERSHOOT_
+      Real*8 :: OS_Disp(3)=[Zero,Zero,Zero]
+#endif
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -381,8 +384,8 @@
          Call Energy_Kriging_Layer(qInt(1,iterAI),OS_Energy,nQQ)
          Call Dispersion_Kriging_Layer(qInt(1,iterAI),OS_Disp,nQQ)
          Write(6,*) 'Max_OS=',Max_OS
-         Write(6,*) OS_Disp,E_Disp,Beta_Disp_
-         If ((OS_Disp.gt.E_Disp).And.(OS_Disp.lt.Beta_Disp_)) Then
+         Write(6,*) OS_Disp(1),E_Disp,Beta_Disp_
+         If ((OS_Disp(1).gt.E_Disp).And.(OS_Disp(1).lt.Beta_Disp_)) Then
             Call dAXpY_(nQQ,OS_Factor,Step_k(1,2),1,
      &                                   Shift(1,iterAI-1),1)
             iRef_Save=iRef

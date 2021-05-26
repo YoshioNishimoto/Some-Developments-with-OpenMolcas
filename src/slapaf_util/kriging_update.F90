@@ -21,7 +21,7 @@ Real*8  qInt(nQQ), E_Disp
 #include "real.fh"
 #include "stdalloc.fh"
 Integer iSet, nAtoms, iAtom, ixyz
-Real*8  Temp(3), Demp(3)
+Real*8 :: Temp(3)=[Zero,Zero,Zero], Demp(3)=[Zero,Zero,Zero]
 Real*8, Allocatable:: Aux(:,:)
 
 

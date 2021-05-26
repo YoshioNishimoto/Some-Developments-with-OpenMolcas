@@ -51,7 +51,7 @@
      &                      Scr1(:), Scr2(:), Value(:), Value0(:),
      &                      Mult(:), dBVec(:), Tmp(:)
       Character(LEN=8), Allocatable:: Lbl_Tmp(:)
-      Real*8 Disp(3)
+      Real*8 :: Disp(3)=[Zero,Zero,Zero]
 *                                                                      *
 ************************************************************************
 *                                                                      *
