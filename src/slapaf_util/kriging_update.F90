@@ -64,11 +64,11 @@ Aux(:,:) = - Aux(:,:) ! Change the sign of the gradient
 !  The default case
 !
 iSet = 1
-Energy(iter) = Temp(iSet)
+Energy(iter) = Temp(1)
 
-E_Disp = Demp(iSet)
+E_Disp = Demp(1)
 
-dqInt(:,iter) = Aux(:,iSet)
+dqInt(:,iter) = Aux(:,1)
 
 If (nSet==1) Then
    Call mma_deallocate(Aux)
@@ -80,7 +80,7 @@ End If
 !  For the energy difference
 !
 iSet = 2
-Energy0(iter+iter_actual-1) = Temp(iSet)
+Energy0(iter+iter_actual-1) = Temp(2)
 
 ! Right now we do not use the dispersion for the constraints
 
@@ -109,13 +109,14 @@ If (nSet==2)                                          &
 call DGEMM_('N','N',                                  &
             3*nAtoms,1,nQQ,                           &
             One,BMx_Save,3*nAtoms,                    &
-                Aux(:,iSet-1),nQQ,                    &
+                Aux(:,1),nQQ,                    &
            Zero,Gx (:,:,iter+iter_actual-1),3*nAtoms)
 call DGEMM_('N','N',                                  &
             3*nAtoms,1,nQQ,                           &
             One,BMx_Save,3*nAtoms,                    &
-                Aux(:,iSet),nQQ,                      &
+                Aux(:,2),nQQ,                      &
            Zero,Gx0(:,:,iter+iter_actual-1),3*nAtoms)
+
 
 
 ! Modify with degeneracy factors.
@@ -129,6 +130,11 @@ if (Curvilinear) then
       end do
    end do
 end if
+
+If (nSet==2) Then
+   Energy0(iter+iter_actual-1) = Energy0(iter+iter_actual-1) + Energy (iter+iter_actual-1)
+   Gx0(:,:,iter+iter_actual-1) = Gx0(:,:,iter+iter_actual-1) + Gx (:,:,iter+iter_actual-1)
+End If
 #ifdef _DEBUGPRINT_
 Call RecPrt('Kriging_Update: Gx ',' ',Gx (:,:,iter+iter_actual-1),3,nAtoms)
 Call RecPrt('Kriging_Update: Gx0',' ',Gx0(:,:,iter+iter_actual-1),3,nAtoms)

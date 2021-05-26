@@ -131,8 +131,11 @@
          If (.NOT.Allocated(dqInt_Aux)) Call Abend()
          Call Trans_K(dqInt_Aux(:,iS:iE,1),dqInt_s(:,:,2),nInter,nRaw)
          dqInt_s(:,:,2) = - dqInt_s(:,:,2)
-
          Energy_s(1:nRaw,2)=Energy0(iS:iE)
+         If (nSet==2) Then
+            Energy_s(1:nRaw,2) = Energy_s(1:nRaw,1) - Energy_s(1:nRaw,2)
+            dqInt_s(:,:,2) = dqInt_s(:,:,1) - dqInt_s(:,:,2)
+         End If
       End If
 
       If (nSet>2) Then
