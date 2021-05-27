@@ -39,6 +39,7 @@
       set (TOOLS "ON" CACHE STRING "compile Tools")
       set (MSYM "ON" CACHE STRING "enable libmsym (needs submodule)")
       set (WFA "ON" CACHE STRING "enable libwfa (needs submodule)")
+      set (GEN1INT "ON" CACHE STRING "enable Gen1Int")
     CC: "gcc"
     CXX: "g++"
     FC: "gfortran"
@@ -52,7 +53,7 @@
   image: ${CI_REGISTRY}/molcas/dockerfiles/gcc-10:latest
   variables:
     CMAKE_GENERATOR: "Ninja"
-    make: "ninja"
+    make: "ninja -j 1"
     cache_file: |
       set (CMAKE_BUILD_TYPE "Fast" CACHE STRING "high opt")
       set (BUILD_SHARED_LIBS "ON" CACHE STRING "use shared libmolcas")
@@ -229,14 +230,10 @@
     cache_file: |
       set (DMRG ON CACHE STRING "Enable DMRG")
       set (NEVPT2 ON CACHE STRING "Enable NEVPT2")
-      set (QCMaquis_NAME "GitLab CI" CACHE STRING "QCMaquis name")
-      set (QCMaquis_EMAIL "gitlab.ci@example.com" CACHE STRING "QCMaquis e-mail")
-    pre_run_script: |
-      . install_dir/qcmaquis/bin/qcmaquis.sh
     CC: "gcc"
     CXX: "g++"
     FC: "gfortran"
-    tests: "qcmaquis"
+    tests: ".all qcmaquis"
   tags:
     - docker
 
@@ -247,7 +244,7 @@
       set (BIGOT "ON" CACHE STRING "do not allow any warning")
       set (MPI "ON" CACHE STRING "enable MPI parallelization")
       set (GA "ON" CACHE STRING "enable Global Arrays")
-      set (GA_BUILD "ON" CACHE STRING "build our own Global Arrays (needs submodule)")
+      set (GA_BUILD "ON" CACHE STRING "build our own Global Arrays")
       set (OPENMP "ON" CACHE STRING "enable OpenMP diagnostics")
       set (LINALG "OpenBLAS" CACHE STRING "use OpenBLAS library")
       set (MPI_LAUNCHER "/usr/bin/mpiexec $$MPI_FLAGS -n $$MOLCAS_NPROCS" CACHE STRING "custom MPI launcher command line")
@@ -255,7 +252,6 @@
     CC: "gcc"
     CXX: "g++"
     FC: "gfortran"
-    submodules: "External/ga"
     tests: ".all"
     MPI_FLAGS: "--allow-run-as-root"
     MOLCAS_NPROCS: "2"

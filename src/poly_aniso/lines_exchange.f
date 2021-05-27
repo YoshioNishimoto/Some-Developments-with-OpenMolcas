@@ -12,7 +12,7 @@
 !     this Subroutine calculates the Lines exchange interaction between
 !     two sites, of the one interacting pair
       Implicit None
-      Integer, parameter            :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter        :: wp=kind(0.d0)
       ! input variables
       Integer, intent(in)           :: N1, N2
       Real(kind=8), intent(in)     :: Jex
@@ -35,7 +35,7 @@
 
               Do l=1,3
                 HAM(i1,j1, i2,j2) = HAM(i1,j1, i2,j2)
-     &                         + cmplx(-Jex,0_wp,wp)
+     &                         + cmplx(-Jex,0.0_wp,wp)
      &                         * S1(l,i1,j1)
      &                         * S2(l,i2,j2)
               End Do
@@ -52,7 +52,7 @@
 !     this Subroutine calculates the Lines exchange interaction between
 !     two sites, of the one interacting pair
       Implicit None
-      Integer, parameter            :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter        :: wp=kind(0.d0)
       ! input variables
       Integer, intent(in)           :: N1, N2
       Real(kind=8), intent(in)     :: Jex(3)
@@ -98,7 +98,7 @@
 !     this Subroutine calculates the Lines exchange interaction between
 !     two sites, of the one interacting pair
       Implicit None
-      Integer, parameter            :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter        :: wp=kind(0.d0)
       ! input variables
       Integer, intent(in)           :: N1, N2
       Real(kind=8), intent(in)     :: Jex(3,3)
@@ -149,7 +149,7 @@
 !     this Subroutine calculates the Dzyaloshinsky-Morya exchange interaction between
 !     two sites, of the one interacting pair
       Implicit None
-      Integer, parameter            :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter        :: wp=kind(0.d0)
       ! input variables
       Integer, intent(in)           :: N1, N2
       Real(kind=8), intent(in)     :: Jex(3)
@@ -212,7 +212,7 @@
 !     two sites, of the one interacting pair on the basis of input ITO parameters
       Implicit None
 #include "stdalloc.fh"
-      Integer, parameter            :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter        :: wp=kind(0.d0)
       ! input variables
       Integer, intent(in)           :: imaxrank(2)
       Integer, intent(in)           :: MxR1, MxR2

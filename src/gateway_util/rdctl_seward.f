@@ -20,7 +20,8 @@
       use Real_Spherical, only: Sphere
       use fortran_strings, only : str
       use External_Centers
-      use Symmetry_Info, only: Symmetry_Info_Setup, iSkip, nIrrep
+      use Symmetry_Info, only: Symmetry_Info_Setup, iSkip, nIrrep,
+     &                         VarR, VarT
       use Temporary_Parameters
       use Integral_Parameters
       use Sizes_of_Seward, Only: S
@@ -32,6 +33,12 @@
      &                     LocalDF, Do_nacCD_Basis, Thrshld_CD
       use Logical_Info
       use Gateway_Interfaces, only: GetBS
+      use Gateway_global, only: Run_Mode, G_Mode, S_Mode
+#ifdef _FDE_
+      use Embedding_Global, only: embPot, embPotInBasis, embPotPath,
+     &outGridPathGiven, embWriteDens, embWriteEsp, embWriteGrad,
+     &embWriteHess
+#endif
 #ifndef _HAVE_EXTRA_
       use XYZ
 #endif
@@ -55,18 +62,14 @@
 #include "real.fh"
 #include "print.fh"
 #include "RelLight.fh"
-#include "gateway.fh"
-#include "hyper.fh"
-#ifdef _FDE_
-      ! Thomas Dresselhaus
-#include "embpotdata.fh"
-#endif
 #include "relae.fh"
-      Common /AMFn/ iAMFn
+#ifdef _HAVE_EXTRA_
+#include "hyper.fh"
+#endif
 *
       Real*8 Lambda
       Character Key*180, KWord*180, Oper(3)*3, BSLbl*80, Fname*256,
-     &          DefNm*13, Ref(2)*80, ChSkip*80, AngTyp(0:iTabMx)*1,
+     &          DefNm*13, Ref(2)*180, ChSkip*80, AngTyp(0:iTabMx)*1,
      &          dbas*(LENIN),filename*180, KeepBasis*256, KeepGroup*180,
      &          Previous_Command*12, CtrLDK(10)*(LENIN),
      &          Directory*256, BasLib*256,ExtBasDir*256
@@ -74,8 +77,7 @@
       Character(LEN=80):: Title(10)=['','','','','','','','','','']
       Character(LEN=14):: Vrsn='Gateway/Seward'
       Character(LEN=512):: Align_Weights='MASS'
-      Character*180 Line
-      common/cgetlc/ Line
+#include "cgetl.fh"
       Character*180 Get_Ln
       External Get_Ln
       Logical lTtl, lSkip, lMltpl, DoRys, RF_read, Convert, IfTest,
@@ -116,6 +118,7 @@
       Logical NoDKroll
       Logical DoTinker
       Logical DoGromacs
+      Logical OrigInput
       Logical OriginSet
       Logical FragSet
       Logical HyperParSet
@@ -128,10 +131,10 @@
       Real*8 HypParam(3), RandVect(3)
       Logical Vlct_, nmwarn, FOUND
 *
-      Logical DoEMPC, Basis_test, lECP, lPP
+      Logical Basis_test, lECP, lPP
       Logical :: lDMS=.FALSE., lOAM=.FALSE., lOMQ=.False.,
      &           lXF=.False., lFAIEMP=.False.
-      Common /EmbPCharg/ DoEMPC
+#include "embpcharg.fh"
 *
 #ifdef _GROMACS_
       Integer, Dimension(:), Allocatable :: CastMM
@@ -233,8 +236,9 @@
       ForceZMAT=.false.
       DoTinker = .False.
       DoGromacs = .False.
-      origin_input = .False.
+      OrigInput = .False.
 #ifdef _HAVE_EXTRA_
+      origin_input = .False.
       geoInput = .False.
       OldZmat = .False.
       isHold=-1
@@ -302,7 +306,6 @@
       End If
 *
       iDNG=0
-      iAMFn = 0   ! usual AMFI
       BasisTypes(:)=0
       KeepBasis=' '
 cperiod
@@ -526,7 +529,7 @@ cperiod
       If (KWord(1:4).eq.'PAMF') Go To 8060
       If (KWord(1:4).eq.'PART') Go To 9763
       If (KWord(1:4).eq.'PKTH') Go To 9940
-      If (KWord(1:4).eq.'PSOI') Go To 9023
+      If (KWord(1:4).eq.'MXTC') Go To 9023
       If (KWord(1:4).eq.'PRIN') Go To 930
 c     If (KWord(1:1).eq.'R' .and.
 c    &    (KWord(2:2).ge.'0' .and.
@@ -1228,8 +1231,8 @@ c Simplistic validity check for value
       If (Show.and.nPrint(2).ge.6 .and.
      &   Ref(1).ne.'' .and. Ref(2).ne.'') Then
          Write (LuWr,'(1x,a)')  'Basis Set Reference(s):'
-         If (Ref(1).ne.'') Write (LuWr,'(5x,a)') Ref(1)
-         If (Ref(2).ne.'') Write (LuWr,'(5x,a)') Ref(2)
+         If (Ref(1).ne.'') Write (LuWr,'(5x,a)') Trim(Ref(1))
+         If (Ref(2).ne.'') Write (LuWr,'(5x,a)') Trim(Ref(2))
          Write (LuWr,*)
          Write (LuWr,*)
       End If
@@ -1264,7 +1267,6 @@ c Simplistic validity check for value
 ************************************************************************
 *                                                                      *
 *     Set Cartesian functions if specified by the basis type
-*     (6-31G family).
 *
       If (BasisTypes(1).eq.9) Then
          Do iSh = jShll+3, iShll
@@ -1427,12 +1429,12 @@ c Simplistic validity check for value
          Write (LuWr,*) '        MxAtom=',MxAtom
          Call Quit_OnUserError()
       End If
-      iend=Index(KWord,' ')
-      If (iEnd.gt.LENIN+1) Then
-         Write (6,*) 'Warning: the label ', KWord(1:iEnd),
+      jend=Index(KWord,' ')
+      If (jEnd.gt.LENIN+1) Then
+         Write (6,*) 'Warning: the label ', KWord(1:jEnd),
      &               ' will be truncated to ',LENIN,' characters!'
       End If
-      dc(mdc+nCnt)%LblCnt = KWord(1:Min(LENIN,iend-1))
+      dc(mdc+nCnt)%LblCnt = KWord(1:Min(LENIN,jend-1))
       dbas=dc(mdc+nCnt)%LblCnt(1:LENIN)
       Call Upcase(dbas)
       If (dbas.eq.'DBAS') Then
@@ -1482,12 +1484,12 @@ c Simplistic validity check for value
                      Call Quit_OnUserError()
                   End If
 
-                  iend=Index(KWord,' ')
-                  If (iEnd.gt.5) Then
-                     Write (6,*) 'Warning: the label ', KWord(1:iEnd),
+                  jend=Index(KWord,' ')
+                  If (jEnd.gt.5) Then
+                     Write (6,*) 'Warning: the label ', KWord(1:jEnd),
      &               ' will be truncated to ',LENIN,' characters!'
                   End If
-                  dc(mdc+nCnt)%LblCnt = KWord(1:Min(LENIN,iend-1))//
+                  dc(mdc+nCnt)%LblCnt = KWord(1:Min(LENIN,jend-1))//
      &              CHAR4
 
                   Call Chk_LblCnt(dc(mdc+nCnt)%LblCnt,mdc+nCnt-1)
@@ -1955,7 +1957,6 @@ c Simplistic validity check for value
 *
  8761 Continue
       lAMFI=.True.
-      iAMFn = 1
       GWInput=.True.
       Go To 998
 *                                                                      *
@@ -1965,7 +1966,6 @@ c Simplistic validity check for value
 *
  8762 Continue
       lAMFI=.True.
-      iAMFn = 2
       GWInput=.True.
       Go To 998
 *                                                                      *
@@ -1975,7 +1975,6 @@ c Simplistic validity check for value
 *
  8763 Continue
       lAMFI=.True.
-      iAMFn = 3
       GWInput=.True.
       Go To 998
 *                                                                      *
@@ -2161,12 +2160,12 @@ c Simplistic validity check for value
          Call Upcase(Key)
          jTmp = iChar(Key(1:1))
          If (jTmp .ge. 65 .AND. jTmp .le. 90) Then
-            iEnd=Index(Key,' ')-1
+            jEnd=Index(Key,' ')-1
             iOff = 0
             iFound_Label = 0
             Do iCnttp = 1, nCnttp
                Do iCnt = iOff+1, iOff+dbsc(iCnttp)%nCntr
-                  If (Key(1:iEnd) .Eq. dc(iCnt)%LblCnt(1:iEnd)) Then
+                  If (Key(1:jEnd) .Eq. dc(iCnt)%LblCnt(1:jEnd)) Then
                      iFound_Label = 1
                      EFt(1:3,iEF)=dbsc(iCnttp)%Coor(1:3,iCnt-iOff)
                   End If
@@ -2176,7 +2175,7 @@ c Simplistic validity check for value
             If (iFound_Label .Eq. 0) Then
                Call WarningMessage(2,';'
      &                     //' Error in processing the keyword FLDG.;'
-     &                     //' The label '''//Key(1:iEnd)
+     &                     //' The label '''//Key(1:jEnd)
      &                  //''' could not be found among the centers.;'
      &                     //' Remember to specify the atom center'
      &                     //' before specifying the FLDG keyword.')
@@ -3315,7 +3314,10 @@ c
 *                                                                      *
 *     Defines translation and rotation for each xyz-file
 *
- 8015 Origin_input = .True.
+ 8015 OrigInput = .True.
+#ifdef _HAVE_EXTRA_
+      Origin_input = .True.
+#endif
       If(FragSet) Then
          Write(6,*) 'Keywords FRGM and ORIG are mutually exclusive!'
          Call Quit_OnUserError()
@@ -3426,13 +3428,20 @@ c
 ***** GEN1INT **********************************************************
 *                                                                      *
 *        GEN1INT integrals
- 9023 lPSOI=.true.
-      !Write(6,*) 'lPSOI',lPSOI,nAtoms
+ 9023 IF(IRELAE.EQ.101) Then
+        lMXTC=.true.
+      ELSE
+       Write(6,*) 'Keyword MXTC must be preceded by keyword RX2C!'
+       Call Quit_OnUserError()
+      ENDIF
       Go To 998
 *                                                                      *
 ***** FRGM *************************************************************
 *                                                                      *
- 8025 Origin_input= .True.
+ 8025 OrigInput = .True.
+#ifdef _HAVE_EXTRA_
+      Origin_input = .True.
+#endif
       GWinput = .True.
       If(OriginSet) Then
          Write(6,*) 'Keywords FRGM and ORIG are mutually exclusive!'
@@ -3789,13 +3798,13 @@ c
             FRAG_Type(iFrag)=KWord
             Do i = 1, 3
                KWord = Get_Ln(LuRd)
-               iend=Index(KWord,' ')
-               If (iEnd.gt.LENIN+1) Then
-                  Write (LuWr,*) 'Warning: the label ', KWord(1:iEnd),
+               jend=Index(KWord,' ')
+               If (jEnd.gt.LENIN+1) Then
+                  Write (LuWr,*) 'Warning: the label ', KWord(1:jEnd),
      &                        ' will be truncated to ',LENIN,
      &                        ' characters!'
                End If
-               ABC(i,iFrag) = KWord(1:Min(LENIN,iend-1))
+               ABC(i,iFrag) = KWord(1:Min(LENIN,jend-1))
                Call Get_F(2,EFP_COORS((i-1)*3+1,iFrag),3)
             End Do
          End Do
@@ -4579,7 +4588,7 @@ C           If (iRELAE.eq.-1) IRELAE=201022
 *                                                                      *
 *     Deallocate fields from keyword ORIGIN
 *
-      If(Origin_input) Then
+      If(OrigInput) Then
          Call mma_deallocate(OrigRot)
          Call mma_deallocate(OrigTrans)
       End If

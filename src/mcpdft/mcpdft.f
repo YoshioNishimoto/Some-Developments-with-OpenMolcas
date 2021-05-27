@@ -58,7 +58,7 @@
 #include "wadr.fh"
 #include "rasdim.fh"
 #include "warnings.fh"
-#include "input_ras.fh"
+#include "input_ras_mcpdft.fh"
 #include "rasscf.fh"
 #include "rasrc.fh"
 #include "general.fh"
@@ -66,7 +66,6 @@
 #include "splitcas.fh"
 #include "bk_approx.fh"
 #include "output_ras.fh"
-      Parameter (ROUTINE='MCPDFT  ')
 #include "rctfld.fh"
 #include "timers.fh"
 #include "casvb.fh"
@@ -76,11 +75,13 @@
 #include "gugx.fh"
 #include "pamint.fh"
 #include "davctl.fh"
-#include "qnctl.fh"
-#include "orthonormalize.fh"
+#include "qnctl_mcpdft.fh"
+#include "orthonormalize_mcpdft.fh"
 #include "ciinfo.fh"
 *JB XMC-PDFT stuff
 #include "mspdft.fh"
+*Chen write JOBIPH
+#include "wjob.fh"
       Integer LRState,NRState         ! storing info in Do_Rotate.txt
       Integer LHrot,NHrot             ! storing info in H0_Rotate.txt
       CHARACTER(Len=18)::MatInfo
@@ -92,28 +93,24 @@
       Logical DSCF
       Logical lOPTO
       Character*80 Line
-      Logical DoQmat,DoActive
       Logical IfOpened
       Logical Found
       Character(len=8),DIMENSION(:),Allocatable::VecStat
       CHARACTER(Len=8)::StatVec
       CHARACTER(Len=30)::mspdftfmt
+      Logical RefBas
       Logical Gradient
 
 * --------- Cholesky stuff:
-      Integer ALGO
-      Logical DoCholesky
-      Logical timings,DoLock,Deco
-      Integer Nscreen
-      COMMON /CHOTODO /DoActive,DoQmat,ipQmat
-      COMMON /CHLCAS /DoCholesky,ALGO
-      COMMON /CHOPAR/ ChFracMem
-      COMMON /CHOTIME / timings
-      Common /CHOLK / DoLocK,Deco,dmpk,Nscreen
+#include "chotodo.fh"
+#include "chlcas.fh"
+#include "chopar.fh"
+#include "chotime.fh"
+#include "cholk.fh"
 * --------- End Cholesky stuff
       Character*8 EMILOOP
 
-#include "sxci.fh"
+#include "sxci_mcpdft.fh"
 
       External Get_ProgName
 !      External Get_SuperName
@@ -177,7 +174,7 @@
 * with '*' or '!' or ' '  when left-adjusted, and replacing any rightmost
 * substring beginning with '!' with blanks.
 * That copy will be in file 'CleanInput', and its unit number is returned
-* as LUInput in common (included file input_ras.fh) by the following call:
+* as LUInput in common (included file input_ras_mcpdft.fh) by the following call:
       Call cpinp_(LUInput,iRc)
 !      write(*,*) LUINPUT, IRC
 * If something wrong with input file:
@@ -643,7 +640,7 @@ c      call triprt('P-mat 1',' ',WORK(LPMAT),nAc*(nAc+1)/2)
          C_Pointer = Lw4
          CALL GetMem('Lucia','Allo','Real',Lucia_Base, 1)
 !Andrew - changed here
-         CALL Lucia_Util('Densi',0,iDummy,Dummy)
+         CALL Lucia_Util('Densi',ip_Dummy,iDummy,Dummy)
                  If (IFCAS.GT.2 .OR. iDoGAS) Then
                    Call CISX_m(IDXSX,Work(LW6),Work(LW7),Work(LW8),
      &                     Work(LW9),Work(LW10))
@@ -693,8 +690,10 @@ c      call triprt('P-mat 1',' ',WORK(LPMAT),nAc*(nAc+1)/2)
         CALL GETMEM('CASDFT_Fock','ALLO','REAL',LFOCK,NACPAR)
         Call MSCtl(Work(LCMO),Work(LFOCK),Work(LFI),Work(LFA),
      &       Work(iRef_E))
+        If(IWJOB==1.and.(.not.Do_Rotate)) Call writejob(iadr19)
+
         If (Do_Rotate) Then
-        NHRot=lroots**2
+         NHRot=lroots**2
          Do Jroot=1,lroots
           Work(LHRot+Jroot-1+(Jroot-1)*lroots)=Work(iRef_E-1+Jroot)
          End DO
@@ -733,6 +732,7 @@ c      call triprt('P-mat 1',' ',WORK(LPMAT),nAc*(nAc+1)/2)
           VecStat(JRoot)=StatVec
          End Do
          write(6,'(6X,2A)')MSPDFTMethod,' Eigenvectors:'
+         write(6,'(7X,A)')'Intermediate-state Basis'
          if(lroots.lt.10) then
           write(mspdftfmt,'(A5,I1,A9)')
      &     '(13X,',lRoots,'(A8,16X))'
@@ -742,13 +742,45 @@ c      call triprt('P-mat 1',' ',WORK(LPMAT),nAc*(nAc+1)/2)
      &     '(13X,',lRoots,'(A8,16X))'
           write(6,mspdftfmt)((VecStat(JRoot)),JRoot=1,lroots)
          end if
-         CALL mma_deallocate(VecStat)
+*Added by Chen to write energies and states of MS-PDFT into JOBIPH
+         If(IWJOB==1) Call writejobms(iadr19,LRState,LHRot)
          Call RecPrt(' ','',Work(LHRot),lroots,lroots)
-         Write(6,*)
-         Write(6,'(6X,80a)') ('*',i=1,80)
+*         Write(6,*)
+         refbas=.false.
+         call f_inquire('ROT_VEC',RefBas)
          Call GetMem('XScratch','FREE','Real',LXScratch,NXScratch)
+*print MS-PDFT final states in basis of reference states
+*re-use RotStat, XScratch and LRState
+         if(RefBas) then
+          NXScratch=NHRot
+          Call GetMem('XScratch','ALLO','Real',LXScratch,NXScratch)
+          Call FZero(Work(LXScratch),NXScratch)
+          Call FZero(Work(LRState)  ,NXScratch)
+          LUMS=IsFreeUnit(LUMS)
+          CALL Molcas_Open(LUMS,'ROT_VEC')
+          Do Jroot=1,lroots
+            read(LUMS,*) (Work(LRState+kroot-1+(jroot-1)*lroots)
+     &                   ,kroot=1,lroots)
+          End Do
+          CALL DGEMM_('n','n',lRoots,lRoots,lRoots,1.0d0,Work(LRState),
+     &         lRoots,Work(LHRot),lRoots,0.0d0,Work(LXScratch),lRoots)
+          write(6,'(7X,A)')'Reference-state Basis'
+          write(6,mspdftfmt)((VecStat(JRoot)),JRoot=1,lroots)
+          Call RecPrt(' ',' ',Work(LXScratch),lroots,lroots)
+          close(LUMS)
+          CALL Molcas_Open(LUMS,'FIN_VEC')
+          Do JRoot=1,lRoots
+           write(LUMS,*)(Work(LXScratch+(JRoot-1)*lRoots+kRoot-1),
+     &     kRoot=1,lRoots)
+          End Do
+          write(LUMS,*) MSPDFTMethod
+          Call GetMem('XScratch','FREE','Real',LXScratch,NXScratch)
+          Close(LUMS)
+         end if
+         Write(6,'(6X,80a)') ('*',i=1,80)
          CALL GETMEM('HRot','FREE','REAL',LHRot,NHRot)
          CALL GETMEM('RotStat','FREE','REAL',LRState,NRState)
+         CALL mma_deallocate(VecStat)
         End If
         CALL GETMEM('CASDFT_Fock','FREE','REAL',LFOCK,NACPAR)
       END IF

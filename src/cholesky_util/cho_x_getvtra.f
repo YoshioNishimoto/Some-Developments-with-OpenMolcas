@@ -23,22 +23,16 @@
 *> \p DoRead = ``.false.`` the reduced vectors must be supplied in
 *> array \p RedVec.
 *>
-*> Given a set of pointers (\p ipChoT) to target
-*> arrays, the routine performs a half-MO-transformation of \p NUMV Cholesky
+*> Given (\p ChoT),the target arrays of type SBA_Type,
+*> the routine performs a half-MO-transformation of \p NUMV Cholesky
 *> vectors of compound symmetry \p ISYM starting with
 *> vector \p IVEC1 and returns them in the target arrays.
-*> Each pointer should thereby point to a
-*> location where the corresponding Cholesky
-*> vector of a given unique symmetry pair
-*> of indices has to be stored
 *>
 *> - \p iSwap = ``0``: \f$ L(k,b,J) \f$ is returned
 *> - \p iSwap = ``1``: \f$ L(a,k,J) \f$ is returned
 *> - \p iSwap = ``2``: \f$ L(k,J,b) \f$ is returned
 *> - \p iSwap = ``3``: \f$ L(a,J,k) \f$ is returned
 *>
-*> - \p iSkip(syma) = ``0``: skip the symmetry block \f$ a \f$. Any vector \f$ L_{ab} \f$ or \f$ L_{ba} \f$
-*>                           with \c syma &times; \c symb = \p ISYM won't be returned in the target array
 *>
 *> - \p IREDC: reduced set in core at the moment of the call to the routine.
 *>             Can be set to ``-1`` (= unknown or undefined) by the calling routine.
@@ -53,70 +47,49 @@
 *> @param[in]  IREDC   reduced set in core
 *> @param[in]  nDen    total number of densities to which MOs refer
 *> @param[in]  kDen    first density for which the MO transformation has to be performed
-*> @param[in]  ipMOs   matrix (8 &times; \p nDen) of pointers to the MOs coefficients
-*> @param[in]  nPorb   number of orbitals in the primary space for a given symmetry and density
-*> @param[in]  ipChoT  pointers to the half transformed vectors
-*> @param[in]  iSkip   skipping parameters for each symmetry block \f$ (ab) \f$ of compound symmetry \p ISYM
+*> @param[in]  MOs     the MOs coefficients stored in the data type DSBA_Type, i.e. symmetry blocked.
+*> @param[in]  ChoT    the half transformed vectors, symmetry blocked as type SBA_Type
 *> @param[in]  DoRead  flag for reading the reduced vectors
 ************************************************************************
       Subroutine Cho_X_getVtra(irc,RedVec,lRedVec,IVEC1,NUMV,ISYM,
-     &                         iSwap,IREDC,nDen,kDen,ipMOs,nPorb,ipChoT,
-     &                         iSkip,DoRead)
+     &                         iSwap,IREDC,nDen,kDen,MOs,ChoT,
+     &                         DoRead)
+      use Data_Structures, only: DSBA_Type, SBA_Type
       Implicit Real*8 (a-h,o-z)
-      Dimension RedVec(lRedVec)
-      Integer   ipChoT(8,*),nDen,kDen
-      Integer   iSkip(*),ipMOs(8,*),nPorb(8,*)
-      Logical   DoRead
-      Character*13 SECNAM
-      Parameter (SECNAM = 'Cho_X_GetVtra')
 
+      Type (DSBA_Type) MOs(nDen)
+      Type (SBA_Type) Chot(nDen)
+
+      Dimension RedVec(lRedVec)
+      Integer   nDen,kDen
+      Logical   DoRead
+      Character(LEN=13), Parameter:: SECNAM = 'Cho_X_GetVtra'
+
+#include "real.fh"
 #include "cholesky.fh"
 #include "choorb.fh"
 #include "WrkSpc.fh"
 #include "stdalloc.fh"
-
-      Integer, Allocatable:: ipVec(:,:)
-
-**************************************************
-      MulD2h(i,j) = iEOR(i-1,j-1) + 1
-**************************************************
 
       MXUSD = 0
       MUSED = 0
 
 C zeroing the target arrays
 C--------------------------
-      Do iSymp=1,nSym
-         IF (iSkip(iSymp).ne.0) THEN
-            iSymb = muld2h(ISYM,iSymp)
-            Do jDen=kDen,nDen
-               If (iSwap.eq.0 .or. iSwap.eq.2) then ! Lpb,J or LpJ,b
-                  Call FZero(Work(ipChoT(iSymp,jDen)),
-     &                 nPorb(iSymp,jDen)*nBas(iSymb)*NUMV)
-               ElseIf (iSwap.eq.1 .or. iSwap.eq.3) then !Laq,J or LaJ,q
-                  Call FZero(Work(ipChoT(iSymp,jDen)),
-     &                 nPorb(iSymb,jDen)*nBas(iSymp)*NUMV)
-               EndIf
-            End Do
-         ENDIF
-      End Do
-
-C --- define local pointers to the target arrays
-C ----------------------------------------------
-      Call mma_allocate(ipVec,8,nDen,Label='ipVec')
-
       Do jDen=kDen,nDen
-         Do i=1,nSym
-            ipVec(i,jDen) = ipChoT(i,jDen)
-         End Do
-      End do
-
-
-C ===============================================
+         ChoT(jDen)%A0(:)=Zero
+      End Do
+*                                                                     *
+***********************************************************************
+***********************************************************************
+*                                                                     *
       IF (DoRead) THEN
-
-       JVEC1 = IVEC1
-       IVEC2 = JVEC1 + NUMV - 1
+*                                                                     *
+***********************************************************************
+***********************************************************************
+*                                                                     *
+       JVEC1 = IVEC1             ! Absolute starting index
+       IVEC2 = JVEC1 + NUMV - 1  ! Absolute ending index
 
        Do While (jVec1.le.iVec2)
 
@@ -124,76 +97,49 @@ C ===============================================
 
         MXUSD = MAX(MXUSD,MUSED)
 
-          If (JNUM.le.0 .or. JNUM.gt.(IVEC2-JVEC1+1)) then
-             irc=77
-             RETURN
-          End If
+        If (JNUM.le.0 .or. JNUM.gt.(IVEC2-JVEC1+1)) then
+           irc=77
+           RETURN
+        End If
 
-        jVref = JVEC1 - IVEC1 + 1
+        JVREF = JVEC1 - IVEC1 + 1 ! Relative index
 
-        Call cho_vTra(irc,RedVec,lRedVec,jVref,JVEC1,JNUM,NUMV,ISYM,
-     &            IREDC,iSwap,nDen,kDen,ipMOs,nPorb,ipVec,iSkip)
+        Call cho_vTra(irc,RedVec,lRedVec,JVREF,JVEC1,JNUM,NUMV,ISYM,
+     &                IREDC,iSwap,nDen,kDen,MOs,ChoT)
 
         if (irc.ne.0) then
            return
         endif
 
-        jVec1 = jVec1 + JNUM
-
-C --- Updating the local pointers to the target arrays (iff iSwap=0,1)
-C --------------------------------------------------------------------
-        IF(iSwap.eq.0)THEN    ! Lpb,J
-
-         Do jDen=kDen,nDen
-          do iSymp=1,nSym
-             iSymb=mulD2h(iSymp,ISYM)
-             if(iSkip(iSymp).ne.0)then
-               ipVec(iSymp,jDen) = ipVec(iSymp,jDen)
-     &                            + nPorb(iSymp,jDen)*nBas(iSymb)*JNUM
-             endif
-          end do
-         End Do
-
-        ELSEIF(iSwap.eq.1)THEN    ! Laq,J
-
-         Do jDen=kDen,nDen
-          do iSyma=1,nSym
-             iSymq=mulD2h(iSyma,ISYM)
-             if(iSkip(iSyma).ne.0)then
-               ipVec(iSyma,jDen) = ipVec(iSyma,jDen)
-     &                           + nBas(iSyma)*nPorb(iSymq,jDen)*JNUM
-             endif
-          end do
-         End Do
-
-        ELSEIF(iSwap.ne.2 .or. iSwap.ne.3)THEN
-
-         write(6,*)SECNAM//': invalid argument. Iswap= ',Iswap
-         irc=66
-         return
-
-        ENDIF
+        JVEC1 = jVec1 + JNUM
 
        End Do  ! end the while loop
-
-
+*                                                                     *
+***********************************************************************
+***********************************************************************
+*                                                                     *
       ELSE ! only MO transformation
-
-
+*                                                                     *
+***********************************************************************
+***********************************************************************
+*                                                                     *
        JNUM = NUMV
+       JVREF= 1
+       Call cho_vTra(irc,RedVec,lRedVec,JVREF,IVEC1,JNUM,NUMV,ISYM,
+     &               IREDC,iSwap,nDen,kDen,MOs,ChoT)
 
-       Call cho_vTra(irc,RedVec,lRedVec,1,IVEC1,JNUM,NUMV,ISYM,IREDC,
-     &              iSwap,nDen,kDen,ipMOs,nPorb,ipVec,iSkip)
-
-        if (irc.ne.0) then
-           return
-        endif
-
-
+       if (irc.ne.0) then
+          return
+       endif
+*                                                                     *
+***********************************************************************
+***********************************************************************
+*                                                                     *
       END IF
-
-      Call mma_deallocate(ipVec)
-
+*                                                                     *
+***********************************************************************
+***********************************************************************
+*                                                                     *
       irc=0
 
       RETURN

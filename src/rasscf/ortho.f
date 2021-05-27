@@ -41,7 +41,6 @@
 #include "general.fh"
 #include "output_ras.fh"
 #include "orthonormalize.fh"
-      Parameter (ROUTINE='ORTHO   ')
 *
       Dimension Smat(*),SCRATCH(*),CMO(*),Temp(*)
 *                                                                      *
@@ -99,7 +98,7 @@ C           Call RecPrt('CMO',' ',CMO(ip_CMO),iBas,iBas)
 *
 * --- compute W^-1/2
 *
-               Call Lowdin(Temp,SCRATCH,iOcc)
+               Call Lowdin_LP(Temp,SCRATCH,iOcc)
 *
 * --- compute C' = C*W^-1/2
 *

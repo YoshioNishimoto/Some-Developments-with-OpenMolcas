@@ -58,8 +58,7 @@
      &       Ovrlp(nFock)
       Logical canorb
 *
-      Logical Do_SpinAV
-      COMMON  / SPAVE_L  / Do_SpinAV
+#include "spave.fh"
 *
       Real*8, Dimension(:), Allocatable:: FckM, FckS, HlfF, EigV,
      &                                    Ctmp, Scratch, CMOOld,
@@ -218,8 +217,7 @@ c         Call TriPrt(' ',' ',FckS,nOrbmF)
 *             Fix standard phase pf the orbitals
 *
               Do i = 1, nOccmF
-                 tmp = OrbPhase(CMO(iCMO+(i-1)*nBas(iSym),iD),
-     &                                         nBas(iSym))
+                 call VecPhase(CMO(iCMO+(i-1)*nBas(iSym),iD),nBas(iSym))
               End Do
 *
 *             Order the occupied orbitals by maximum overlap with

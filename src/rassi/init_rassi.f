@@ -9,6 +9,9 @@
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
       SUBROUTINE INIT_RASSI
+
+      use rasscf_data, only: doDMRG
+
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "prgm.fh"
       CHARACTER*16 ROUTINE
@@ -20,10 +23,15 @@
 #include "stdalloc.fh"
 #include "WrkSpc.fh"
 #include "rassi.fh"
+#include "hfc_logical.fh"
       Character*256 STRING
       Logical FoundTwoEls,DoCholesky
 
 
+* Initialise doDMRG if compiled without QCMaquis
+#ifndef _DMRG_
+      DoDMRG = .false.
+#endif
 
 C SET UP SYMMETRY MULTIPLICATION TABLE:
       MUL(1,1)=1
@@ -184,6 +192,8 @@ cnf
 C tjd- BMII: Print out spin-orbit properties to files
       LPRPR=.FALSE.
       LHAMI=.FALSE.
+c Feng: test control
+      MAG_X2C=.FALSE.
 
 C K. Sharkas  BEG
       IFATCALSA=.FALSE.

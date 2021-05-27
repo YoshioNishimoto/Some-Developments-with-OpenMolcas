@@ -17,11 +17,11 @@
 * SWEDEN                                     *
 *--------------------------------------------*
       SUBROUTINE MKSMAT()
+      use output_caspt2, only:iPrGlb,verbose,debug
       IMPLICIT REAL*8 (A-H,O-Z)
 C     Set up S matrices for cases 1..13.
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
 #include "pt2_guga.fh"
@@ -86,13 +86,13 @@ C looping, etc in the rest  of the routines.
 ********************************************************************************
       SUBROUTINE MKSA(DREF,PREF,NG3,G3,idxG3)
       USE SUPERINDEX
+      use output_caspt2, only:iPrGlb,debug
 #ifdef _MOLCAS_MPP_
       USE Para_Info, ONLY: Is_Real_Par
 #endif
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
@@ -165,7 +165,6 @@ C         - dxu Gvtyz - dxu dyt Gvz +2 dtx Gvuyz + 2 dtx dyu Gvz
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
@@ -342,7 +341,6 @@ C  - G(xvzyut) -> SA(yvx,zut)
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
@@ -367,6 +365,8 @@ C  - G(xvzyut) -> SA(yvx,zut)
       INTEGER, PARAMETER :: I4=KIND(ONE4)
 
       INTEGER, ALLOCATABLE :: IBUF(:)
+
+#include "mpi_interfaces.fh"
 
       ! Since we are stuck with collective calls to MPI_Alltoallv in
       ! order to gather the elements, each process needs to loop over
@@ -802,7 +802,6 @@ C storage uses a triangular scheme, and the LDA passed is zero.
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
@@ -893,6 +892,7 @@ C Add -dyu Gvzxt
 * Case C (ICASE=4)
 ********************************************************************************
       SUBROUTINE MKSC(DREF,PREF,NG3,G3,idxG3)
+      use output_caspt2, only:iPrGlb,debug
       USE SUPERINDEX
 #ifdef _MOLCAS_MPP_
       USE Para_Info, ONLY: Is_Real_Par
@@ -900,7 +900,6 @@ C Add -dyu Gvzxt
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
@@ -974,7 +973,6 @@ C    = Gvutxyz +dyu Gvztx + dyx Gvutz + dtu Gvxyz + dtu dyx Gvz
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
@@ -1151,7 +1149,6 @@ C  - G(xvzyut) -> SC(zvx,yut)
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
@@ -1176,6 +1173,8 @@ C  - G(xvzyut) -> SC(zvx,yut)
       INTEGER, PARAMETER :: I4=KIND(ONE4)
 
       INTEGER, ALLOCATABLE :: IBUF(:)
+
+#include "mpi_interfaces.fh"
 
       ! Since we are stuck with collective calls to MPI_Alltoallv in
       ! order to gather the elements, each process needs to loop over
@@ -1611,7 +1610,6 @@ C storage uses a triangular scheme, and the LDC passed is zero.
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
@@ -1691,7 +1689,6 @@ C Add  dtu Gvxyz + dtu dyx Gvz
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 
@@ -1838,7 +1835,6 @@ C Write to disk, and save size and address.
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 
@@ -1927,7 +1923,6 @@ C Write to disk
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 
@@ -1984,7 +1979,6 @@ C Write to disk
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 
@@ -2098,7 +2092,6 @@ C Write to disk
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 

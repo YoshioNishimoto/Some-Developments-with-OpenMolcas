@@ -12,14 +12,15 @@
       use rassi_global_arrays, only: JBNUM, LROOT
 #ifdef _DMRG_
       use qcmaquis_interface_cfg
-      use qcmaquis_info, only: qcmaquis_info_init, qcm_group_names
-      use mh5, only: mh5_fetch_dset_array_str
+      use qcmaquis_info, only: qcmaquis_info_init, qcm_group_names,
+     &    qcm_prefixes
+      use rasscf_data, only: doDMRG
 #endif
       use mspt2_eigenvectors
 #ifdef _HDF5_
       use mh5, only: mh5_is_hdf5, mh5_open_file_r, mh5_exists_attr,
      &               mh5_exists_dset, mh5_fetch_attr, mh5_fetch_dset,
-     &               mh5_fetch_dset_array_real, mh5_close_file
+     &               mh5_close_file
 #endif
       IMPLICIT NONE
 #include "prgm.fh"
@@ -67,6 +68,10 @@
       character(len=21) :: pt2_e_string
 #endif
 
+#ifdef _DMRG_
+      integer :: idx
+      character(len=300) :: currdir
+#endif
 
 
 #ifdef _HDF5_
@@ -181,7 +186,7 @@
 * read the ms-caspt2/qd-nevpt2 effective hamiltonian if it is available
       If (mh5_exists_dset(refwfn_id, heff_string)) Then
         call mma_allocate(ref_Heff,ref_nstates,ref_nstates)
-        call mh5_fetch_dset_array_real(refwfn_id,heff_string,ref_Heff)
+        call mh5_fetch_dset(refwfn_id,heff_string,ref_Heff)
         HAVE_HEFF=.TRUE.
 * with ejob, only read diagonal
         If (ifejob) Then
@@ -238,31 +243,44 @@
         call mma_deallocate(ref_energies)
       End If
 
-!     write(6,*) 'job --> ',job, 'doDMRG and doMPSSICheckpoints ',
-!    & doDMRG,doMPSSICheckpoints
 #ifdef _DMRG_
+      call getenv("CurrDir", currdir)
       ! Leon 5/12/2016: Fetch QCMaquis checkpoint names if requested
-      if (doDMRG.and.doMPSSICheckpoints) then
+      if (doDMRG) then
         if(mh5_exists_dset(refwfn_id, 'QCMAQUIS_CHECKPOINT')) then
-!         Write(6,'(A)') 'Reading QCMaquis checkpoint names '//
-!    &    'from HDF5 files'
-!         Write(6,'(A)') 'State    Checkpoint name'
+          write(6,*) "  QCMaquis checkpoint files:"
+          write(6,*) "  --------------------------"
+          write(6,*) "  State   Checkpoint file  "
 
           !> allocate space for the file name strings of job JOB
           call qcmaquis_info_init(job,nstat(job),1)
 
           DO I=1,NSTAT(JOB)
             ISTATE=ISTAT(JOB)-1+I
-            call mh5_fetch_dset_array_str(refwfn_id,
-     &                                    'QCMAQUIS_CHECKPOINT',
-     &                                     qcm_group_names(job)
-     &                                     %states(i),
-     &                                     [1],
-     &                                     [LROOT(ISTATE)-1]
-     &                                    )
+            call mh5_fetch_dset(refwfn_id,'QCMAQUIS_CHECKPOINT',
+     &                          qcm_group_names(job)%states(i:i),
+     &                          [1],[LROOT(ISTATE)-1])
 !           Write(6,'(I3,A,A)') ISTATE, '   ',
 !    &      trim(qcm_group_names(job)%states(i))
           END DO
+          write(6,*) "  --------------------------"
+          !! save QCMaquis prefix
+          !! by cutting off the last '.checkpoint_state.X.h5'
+          !! and adding the full path
+          if (size(qcm_group_names(job)%states).gt.0) then
+            idx = index(qcm_group_names(job)%states(1),
+     &        '.checkpoint_state.')
+            if (idx.gt.0) then
+              qcm_prefixes(job)=
+     &        trim(currdir)//'/'//
+     &        trim(qcm_group_names(job)%states(1)
+     &        (1:idx-1))
+            else
+              CALL WarningMessage(2,"Faulty QCMaquis checkpoint name")
+              write(6,*) 'Must contain "checkpoint_state"'
+              Call Abend()
+            end if
+          end if
         else
           call WarningMessage(2,'QCMaquis checkpoint names not found'//
      &    ' on HDF5 files. Make sure you created them with the'//
@@ -331,9 +349,15 @@
         WRITE(6,*)'  STATE IRREP:        ',IRREP(JOB)
         WRITE(6,*)'  SPIN MULTIPLICITY:  ',MLTPLT(JOB)
         WRITE(6,*)'  ACTIVE ELECTRONS:   ',NACTE(JOB)
+#ifdef _DMRG_
+        if (.not.doDMRG) then
+#endif
         WRITE(6,*)'  MAX RAS1 HOLES:     ',NHOLE1(JOB)
         WRITE(6,*)'  MAX RAS3 ELECTRONS: ',NELE3(JOB)
         WRITE(6,*)'  NR OF CONFIG:       ',NCONF(JOB)
+#ifdef _DMRG_
+        end if
+#endif
       END IF
       IF(IPGLOB.GE.VERBOSE)
      &          WRITE(6,*)'  Wave function type WFTYPE=',WFTYPE
@@ -350,15 +374,10 @@
 ************************************************************************
 #ifdef _DMRG_
       if (doDMRG) then
-        if (doMPSSICheckpoints) then
-          call WarningMessage(3, "QCMaquis checkpoint names from "//
-     &   "JobIph requested. This works only with HDF5 JobIph files."//
+        call WarningMessage(3, "QCMaquis requires checkpoint names "//
+     & "from JOBxxx. This works only with HDF5 JobIph files."//
      &   " Please make sure you use a .h5 file as JOBxxx.")
           call abend()
-        else
-          call WarningMessage(2, "Using old-style JobIph with DMRG "//
-     &      "and hence default naming convention for checkpoint files")
-        end if
       end if
 #endif
       IF (IPGLOB.GE.USUAL) THEN

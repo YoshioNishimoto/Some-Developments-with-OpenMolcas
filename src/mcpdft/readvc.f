@@ -68,13 +68,14 @@
 #include "rasscf.fh"
 #include "general.fh"
 #include "output_ras.fh"
+      Character*16 ROUTINE
       Parameter (ROUTINE='READVC  ')
 #include "WrkSpc.fh"
 #include "SysDef.fh"
 #include "warnings.fh"
 #include "wadr.fh"
 #include "casvb.fh"
-#include "sxci.fh"
+#include "sxci_mcpdft.fh"
 *     calling arguments
 
       Dimension CMO(*),OCC(*),D(*),DS(*),P(*),PA(*)

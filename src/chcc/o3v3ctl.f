@@ -8,7 +8,6 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
-c
         subroutine o3v3ctl (wrk,wrksize,NvGrp,LunAux)
 c
 c       docasny drajver o3v3 procesov
@@ -16,7 +15,7 @@ c
         use Para_Info, only: nProcs
         implicit none
 #include "chcc1.fh"
-#include "chcc_parcc.fh"
+#include "parcc.fh"
 #include "o3v3.fh"
 #include "wrk.fh"
 c

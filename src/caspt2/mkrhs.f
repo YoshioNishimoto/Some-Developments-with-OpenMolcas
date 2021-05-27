@@ -20,11 +20,11 @@
 * contravariant components. 980928, P-A Malmqvist
 *--------------------------------------------
       SUBROUTINE MKRHS(IVEC)
+      use output_caspt2, only:iPrGlb,verbose
       IMPLICIT REAL*8 (A-H,O-Z)
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
 #include "SysDef.fh"
@@ -71,7 +71,6 @@ C INTEGRAL BUFFERS:
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
 #include "SysDef.fh"
@@ -143,14 +142,13 @@ C Put W on disk:
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
 #include "SysDef.fh"
       DIMENSION ERI(*), SCR(*)
 *#define _KIGEJ_
 *#define _KIGTJ_
-*#include <mig_kig.fh>
+*#include "mig_kig.fh"
 
 C Set up RHS vector of PT2 Linear Equation System, in vector
 C number IVEC of LUSOLV for cases 2 and 3 (VJTI).
@@ -273,7 +271,6 @@ C  Put WM on disk
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
 #include "SysDef.fh"
@@ -368,7 +365,6 @@ C   Put W on disk
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
 #include "SysDef.fh"
@@ -453,7 +449,6 @@ C   Put W on disk.
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
 #include "SysDef.fh"
@@ -461,7 +456,7 @@ C   Put W on disk.
       DIMENSION ERI1(*),ERI2(*), SCR(*)
 *#define _KIGEJ_
 *#define _KIGTJ_
-*#include <mig_kig.fh>
+*#include "mig_kig.fh"
 
 C Set up RHS vector of PT2 Linear Equation System, in vector
 C number IVEC of LUSOLV, for cases 6 and 7 (VJAI).
@@ -556,7 +551,6 @@ C   Put WP and WM on disk.
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
 #include "SysDef.fh"
@@ -655,7 +649,6 @@ C   Put WM on disk
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
 #include "SysDef.fh"
@@ -758,14 +751,13 @@ C   Put WP and WM on disk.
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
 #include "SysDef.fh"
       DIMENSION ERI1(*),ERI2(*), SCR(*)
 *#define _KIGEJ_
 *#define _KIGTJ_
-*#include <mig_kig.fh>
+*#include "mig_kig.fh"
 
 C Set up RHS vector of PT2 Linear Equation System, in vector
 C number IVEC of LUSOLV, for cases 12 and 13 (BJAI).

@@ -53,7 +53,6 @@
       Implicit Real*8 (a-h,o-z)
 #include "Molcas.fh"
 #include "real.fh"
-#include "periodic_table.fh"
 #include "constants2.fh"
 #include "WrkSpc.fh"
       Integer AtNum, IsoNum, AtNum2, Subs, Subs2
@@ -171,7 +170,7 @@
       Write (6,*) ' Full substitutions:'
       Write (6,*) ' -----------------------'
       Write (6,*)
-      Do iElement=1,Num_Elem
+      Do iElement=1,MaxAtomNum
 
          Found = .False.
          Do i = 1, mAtoms
@@ -329,12 +328,11 @@
 *
 *-----Compute eigenvectors and eigenfunctions
 *
-      nAux = 2 * nX
       iOpt=1
       If ( nX.gt.0 ) then
         Call Not_DGeEv(iOpt,H,nX,
      &             EVal,EVec,nX,
-     &             nX,Tmp2,nAux)
+     &             nX,Tmp2)
       End If
 *
 *-----Compute the harmonic frequencies

@@ -22,7 +22,6 @@
       use definitions, only: wp
       use Para_Info, only: MyRank
 #ifdef _NECI_
-      use definitions, only: int64, real64
       use filesystem, only: chdir_
       use stdalloc, only: mxMem
       use fortran_strings, only: str
@@ -49,12 +48,12 @@
 
 #ifdef _NECI_
       interface
-          subroutine NECImain(fcidmp, input_name, MemSize, NECIen)
-            import :: int64, real64
-            character(len=*), intent(in) :: fcidmp, input_name
-            integer(int64), intent(in) :: MemSize
-            real(real64), intent (out) :: NECIen
-          end subroutine
+        subroutine NECImain(fcidmp, input_name, MemSize, NECIen)
+          use, intrinsic :: iso_fortran_env, only: int64, real64
+          character(len=*), intent(in) :: fcidmp, input_name
+          integer(int64), intent(in) :: MemSize
+          real(real64), intent (out) :: NECIen
+        end subroutine
       end interface
 #endif
 
@@ -339,5 +338,4 @@
             call read_neci_RDM(DMAT, D1S_MO, PSMAT, PAMAT)
         end if
       end subroutine get_neci_RDM
-
       end module fciqmc

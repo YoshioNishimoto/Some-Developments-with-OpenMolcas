@@ -10,7 +10,7 @@
 *                                                                      *
 * Copyright (C) 2019, Oskar Weser                                      *
 ************************************************************************
-#include "intent.h"
+#include "intent.fh"
       module orthonormalization
         use definitions, only: wp
         use stdalloc, only: mma_allocate, mma_deallocate
@@ -137,7 +137,7 @@
         integer :: i
 
         do i = 1, size(basis)
-          call Lowdin(basis(i)%block, ONB(i)%block, S(i)%block)
+          call Lowdin(basis(i)%blck, ONB(i)%blck, S(i)%blck)
         end do
       end subroutine Lowdin_Blocks
 
@@ -156,8 +156,8 @@
         integer :: i
 
         do i = 1, size(basis)
-          call Canonical(basis(i)%block, n_to_ON(i),
-     &                   ONB(i)%block, n_new(i), S(i)%block)
+          call Canonical(basis(i)%blck, n_to_ON(i),
+     &                   ONB(i)%blck, n_new(i), S(i)%blck)
         end do
       end subroutine Canonical_Blocks
 
@@ -175,8 +175,8 @@
         integer :: i
 
         do i = 1, size(basis)
-          call Gram_Schmidt(basis(i)%block, n_to_ON(i), ONB(i)%block,
-     &                      n_new(i), S(i)%block)
+          call Gram_Schmidt(basis(i)%blck, n_to_ON(i), ONB(i)%blck,
+     &                      n_new(i), S(i)%blck)
         end do
       end subroutine Gram_Schmidt_Blocks
 
@@ -191,7 +191,6 @@
       integer, intent(in) :: n_to_ON(:), nNew(:)
       integer, intent(inout) :: nDel(:), nSSH(:), nOrb(:),
      &  nDelt, nSec, nOrbt, nTot3, nTot4
-      parameter(ROUTINE='update_orb_numbe')
 
       integer :: iSym, remove(nSym), total_remove
 
@@ -263,7 +262,6 @@
 #include "output_ras.fh"
         type(t_blockdiagonal) :: S(nSym)
 
-        parameter(ROUTINE='update_orb_numbe')
         integer :: size_S_buffer
         real(wp) :: Mol_Charge
         real(wp), allocatable :: S_buffer(:)

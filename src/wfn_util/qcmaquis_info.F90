@@ -16,15 +16,20 @@ module qcmaquis_info
 use stdalloc, only: mma_allocate, mma_deallocate
 
 implicit none
+
+#ifdef _DMRG_
 private
 
 type qcm_names
-  character(len=256), allocatable :: states(:)
+  character(len=256), allocatable :: states(:) ! full checkpoint names for every state
 end type
 
 type(qcm_names), allocatable :: qcm_group_names(:)
+character(len=256), allocatable :: qcm_prefixes(:)
+! prefix for the particular group (although redundant but used in the new MPSSI interface)
 
 public :: qcm_group_names
+public :: qcm_prefixes
 public :: qcmaquis_info_init, qcmaquis_info_deinit
 
 ! Private extension to mma interfaces
@@ -46,20 +51,43 @@ subroutine qcmaquis_info_init(igroup,nstates,tag)
   use Definitions, only: iwp, u6
 
   integer(kind=iwp), intent(in) :: igroup, nstates, tag
+# ifdef _GARBLE_
+  interface
+    subroutine c_null_alloc(A)
+      character(len=*), allocatable :: A(:)
+    end subroutine c_null_alloc
+  end interface
+  integer(kind=iwp) :: i
+# endif
 
   if (tag == 0) then
     call mma_allocate(qcm_group_names,igroup,label='qcm_group_names')
+#   ifdef _GARBLE_
+    ! Garbling corrupts the allocation status of allocatable components, use a hack to reset it
+    do i=1,igroup
+      call c_null_alloc(qcm_group_names(i)%states)
+    end do
+#   endif
+    call mma_allocate(qcm_prefixes,igroup,label='qcm_prefixes')
   else if (tag == 1) then
     call mma_allocate(qcm_group_names(igroup)%states,nstates,label='qcm_igroup')
     qcm_group_names(igroup)%states = ''
   else if (tag == -1) then
     call mma_allocate(qcm_group_names,igroup,label='qcm_group_names')
+#   ifdef _GARBLE_
+    do i=1,igroup
+      call c_null_alloc(qcm_group_names(i)%states)
+    end do
+#   endif
     call mma_allocate(qcm_group_names(igroup)%states,nstates,label='qcm_igroup')
     qcm_group_names(igroup)%states = ''
   else
     write(u6,*) 'unknown tag in qcmaquis_info_init'
     call abend()
   end if
+
+# include "macros.fh"
+  unused_proc(mma_allocate(qcm_group_names,[0,0]))
 
 end subroutine qcmaquis_info_init
 
@@ -75,12 +103,7 @@ subroutine qcmaquis_info_deinit
     if (allocated(qcm_group_names(i)%states)) call mma_deallocate(qcm_group_names(i)%states)
   end do
   call mma_deallocate(qcm_group_names)
-# ifdef _WARNING_WORKAROUND_
-  if (.false.) then
-    ! Since this should never be executed, don't deallocate
-    call mma_allocate(qcm_group_names,[0,0])
-  end if
-# endif
+  if(allocated(qcm_prefixes)) call mma_deallocate(qcm_prefixes)
 
 end subroutine qcmaquis_info_deinit
 
@@ -100,5 +123,5 @@ end subroutine qcmaquis_info_deinit
 #  undef _DIMENSIONS_
 #  undef _DEF_LABEL_
 #undef _TYPE_
-
+#endif
 end module qcmaquis_info

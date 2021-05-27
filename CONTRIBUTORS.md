@@ -80,10 +80,13 @@ Michael Diedenhofen
 Werner Dobrautz  
 Sijia S. Dong  
 Thomas Dresselhaus  
+Thomas J. Duignan  
 Daniel Fairhead  
 Ignacio Fdez. Galván  
+Rulin Feng  
 Nicolas Ferré  
 Timo Fleig  
+Niclas Forsberg  
 Leon Freitag  
 Luis Manuel Frutos  
 Markus P. Fülscher  
@@ -182,5 +185,6 @@ Sebastian Wouters
 Felipe Zapata  
 Alexander Zech  
 Yan Zhao  
+Chen Zhou  
 J. Patrick Zobel  
 

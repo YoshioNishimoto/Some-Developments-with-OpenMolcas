@@ -49,8 +49,7 @@
       Subroutine Read_XYZ(Lu,Rot,Trans,Replace)
 #ifdef _HDF5_
       Use mh5, Only: mh5_is_hdf5, mh5_open_file_r, mh5_fetch_attr,
-     &               mh5_fetch_dset, mh5_fetch_dset_array_real,
-     &               mh5_close_file
+     &               mh5_fetch_dset, mh5_close_file
 #endif
       Integer, Intent(In) :: Lu
       Real*8, Dimension(:,:,:), Allocatable, Intent(In) :: Rot
@@ -173,10 +172,10 @@
         End Do
 !       read atom coordinates
         If (nSym .gt. 1) then
-          Call mh5_fetch_dset_array_real(Coord_id,
+          Call mh5_fetch_dset(Coord_id,
      &         'DESYM_CENTER_COORDINATES',Coords)
         Else
-          Call mh5_fetch_dset_array_real(Coord_id,
+          Call mh5_fetch_dset(Coord_id,
      &         'CENTER_COORDINATES',Coords)
         End If
         Call mh5_close_file(Coord_id)
@@ -561,6 +560,7 @@
       Integer :: Op, nOp, Num, i, j
       Character (Len=MAXLEN) :: Sym, SymA, SymB, Lab, Bas
       Logical :: Found, Moved
+      Logical, Dimension(3) :: ZeroAxis
 #include "constants2.fh"
 #include "real.fh"
       Moved = .False.
@@ -573,6 +573,7 @@
         SymA = Trim(Sym)//Trim(Lab)
         Call UpCase(SymA)
         Aver = Geom(i)%Coord
+        ZeroAxis = .False.
         Do Op=1,7
           If (Oper(Op) .eq. 0) Exit
           Found = .False.
@@ -588,7 +589,13 @@
             If (Dist*Angstrom**2 .le. Thr**2) Then
               Found = .True.
               Aver = Aver+New
-              If (j .ne. i) Geom(j)%FileNum = 0
+              If (j .eq. i) Then
+                If (iAnd(Oper(Op), iX) .gt. 0) ZeroAxis(1) = .True.
+                If (iAnd(Oper(Op), iY) .gt. 0) ZeroAxis(2) = .True.
+                If (iAnd(Oper(Op), iZ) .gt. 0) ZeroAxis(3) = .True.
+              Else
+                Geom(j)%FileNum = 0
+              End If
               If (Dist .gt. Zero) Moved = .True.
               Exit
             End If
@@ -598,7 +605,8 @@
             Call Quit_OnUserError()
           End If
         End Do
-        Geom(i)%Coord = Aver/Dble(nOp)
+        ! Make sure the axes that should be zero are exactly zero
+        Geom(i)%Coord = Merge([Zero,Zero,Zero],Aver/Dble(nOp),ZeroAxis)
       End Do
       If (Moved)
      &  Call WarningMessage(0,

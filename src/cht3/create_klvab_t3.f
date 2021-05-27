@@ -8,8 +8,8 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
-cmp      SUBROUTINE create_klvab_t3(G,vblock)
       SUBROUTINE create_klvab_t3(vblock)
+cmp      SUBROUTINE create_klvab_t3(G,vblock)
 C
 C  creates K(alpha-beta,alpha-beta),K(beta-alpha,alpha-beta)
 C  DA files KMATBA and KMATAB, LMATBA and LMATAB
@@ -47,12 +47,12 @@ cmp      integer it,ix,ig,iscr, KADT, IJS, RAD, AADT, IADR
       integer ix,ig,iscr, IJS, RAD, AADT, IADR
       integer isp,is2,ias,vblock,n,i,j,k,lu,iasblock,ias_aa
       INTEGER A,A1,A2,B1,NSTEP,ISTEP
-      CHARACTER FN*6,ich*1
-      INTEGER IOPT,NOAB,NNOAB,NUAB,NNUAB,NNU,IUHF,NNO,ISPA
+      CHARACTER FN*6
+      INTEGER NNU,IUHF,NNO,ISPA
       integer adim, last,last_aa,nug
 c     integer bdim
-      COMMON/UHF/NOAB(2),NNOAB(3),NUAB(2),NNUAB(3),ICH(3)
-      COMMON/IOIND/IOPT(96)
+#include "uhf.fh"
+#include "ioind.fh"
 cmp
         integer itmp,il1_1,il2_1,il0,il1,it2_tmp,itmp2
         logical switch

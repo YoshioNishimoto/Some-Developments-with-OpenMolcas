@@ -411,7 +411,6 @@ Optional important keywords are:
               </HELP>
               </KEYWORD>
 
-
 :kword:`REOR`
   The user can input a permutation by specifying the number of non
   fixed point elements, followed by the order of the non fixed point elements.
@@ -604,7 +603,7 @@ The :program:`RASSCF` program produces a binary output file called
 was usually a link, pointing to whichever file the user wanted, or by default
 to the file :file:`$Project.JobIph` if no such links had been made. This default
 can be changed, see keyword :kword:`NewIph` and :kword:`IphName`.
-For simplicity, we refer to this as :file:`JOBIPH` in the manual.The job interface,
+For simplicity, we refer to this as :file:`JOBIPH` in the manual. The job interface,
 :file:`JOBIPH`, contains four different sets of MO's and
 it is important to know the difference between the sets:
 
@@ -2220,20 +2219,147 @@ A list of these keywords is given below:
               </HELP>
               </KEYWORD>
 
+:kword:`XMSInter`
+  This keyword can be used in an XMS-PDFT calculation (which needs :program:`RASSCF` and :program:`MCPDFT` modules). This keyword stands for XMS Intermediate states. It rotates the CASSCF, CASCI, RASSCF or RASCI states into the XMS intermediate states.
+  This keyword generates a file named :file:`Do_Rotate.txt` that stores the rotation vector and another file named :file:`H0_Rotate.txt` that stores the Hamiltonian matrix, called the intermediate Hamiltonian matrix, for the XMS intermediate states. The intermediate Hamiltonian matrix is the XMS-PDFT effective Hamiltonian matrix before one replaces the diagonal elements with the MC-PDFT energies.
+  This keyword currently does not work for wave functions optimized with the DMRG algorithm.
+  This keyword performs the functions called by :kword:`ROSTate`; therefore one does not need to use :kword:`ROSTate` when this keyword is used.
+  More information regarding XMS-PDFT can be found on the Minnesota OpenMolcas page\ [#fn1]_.
+
+  .. [#fn1] https://comp.chem.umn.edu/openmolcas/
+
+  .. xmldoc:: <KEYWORD MODULE="RASSCF" NAME="XMSI" APPEAR="XMS Intermediate States" KIND="SINGLE" LEVEL="BASIC">
+              %%Keyword: XMSI <basic>
+              <HELP>
+              This keyword rotates the states after the last diagonalization of the CASSCF, CASCI, RASSCF or RASCI calculation into XMS intermediate states.
+              </HELP>
+              </KEYWORD>
+
+:kword:`CMSInter`
+  This keyword can be used in a CMS-PDFT calculation (which needs :program:`RASSCF` and :program:`MCPDFT` modules). This keyword stands for CMS Intermediate states. It rotates the CASSCF, CASCI, RASSCF or RASCI states into the CMS intermediate states.
+  This keyword generates a file named :file:`Do_Rotate.txt` that stores the rotation vector and another file named :file:`H0_Rotate.txt` that stores the Hamiltonian matrix, called intermediate the Hamiltonian matrix, for the CMS intermediate states. The intermediate Hamiltonian matrix is the CMS-PDFT effective Hamiltonian matrix before one replaces the diagonal elements with the MC-PDFT energies.
+  This keyword currently does not work for wave functions optimized with the DMRG algorithm.
+  This keyword performs the functions called by :kword:`ROSTate`; therefore one does not need to use :kword:`ROSTate` when this keyword is used.
+  More information regarding CMS-PDFT can be found on the Minnesota OpenMolcas page\ [#fn1]_.
+
+  .. xmldoc:: <KEYWORD MODULE="RASSCF" NAME="CMSI" APPEAR="CMS Intermediate States" KIND="SINGLE" LEVEL="BASIC">
+              %%Keyword: CMSI <basic>
+              <HELP>
+              This keyword rotates the states after the last diagonalization of the CASSCF, CASCI, RASSCF or RASCI calculation into CMS intermediate states.
+              </HELP>
+              </KEYWORD>
+
+:kword:`CMMAx`
+   This keyword defines the maximum number of cycles to find the CMS intermediate states (see :kword:`CMSInter`). The default value is 100.
+
+  .. xmldoc:: <KEYWORD MODULE="RASSCF" NAME="CMMA" APPEAR="CMS Maximum Cycles" LEVEL="ADVANCED" KIND="INT" DEFAULT_VALUE="100" MIN_VALUE="1">
+              %%Keyword: CMMA <advanced>
+              <HELP>
+              This keyword specifies the maximum number of cycles to optimize the CMS intermediate states.
+              </HELP>
+              </KEYWORD>
+
+:kword:`CMMIn`
+   This keyword defines the minimum number of cycles to find the CMS intermediate states (see :kword:`CMSInter`). The default value is 5.
+
+  .. xmldoc:: <KEYWORD MODULE="RASSCF" NAME="CMMI" APPEAR="CMS Mininum Cycles" LEVEL="ADVANCED" KIND="INT" DEFAULT_VALUE="5" MIN_VALUE="1">
+              %%Keyword: CMMI <advanced>
+              <HELP>
+              This keyword specifies the minimum number of cycles to optimize the CMS intermediate states.
+              </HELP>
+              </KEYWORD>
+
+:kword:`CMTHreshold`
+   This keyword defines the threshold for the change in the sum over states of the classical Coulomb energy for CMS intermediate states to converge (see :kword:`CMSInter`). The default value is 1.0d-6.
+
+  .. xmldoc:: <KEYWORD MODULE="RASSCF" NAME="CMTH" APPEAR="CMS Threshold" LEVEL="ADVANCED" KIND="REAL" DEFAULT_VALUE="1.0d-6" >
+              %%Keyword: CMTH <advanced>
+              <HELP>
+              This keyword specifies the threshold for the change of sum over states of the classical Coulomb energy for CMS intermediate states to converge.
+              </HELP>
+              </KEYWORD>
+
+:kword:`ROSTate`
+  This keyword can be used in an MS-PDFT calculation. This keyword stands for ROtate STates, and it rotate the states after the last diagonalization of the CASSCF, CASCI, RASSCF or RASCI calculation.
+  This keyword is only effective when there is a file named :file:`Do_Rotate.txt` present in the scratch directory; otherwise the states will not be rotated.
+  The file :file:`Do_Rotate.txt` stores the rotation vector that rotates the states; the rotation vector is stored in a format such that the first line of the file records the first row of the rotation matrix, and so on. This keyword writes a file called :file:`H0_Rotate.txt` in the scratch directory; :file:`H0_Rotate.txt` contains the Hamiltonian matrix of the rotated states.
+  This keyword currently does not work for wave functions optimized with the DMRG algorithm.
+  More information regarding XMS-PDFT can be found on the Minnesota OpenMolcas page\ [#fn1]_.
+
+  .. xmldoc:: <KEYWORD MODULE="RASSCF" NAME="ROSTate" APPEAR="Rotate states" KIND="SINGLE" LEVEL="BASIC">
+              %%Keyword: ROSTate <basic>
+              <HELP>
+              This keyword rotates the states after the last diagonalization of the CASSCF, CASCI, RASSCF or RASCI calculation.
+              </HELP>
+              </KEYWORD>
+
+DMRG keywords
+.............
+
+.. warning::
+
+   The :kword:`DMRG` keyword has different meanings for QCMaquis, Block and CheMPS2 DMRG interfaces.
+
+.. class:: keywordlist
+
 :kword:`DMRG`
-  Specify maximum number of renormalized states (or virtual bond dimension :math:`m`)
-  in each microiteration in DMRG calculations.
-  :math:`m` must be integer and should be at least 500.
+  For QCMaquis interface, this keyword is used standalone and activates the DMRG calculation with QCMaquis. In this case, the input should also contain :kword:`RGINPUT` block with parameters controlling the DMRG optimization settings in QCMaquis.
+
+  For Block and CheMPS2 interfaces, it should be followed by an integer :math:`m`
+  Specify maximum number of renormalized states in the DMRG calculation, also known as (virtual) bond dimension :math:`m` in each microiteration in DMRG calculations.
+  :math:`m` should be at least 500.
   This keyword is supported in both CheMPS2 and Block interfaces.
   Note that DMRG-CASSCF calculations for excited states are not fully supported by the Block interface.
 
-  .. xmldoc:: <KEYWORD MODULE="RASSCF" NAME="DMRG" LEVEL="BASIC" APPEAR="Number of DMRG renormalized states" KIND="INT" DEFAULT_VALUE="0" EXCLUSIVE="NECI">
+  .. xmldoc:: <KEYWORD MODULE="RASSCF" NAME="DMRG" LEVEL="BASIC" APPEAR="DMRG flag" KIND="INT" DEFAULT_VALUE="0" EXCLUSIVE="NECI">
               <ALTERNATE KIND="SINGLE" />
               %%Keyword: DMRG <basic>
               <HELP>
-              The number of DMRG renormalized states.
+              DMRG flag:
+              - for QCMaquis interface, activates the DMRG calculation
+              - for Block and CheMPS2 interfaces, sets the number of renormalized states m
               </HELP>
               </KEYWORD>
+
+Keywords for the QCMaquis DMRG interface:
+
+.. warning::
+
+   Using :kword:`DMRG` with QCMaquis interface is deprecated. It is advised to use the :program:`DMRGSCF` module for QCMaquis DMRG calculations.
+
+.. class:: keywordlist
+
+:kword:`RGInput`
+  This block, terminated by :kword:`EndRG`, is mandatory and contains parameters to QCMaquis which control the DMRG wavefunction optimization. This block is equivalent to the
+  :kword:`DMRGSettings..EndDMRGSettings` block of the :program:`DMRGSCF` module (see :numref:`UG:sec:dmrgsettings_input`).
+
+  .. xmldoc:: <GROUP MODULE="RASSCF" NAME="RGINPUT" APPEAR="QCMaquis DMRG settings" KIND="BLOCK" LEVEL="BASIC">
+              <INCLUDE MODULE="DMRGSCF" EXCEPT="ACTIVESPACEOPTIMIZER,FIEDLER,CIDEAS,OOPTIMIZATIONSETTINGS,FCIDUMP,SOCCUPY,NEVPT2PREP" />
+              </GROUP>
+
+:kword:`SOCCupy`
+  Initial electronic configuration for the calculated state(s). This keyword is equivalent to the :kword:`hf_occ` card in the **QCMaquis** input (see Table 8 of the QCMaquis manual), but allows input for multiple states. The occupation is inserted as a string (strings) of aliases of occupations of the active (RAS2) orbitals with the aliases ``2`` = full, ``u`` = up, ``d`` = down, ``0`` = empty. For several states, the occupation strings for each state are separated by newlines.
+
+  .. xmldoc:: <KEYWORD MODULE="RASSCF" NAME="SOCCUPY" KIND="CUSTOM" LEVEL="BASIC">
+              %%Keyword: soccupy <basic>
+              <HELP>
+              Set HF determinant start guess for MPS wave functions. (QCMaquis)
+              </HELP>
+              </KEYWORD>
+
+:kword:`NEVPT2prep`
+  Prepare for a subsequent DMRG-NEVPT2 or CASPT2 calculation. Then the four- and transition three-particle density matrices (4- and t-3RDMs), required for the MRPT2 calculations, will be evaluated and stored on disk in :file:`$WorkDir`. **QCMaquis** input files for the 4- and t-3RDMs evaluation are prepared and the RDM evaluation may be performed externally or directly in the :program:`NEVPT2` program. More about external RDM evaluation in Section 6.3 of the QCMaquis manual.
+
+  .. xmldoc:: <KEYWORD MODULE="RASSCF" NAME="NEVPT2PREP" KIND="SINGLE" LEVEL="BASIC">
+              %%Keyword: NEVPT2prep <basic>
+              <HELP>
+              Prepare input for higher-order RDM/TDM evaluation. (QCMaquis)
+              </HELP>
+              </KEYWORD>
+
+Keywords for the CheMPS2 DMRG interface:
+
+.. class:: keywordlist
 
 :kword:`3RDM`
   Use this keyword to get the 3-particle and Fock matrix contracted with the 4-particle reduced density
@@ -2245,7 +2371,7 @@ A list of these keywords is given below:
   .. xmldoc:: <KEYWORD MODULE="RASSCF" NAME="3RDM" APPEAR="Calculate 3- and 4-particle reduced density matrices" KIND="SINGLE" LEVEL="BASIC">
               %%Keyword: 3RDM <basic>
               <HELP>
-              Use this keyword to get the 3-particle and 4-particle reduced density matrices (3-RDM and F.4-RDM) for DMRG-CASPT2.
+              Use this keyword to get the 3-particle and 4-particle reduced density matrices (3-RDM and F.4-RDM) for DMRG-CASPT2 with CheMPS2 interface.
               </HELP>
               </KEYWORD>
 
@@ -2350,81 +2476,6 @@ A list of these keywords is given below:
               (Default: 0)
               </KEYWORD>
 
-:kword:`XMSInter`
-  This keyword can be used in an XMS-PDFT calculation (which needs :program:`RASSCF` and :program:`MCPDFT` modules). This keyword stands for XMS Intermediate states. It rotates the CASSCF, CASCI, RASSCF or RASCI states into the XMS intermediate states.
-  This keyword generates a file named :file:`Do_Rotate.txt` that stores the rotation vector and another file named :file:`H0_Rotate.txt` that stores the Hamiltonian matrix, called the intermediate Hamiltonian matrix, for the XMS intermediate states. The intermediate Hamiltonian matrix is the XMS-PDFT effective Hamiltonian matrix before one replaces the diagonal elements with the MC-PDFT energies.
-  This keyword currently does not work for wave functions optimized with the DMRG algorithm.
-  This keyword performs the functions called by :kword:`ROSTate`; therefore one does not need to use :kword:`ROSTate` when this keyword is used.
-  More information regarding XMS-PDFT can be found on the Minnesota OpenMolcas page\ [#fn1]_.
-
-  .. [#fn1] https://comp.chem.umn.edu/openmolcas/
-
-  .. xmldoc:: <KEYWORD MODULE="RASSCF" NAME="XMSI" APPEAR="XMS Intermediate States" KIND="SINGLE" LEVEL="BASIC">
-              %%Keyword: XMSI <basic>
-              <HELP>
-              This keyword rotates the states after the last diagonalization of the CASSCF, CASCI, RASSCF or RASCI calculation into XMS intermediate states.
-              </HELP>
-              </KEYWORD>
-
-:kword:`CMSInter`
-  This keyword can be used in a CMS-PDFT calculation (which needs :program:`RASSCF` and :program:`MCPDFT` modules). This keyword stands for CMS Intermediate states. It rotates the CASSCF, CASCI, RASSCF or RASCI states into the CMS intermediate states.
-  This keyword generates a file named :file:`Do_Rotate.txt` that stores the rotation vector and another file named :file:`H0_Rotate.txt` that stores the Hamiltonian matrix, called intermediate the Hamiltonian matrix, for the CMS intermediate states. The intermediate Hamiltonian matrix is the CMS-PDFT effective Hamiltonian matrix before one replaces the diagonal elements with the MC-PDFT energies.
-  This keyword currently does not work for wave functions optimized with the DMRG algorithm.
-  This keyword performs the functions called by :kword:`ROSTate`; therefore one does not need to use :kword:`ROSTate` when this keyword is used.
-  More information regarding CMS-PDFT can be found on the Minnesota OpenMolcas page\ [#fn1]_.
-
-  .. xmldoc:: <KEYWORD MODULE="RASSCF" NAME="CMSI" APPEAR="CMS Intermediate States" KIND="SINGLE" LEVEL="BASIC">
-              %%Keyword: CMSI <basic>
-              <HELP>
-              This keyword rotates the states after the last diagonalization of the CASSCF, CASCI, RASSCF or RASCI calculation into CMS intermediate states.
-              </HELP>
-              </KEYWORD>
-
-:kword:`CMMAx`
-   This keyword defines the maximum number of cycles to find the CMS intermediate states (see :kword:`CMSInter`). The default value is 100.
-
-  .. xmldoc:: <KEYWORD MODULE="RASSCF" NAME="CMMA" APPEAR="CMS Maximum Cycles" LEVEL="ADVANCED" KIND="INT" DEFAULT_VALUE="100" MIN_VALUE="1">
-              %%Keyword: CMMA <advanced>
-              <HELP>
-              This keyword specifies the maximum number of cycles to optimize the CMS intermediate states.
-              </HELP>
-              </KEYWORD>
-
-:kword:`CMMIn`
-   This keyword defines the minimum number of cycles to find the CMS intermediate states (see :kword:`CMSInter`). The default value is 5.
-
-  .. xmldoc:: <KEYWORD MODULE="RASSCF" NAME="CMMI" APPEAR="CMS Mininum Cycles" LEVEL="ADVANCED" KIND="INT" DEFAULT_VALUE="5" MIN_VALUE="1">
-              %%Keyword: CMMI <advanced>
-              <HELP>
-              This keyword specifies the minimum number of cycles to optimize the CMS intermediate states.
-              </HELP>
-              </KEYWORD>
-
-:kword:`CMTHreshold`
-   This keyword defines the threshold for the change in the sum over states of the classical Coulomb energy for CMS intermediate states to converge (see :kword:`CMSInter`). The default value is 1.0d-6.
-
-  .. xmldoc:: <KEYWORD MODULE="RASSCF" NAME="CMTH" APPEAR="CMS Threshold" LEVEL="ADVANCED" KIND="REAL" DEFAULT_VALUE="1.0d-6" >
-              %%Keyword: CMTH <advanced>
-              <HELP>
-              This keyword specifies the threshold for the change of sum over states of the classical Coulomb energy for CMS intermediate states to converge.
-              </HELP>
-              </KEYWORD>
-
-
-:kword:`ROSTate`
-  This keyword can be used in an MS-PDFT calculation. This keyword stands for ROtate STates, and it rotate the states after the last diagonalization of the CASSCF, CASCI, RASSCF or RASCI calculation.
-  This keyword is only effective when there is a file named :file:`Do_Rotate.txt` present in the scratch directory; otherwise the states will not be rotated.
-  The file :file:`Do_Rotate.txt` stores the rotation vector that rotates the states; the rotation vector is stored in a format such that the first line of the file records the first row of the rotation matrix, and so on. This keyword writes a file called :file:`H0_Rotate.txt` in the scratch directory; :file:`H0_Rotate.txt` contains the Hamiltonian matrix of the rotated states.
-  This keyword currently does not work for wave functions optimized with the DMRG algorithm.
-  More information regarding XMS-PDFT can be found on the Minnesota OpenMolcas page\ [#fn1]_.
-
-  .. xmldoc:: <KEYWORD MODULE="RASSCF" NAME="ROSTate" APPEAR="Rotate states" KIND="SINGLE" LEVEL="BASIC">
-              %%Keyword: ROSTate <basic>
-              <HELP>
-              This keyword rotates the states after the last diagonalization of the CASSCF, CASCI, RASSCF or RASCI calculation.
-              </HELP>
-              </KEYWORD>
-
 A general comment concerning the input orbitals: The orbitals are ordered by
 symmetry. Within each symmetry block the order is assumed to be:
 frozen, inactive, active, external (secondary), and deleted. Note that
@@ -2497,12 +2548,5 @@ Input example for DMRG-CASSCF with Molcas-CheMPS2 interface: ::
 .. xmldoc:: <KEYWORD MODULE="RASSCF" NAME="AVERAGE" LEVEL="UNDOCUMENTED" KIND="INTS_COMPUTED" SIZE="2" />
 
 .. xmldoc:: <KEYWORD MODULE="RASSCF" NAME="FAROALD" LEVEL="UNDOCUMENTED" KIND="SINGLE" />
-
-.. xmldoc:: <GROUP MODULE="RASSCF" NAME="RGINPUT" LEVEL="UNDOCUMENTED" KIND="BLOCK">
-            <KEYWORD MODULE="RASSCF" NAME="MAX_BOND_DIMENSION" LEVEL="UNDOCUMENTED" KIND="INT" />
-            <KEYWORD MODULE="RASSCF" NAME="NSWEEPS" LEVEL="UNDOCUMENTED" KIND="INT" />
-            </GROUP>
-
-.. xmldoc:: <KEYWORD MODULE="RASSCF" NAME="NEVPT2PREP" LEVEL="UNDOCUMENTED" KIND="STRING" />
 
 .. xmldoc:: </MODULE>

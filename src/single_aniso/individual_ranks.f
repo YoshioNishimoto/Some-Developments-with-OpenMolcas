@@ -10,7 +10,7 @@
 ************************************************************************
       Subroutine individual_ranks(nDIMCF,BC,BS,Hinit,LJ,iprint)
       Implicit None
-      Integer, Parameter          :: wp=selected_real_kind(p=15,r=307)
+      Integer, Parameter            :: wp=kind(0.d0)
 #include "stdalloc.fh"
       Integer, intent(in)         :: nDIMCF,iprint
       Real(kind=8),intent(in)    :: BC(nDIMcf,0:nDIMcf)
@@ -364,7 +364,7 @@
          ip=projKQ(ik)
          iq=abs(projKQ(ik))
          ir=rankKQ(ik)
-         wt=100_wp*ListKQ(ik)/TnrmKQ
+         wt=100.0_wp*ListKQ(ik)/TnrmKQ
 
          If(projKQ(ik)>=0) Then
             Write(6,'((1x,I2,1x,A),(1x,I3,1x,A),(E22.14,1x,A),'//
@@ -410,7 +410,7 @@
 
       Subroutine sort_KQ(N,ARR,rank,proj,iopt)
       Implicit None
-      Integer, Parameter          :: wp=selected_real_kind(p=15,r=307)
+      Integer, Parameter            :: wp=kind(0.d0)
       Integer, intent(in)         :: N, iopt
       Integer, intent(inout)      :: rank(N), proj(N)
       Real(kind=8), intent(inout):: ARR(N)

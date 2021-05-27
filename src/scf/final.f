@@ -59,16 +59,15 @@
 #endif
       Use Interfaces_SCF, Only: dOne_SCF
       use OFembed, only: Do_OFemb, FMaux
+#ifdef _FDE_
+      use Embedding_Global, only: embPot, embWriteEsp
+#endif
       Implicit Real*8 (a-h,o-z)
 *
 #include "real.fh"
 #include "mxdm.fh"
 #include "infscf.fh"
 #include "file.fh"
-#ifdef _FDE_
-      ! Thomas Dresselhaus
-#include "embpotdata.fh"
-#endif
 #include "scfwfn.fh"
 #include "stdalloc.fh"
 *
@@ -77,13 +76,8 @@
      &       Fock(mBT,nD), OccNo(mmB,nD), KntE(mBT), MssVlc(mBT),
      &       Darwin(mBT)
 *
-      Logical Do_SpinAV
-      COMMON  / SPAVE_L  / Do_SpinAV
-      COMMON  / SPAVE_I  / ip_DSc
-      Logical Do_Addc
-      COMMON  / ADDcorr_L   / Do_Addc
-      Logical Do_Tw
-      COMMON  / Tw_corr_L   / Do_Tw
+#include "spave.fh"
+#include "addcorr.fh"
 #ifdef _EFP_
       Logical EFP_On
 #endif
@@ -319,7 +313,7 @@ c         If (iUHF.eq.1) Call Put_dScalar('Ener_ab',EneV_ab)
 #ifdef _FDE_
       ! Embedding
       if (embPot.and.(embWriteEsp)) then
-         Call embPotOutput(nAtoms,ip_of_Work(Dens(1,1,1)))
+         Call embPotOutput(nAtoms,Dens)
       end if
 #endif
 *

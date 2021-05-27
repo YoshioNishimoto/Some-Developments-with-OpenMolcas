@@ -12,7 +12,7 @@
 
   IMPLICIT NONE
 
-  Integer, parameter    :: wp=SELECTED_REAL_KIND(p=15,r=307)
+  Integer, parameter        :: wp=kind(0.d0)
   INTEGER, INTENT(in)   :: nH, nTempMagn
   REAL (wp), INTENT(in) :: H(nH), TempMagn(nTempMagn)
   REAL (wp), INTENT(in) :: MHexp(nH,nTempMagn)
@@ -21,11 +21,15 @@
   ! local variables
   REAL (wp) :: hmin, hmax, MHmin_exp, MHmax_exp, MHmin_calc, MHmax_calc, MHmin, MHmax
   REAL (wp) :: gnuplot_version
-  INTEGER           :: file_number, iH, iTempMagn, LuPlt, LuData, file_size, StdOut, iErr
-  LOGICAL           :: file_exist, is_file_open, execute_gnuplot_cmd, dbg
-  CHARACTER(LEN=100):: line1, line2, cdummy
-  CHARACTER(LEN=100):: gnuplot_CMD, filedat, fileplt
-  INTEGER, EXTERNAL:: AixRm
+  INTEGER   :: file_number, iH, iTempMagn, LuPlt, LuData, file_size, StdOut
+  LOGICAL   :: file_exist, is_file_open, execute_gnuplot_cmd, dbg
+  CHARACTER(LEN=100)  :: line1, line2, cdummy
+  CHARACTER(LEN=100)  :: datafile, plotfile, imagefile, epsfile
+  INTEGER, EXTERNAL   :: AixRm
+  INTEGER             :: Length
+  CHARACTER(LEN=1023) :: realname_plt, realname_dat, realname_png, realname_eps, gnuplot_CMD
+  INTEGER             :: iErr, ifilenumber
+  INTEGER, EXTERNAL   :: IsFreeUnit
 
   dbg=.false.
   iErr=0
@@ -46,7 +50,6 @@
   MHmax_calc=MAXVAL(MHcalc)
   MHmin=MIN(MHmin_exp,MHmin_calc)-0.08_wp*MAX(MHmax_exp,MHmax_calc)
   MHmax=MAX(MHmax_exp,MHmax_calc)+0.08_wp*MAX(MHmax_exp,MHmax_calc)
-
 
   IF (dbg) WRITE (StdOut,*) 'nH        = ',nH
   IF (dbg) WRITE (StdOut,*) 'hmin      = ',hmin
@@ -87,6 +90,7 @@
      ! delete the file
      IF (dbg) WRITE (StdOut,'(A)') 'deleting the file...'
      iErr=AixRm("lineOUT")
+     IF(dbg)  WRITE (StdOut,*) 'iErr = ',iErr
   ELSE
      IF (dbg) WRITE (StdOut,'(A)') 'file  "lineOUT" does not exist in WorkDir'
   END IF
@@ -95,7 +99,12 @@
   ! find the gnuplot
   IF (dbg) WRITE (StdOut,'(A)') 'inquire which GNUPLOT'
 
+!#ifdef __INTEL_COMPILER
   CALL systemf ( "which gnuplot >> lineOUT", iErr )
+  IF(dbg)  WRITE (StdOut,*) 'iErr = ',iErr
+!#else
+!  CALL execute_command_line ( "which gnuplot >> lineOUT" )
+!#endif
 
   INQUIRE(FILE="lineOUT",EXIST=file_exist,OPENED=is_file_open,NUMBER=file_number,SIZE=file_size)
 
@@ -108,7 +117,7 @@
     IF (file_size>0) then
       IF (dbg) WRITE (StdOut,'(A)') 'new file  "lineOUT"  exists in WorkDir'
 
-      file_number=453
+      file_number=IsFreeUnit(93)
       Call molcas_open(file_number,'lineOUT')
 
       READ (file_number,'(A)') line1
@@ -131,6 +140,7 @@
   END IF
   ! remove file "lineOUT"
   iErr=AixRm("lineOUT")
+  IF(dbg)  WRITE (StdOut,*) 'iErr = ',iErr
 !--------------------------------------------------------------------------------------------
 
 
@@ -140,8 +150,13 @@
     ! attempt to execute the script
     WRITE (gnuplot_CMD,'(2A)') trim(line2),' --version > lineOUT'
     IF (dbg) WRITE (StdOut,'(A,A)') 'gnuplot_CMD=',gnuplot_CMD
+!#ifdef __INTEL_COMPILER
     CALL systemf ( gnuplot_CMD, iErr )
-    file_number=452
+    IF(dbg)  WRITE (StdOut,*) 'iErr = ',iErr
+!#else
+!    CALL execute_command_line ( gnuplot_CMD )
+!#endif
+    file_number=IsFreeUnit(94)
     Call molcas_open(file_number,'lineOUT')
     READ (file_number,*) cdummy, gnuplot_version
     IF (dbg) WRITE (StdOut,'(A,F4.1)') 'gnuplot_version = ', gnuplot_version
@@ -149,43 +164,80 @@
     CLOSE (file_number)
     ! remove file "lineOUT"
     iErr=AixRm("lineOUT")
+    IF(dbg)  WRITE (StdOut,*) 'iErr = ',iErr
   END IF
+
+
+
+
+  !WRITE(datafile ,'(3A)')  'MH.dat'
+  !WRITE(imagefile,'(3A)')  'MH.png'
+  !WRITE(epsfile  ,'(3A)')  'MH.eps'
+  !WRITE(plotfile ,'(3A)')  'MH.plt'
+  !Call prgmtranslate(datafile ,realname_dat,Length)
+  !Call prgmtranslate(imagefile,realname_png,Length)
+  !Call prgmtranslate(epsfile  ,realname_eps,Length)
+  !Call prgmtranslate(plotfile ,realname_plt,Length)
+  !IF (dbg) THEN
+  !  WRITE(StdOut,'(3A)') 'realname_dat=',trim(realname_dat)
+  !  WRITE(StdOut,'(3A)') 'realname_png=',trim(realname_png)
+  !  WRITE(StdOut,'(3A)') 'realname_eps=',trim(realname_eps)
+  !  WRITE(StdOut,'(3A)') 'realname_plt=',trim(realname_plt)
+  !END IF
 !--------------------------------------------------------------------------------------------
-
-
-
-
   DO iTempMagn=1,nTempMagn
+
      ! generate the file "MH.dat":
-     WRITE(filedat,'(A,I0,A)') 'MH_T_',iTempMagn,'.dat'
-     INQUIRE(FILE=filedat,EXIST=file_exist,OPENED=is_file_open,NUMBER=file_number)
-     IF(file_exist)  iErr=AixRm(trim(filedat))
-     LuData=554+iTempMagn
-     Call molcas_open(LuData,filedat)
-     IF (dbg) WRITE (StdOut,*) 'Opening'//trim(filedat)//' file'
+     WRITE(datafile ,'(A,I0,A)') 'MH_T_',iTempMagn,'.dat'
+     WRITE(imagefile,'(A,I0,A)') 'MH_T_',iTempMagn,'.png'
+     WRITE(epsfile  ,'(A,I0,A)') 'MH_T_',iTempMagn,'.eps'
+     Write(plotfile ,'(A,I0,A)') 'MH_T_',iTempMagn,'.plt'
+     Call prgmtranslate(datafile ,realname_dat,Length)
+     Call prgmtranslate(imagefile,realname_png,Length)
+     Call prgmtranslate(epsfile  ,realname_eps,Length)
+     Call prgmtranslate(plotfile ,realname_plt,Length)
+
+     INQUIRE(FILE=datafile,EXIST=file_exist,OPENED=is_file_open,NUMBER=file_number)
+     IF(file_exist)  iErr=AixRm( trim(datafile) )
+     IF(dbg)  WRITE (StdOut,*) 'iErr = ',iErr
+     ifilenumber=0
+     ifilenumber=95+iTempMagn
+     LuData=IsFreeUnit(ifilenumber)
+     Call molcas_open(LuData,datafile)
+     IF (dbg) WRITE (StdOut,*) 'Opening "'//trim(datafile)//'" file. iTempMagn=', iTempMagn
+     IF (dbg) WRITE (StdOut,*) 'Opening "'//trim(realname_dat)//'" file. iTempMagn=',iTempMagn
      DO iH=1,nH
         WRITE (LuData,'(3ES24.14)') H(iH), MHexp(iH,iTempMagn), MHcalc(iH,iTempMagn)
      END DO
-     IF (dbg) WRITE (StdOut,*) 'Writing into the '//trim(filedat)//' file. iTempMagn=',iTempMagn
+     IF (dbg) WRITE (StdOut,*) 'Writing into the "'//trim(datafile)//'" file. iTempMagn=',iTempMagn
+     IF (dbg) WRITE (StdOut,*) 'Writing into the "'//trim(realname_dat)//'" file. iTempMagn=',iTempMagn
      CLOSE (LuData)
-     IF (dbg) WRITE (StdOut,*) 'Closing the '//trim(filedat)//' file. iTempMagn=',iTempMagn
+     IF (dbg) WRITE (StdOut,*) 'Closing the "'//trim(datafile)//'" file. iTempMagn=',iTempMagn
+     IF (dbg) WRITE (StdOut,*) 'Closing the "'//trim(realname_dat)//'" file. iTempMagn=',iTempMagn
      FLUSH (StdOut)
 
 
 
      ! generate the GNUPLOT script in the $WorkDir
-     Write(fileplt,'(A,I0,A)') 'MH_T_',iTempMagn,'.plt'
-     INQUIRE(FILE=fileplt,EXIST=file_exist,OPENED=is_file_open,NUMBER=file_number)
-     IF(file_exist)  iErr=AixRm(trim(fileplt))
-     LuPlt=455+iTempMagn
-     Call molcas_open(LuPlt,fileplt)
-     IF (dbg) WRITE (StdOut,*) 'Opening '//trim(fileplt)//' file'
+
+     INQUIRE(FILE=plotfile,EXIST=file_exist,OPENED=is_file_open,NUMBER=file_number)
+     IF(file_exist)  iErr=AixRm( trim(plotfile) )
+     IF(dbg)  WRITE (StdOut,*) 'iErr = ',iErr
+     ifilenumber=0
+     ifilenumber=105+iTempMagn
+     LuPlt=IsFreeUnit(ifilenumber)
+     Call molcas_open(LuPlt,plotfile)
+     IF (dbg) WRITE (StdOut,*) 'Opening "'//trim(plotfile)//'" file'
+     IF (dbg) WRITE (StdOut,*) 'Opening "'//trim(realname_plt)//'" file'
+
+
+     ! EPS or PNG images:
 
 
      IF ( gnuplot_version < 5.0_wp ) Then
      !===  GNUPLOT VERSION 4 and below ==>>  generate EPS
         WRITE (LuPlt,'(A)') 'set terminal postscript eps enhanced color  size 3.0, 2.0 font "arial, 10"'
-        WRITE (LuPlt,'(A,i0,A)') 'set output "MH_T_',iTempMagn,'.eps"'
+        WRITE (LuPlt,'(A)') 'set output "'//trim(realname_eps)//'" '
         WRITE (LuPlt,'(A)') 'set grid'
         WRITE (LuPlt,'(A)')
         WRITE (LuPlt,'(A)') '# Axes'
@@ -210,16 +262,16 @@
         WRITE (LuPlt,'(A)')
         WRITE (LuPlt,'(A)') '# actual plotting'
 
-        WRITE (LuPlt,'(A,F7.3,A)') 'plot "'//trim(filedat)//'" using 1:2 with points  lt 1  lw 3 lc rgb "black"  title "Exp. T=',&
-                                    TempMagn(iTempMagn),' K.", \'
-        WRITE (LuPlt,'(A,F7.3,A)') '     "'//trim(filedat)//'" using 1:3 with lines   lt 1  lw 8 lc rgb "red"    title "Calc.T=',&
-                                    TempMagn(iTempMagn),' K."'
+        WRITE (LuPlt,'(A,F7.3,A)') 'plot "'//trim(realname_dat)//'" using 1:2 with points  lt 1  lw 3 lc rgb "black"'//&
+                                   '  title "Exp. T=',TempMagn(iTempMagn),' K.", \'
+        WRITE (LuPlt,'(A,F7.3,A)') '     "'//trim(realname_dat)//'" using 1:3 with lines   lt 1  lw 8 lc rgb "red"  '//&
+                                   '  title "Calc.T=',TempMagn(iTempMagn),' K."'
         WRITE (LuPlt,'(A)')
 
      ELSE IF ( (gnuplot_version >= 5.0_wp) .AND.(gnuplot_version < 6.0_wp) ) Then
      !===  GNUPLOT VERSION 5 and above ==>>  generate PNG
         WRITE (LuPlt,'(A)') 'set terminal pngcairo transparent enhanced font "arial,10" fontscale 4.0 size 1800, 1200'
-        WRITE (LuPlt,'(A,i0,A)') 'set output "MH_T_',iTempMagn,'.png"'
+        WRITE (LuPlt,'(A)') 'set output "'//trim(realname_png)//'" '
         WRITE (LuPlt,'(A)') 'set grid'
         WRITE (LuPlt,'(A)')
         WRITE (LuPlt,'(A)') '# Axes'
@@ -244,10 +296,10 @@
         WRITE (LuPlt,'(A)')
         WRITE (LuPlt,'(A)') '# actual plotting'
 
-        WRITE (LuPlt,'(A,F7.3,A)') 'plot "'//trim(filedat)//'" using 1:2 with circles lt 1  lw 3 lc rgb "black"  title "Exp. T=',&
-                                    TempMagn(iTempMagn),' K.", \'
-        WRITE (LuPlt,'(A,F7.3,A)') '     "'//trim(filedat)//'" using 1:3 with lines   lt 1  lw 8 lc rgb "red"    title "Calc.T=',&
-                                    TempMagn(iTempMagn),' K."'
+        WRITE (LuPlt,'(A,F7.3,A)') 'plot "'//trim(realname_dat)//'" using 1:2 with circles lt 1  lw 3 lc rgb "black"'//&
+                                   '  title "Exp. T=',TempMagn(iTempMagn),' K.", \'
+        WRITE (LuPlt,'(A,F7.3,A)') '     "'//trim(realname_dat)//'" using 1:3 with lines   lt 1  lw 8 lc rgb "red"  '//&
+                                   '  title "Calc.T=',TempMagn(iTempMagn),' K."'
         WRITE (LuPlt,'(A)')
      ELSE
        WRITE (StdOut,*) 'GNUPLOT has version: ', gnuplot_version
@@ -258,15 +310,43 @@
 
      IF (execute_gnuplot_cmd) Then
        ! attempt to execute the script
-       WRITE (gnuplot_CMD,'(5A)') trim(line2),'  ',trim(fileplt)
-       IF (dbg) WRITE (StdOut,'(A,A)') 'gnuplot_CMD=',gnuplot_CMD
+       IF (dbg) THEN
+         WRITE (StdOut,*) trim(realname_plt)
+         INQUIRE(FILE=trim(realname_plt),EXIST=file_exist,OPENED=is_file_open,NUMBER=file_number)
+         IF(file_exist) THEN
+           WRITE (StdOut,'(A,i0,A)') 'File "'//trim(realname_plt)//'" exists.'
+         ELSE
+           WRITE (StdOut,'(A,i0,A)') 'File "'//trim(realname_plt)//'" does not exist.'
+         END IF
+       END IF
+
+       WRITE (gnuplot_CMD,'(5A)') trim(line2),' < ',trim(realname_plt)
+       IF (dbg) WRITE (StdOut,'(A,A)') 'gnuplot_CMD=',trim(gnuplot_CMD)
+
+!#ifdef __INTEL_COMPILER
        CALL systemf ( gnuplot_CMD, iErr )
+       IF(dbg)  WRITE (StdOut,*) 'iErr = ',iErr
+!#else
+!       CALL execute_command_line ( gnuplot_CMD )
+!#endif
+
        IF ( gnuplot_version < 5.0_wp ) Then
-         WRITE (StdOut,'(A,i0,A)') 'File "MH_T_',iTempMagn,'.eps" was created in Working directory.'
+         INQUIRE(FILE=trim(realname_eps),EXIST=file_exist,OPENED=is_file_open,NUMBER=file_number)
+         IF(file_exist) THEN
+           WRITE (StdOut,'(A,i0,A)') 'File "'//trim(realname_eps)//'" was created in Working directory.'
+         ELSE
+           WRITE (StdOut,'(A,i0,A)') 'File "'//trim(realname_eps)//'" was NOT created in Working directory.'
+         END IF
        ELSE
-         WRITE (StdOut,'(A,i0,A)') 'File "MH_T_',iTempMagn,'.png" was created in Working directory.'
+         INQUIRE(FILE=trim(realname_png),EXIST=file_exist,OPENED=is_file_open,NUMBER=file_number)
+         IF(file_exist) THEN
+           WRITE (StdOut,'(A,i0,A)') 'File "'//trim(realname_png)//'" was created in Working directory.'
+         ELSE
+           WRITE (StdOut,'(A,i0,A)') 'File "'//trim(realname_png)//'" was NOT created in Working directory.'
+         END IF
        END IF
      END IF
+
   END DO ! iTempMagn
 
   RETURN
@@ -283,7 +363,7 @@
 
   IMPLICIT NONE
 
-  Integer, parameter    :: wp=SELECTED_REAL_KIND(p=15,r=307)
+  Integer, parameter        :: wp=kind(0.d0)
   INTEGER, INTENT(in)   :: nH, nTempMagn
   REAL (wp), INTENT(in) :: H(nH), TempMagn(nTempMagn)
   REAL (wp), INTENT(in) :: MHcalc(nH,nTempMagn)
@@ -291,12 +371,16 @@
   ! local variables
   REAL (wp) :: hmin, hmax, MHmin_calc, MHmax_calc, MHmin, MHmax, r
   REAL (wp) :: gnuplot_version
-  INTEGER           :: file_number, iH, iTempMagn, LuPlt, LuData, ik, ic, file_size, StdOut, iErr
-  LOGICAL           :: file_exist, is_file_open, execute_gnuplot_cmd, dbg
-  CHARACTER(LEN=100):: line1, line2, fmtline, cdummy
-  CHARACTER(LEN=100):: gnuplot_CMD
-  CHARACTER(LEN=7) :: color(111)
-  INTEGER, EXTERNAL:: AixRm
+  INTEGER   :: file_number, iH, iTempMagn, LuPlt, LuData, ik, ic, file_size, StdOut
+  LOGICAL   :: file_exist, is_file_open, execute_gnuplot_cmd, dbg
+  CHARACTER(LEN=100)    :: line1, line2, fmtline, cdummy
+  CHARACTER(LEN=100)    :: datafile, plotfile, imagefile, epsfile
+  CHARACTER(LEN=7)      :: color(111)
+  INTEGER, EXTERNAL     :: AixRm
+  INTEGER               :: Length
+  CHARACTER(LEN=1023)   :: realname_plt, realname_dat, realname_png, realname_eps, gnuplot_CMD
+  INTEGER               :: iErr
+  INTEGER, EXTERNAL     :: IsFreeUnit
 
   color(  1)="#ffffff"; color(  2)="#000000"; color(  3)="#a0a0a0"; color(  4)="#ff0000"; color(  5)="#00c000"
   color(  6)="#0080ff"; color(  7)="#c000ff"; color(  8)="#00eeee"; color(  9)="#c04000"; color( 10)="#c8c800"
@@ -323,8 +407,8 @@
   color(111)="#ffffff"
 
   dbg=.false.
-  StdOut=6
   iErr=0
+  StdOut=6
   hmin=0.0_wp
   hmax=0.0_wp
   MHmin_calc=0.0_wp
@@ -376,6 +460,7 @@
      ! delete the file
      IF (dbg) WRITE (StdOut,'(A)') 'deleting the file...'
      iErr=AixRm("lineOUT")
+     IF(dbg)  WRITE (StdOut,*) 'iErr = ',iErr
   ELSE
      IF (dbg) WRITE (StdOut,'(A)') 'file  "lineOUT" does not exist in WorkDir'
   END IF
@@ -384,7 +469,13 @@
   ! find the gnuplot
   IF (dbg) WRITE (StdOut,'(A)') 'inquire which GNUPLOT'
 
+!#ifdef __INTEL_COMPILER
   CALL systemf ( "which gnuplot >> lineOUT", iErr )
+  IF(dbg)  WRITE (StdOut,*) 'iErr = ',iErr
+!#else
+!  CALL execute_command_line ( "which gnuplot >> lineOUT" )
+!#endif
+
   INQUIRE(FILE="lineOUT",EXIST=file_exist,OPENED=is_file_open,NUMBER=file_number,SIZE=file_size)
 
   IF (dbg) WRITE (StdOut,*) 'File_number =',file_number
@@ -396,7 +487,7 @@
     IF (file_size>0) then
       IF (dbg) WRITE (StdOut,'(A)') 'new file  "lineOUT"  exists in WorkDir'
 
-      file_number=453
+      file_number=IsFreeUnit(103)
       Call molcas_open(file_number,"lineOUT")
 
       READ (file_number,'(A)') line1
@@ -420,6 +511,7 @@
   END IF
   ! remove file "lineOUT"
   iErr=AixRm("lineOUT")
+  IF(dbg)  WRITE (StdOut,*) 'iErr = ',iErr
 !--------------------------------------------------------------------------------------------
 
 
@@ -429,8 +521,13 @@
     ! attempt to execute the script
     WRITE (gnuplot_CMD,'(2A)') trim(line2),' --version > lineOUT'
     IF (dbg) WRITE (StdOut,'(A,A)') 'gnuplot_CMD=',gnuplot_CMD
+!#ifdef __INTEL_COMPILER
     CALL systemf ( gnuplot_CMD, iErr )
-    file_number=452
+    IF(dbg)  WRITE (StdOut,*) 'iErr = ',iErr
+!#else
+!    CALL execute_command_line ( gnuplot_CMD )
+!#endif
+    file_number=IsFreeUnit(102)
     Call molcas_open(file_number,"lineOUT")
     READ (file_number,*) cdummy, gnuplot_version
     IF (dbg) WRITE (StdOut,'(A,F4.1)') 'gnuplot_version = ', gnuplot_version
@@ -438,37 +535,70 @@
     CLOSE (file_number)
     ! remove file "lineOUT"
     iErr=AixRm("lineOUT")
+    IF(dbg)  WRITE (StdOut,*) 'iErr = ',iErr
   END IF
+
+
+
+!--------------------------------------------------------------------------------------------
+! get the true real names of the files on disk:
+  WRITE(datafile ,'(3A)')  'MH.dat'
+  WRITE(imagefile,'(3A)')  'MH.png'
+  WRITE(epsfile  ,'(3A)')  'MH.eps'
+  WRITE(plotfile ,'(3A)')  'MH.plt'
+  Call prgmtranslate(datafile ,realname_dat,Length)
+  Call prgmtranslate(imagefile,realname_png,Length)
+  Call prgmtranslate(epsfile  ,realname_eps,Length)
+  Call prgmtranslate(plotfile ,realname_plt,Length)
+  IF (dbg) THEN
+    WRITE(StdOut,'(3A)') 'realname_dat=',trim(realname_dat)
+    WRITE(StdOut,'(3A)') 'realname_png=',trim(realname_png)
+    WRITE(StdOut,'(3A)') 'realname_eps=',trim(realname_eps)
+    WRITE(StdOut,'(3A)') 'realname_plt=',trim(realname_plt)
+  END IF
+
+
+
 
 
 !----------------------------------------------------------------------------------------
 ! create the file "MH.dat"
-  INQUIRE(FILE="MH.dat",EXIST=file_exist,OPENED=is_file_open,NUMBER=file_number)
-  IF(file_exist)  iErr=AixRm("MH.dat")
-  LuData=454
-  Call molcas_open(LuData,"MH.dat")
-  IF (dbg) WRITE (StdOut,*) 'Opening "MH.dat" file'
+  INQUIRE(FILE=datafile,EXIST=file_exist,OPENED=is_file_open,NUMBER=file_number)
+  IF(file_exist)  iErr=AixRm( trim(datafile) )
+  IF(dbg)  WRITE (StdOut,*) 'iErr = ',iErr
+  LuData=IsFreeUnit(104)
+  Call molcas_open(LuData, datafile )
+  IF (dbg) WRITE (StdOut,*) 'Opening "'//trim(datafile)//'" file'
+  IF (dbg) WRITE (StdOut,*) 'Opening "'//trim(realname_dat)//'" file'
   write(fmtline,'(A,i0,A)') '(',nTempMagn+1,'ES24.14)'
   DO iH=1,nH
      WRITE (LuData,fmtline) H(iH), ( MHcalc(iH,iTempMagn), iTempMagn=1,nTempMagn )
   END DO
-  IF (dbg) WRITE (StdOut,*) 'Writing into the "MH.dat" file'
+  IF (dbg) WRITE (StdOut,*) 'Writing into the "'//trim(datafile)//'"file'
+  IF (dbg) WRITE (StdOut,*) 'Writing into the "'//trim(realname_dat)//'"file'
   CLOSE (LuData)
-  IF (dbg) WRITE (StdOut,*) 'Closing the "MH.dat" file'
+  IF (dbg) WRITE (StdOut,*) 'Closing the "'//trim(datafile)//'" file'
+  IF (dbg) WRITE (StdOut,*) 'Closing the "'//trim(realname_dat)//'" file'
   FLUSH (StdOut)
 
+
+
+!----------------------------------------------------------------------------------------
   ! generate the GNUPLOT script in the $WorkDir
-  INQUIRE(FILE="MH.plt",EXIST=file_exist,OPENED=is_file_open,NUMBER=file_number)
-  IF(file_exist) iErr=AixRm("MH.plt")
-  LuPlt=455
-  Call molcas_open(LuPlt,"MH.plt")
-  IF (dbg) WRITE (StdOut,*) 'Opening "MH.plt" file'
+  INQUIRE(FILE=plotfile,EXIST=file_exist,OPENED=is_file_open,NUMBER=file_number)
+  IF(file_exist) iErr=AixRm( trim(plotfile) )
+  IF(dbg)  WRITE (StdOut,*) 'iErr = ',iErr
+  LuPlt=IsFreeUnit(105)
+  Call molcas_open(LuPlt, plotfile )
+  IF (dbg) WRITE (StdOut,*) 'Opening "'//trim(plotfile)//'" file'
+  IF (dbg) WRITE (StdOut,*) 'Opening "'//trim(realname_plt)//'" file'
+
 
 
   IF ( gnuplot_version < 5.0_wp ) Then
   !===  GNUPLOT VERSION 4 and below ==>>  generate EPS
      WRITE (LuPlt,'(A)') 'set terminal postscript eps enhanced color  size 3.0, 2.0 font "arial, 10"'
-     WRITE (LuPlt,'(A)') 'set output "MH.eps"'
+     WRITE (LuPlt,'(A)') 'set output "'//trim(realname_eps)//'" '
      WRITE (LuPlt,'(A)') 'set grid'
      WRITE (LuPlt,'(A)')
      WRITE (LuPlt,'(A)') '# Axes'
@@ -497,19 +627,19 @@
        Call RANDOM_NUMBER(r)
        ic=INT(111.0_wp*r)
        IF((iTempMagn.eq.1).AND.(nTempMagn.gt.1)) THEN
-         WRITE (LuPlt,'(A,i0,A,F7.3,A)') 'plot "MH.dat" using 1:',ik,' with lines lt 1  lw  8 lc rgb "'//color(ic)//&
-                                          '"  title "Calc. M at T=',TempMagn(iTempMagn),'K.", \'
+         WRITE (LuPlt,'(A,i0,A,F7.3,A)') 'plot "'//trim(realname_dat)//'" using 1:',ik,&
+               ' with lines lt 1  lw  8 lc rgb "'//color(ic)//'"  title "Calc. M at T=',TempMagn(iTempMagn),'K.", \'
        ELSE IF ((iTempMagn.eq.1).AND.(nTempMagn.eq.1)) THEN
-         WRITE (LuPlt,'(A,i0,A,F7.3,A)') 'plot "MH.dat" using 1:',ik,' with lines lt 1  lw  8 lc rgb "'//color(ic)//&
-                                         '"  title "Calc. M at T=',TempMagn(iTempMagn),'K."'
+         WRITE (LuPlt,'(A,i0,A,F7.3,A)') 'plot "'//trim(realname_dat)//'" using 1:',ik,&
+               ' with lines lt 1  lw  8 lc rgb "'//color(ic)//'"  title "Calc. M at T=',TempMagn(iTempMagn),'K."'
        END IF
        IF ( (iTempMagn.lt.nTempMagn).AND.(iTempMagn.ne.1) ) THEN
-         WRITE (LuPlt,'(A,i0,A,F7.3,A)') '     "MH.dat" using 1:',ik,' with lines lt 1  lw  8 lc rgb "'//color(ic)//&
-                                         '"  title "Calc. M at T=',TempMagn(iTempMagn),'K.", \'
+         WRITE (LuPlt,'(A,i0,A,F7.3,A)') '     "'//trim(realname_dat)//'" using 1:',ik,&
+               ' with lines lt 1  lw  8 lc rgb "'//color(ic)//'"  title "Calc. M at T=',TempMagn(iTempMagn),'K.", \'
        END IF
        IF ( (iTempMagn.eq.nTempMagn).AND.(nTempMagn.gt.1) ) THEN
-         WRITE (LuPlt,'(A,i0,A,F7.3,A)') '     "MH.dat" using 1:',ik,' with lines lt 1  lw  8 lc rgb "'//color(ic)//&
-                                         '"  title "Calc. M at T=',TempMagn(iTempMagn),'K."'
+         WRITE (LuPlt,'(A,i0,A,F7.3,A)') '     "'//trim(realname_dat)//'" using 1:',ik,&
+               ' with lines lt 1  lw  8 lc rgb "'//color(ic)//'"  title "Calc. M at T=',TempMagn(iTempMagn),'K."'
        END IF
      END DO
 
@@ -517,7 +647,7 @@
   ELSE IF ( (gnuplot_version >= 5.0_wp) .AND.(gnuplot_version < 6.0_wp) ) Then
   !===  GNUPLOT VERSION 5 and above ==>>  generate PNG
      WRITE (LuPlt,'(A)') 'set terminal pngcairo transparent enhanced font "arial,10" fontscale 4.0 size 1800, 1200'
-     WRITE (LuPlt,'(A)') 'set output "MH.png"'
+     WRITE (LuPlt,'(A)') 'set output "'//trim(realname_png)//'" '
      WRITE (LuPlt,'(A)') 'set grid'
      WRITE (LuPlt,'(A)')
      WRITE (LuPlt,'(A)') '# Axes'
@@ -546,19 +676,19 @@
        Call RANDOM_NUMBER(r)
        ic=INT(110.0_wp*r)
        IF((iTempMagn.eq.1).AND.(nTempMagn.gt.1)) THEN
-         WRITE (LuPlt,'(A,i0,A,F7.3,A)') 'plot "MH.dat" using 1:',ik,' with lines lt 1  lw  8 lc rgb "'//color(ic)//&
-                                          '"  title "Calc. M at T=',TempMagn(iTempMagn),'K.", \'
+         WRITE (LuPlt,'(A,i0,A,F7.3,A)') 'plot "'//trim(realname_dat)//'" using 1:',ik,&
+               ' with lines lt 1  lw  8 lc rgb "'//color(ic)//'"  title "Calc. M at T=',TempMagn(iTempMagn),'K.", \'
        ELSE IF ((iTempMagn.eq.1).AND.(nTempMagn.eq.1)) THEN
-         WRITE (LuPlt,'(A,i0,A,F7.3,A)') 'plot "MH.dat" using 1:',ik,' with lines lt 1  lw  8 lc rgb "'//color(ic)//&
-                                         '"  title "Calc. M at T=',TempMagn(iTempMagn),'K."'
+         WRITE (LuPlt,'(A,i0,A,F7.3,A)') 'plot "'//trim(realname_dat)//'" using 1:',ik,&
+               ' with lines lt 1  lw  8 lc rgb "'//color(ic)//'"  title "Calc. M at T=',TempMagn(iTempMagn),'K."'
        END IF
        IF ( (iTempMagn.lt.nTempMagn).AND.(iTempMagn.ne.1) ) THEN
-         WRITE (LuPlt,'(A,i0,A,F7.3,A)') '     "MH.dat" using 1:',ik,' with lines lt 1  lw  8 lc rgb "'//color(ic)//&
-                                         '"  title "Calc. M at T=',TempMagn(iTempMagn),'K.", \'
+         WRITE (LuPlt,'(A,i0,A,F7.3,A)') '     "'//trim(realname_dat)//'" using 1:',ik,&
+               ' with lines lt 1  lw  8 lc rgb "'//color(ic)//'"  title "Calc. M at T=',TempMagn(iTempMagn),'K.", \'
        END IF
        IF ( (iTempMagn.eq.nTempMagn).AND.(nTempMagn.gt.1) ) THEN
-         WRITE (LuPlt,'(A,i0,A,F7.3,A)') '     "MH.dat" using 1:',ik,' with lines lt 1  lw  8 lc rgb "'//color(ic)//&
-                                         '"  title "Calc. M at T=',TempMagn(iTempMagn),'K."'
+         WRITE (LuPlt,'(A,i0,A,F7.3,A)') '     "'//trim(realname_dat)//'" using 1:',ik,&
+               ' with lines lt 1  lw  8 lc rgb "'//color(ic)//'"  title "Calc. M at T=',TempMagn(iTempMagn),'K."'
        END IF
      END DO
   ELSE
@@ -569,20 +699,47 @@
   WRITE (LuPlt,'(A)')
   CLOSE (LuPlt)
 
-
-  WRITE (StdOut,'(A)') 'File "MH.png" was created in Working directory.'
+  WRITE (StdOut,'(A)') 'File "'//trim(realname_png)//'" was created in Working directory.'
 
   IF (execute_gnuplot_cmd) Then
     ! attempt to execute the script
-    WRITE (gnuplot_CMD,'(A,A)') trim(line2),'  MH.plt'
-    IF (dbg) WRITE (StdOut,'(A,A)') 'gnuplot_CMD=',gnuplot_CMD
+    IF (dbg) THEN
+      WRITE (StdOut,*) trim(realname_plt)
+      INQUIRE(FILE=trim(realname_plt),EXIST=file_exist,OPENED=is_file_open,NUMBER=file_number)
+      IF(file_exist) THEN
+        WRITE (StdOut,'(A,i0,A)') 'File "'//trim(realname_plt)//'" exists.'
+      ELSE
+        WRITE (StdOut,'(A,i0,A)') 'File "'//trim(realname_plt)//'" does not exist.'
+      END IF
+    END IF
+
+    WRITE (gnuplot_CMD,'(5A)') trim(line2),' < ',trim(realname_plt)
+    IF (dbg) WRITE (StdOut,'(A,A)') 'gnuplot_CMD=',trim(gnuplot_CMD)
+
+!#ifdef __INTEL_COMPILER
     CALL systemf ( gnuplot_CMD, iErr )
+    IF(dbg)  WRITE (StdOut,*) 'iErr = ',iErr
+!#else
+!    CALL execute_command_line ( gnuplot_CMD )
+!#endif
+
     IF ( gnuplot_version < 5.0_wp ) Then
-      WRITE (StdOut,'(A,i0,A)') 'File "MH.eps" was created in Working directory.'
+      INQUIRE(FILE=trim(realname_eps),EXIST=file_exist,OPENED=is_file_open,NUMBER=file_number)
+      IF(file_exist) THEN
+        WRITE (StdOut,'(A,i0,A)') 'File "'//trim(realname_eps)//'" was created in Working directory.'
+      ELSE
+        WRITE (StdOut,'(A,i0,A)') 'File "'//trim(realname_eps)//'" was NOT created in Working directory.'
+      END IF
     ELSE
-      WRITE (StdOut,'(A,i0,A)') 'File "MH.png" was created in Working directory.'
+      INQUIRE(FILE=trim(realname_png),EXIST=file_exist,OPENED=is_file_open,NUMBER=file_number)
+      IF(file_exist) THEN
+        WRITE (StdOut,'(A,i0,A)') 'File "'//trim(realname_png)//'" was created in Working directory.'
+      ELSE
+        WRITE (StdOut,'(A,i0,A)') 'File "'//trim(realname_png)//'" was NOT created in Working directory.'
+      END IF
     END IF
   END IF
+
 
   RETURN
 #ifdef _WARNING_WORKAROUND_

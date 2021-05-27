@@ -31,9 +31,8 @@
 #include "rasscf.fh"
 #include "general.fh"
 #include "output_ras.fh"
-      Parameter (ROUTINE='OPNFLS  ')
 #include "davctl.fh"
-#include "qnctl.fh"
+#include "qnctl_mcpdft.fh"
       Logical DSCF,test,DoCholesky
 *----------------------------------------------------------------------*
 *     Start                                                            *

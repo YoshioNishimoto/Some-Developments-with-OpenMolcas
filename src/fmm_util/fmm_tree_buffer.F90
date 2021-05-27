@@ -80,6 +80,7 @@ integer(INTK), save :: pack_inter_tree_used
 integer(INTK), save :: pack_total_in_current_chunk
 
 contains
+
 !---------------------------------------------------------------------------
 ! fmm_tree_buffer_init:
 ! initialize data structures and counters when starting packing the tree.
@@ -154,7 +155,8 @@ recursive subroutine point_node_new(node,level,r,ll,lr,lm,NT,T_pair)
   node => pack_inter_tree(pack_inter_tree_used)
   node%level = level
   node%coord = r(level)
-  nullify(node%left); nullify(node%right)
+  nullify(node%left)
+  nullify(node%right)
   if (level < 3) then
     nullify(node%abl1l2)
     call point_node_new(node%this,level+1,r,ll,lr,lm,NT,T_pair)

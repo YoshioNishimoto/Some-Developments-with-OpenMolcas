@@ -12,6 +12,7 @@
       use rassi_global_arrays, only: HAM, ESHFT, HDIAG, JBNUM, LROOT
       use kVectors
 #ifdef _DMRG_
+      use rasscf_data, only: doDMRG
       use qcmaquis_interface_cfg
 #endif
 
@@ -29,13 +30,11 @@
       INTEGER MXPLST
       PARAMETER (MXPLST=50)
       CHARACTER*8 TRYNAME
-      Integer ALGO,Nscreen
-      Real*8  dmpk, tmp
-      Logical timings, Estimate, Update, Deco, PseudoChoMOs
+      Real*8 tmp
       Logical lExists
-      Common /CHORASSI / ALGO,Nscreen,dmpk
-      COMMON /CHOTIME / timings
-      COMMON /LKSCREEN / Estimate, Update, Deco, PseudoChoMOs
+#include "chorassi.fh"
+#include "chotime.fh"
+#include "lkscreen.fh"
       Integer I, J, ISTATE, JSTATE, IJOB, ILINE, LINENR
       Integer LuIn
       Integer NFLS
@@ -65,7 +64,6 @@ C --- Default settings for Cholesky
       QDPT2EV = .false.
 #ifdef _DMRG_
       !> make sure that we read checkpoint names from xxx.h5 files, for example: rasscf.h5, nevpt2.h5, caspt2.h5, ...
-      doMPSSICheckpoints = .true.
       if(doDMRG) input_id = '&MPSSI '
 #endif
 

@@ -13,7 +13,21 @@
 
        interface mma_allocate
 
+! 0D allocate
+         subroutine cmma_allo_0D(buffer,n1,label)
+           character(:), allocatable, intent(inout) :: buffer
+           integer, intent(in) :: n1
+           character(len=*), optional, intent(in) :: label
+         end subroutine
+
 ! 1D allocate
+#ifdef _NOT_USED_
+         subroutine dpmma_allo_1D(buffer,n1,label)
+           real*8, pointer, intent(inout) :: buffer(:)
+           integer, intent(in) :: n1
+           character(len=*), optional, intent(in) :: label
+         end subroutine
+#endif
          subroutine dmma_allo_1D(buffer,n1,label)
            real*8, allocatable, intent(inout) :: buffer(:)
            integer, intent(in) :: n1
@@ -34,6 +48,13 @@
            integer, intent(in) :: l1(2)
            character(len=*), optional, intent(in) :: label
          end subroutine
+#ifdef _NOT_USED_
+         subroutine ipmma_allo_1D(buffer,n1,label)
+           integer, pointer, intent(inout) :: buffer(:)
+           integer, intent(in) :: n1
+           character(len=*), optional, intent(in) :: label
+         end subroutine
+#endif
          subroutine imma_allo_1D(buffer,n1,label)
            integer, allocatable, intent(inout) :: buffer(:)
            integer, intent(in) :: n1
@@ -93,6 +114,16 @@
          end subroutine
          subroutine imma_allo_2D_lim(buffer,l1,l2,label)
            integer, allocatable :: buffer(:,:)
+           integer, intent(in) :: l1(2), l2(2)
+           character(len=*), optional, intent(in) :: label
+         end subroutine
+         subroutine cmma_allo_2D(buffer,n1,n2,label)
+           character(*), allocatable, intent(inout) :: buffer(:,:)
+           integer, intent(in) :: n1, n2
+           character(len=*), optional, intent(in) :: label
+         end subroutine
+         subroutine cmma_allo_2D_lim(buffer,l1,l2,label)
+           character(*), allocatable, intent(inout) :: buffer(:,:)
            integer, intent(in) :: l1(2), l2(2)
            character(len=*), optional, intent(in) :: label
          end subroutine
@@ -211,13 +242,28 @@
 
        interface mma_deallocate
 
+! 0D deallocate
+         subroutine cmma_free_0D(buffer)
+           character(len=:), allocatable, intent(inout) :: buffer
+         end subroutine
+
 ! 1D deallocate
+#ifdef _NOT_USED_
+         subroutine dpmma_free_1D(buffer)
+           real*8, pointer, intent(inout) :: buffer(:)
+         end subroutine
+#endif
          subroutine dmma_free_1D(buffer)
            real*8, allocatable, intent(inout) :: buffer(:)
          end subroutine
          subroutine zmma_free_1D(buffer)
            complex*16, allocatable, intent(inout) :: buffer(:)
          end subroutine
+#ifdef _NOT_USED_
+         subroutine ipmma_free_1D(buffer)
+           integer, pointer, intent(inout) :: buffer(:)
+         end subroutine
+#endif
          subroutine imma_free_1D(buffer)
            integer, allocatable, intent(inout) :: buffer(:)
          end subroutine
@@ -237,6 +283,9 @@
          end subroutine
          subroutine imma_free_2D(buffer)
            integer, allocatable, intent(inout) :: buffer(:,:)
+         end subroutine
+         subroutine cmma_free_2D(buffer)
+           character(*), allocatable, intent(inout) :: buffer(:,:)
          end subroutine
          subroutine lmma_free_2D(buffer)
            logical, allocatable, intent(inout) :: buffer(:,:)

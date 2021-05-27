@@ -11,7 +11,7 @@
 * Copyright (C) Francesco Aquilante                                    *
 ************************************************************************
       SUBROUTINE CHO_VTRA(irc,scr,lscr,jVref,JVEC1,JNUM,NUMV,JSYM,IREDC,
-     &                   iSwap,nDen,kDen,ipMOs,nPorb,ipChoT,iSkip)
+     &                   iSwap,nDen,kDen,MOs,ChoT)
 
 *********************************************************
 *   Author: F. Aquilante
@@ -20,14 +20,10 @@
 *             starting from JVEC1 and stored in reduced
 *             sets. The routine performs an MOs half transformation
 *             of these elements in a set of target
-*             arrays identified by the pointers ipChoT.
+*             arrays, ChoT, identified the data type SBA_Type.
 *             In the target arrays, the vectors are
 *             stored in full dimension and as a
 *             subset of a a given NUMV number of vectors.
-*             Each pointer should thereby point to a
-*             location where the corresponding Cholesky
-*             vector of a given unique symmetry pair
-*             of indices has to be stored
 *
 *   Input:
 *       jVref =  index of the first vector to be transformed
@@ -47,10 +43,6 @@
 *                 = 2   L(k,J,b) is returned
 *                 = 3   L(a,J,k) is returned
 *
-*       iSkip(syma)=0 : skip the symmetry block a.
-*                    Any vector L(ak) with syma x symk=JSYM
-*                    won't be returned in the target array
-*
 *       IREDC :  reduced set in core at the moment of
 *                the first call to the routine.
 *                Can be set to -1 by the calling routine
@@ -58,27 +50,55 @@
 *********************************************************
       use ChoArr, only: nDimRS, iRS2F
       use ChoSwp, only: InfVec, IndRed
+      use Data_Structures, only: DSBA_Type, SBA_Type
       Implicit Real*8 (a-h,o-z)
+
+      Integer irc, nDen,kDen,lScr
       Real*8  Scr(lscr)
-      Integer nDen,kDen
-      Integer ipChoT(8,*),ipMOs(8,*),iSkip(*),nPorb(8,*)
+      Type (DSBA_Type) MOs(nDen)
+      Type (SBA_Type) ChoT(nDen)
 
-      Integer  cho_isao
-      External cho_isao
+      Integer, External:: cho_isao
 
-      Character*8  SECNAM
-      Parameter (SECNAM = 'CHO_VTRA')
+      Character(Len=8), Parameter:: SECNAM = 'CHO_VTRA'
 
-      Real*8  Fac(0:1)
-      Data Fac /0.5D0,1.0D0/
+      Real*8::  Fac(0:1)=[0.5D0,1.0D0]
 
 #include "cholesky.fh"
 #include "choorb.fh"
 #include "WrkSpc.fh"
+#include "stdalloc.fh"
 
+      Integer, Allocatable:: nPorb(:,:)
+      Logical Skip3, Skip2, Skip1
+
+*                                                                      *
+************************************************************************
+*                                                                      *
+      Interface
+      Subroutine daxpy_(n,da,dx,incx,dy,incy)
+      implicit none
+      real*8 :: da
+      integer :: incx,incy,n
+      real*8 :: dx(*),dy(*)
+      End Subroutine daxpy_
+      End Interface
+*                                                                      *
+************************************************************************
+*                                                                      *
 ************************************************************************
       MulD2h(i,j) = iEOR(i-1,j-1) + 1
+      Skip1(jDen,iSyma)=.NOT.Associated(ChoT(jDen)%SB(iSyma)%A1)
+      Skip2(jDen,iSyma)=.NOT.Associated(ChoT(jDen)%SB(iSyma)%A2)
+      Skip3(jDen,iSyma)=.NOT.Associated(ChoT(jDen)%SB(iSyma)%A3)
 ************************************************************************
+
+      Call mma_allocate(nPorb,8,nDen,Label='nPorb')
+      Do iDen = 1, nDen
+        Do iSym = 1, nSym
+          nPorb(iSym,iDen)=SIZE(MOs(iDen)%SB(iSym)%A2,1)
+        End Do
+      End Do
 
 **********************************************************
 C
@@ -104,14 +124,23 @@ C     L{a,b,J} ---> L(a,J,q)
 
       iLoc = 3 ! use scratch location in reduced index arrays
 
-
-      IF (iSwap.eq.0) THEN     ! L(pb,J) storage
-
+*                                                                      *
+************************************************************************
+*                                                                      *
+      Select Case (iSwap)
+*                                                                      *
+************************************************************************
+*                                                                      *
+      Case (0)
+*                                                                      *
+************************************************************************
+*                                                                      *
          NREAD = 0
-         kchot = 0
-         DO JVEC=1,JNUM
+         DO JVEC=1,JNUM   ! Relative index in the JNUM batch
 
-            JRED = InfVec(JVEC1-1+JVEC,2,jSym)
+            LVEC = JVEC - 1 + JVREF  ! Relative index in the NUMV batch
+            kVEC = JVEC - 1 + JVEC1  ! Absolute index
+            JRED = InfVec(KVEC,2,jSym)
 
             IF (JRED .NE. IREDC) THEN ! JRED is not the rs in core
                Call Cho_X_SetRed(irc,iLoc,JRED) !set indx arrays at iLoc
@@ -135,38 +164,28 @@ C     L{a,b,J} ---> L(a,J,q)
 
                   kscr  = kscr + 1
 
-                  IF (iSkip(iSyma).ne.0) THEN
 
-                     ias   = iag - ibas(iSyma) !address within that sym
-                     ibs   = ibg - ibas(iSyma)
-                     xfd   = Fac(min(abs(ias-ibs),1)) !fac for diag
+                  ias   = iag - ibas(iSyma) !address within that sym
+                  ibs   = ibg - ibas(iSyma)
+                  xfd   = Fac(min(abs(ias-ibs),1)) !fac for diag
 C
 C     L(p,b,J) = sum_a  xfd* L(a,b,J) * C(p,a)
 C     ----------------------------------------
-                     DO jDen=kDen,nDen
-                        ! pointer to C(1,a)
-                        ISMOSA = ipMOs(iSyma,jDen)
-     &                         + nPorb(iSyma,jDen)*(ias-1)
-                        ! pointer to C(1,b)
-                        ISMOSB = ipMOs(iSyma,jDen)
-     &                         + nPorb(iSyma,jDen)*(ibs-1)
+                  DO jDen=kDen,nDen
 
-                        ichot = nPorb(iSyma,jDen)*nBas(iSyma)*(JVEC-1)
-     &                        + ipChoT(iSyma,jDen)
+                     If (skip3(jDen,iSyma)) Cycle
 
-                        kchot = ichot + nPorb(iSyma,jDen)*(ias-1)
+                     ! C(1,b)
+                     CALL DAXPY_(nPorb(iSyma,jDen),xfd*Scr(kscr),
+     &                           MOs(JDen)%SB(iSyma)%A2(:,ibs),1,
+     &                          ChoT(jDen)%SB(iSyma)%A3(:,ias,LVEC),1)
 
-                        CALL DAXPY_(nPorb(iSyma,jDen),xfd*Scr(kscr),
-     &                             Work(ISMOSB),1,Work(kchot),1)
+                     ! C(1,a)
+                     CALL DAXPY_(nPorb(iSyma,jDen),xfd*Scr(kscr),
+     &                           MOs(JDen)%SB(iSyma)%A2(:,ias),1,
+     &                          ChoT(jDen)%SB(iSyma)%A3(:,ibs,LVEC),1)
 
-                        kchot = ichot + nPorb(iSyma,jDen)*(ibs-1)
-
-                        CALL DAXPY_(nPorb(iSyma,jDen),xfd*Scr(kscr),
-     &                             Work(ISMOSA),1,Work(kchot),1)
-
-                     END DO  ! loop over densities
-
-                  ENDIF  ! skipping blocks check
+                  END DO  ! loop over densities
 
                End Do  ! jRab loop
 
@@ -188,59 +207,50 @@ C     ----------------------------------------
                   ias   = iag - ibas(iSyma)  !address within that sym
                   ibs   = ibg - ibas(iSymb)
 
-                  IF (iSkip(iSyma).ne.0) THEN
 C
 C     L(p,b,J) = sum_a  L(a,b,J) * C(p,a)
 C     -----------------------------------
-                     DO jDen=kDen,nDen
+                  DO jDen=kDen,nDen
 
-                        ISMOSA = ipMOs(iSyma,jDen)
-     &                         + nPorb(iSyma,jDen)*(ias-1)
+                     If (skip3(jDen,iSyma)) Cycle
 
-                        kchot = nPorb(iSyma,jDen)*nBas(iSymb)*(JVEC-1)
-     &                        + nPorb(iSyma,jDen)*(ibs-1)
-     &                        + ipChoT(iSyma,jDen)
+                     CALL DAXPY_(nPorb(iSyma,jDen),Scr(kscr),
+     &                           MOs(jDen)%SB(iSyma)%A2(:,ias),1,
+     &                          ChoT(jDen)%SB(iSyma)%A3(:,ibs,LVEC),1)
 
-                        CALL DAXPY_(nPorb(iSyma,jDen),Scr(kscr),
-     &                           Work(ISMOSA),1,Work(kchot),1)
+                  END DO
 
-                     END DO
-
-                  ENDIF  ! skipping block
-
-                  IF (iSkip(iSymb).ne.0) THEN
 C
 C     L(p,a,J) = sum_b  L(a,b,J) * C(p,b)
 C     -----------------------------------
-                     DO jDen=kDen,nDen
+                  DO jDen=kDen,nDen
 
-                        ISMOSB = ipMOs(iSymb,jDen)
-     &                         + nPorb(iSymb,jDen)*(ibs-1)
+                     If (skip3(jDen,iSymb)) Cycle
 
-                        kchot = nPorb(iSymb,jDen)*nBas(isyma)*(JVEC-1)
-     &                        + nPorb(iSymb,jDen)*(ias-1)
-     &                        + ipChoT(iSymb,jDen)
+                     CALL DAXPY_(nPorb(iSymb,jDen),Scr(kscr),
+     &                           MOs(jDen)%SB(iSymb)%A2(:,ibs),1,
+     &                          ChoT(jDen)%SB(iSymb)%A3(:,ias,LVEC),1)
 
-                        CALL DAXPY_(nPorb(iSymb,jDen),Scr(kscr),
-     &                           Work(ISMOSB),1,Work(kchot),1)
-
-                     END DO
-
-                  ENDIF  ! skipping blocks check
+                  END DO
 
                End Do  ! jRab loop
 
             ENDIF ! total symmetric vectors check
 
          END DO
-
-      ELSEIF (iSwap.eq.1) THEN     ! L(ap,J) storage
-
+*                                                                      *
+************************************************************************
+*                                                                      *
+      Case (1)
+*                                                                      *
+************************************************************************
+*                                                                      *
       NREAD = 0
-      kchot = 0
       DO JVEC=1,JNUM
 
-         JRED = InfVec(JVEC1-1+JVEC,2,jSym)
+         LVEC = JVEC - 1 + JVREF
+         kVEC = JVEC - 1 + JVEC1  ! Absolute index
+         JRED = InfVec(KVEC,2,jSym)
 
          IF (JRED .NE. IREDC) THEN ! JRED is not the reduced set in core
             Call Cho_X_SetRed(irc,iLoc,JRED) !set index arrays at iLoc
@@ -264,8 +274,6 @@ C     -----------------------------------
 
             kscr  = kscr + 1
 
-            IF (iSkip(iSyma).ne.0) THEN
-
             ias   = iag - ibas(iSyma)  !address within that symm block
             ibs   = ibg - ibas(iSyma)
             xfd   = Fac(min(abs(ias-ibs),1)) !fac for diagonal elements
@@ -274,24 +282,18 @@ C     L(a,p,J) = sum_b  xfd* L(a,b,J) * C(p,b)
 C     ----------------------------------------
             DO jDen=kDen,nDen
 
-               ISMOSA = ipMOs(iSyma,jDen)
-     &                + nPorb(iSyma,jDen)*(ias-1)  ! pointer to C(1,a)
+               If (skip2(jDen,iSyma)) Cycle
 
-               ISMOSB = ipMOs(iSyma,jDen)
-     &                + nPorb(iSyma,jDen)*(ibs-1)  ! pointer to C(1,b)
+               iE = SIZE(ChoT(jDen)%SB(iSyma)%A2,1)
+               CALL DAXPY_(nPorb(iSyma,jDen),xfd*Scr(kscr),
+     &                     MOs(jDen)%SB(iSyma)%A2(:,ibs),1,
+     &                ChoT(jDen)%SB(iSyma)%A2(ias:iE,LVEC),nBas(iSyma))
 
-               kchot = nBas(iSyma)*nPorb(iSyma,jDen)*(JVEC-1)
-     &               + ipChoT(iSyma,jDen) - 1
-
-               CALL DAXPY_(nPorb(iSyma,jDen),xfd*Scr(kscr),Work(ISMOSB),
-     &                    1,Work(kchot+ias),nBas(iSyma))
-
-               CALL DAXPY_(nPorb(iSyma,jDen),xfd*Scr(kscr),Work(ISMOSA),
-     &                    1,Work(kchot+ibs),nBas(iSyma))
+               CALL DAXPY_(nPorb(iSyma,jDen),xfd*Scr(kscr),
+     &                     MOs(jDen)%SB(iSyma)%A2(:,ias),1,
+     &                ChoT(jDen)%SB(iSyma)%A2(ibs:iE,LVEC),nBas(iSyma))
 
             END DO  ! loop over densities
-
-            ENDIF  ! skipping blocks check
 
          End Do  ! jRab loop
 
@@ -312,61 +314,51 @@ C     ----------------------------------------
 
             ias   = iag - ibas(iSyma)  !address within that symm block
             ibs   = ibg - ibas(iSymb)
-
-            IF (iSkip(iSyma).ne.0) THEN
 C
 C     L(a,q,J) = sum_b  L(a,b,J) * C(q,b)
 C     -----------------------------------
              DO jDen=kDen,nDen
 
-               ISMOSB = ipMOs(iSymb,jDen)
-     &                + nPorb(iSymb,jDen)*(ibs-1)  ! pointer to C(1,b)
+               If (skip2(jDen,iSyma)) Cycle
 
-               kchot = nBas(iSyma)*nPorb(iSymb,jDen)*(JVEC-1)
-     &               + ias
-     &               + ipChoT(iSyma,jDen) - 1
-
-               CALL DAXPY_(nPorb(iSymb,jDen),Scr(kscr),Work(ISMOSB),1,
-     &                    Work(kchot),nBas(iSyma))
+               iE = SIZE(ChoT(jDen)%SB(iSyma)%A2,1)
+               CALL DAXPY_(nPorb(iSymb,jDen),Scr(kscr),
+     &                     MOs(jDen)%SB(iSymb)%A2(:,ibs),1,
+     &                ChoT(jDen)%SB(iSyma)%A2(ias:iE,LVEC),nBas(iSyma))
 
              END DO
-
-            ENDIF  ! skipping block
-
-            IF (iSkip(iSymb).ne.0) THEN
 C
 C     L(b,q,J) = sum_a  L(a,b,J) * C(q,a)
 C     -----------------------------------
              DO jDen=kDen,nDen
 
-               ISMOSA = ipMOs(iSyma,jDen)
-     &                + nPorb(iSyma,jDen)*(ias-1)  ! pointer to C(1,a)
+               If (skip2(jDen,iSymb)) Cycle
 
-               kchot = nBas(iSymb)*nPorb(iSyma,jDen)*(JVEC-1)
-     &               + ibs
-     &               + ipChoT(iSymb,jDen) - 1
-
-               CALL DAXPY_(nPorb(iSyma,jDen),Scr(kscr),Work(ISMOSA),1,
-     &                    Work(kchot),nBas(iSyma))
+               iE = SIZE(ChoT(jDen)%SB(iSymb)%A2,1)
+               CALL DAXPY_(nPorb(iSyma,jDen),Scr(kscr),
+     &                     MOs(jDen)%SB(iSyma)%A2(:,ias),1,
+     &                ChoT(jDen)%SB(iSymb)%A2(ibs:iE,LVEC),nBas(iSyma))
 
              END DO
-
-            ENDIF  ! skipping blocks check
 
          End Do  ! jRab loop
 
         ENDIF ! total symmetric vectors check
 
       END DO
-
-
-      ELSEIF (iSwap.eq.2) THEN     ! L(pJ,b) storage
-
+*                                                                      *
+************************************************************************
+*                                                                      *
+      Case (2)
+*                                                                      *
+************************************************************************
+*                                                                      *
              NREAD = 0
-             kchot = 0
              DO JVEC=1,JNUM
 
-                JRED = InfVec(JVEC1-1+JVEC,2,jSym)
+                LVEC = JVEC - 1 + JVREF
+                kVEC = JVEC - 1 + JVEC1  ! Absolute index
+                JRED = InfVec(KVEC,2,jSym)
 
                 IF (JRED .NE. IREDC) THEN
                    Call Cho_X_SetRed(irc,iLoc,JRED)
@@ -390,38 +382,26 @@ C     -----------------------------------
 
                    kscr  = kscr + 1
 
-                   IF (iSkip(iSyma).ne.0) THEN
 
-                      ias   = iag - ibas(iSyma)
-                      ibs   = ibg - ibas(iSyma)
-                      xfd   = Fac(min(abs(ias-ibs),1))
+                   ias   = iag - ibas(iSyma)
+                   ibs   = ibg - ibas(iSyma)
+                   xfd   = Fac(min(abs(ias-ibs),1))
 C
 C     L(p,J,b) = sum_a  xfd* L(a,b,J) * C(p,a)
 C     ----------------------------------------
-                      DO jDen=kDen,nDen
+                   DO jDen=kDen,nDen
 
-                         ISMOSA = ipMOs(iSyma,jDen)
-     &                          + nPorb(iSyma,jDen)*(ias-1)
+                      If (skip3(jDen,iSyma)) Cycle
 
-                         ISMOSB = ipMOs(iSyma,jDen)
-     &                          + nPorb(iSyma,jDen)*(ibs-1)
+                      CALL DAXPY_(nPorb(iSyma,jDen),xfd*Scr(kscr),
+     &                            MOs(jDen)%SB(iSyma)%A2(:,ibs),1,
+     &                          ChoT(jDen)%SB(iSyma)%A3(:,LVEC,ias),1)
 
-                         ichot = nPorb(iSyma,jDen)*(jVref+JVEC-2)
-     &                         + ipChoT(iSyma,jDen)
+                      CALL DAXPY_(nPorb(iSyma,jDen),xfd*Scr(kscr),
+     &                            MOs(jDen)%SB(iSyma)%A2(:,ias),1,
+     &                          ChoT(jDen)%SB(iSyma)%A3(:,LVEC,ibs),1)
 
-                         kchot = ichot + nPorb(iSyma,jDen)*NUMV*(ias-1)
-
-                         CALL DAXPY_(nPorb(iSyma,jDen),xfd*Scr(kscr),
-     &                           Work(ISMOSB),1,Work(kchot),1)
-
-                         kchot = ichot + nPorb(iSyma,jDen)*NUMV*(ibs-1)
-
-                         CALL DAXPY_(nPorb(iSyma,jDen),xfd*Scr(kscr),
-     &                           Work(ISMOSA),1,Work(kchot),1)
-
-                      END DO  ! loop over densities
-
-                   ENDIF  ! skipping blocks check
+                   END DO  ! loop over densities
 
                 End Do  ! jRab loop
 
@@ -442,60 +422,49 @@ C     ----------------------------------------
 
                    ias   = iag - ibas(iSyma)
                    ibs   = ibg - ibas(iSymb)
-
-                   IF (iSkip(iSyma).ne.0) THEN
 C
 C     L(p,J,b) = sum_a  L(a,b,J) * C(p,a)
 C     -----------------------------------
-                      DO jDen=kDen,nDen
+                   DO jDen=kDen,nDen
 
-                         ISMOSA = ipMOs(iSyma,jDen)
-     &                          + nPorb(iSyma,jDen)*(ias-1)
+                      If (skip3(jDen,iSyma)) Cycle
 
-                         kchot = nPorb(iSyma,jDen)*NUMV*(ibs-1)
-     &                         + nPorb(iSyma,jDen)*(jVref+JVEC-2)
-     &                         + ipChoT(iSyma,jDen)
+                      CALL DAXPY_(nPorb(iSyma,jDen),Scr(kscr),
+     &                            MOs(jDen)%SB(iSyma)%A2(:,ias),1,
+     &                          ChoT(jDen)%SB(iSyma)%A3(:,LVEC,ibs),1)
 
-                         CALL DAXPY_(nPorb(iSyma,jDen),Scr(kscr),
-     &                              Work(ISMOSA),1,Work(kchot),1)
-
-                      END DO
-
-                   ENDIF  ! skipping block
-
-                   IF (iSkip(iSymb).ne.0) THEN
+                   END DO
 C
 C     L(p,J,a) = sum_b  L(a,b,J) * C(p,b)
 C     -----------------------------------
-                      DO jDen=kDen,nDen
+                   DO jDen=kDen,nDen
 
-                         ISMOSB = ipMOs(iSymb,jDen)
-     &                          + nPorb(iSymb,jDen)*(ibs-1)
+                      If (skip3(jDen,iSymb)) Cycle
 
-                         kchot = nPorb(iSymb,jDen)*NUMV*(ias-1)
-     &                         + nPorb(iSymb,jDen)*(jVref+JVEC-2)
-     &                         + ipChoT(iSymb,jDen)
+                      CALL DAXPY_(nPorb(iSymb,jDen),Scr(kscr),
+     &                            MOs(jDen)%SB(iSymb)%A2(:,ibs),1,
+     &                          ChoT(jDen)%SB(iSymb)%A3(:,LVEC,ias),1)
 
-                         CALL DAXPY_(nPorb(iSymb,jDen),Scr(kscr),
-     &                              Work(ISMOSB),1,Work(kchot),1)
-
-                      END DO
-
-                   ENDIF  ! skipping blocks check
+                   END DO
 
                 End Do  ! jRab loop
 
               ENDIF ! total symmetric vectors check
 
            END DO
-
-      ELSEIF (iSwap.eq.3) THEN     ! L(aJ,p) storage
-
+*                                                                      *
+************************************************************************
+*                                                                      *
+      Case (3)
+*                                                                      *
+************************************************************************
+*                                                                      *
       NREAD = 0
-      kchot = 0
       DO JVEC=1,JNUM
 
-         JRED = InfVec(JVEC1-1+JVEC,2,jSym)
+         LVEC = JVEC - 1 + JVREF
+         KVEC = JVEC - 1 + JVEC1  ! Absolute index
+         JRED = InfVec(KVEC,2,jSym)
 
          IF (JRED .NE. IREDC) THEN ! JRED is not the reduced set in core
             Call Cho_X_SetRed(irc,iLoc,JRED) !set index arrays at iLoc
@@ -519,8 +488,6 @@ C     -----------------------------------
 
             kscr  = kscr + 1
 
-            IF (iSkip(iSyma).ne.0) THEN
-
             ias   = iag - ibas(iSyma)  !address within that sym block
             ibs   = ibg - ibas(iSyma)
             xfd   = Fac(min(abs(ias-ibs),1)) !scale fac for diag
@@ -529,25 +496,22 @@ C     L(a,J,p) = sum_b  xfd* L(a,b,J) * C(p,b)
 C     ----------------------------------------
             DO jDen=kDen,nDen
 
-               ISMOSA = ipMOs(iSyma,jDen)
-     &                + nPorb(iSyma,jDen)*(ias-1)  ! pointer to C(1,a)
+               If (skip1(jDen,iSyma)) Cycle
 
-               ISMOSB = ipMOs(iSyma,jDen)
-     &                + nPorb(iSyma,jDen)*(ibs-1)  ! pointer to C(1,b)
+               n1 = SIZE(ChoT(jDen)%SB(iSyma)%A3,1)
+               ij= ias + n1*(LVEC-1)
+               CALL DAXPY_(nPorb(iSyma,jDen),xfd*Scr(kscr),
+     &                     MOs(jDen)%SB(iSyma)%A2(:,ibs),1,
+     &                     ChoT(jDen)%SB(iSyma)%A1(ij:),
+     &                     nBas(iSyma)*NUMV)
 
-               kchot = nBas(iSyma)*NUMV
-     &               + nBas(iSyma)*(jVref+JVEC-2)
-     &               + ipChoT(iSyma,jDen) - 1
-
-               CALL DAXPY_(nPorb(iSyma,jDen),xfd*Scr(kscr),Work(ISMOSB),
-     &                    1,Work(kchot+ias),nBas(iSyma)*NUMV)
-
-               CALL DAXPY_(nPorb(iSyma,jDen),xfd*Scr(kscr),Work(ISMOSA),
-     &                    1,Work(kchot+ibs),nBas(iSyma))
+               ij= ibs + n1*(LVEC-1)
+               CALL DAXPY_(nPorb(iSyma,jDen),xfd*Scr(kscr),
+     &                     MOs(jDen)%SB(iSyma)%A2(:,ias),1,
+     &                     ChoT(jDen)%SB(iSyma)%A1(ij:),
+     &                     nBas(iSyma)*NUMV)
 
             END DO  ! loop over densities
-
-            ENDIF  ! skipping blocks check
 
          End Do  ! jRab loop
 
@@ -568,67 +532,58 @@ C     ----------------------------------------
 
             ias   = iag - ibas(iSyma)  !address within that symm block
             ibs   = ibg - ibas(iSymb)
-
-            IF (iSkip(iSyma).ne.0) THEN
 C
 C     L(a,J,q) = sum_b  L(a,b,J) * C(q,b)
 C     -----------------------------------
              DO jDen=kDen,nDen
 
-               ISMOSB = ipMOs(iSymb,jDen)
-     &                + nPorb(iSymb,jDen)*(ibs-1)  ! pointer to C(1,b)
+               If (skip1(jDen,iSyma)) Cycle
 
-               kchot = nBas(iSyma)*NUMV
-     &               + nBas(iSyma)*(jVref+JVEC-2) + ias
-     &               + ipChoT(iSyma,jDen) - 1
-
-               CALL DAXPY_(nPorb(iSymb,jDen),Scr(kscr),Work(ISMOSB),1,
-     &                    Work(kchot),nBas(iSyma)*NUMV)
+               n1 = SIZE(ChoT(jDen)%SB(iSyma)%A3,1)
+               ij= ias + n1*(LVEC-1)
+               CALL DAXPY_(nPorb(iSymb,jDen),Scr(kscr),
+     &                     MOs(jDen)%SB(iSymb)%A2(:,ibs),1,
+     &                     ChoT(jDen)%SB(iSyma)%A1(ij:),
+     &                     nBas(iSyma)*NUMV)
 
              END DO
-
-            ENDIF  ! skipping block
-
-            IF (iSkip(iSymb).ne.0) THEN
 C
 C     L(b,J,q) = sum_a  L(a,b,J) * C(q,a)
 C     -----------------------------------
              DO jDen=kDen,nDen
 
-               ISMOSA = ipMOs(iSyma,jDen)
-     &                + nPorb(iSyma,jDen)*(ias-1)  ! pointer to C(1,a)
+               If (skip1(jDen,iSyma)) Cycle
 
-               kchot = nBas(iSymb)*NUMV
-     &               + nBas(iSymb)*(jVref+JVEC-2) + ibs
-     &               + ipChoT(iSymb,jDen) - 1
-
-               CALL DAXPY_(nPorb(iSyma,jDen),Scr(kscr),Work(ISMOSA),1,
-     &                    Work(kchot),nBas(iSyma)*NUMV)
+               n1 = SIZE(ChoT(jDen)%SB(iSymb)%A3,1)
+               ij= ibs + n1*(LVEC-1)
+               CALL DAXPY_(nPorb(iSyma,jDen),Scr(kscr),
+     &                     MOs(jDen)%SB(iSyma)%A2(:,ias),1,
+     &                     ChoT(jDen)%SB(iSymb)%A1(ij:),
+     &                     nBas(iSyma)*NUMV)
 
              END DO
-
-            ENDIF  ! skipping blocks check
 
          End Do  ! jRab loop
 
         ENDIF ! total symmetric vectors check
 
       END DO
-
-
-      ELSE   ! iSwap check
-
+*                                                                      *
+************************************************************************
+*                                                                      *
+      Case Default
+*                                                                      *
+************************************************************************
+*                                                                      *
          write(6,*)SECNAM//': invalid argument. Iswap= ',Iswap
          irc = 66
          Return
 
-      ENDIF  ! iSwap check
+      End Select
+*     ENDIF  ! iSwap check
 
-
+      Call mma_deallocate(nPorb)
       irc=0
-
 
       Return
       END
-
-**************************************************************

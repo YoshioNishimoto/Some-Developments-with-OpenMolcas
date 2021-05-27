@@ -8,91 +8,98 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
-        Subroutine Cho_MOtra(CMO,nCMOs,Do_int,ihdf5)
-        Implicit None
-        Integer nCMOs, ihdf5
-        Real*8  CMO(nCMOs)
-        Logical Do_int
+      Subroutine Cho_MOtra(CMO,nCMOs,Do_int,ihdf5)
+      Implicit None
+      Integer nCMOs, ihdf5
+      Real*8  CMO(nCMOs)
+      Logical Do_int
 
-        Character*6 BName
+      Character*6 BName
 
-        Integer iSym
-        Integer nSym
-        Integer nBas(8), nOrb(8)
-        Integer nFro(8), nIsh(8), nAsh(8)
-        Integer nSsh(8), nDel(8)
+      Integer iSym
+      Integer nSym
+      Integer nBas(8), nOrb(8)
+      Integer nFro(8), nIsh(8), nAsh(8)
+      Integer nSsh(8), nDel(8)
 
-        Logical InitChoEnv
+      Logical InitChoEnv
 
-        Call Get_iScalar('nSym',nSym)
-        Call Get_iArray('nBas',nBas,nSym)
-        Call Get_iArray('nOrb',nOrb,nSym)
-        Call Get_iArray('nFro',nFro,nSym)
-        Call Get_iArray('nIsh',nIsh,nSym)
-        Call Get_iArray('nAsh',nAsh,nSym)
-        Call Get_iArray('nDel',nDel,nSym)
-        Do iSym=1,nSym
-           nSsh(iSym)=nBas(iSym)-nDel(iSym)-nAsh(iSym)
-     &               -nIsh(iSym)-nFro(iSym)
-        End Do
-        BName='_CHMOT'
-        InitChoEnv=.true.
-        Call Cho_MOTra_(CMO,nCMOs,nSym,nBas,nOrb,
-     &                  nFro,nIsh,nAsh,nSsh,nDel,
-     &                  BName,Do_Int,ihdf5,InitChoEnv)
+      Call Get_iScalar('nSym',nSym)
+      Call Get_iArray('nBas',nBas,nSym)
+      Call Get_iArray('nOrb',nOrb,nSym)
+      Call Get_iArray('nFro',nFro,nSym)
+      Call Get_iArray('nIsh',nIsh,nSym)
+      Call Get_iArray('nAsh',nAsh,nSym)
+      Call Get_iArray('nDel',nDel,nSym)
+      Do iSym=1,nSym
+         nSsh(iSym)=nBas(iSym)-nDel(iSym)-nAsh(iSym)
+     &             -nIsh(iSym)-nFro(iSym)
+      End Do
+      BName='_CHMOT'
+      InitChoEnv=.true.
+      Call Cho_MOTra_Internal(CMO,nCMOs,nSym,nBas,nOrb,nFro,nIsh,nAsh,
+     &                          nSsh,nDel,BName,Do_Int,ihdf5,InitChoEnv)
 
-        End
+      End
 ************************************************************************
-        Subroutine Cho_MOTra_(CMO,nCMOs,nSym,nBas,nOrb,
-     &                        nFro,nIsh,nAsh,nSsh,nDel,
-     &                        BName,Do_int,ihdf5,Do_ChoInit)
+      Subroutine Cho_MOTra_Internal(CMO,nCMOs,nSym,nBas,nOrb,
+     &                              nFro,nIsh,nAsh,nSsh,nDel,
+     &                              BName,Do_int,ihdf5,Do_ChoInit)
 C
-C       Note: frozen and deleted orbitals are not included in the
-C             transformation.
+C     Note: frozen and deleted orbitals are not included in the
+C           transformation.
 C
-        Implicit Real*8 (a-h,o-z)
-        Integer nCMOs, ihdf5
-        real*8  CMO(nCMOs)
-        Integer nSym
-        Integer nBas(nSym), nOrb(nSym)
-        Integer nFro(nSym), nIsh(nSym), nAsh(nSym)
-        Integer nSsh(nSym), nDel(nSym)
-        Character*6 BName
-        Logical Do_int
-        Logical Do_ChoInit
+      use Data_Structures, only: DSBA_Type, Deallocate_DSBA
+      use Data_Structures, only: Allocate_DSBA
+      Implicit Real*8 (a-h,o-z)
+      Integer nCMOs, ihdf5
+      real*8  CMO(nCMOs)
+      Integer nSym
+      Integer nBas(nSym), nOrb(nSym)
+      Integer nFro(nSym), nIsh(nSym), nAsh(nSym)
+      Integer nSsh(nSym), nDel(nSym), nAux(8)
+      Character*6 BName
+      Logical Do_int
+      Logical Do_ChoInit
 
-        Logical timings
-        COMMON /CHOTIME /timings
-#include "WrkSpc.fh"
+      Real*8, Allocatable:: xInt(:)
+
+      Type (DSBA_Type), Target:: CMOT
+
+#include "chotime.fh"
+#include "stdalloc.fh"
 **************************************************
       MulD2h(i,j) = iEOR(i-1,j-1) + 1
 **************************************************
 
-        n=nBas(1)**2
-        Do iSym=2,nSym
-           n=n+nBas(iSym)**2
-        End Do
-        If (n.ne.nCMOs) Then
-           ! The dimension of CMO is assumed to be nBas**2 in Transp_MOs
-           ! with each symmetry block starting at
-           !  sym=1: 1
-           !  sym=2: 1+nBas(1)**2
-           !  sym=3: 1+nBas(1)**2+nBas(2)**2
-           ! etc.
-           ! This differs from, e.g., subroutine PriMO where each
-           ! symmetry block starts at
-           !  sym=1: 1
-           !  sym=2: 1+nBas(1)*nOrb(1)
-           !  sym=3: 1+nBas(1)*nOrb(1)+nBas(2)*nOrb(2)
-           ! etc.
-           ! This is only a potential problem if orbitals were removed
-           ! due to linear dependence (not deleted virtual orbitals)
-           Call WarningMessage(2,'Cho_MOTra_: n != nCMOs')
-           Write(6,*) 'n,nCMOs=',n,nCMOs
-           Call Abend()
-        End If
-        Call GetMem('CHMOs','Allo','Real',ipCMO,nCMOs)
-        Call Transp_MOs(CMO,Work(ipCMO),nSym,nFro,nIsh,nAsh,nSsh,nBas)
+      n=nBas(1)**2
+      Do iSym=2,nSym
+         n=n+nBas(iSym)**2
+      End Do
+      If (n.ne.nCMOs) Then
+         ! The dimension of CMO is assumed to be nBas**2 in Transp_MOs
+         ! with each symmetry block starting at
+         !  sym=1: 1
+         !  sym=2: 1+nBas(1)**2
+         !  sym=3: 1+nBas(1)**2+nBas(2)**2
+         ! etc.
+         ! This differs from, e.g., subroutine PriMO where each
+         ! symmetry block starts at
+         !  sym=1: 1
+         !  sym=2: 1+nBas(1)*nOrb(1)
+         !  sym=3: 1+nBas(1)*nOrb(1)+nBas(2)*nOrb(2)
+         ! etc.
+         ! This is only a potential problem if orbitals were removed
+         ! due to linear dependence (not deleted virtual orbitals)
+         Call WarningMessage(2,'Cho_MOTra_: n != nCMOs')
+         Write(6,*) 'n,nCMOs=',n,nCMOs
+         Call Abend()
+      End If
+
+      nAux(1:nSym) = nBas(1:nSym) - nFro(1:nSym) - nDel(1:nSym)
+      Call Allocate_DSBA(CMOT,nAux,nBas,nSym)
+
+      Call Transp_MOs(CMO,CMOT%A0,nSym,nFro,nIsh,nAsh,nSsh,nBas)
 c
         timings=.True.
 c
@@ -113,7 +120,10 @@ c
                 EndIf
              End Do
           End Do
-          Call GetMem('DIAGON','Allo','Real',ipXint,lXint)
+          Call mma_allocate(xInt,lXint,Label='xInt')
+        Else
+          lXint=1
+          Call mma_allocate(xInt,lXint,Label='xInt')
         EndIf
 c
         If (Do_ChoInit) Then
@@ -127,8 +137,8 @@ c
               Call Abend()
            End If
         End If
-        call CHO_TR_drv(irc,nIsh,nAsh,nSsh,ipCMO,BName,
-     &                      Do_int,ihdf5,Work(ipXint),lXint)
+        call CHO_TR_drv(irc,nIsh,nAsh,nSsh,CMOT,BName,
+     &                      Do_int,ihdf5,xInt,lXint)
         If (Do_ChoInit) Then
            Call Cho_X_final(irc)
            If (irc.ne.0) Then
@@ -140,13 +150,13 @@ c
         End If
 c
         If (Do_int) Then
-           Call GADSum(Work(ipXint),lXint)
+           Call GADSum(xInt,lXint)
            kdisk=0
-           Call ddafile(Lu_Xint,1,Work(ipXint),lXint,kdisk)
+           Call ddafile(Lu_Xint,1,Xint,lXint,kdisk)
            Call daclos(Lu_Xint)
-           Call GetMem('DIAGON','Free','Real',ipXint,lXint)
         EndIf
-        Call GetMem('CHMOs','Free','Real',ipCMO,nCMOs)
+        Call mma_deallocate(XInt)
+        Call Deallocate_DSBA(CMOT)
 c
         return
 c Avoid unused argument warnings
@@ -156,7 +166,7 @@ c Avoid unused argument warnings
         End If
         end
 ************************************************************************
-      SUBROUTINE CHO_TR_drv(rc,nIsh,nAsh,nSsh,ipPorb,BName,Do_int,ihdf5,
+      SUBROUTINE CHO_TR_drv(rc,nIsh,nAsh,nSsh,Porb,BName,Do_int,ihdf5,
      &                      Xint,lXint)
 **********************************************************************
 C
@@ -169,16 +179,22 @@ C
 #endif
       use ChoArr, only: nDimRS
       use ChoSwp, only: InfVec
+      use Data_Structures, only: DSBA_Type
+      use Data_Structures, only: SBA_Type
+      use Data_Structures, only: Allocate_SBA, Deallocate_SBA
       Implicit Real*8 (a-h,o-z)
 
       Integer   rc,nIsh(*),nAsh(*),nSsh(*),lXint, ihdf5
       Real*8    Xint(0:lXint-1)
       Character*6 BName
 
+      Type (DSBA_Type) Porb
+      Type (SBA_Type), Target:: ChoT(1)
+
       Real*8    tread(2),tmotr1(2),tmotr2(2)
-      Logical   timings,DoRead,Do_int
-      Integer   nPorb(8),ipOrb(8)
-      Integer   ipLpb(8),iSkip(8)
+      Logical, Parameter ::   DoRead=.False.
+      Logical   Do_int
+      Integer   nPorb(8)
       Integer   LunChVF(8),kOff(8),iOffB(8),nOB(8)
 
       Character*7  Fnam
@@ -186,9 +202,8 @@ C
       Character*10 SECNAM
       Parameter (SECNAM = 'CHO_TR_drv')
 
-      COMMON    /CHOTIME /timings
-      Character*3  tv2disk
-      COMMON    /CHOTRAW /tv2disk
+#include "chotime.fh"
+#include "chotraw.fh"
 
       parameter (zero = 0.0D0, one = 1.0D0)
 
@@ -199,9 +214,14 @@ C
 
 #include "cholesky.fh"
 #include "choorb.fh"
-#include "WrkSpc.fh"
+#include "stdalloc.fh"
 
-      integer isfreeunit
+      Real*8, Allocatable:: Lrs(:)
+
+      Real*8, Allocatable :: Lpq(:,:)
+      Real*8, Allocatable :: Lpq_J(:)
+
+      Integer IsFreeUnit
 
 ************************************************************************
       MulD2h(i,j) = iEOR(i-1,j-1) + 1
@@ -221,21 +241,15 @@ C
       End If
 #endif
 
-      DoRead  = .false.
       IREDC = -1  ! unknown reduced set in core
-
-      iSwap = 0  ! Lpb,J are returned by cho_x_getVtra
-      kMOs = 1
-      nMOs = 1
 
 
       CALL CWTIME(TOTCPU1,TOTWALL1) !start clock for total time
 
-      do i=1,2            ! 1 --> CPU   2 --> Wall
-         tread(i) = zero   !time read/write vectors
-         tmotr1(i) = zero  !time 1st MO half-transf.
-         tmotr2(i) = zero  !time 2nd MO half-transf.
-      end do
+      ! 1 --> CPU   2 --> Wall
+      tread(:) = zero   !time read/write vectors
+      tmotr1(:) = zero  !time 1st MO half-transf.
+      tmotr2(:) = zero  !time 2nd MO half-transf.
 
       If (Do_int) Call Fzero(Xint(0),lXint)
 
@@ -247,16 +261,6 @@ c -----------------------------------
 
 
 C ==================================================================
-
-c --- Various offsets & pointers
-c ------------------------------
-      ipOrb(1)=ipPorb
-      DO ISYM=2,NSYM
-        NB=NBAS(ISYM-1)
-        NP=NPORB(ISYM-1)
-        NP2=NP*NB
-        ipOrb(ISYM)=ipOrb(ISYM-1)+NP2 !  MO coeff. symm pointers
-      END DO
 
       iLoc = 3 ! use scratch location in reduced index arrays
 
@@ -284,9 +288,7 @@ c
 C --- Set up the skipping flags + some initializations --------
 C -------------------------------------------------------------
          Do i=1,nSym
-            ipLpb(i) = -6666
             k=Muld2h(i,JSYM)
-            iSkip(i) = Min(1,nPorb(i)*nPorb(k)) ! skip Lik vector
             If (i.lt.k) Then
                kOff(i)=Mpq
                nOB(i)=nPorb(i)*nPorb(k)*NumCho(jSym)
@@ -358,7 +360,7 @@ C ------------------------------------------------------------------
 
             nRS = nDimRS(JSYM,JRED)
 
-            Call GetMem('MaxM','Max','Real',KDUM,LWORK)
+            Call mma_maxDBLE(LWORK)
 
             nVec  = Min(LWORK/(nRS+mvec+1),nVrs)
 
@@ -375,8 +377,12 @@ C ------------------------------------------------------------------
 
             LREAD = nRS*nVec
 
-            Call GetMem('rsL','Allo','Real',ipLrs,LREAD)
-            Call GetMem('ChoT','Allo','Real',ipChoT,(mvec+1)*nVec)
+            Call mma_allocate(Lrs,LREAD,Label='Lrs')
+            Call mma_allocate(Lpq_J,nVec,Label='Lpq_j')
+
+            iSwap = 0  ! Lpb,J are returned by cho_x_getVtra
+            Call Allocate_SBA(ChoT(1),nPorb,nBas,nVec,JSYM,nSym,iSwap)
+            ChoT(1)%A0(:)=0.0D0
 
 C --- BATCH over the vectors ----------------------------
 
@@ -395,7 +401,7 @@ C --- BATCH over the vectors ----------------------------
 
                CALL CWTIME(TCR1,TWR1)
 
-               CALL CHO_VECRD(Work(ipLrs),LREAD,JVEC,IVEC2,JSYM,
+               CALL CHO_VECRD(Lrs,LREAD,JVEC,IVEC2,JSYM,
      &                        NUMV,IREDC,MUSED)
 
                If (NUMV.le.0 .or.NUMV.ne.JNUM) then
@@ -407,27 +413,18 @@ C --- BATCH over the vectors ----------------------------
                tread(1) = tread(1) + (TCR2 - TCR1)
                tread(2) = tread(2) + (TWR2 - TWR1)
 
-               lChoT=JNUM
-               Do iSymp=1,nSym
-
-                  iSymb = MulD2h(jSym,iSymp)
-
-                  ipLpb(iSymp) = ipChoT + lChoT
-                  lChoT = lChoT + nPorb(iSymp)*nBas(iSymb)*JNUM
-
-               End Do
-
-               ipLpq = ipChoT + lChot
-
 C --------------------------------------------------------------------
 C --- First half MO transformation  Lpb,J = sum_a  C(p,a) * Lab,J
 C --------------------------------------------------------------------
 
                CALL CWTIME(TCM1,TWM1)
 
-               CALL CHO_X_getVtra(irc,Work(ipLrs),LREAD,jVEC,JNUM,
-     &                           JSYM,iSwap,IREDC,nMOs,kMOs,ipOrb,nPorb,
-     &                           ipLpb,iSkip,DoRead)
+               kMOs = 1
+               nMOs = 1
+
+               CALL CHO_X_getVtra(irc,Lrs,LREAD,jVEC,JNUM,
+     &                           jSym,iSwap,IREDC,nMOs,kMOs,POrb,
+     &                           ChoT(1),DoRead)
 
                if (irc.ne.0) then
                   rc = irc
@@ -451,23 +448,18 @@ C --------------------------------------------------------------------
 
                      CALL CWTIME(TCM3,TWM3)
 
-                     If (NApq.ne.0) Then
+                     If (NApq==0) Cycle
 
-                      Do JVC=1,JNUM
+                     Call mma_allocate(Lpq,NApq,JNUM,Label='Lpq')
 
-                       ipLJpb = ipLpb(iSymb)
-     &                        + nPorb(iSymb)*nBas(iSymb)*(JVC-1)
-                       ipLJpq = ipLpq
-     &                        + NApq*(JVC-1)
+                     Do JVC=1,JNUM
 
-                       CALL DGEMM_Tri('N','T',NAp,NAp,nBas(iSymb),
-     &                            One,Work(ipLJpb),NAp,
-     &                                Work(ipOrb(iSymb)),NAp,
-     &                           Zero,Work(ipLJpq),NAp)
+                      CALL DGEMM_Tri('N','T',NAp,NAp,nBas(iSymb),
+     &                           One,ChoT(1)%SB(iSymb)%A3(:,:,JVC),NAp,
+     &                               Porb%SB(iSymb)%A2,NAp,
+     &                          Zero,Lpq(:,jVC),NAp)
 
-                      End Do
-
-                     EndIf
+                     End Do
 
                      CALL CWTIME(TCM4,TWM4)
                      tmotr2(1) = tmotr2(1) + (TCM4 - TCM3)
@@ -475,76 +467,71 @@ C --------------------------------------------------------------------
 
                      CALL CWTIME(TCR3,TWR3)
 
-                     If (NApq.ne.0) Then
-
-                        If (tv2disk.eq.'PQK') Then
+                     If (tv2disk.eq.'PQK') Then
 #ifdef _HDF5_QCM_
+                      if (ihdf5/=1) then
+#endif
+                          Call ddafile(LunChVF(jSym),1,Lpq,
+     &                                               NApq*JNUM,
+     &                                               iOffB(iSymb))
+#ifdef _HDF5_QCM_
+                      else
+                         ! this should never happen, this case should be caught in motra.f
+                         Write(6,*)' Writing of Cholesky vectors'//
+     &                   'in HDF5 format as (pq,k) is not'//
+     &                   'supported.'
+                         call Abend()
+                      end if
+#endif
+                      If (Do_int) Then
+                         Do ipq=1,NApq
+                            kt=kOff(iSymb)+ipq-1
+                            Xint(kt)=Xint(kt)
+     &                              +ddot_(JNUM,Lpq(ipq,:),NApq,
+     &                                          Lpq(ipq,:),NApq)
+                         End Do
+                      EndIf
+                     Else
+                      Do ipq=1,NApq
+                         Lpq_J(1:JNUM) = Lpq(ipq,1:JNUM)
+                         If (Do_int) Then
+                            kt=kOff(iSymb)+ipq-1
+                            Xint(kt)=Xint(kt)
+     &                              +ddot_(JNUM,Lpq_J,1,Lpq_J,1)
+                         EndIf
+                         idisk=iOffB(iSymb)+NumCho(jSym)*(ipq-1)
+#ifdef _HDF5_QCM_
+                         ! Leon 13.6.2017: Do not write Cholesky vectors to the regular file
+                         ! if the hdf5 file is written. It becomes counterproductive to write
+                         ! the same content twice for large basis sets
                          if (ihdf5/=1) then
 #endif
-                           Call ddafile(LunChVF(jSym),1,Work(ipLpq),
-     &                                                NApq*JNUM,
-     &                                                iOffB(iSymb))
+                            Call ddafile(LunChVF(jSym),1,Lpq_J,JNUM,
+     &                                   idisk)
+
 #ifdef _HDF5_QCM_
+                            ! Write the transformed Cholesky batch to the hdf5 dataset
+                            ! The ordering in HDF5 is in column-major order, corresponding to
+                            ! the 'Kpq' storage
+                            ! This way all the elements needed to compute one integral can be
+                            ! read with one read operation.
+
+                            ! TODO: eventually row-major order storage + chunked dataset might
+                            ! improve the performance -- but probably it's irrelevant.
+                            ! Leon 22.4.2016 -- modified the write_cholesky call below to
+                            ! account for multiple reduced sets
                          else
-                           ! this should never happen, this case should be caught in motra.f
-                           Write(6,*)' Writing of Cholesky vectors'//
-     &                       'in HDF5 format as (pq,k) is not'//
-     &                       'supported.'
-                           call Abend()
+                            call hdf5_write_cholesky(choset_id,
+     &                           space_id,ipq-1,nVec*(iBatch-1)+iVrs-1,
+     &                                                       JNUM,Lpq_J)
                          end if
 #endif
-                           If (Do_int) Then
-                              Do ipq=0,NApq-1
-                                 kt=kOff(iSymb)+ipq
-                                 kLpq=ipLpq+ipq
-                                Xint(kt)=Xint(kt)+ddot_(JNUM,Work(kLpq),
-     &                                             NApq,Work(kLpq),NApq)
-                              End Do
-                           EndIf
-                        Else
-                           Do ipq=0,NApq-1
-                              call dcopy_(JNUM,Work(ipLpq+ipq),NApq,
-     &                                        Work(ipChoT),1)
-                              If (Do_int) Then
-                                 kt=kOff(iSymb)+ipq
-                                 Xint(kt)=Xint(kt)+ddot_(JNUM,
-     &                                                  Work(ipChoT),1,
-     &                                                  Work(ipChoT),1)
-                              EndIf
-                              idisk=iOffB(iSymb)+NumCho(jSym)*ipq
-#ifdef _HDF5_QCM_
-                             ! Leon 13.6.2017: Do not write Cholesky vectors to the regular file
-                             ! if the hdf5 file is written. It becomes counterproductive to write
-                             ! the same content twice for large basis sets
-                             if (ihdf5/=1) then
-#endif
-                              Call ddafile(LunChVF(jSym),1,Work(ipChoT),
-     &                                                   JNUM,
-     &                                                   idisk)
 
-#ifdef _HDF5_QCM_
-                             ! Write the transformed Cholesky batch to the hdf5 dataset
-                             ! The ordering in HDF5 is in column-major order, corresponding to
-                             ! the 'Kpq' storage
-                             ! This way all the elements needed to compute one integral can be
-                             ! read with one read operation.
-
-                             ! TODO: eventually row-major order storage + chunked dataset might
-                             ! improve the performance -- but probably it's irrelevant.
-                             ! Leon 22.4.2016 -- modified the write_cholesky call below to
-                             ! account for multiple reduced sets
-                             else
-                               call hdf5_write_cholesky(choset_id,
-     &                           space_id,ipq,nVec*(iBatch-1)+iVrs-1,
-     &                                             JNUM,Work(ipChoT))
-                             end if
-#endif
-
-                           End Do
-                           iOffB(iSymb)=iOffB(iSymb)+JNUM
-                        EndIf
-
+                      End Do
+                      iOffB(iSymb)=iOffB(iSymb)+JNUM
                      EndIf
+
+                     Call mma_deallocate(Lpq)
 
                      CALL CWTIME(TCR4,TWR4)
                      tread(1) = tread(1) + (TCR4 - TCR3)
@@ -563,23 +550,22 @@ C --------------------------------------------------------------------
 
                      CALL CWTIME(TCM3,TWM3)
 
-                     If(NApq.ne.0.and.iSymp.lt.iSymb)Then
+                     If (NApq==0) Cycle
 
-                      Do JVC=1,JNUM
+                     Call mma_allocate(Lpq,NApq,JNUM,Label='Lpq')
 
-                       ipLJpb = ipLpb(iSymp)
-     &                        + nPorb(iSymp)*nBas(iSymb)*(JVC-1)
-                       ipLJpq = ipLpq
-     &                        + nPorb(iSymp)*nPorb(iSymb)*(JVC-1)
+                     If (iSymp.lt.iSymb)Then
+                       Do JVC=1,JNUM
 
-                       CALL DGEMM_('N','T',NAp,NAq,nBas(iSymb),
-     &                            One,Work(ipLJpb),NAp,
-     &                                Work(ipOrb(iSymb)),NAq,
-     &                           Zero,Work(ipLJpq),NAp)
+                        CALL DGEMM_('N','T',NAp,NAq,nBas(iSymb),
+     &                            One,ChoT(1)%SB(iSymp)%A3(:,:,JVC),NAp,
+     &                                 Porb%SB(iSymb)%A2,NAq,
+     &                            Zero,Lpq(:,JVC),NAp)
 
-                      End Do
-
-                     EndIf
+                       End Do
+                     Else
+                       Lpq(:,:)=Zero
+                     End If
 
                      CALL CWTIME(TCM4,TWM4)
                      tmotr2(1) = tmotr2(1) + (TCM4 - TCM3)
@@ -587,32 +573,30 @@ C --------------------------------------------------------------------
 
                      CALL CWTIME(TCR3,TWR3)
 
-                     If (NApq.ne.0) Then
+                     If (iSymp.lt.iSymb) Then
 
                         If (tv2disk.eq.'PQK') Then
-                           Call ddafile(LunChVF(jSym),1,Work(ipLpq),
+                           Call ddafile(LunChVF(jSym),1,Lpq,
      &                                                NApq*JNUM,
      &                                                iOffB(iSymp))
                            If (Do_int) Then
-                              Do ipq=0,NApq-1
-                                 kt=kOff(iSymp)+ipq
-                                 kLpq=ipLpq+ipq
-                                Xint(kt)=Xint(kt)+ddot_(JNUM,Work(kLpq),
-     &                                             NApq,Work(kLpq),NApq)
+                              Do ipq=1,NApq
+                                 kt=kOff(iSymp)+ipq-1
+                                 Xint(kt)=Xint(kt)
+     &                                   +ddot_(JNUM,Lpq(ipq,:),NApq,
+     &                                               Lpq(ipq,:),NApq)
                               End Do
                            EndIf
 
                         Else
-                           Do ipq=0,NApq-1
-                              call dcopy_(JNUM,Work(ipLpq+ipq),NApq,
-     &                                        Work(ipChoT),1)
+                           Do ipq=1,NApq
+                              Lpq_J(1:JNUM) = Lpq(ipq,1:JNUM)
                               If (Do_int) Then
-                                 kt=kOff(iSymp)+ipq
-                                 Xint(kt)=Xint(kt)+ddot_(JNUM,
-     &                                                  Work(ipChoT),1,
-     &                                                  Work(ipChoT),1)
+                                 kt=kOff(iSymp)+ipq-1
+                                 Xint(kt)=Xint(kt)+ddot_(JNUM,Lpq_J,1,
+     &                                                        Lpq_J,1)
                               EndIf
-                              idisk=iOffB(iSymp)+NumCho(jSym)*ipq
+                              idisk=iOffB(iSymp)+NumCho(jSym)*(ipq-1)
 #ifdef _HDF5_QCM_
                              ! Write the transformed Cholesky batch to the hdf5 dataset
                              ! The ordering in HDF5 is in column-major order, corresponding to
@@ -620,14 +604,14 @@ C --------------------------------------------------------------------
                              ! See above for more explanation
                              if (ihdf5==1) then
                                call hdf5_write_cholesky(choset_id,
-     &                           space_id,ipq,nVec*(iBatch-1),JNUM,
-     &                                                    Work(ipChoT))
+     &                                                  space_id,ipq-1,
+     &                                                  nVec*(iBatch-1),
+     &                                                  JNUM,Lpq_J)
                              end if
 #endif
 
-                              Call ddafile(LunChVF(jSym),1,Work(ipChoT),
-     &                                                   JNUM,
-     &                                                   idisk)
+                              Call ddafile(LunChVF(jSym),1,Lpq_J,JNUM,
+     &                                     idisk)
                            End Do
                            iOffB(iSymp)=iOffB(iSymp)+JNUM
                         EndIf
@@ -637,6 +621,8 @@ C --------------------------------------------------------------------
                      CALL CWTIME(TCR4,TWR4)
                      tread(1) = tread(1) + (TCR4 - TCR3)
                      tread(2) = tread(2) + (TWR4 - TWR3)
+
+                     Call mma_deallocate(Lpq)
 
                   End Do
 
@@ -648,8 +634,9 @@ C --------------------------------------------------------------------
             END DO  ! end batch loop
 
 C --- free memory
-            Call GetMem('ChoT','Free','Real',ipChoT,(mvec+1)*nVec)
-            Call GetMem('rsL','Free','Real',ipLrs,LREAD)
+            Call mma_deallocate(Lpq_J)
+            Call Deallocate_SBA(ChoT(1))
+            Call mma_deallocate(Lrs)
 
 999         CONTINUE
 

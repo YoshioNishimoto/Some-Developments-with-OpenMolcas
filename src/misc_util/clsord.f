@@ -39,8 +39,6 @@
 ************************************************************************
       Implicit Integer (A-Z)
 *
-#include "TwoRc.fh"
-#include "TwoFlags.fh"
 #include "Molcas.fh"
 #include "TwoDat.fh"
 *----------------------------------------------------------------------*
@@ -66,10 +64,7 @@
       AuxTwo(isStat) = iNoNum
       AuxTwo(isDaDa) = iNoNum
 *
-      If (RAMD) Then
-         Call GetMem('RAMD','Free','Real',ip_RAMD,RAMD_size)
-         RAMD=.False.
-      End If
+      If (RAMD) RAMD=.False.
 *----------------------------------------------------------------------*
 *     Terminate procedure                                              *
 *----------------------------------------------------------------------*

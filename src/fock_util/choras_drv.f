@@ -8,85 +8,77 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
-      SUBROUTINE CHORAS_DRV(nSym,nBas,nOcc,DSQ,DLT,FLT,
-     &                      ExFac,LWFSQ,CMO)
+      SUBROUTINE CHORAS_DRV(nSym,nBas,nOcc,W_DSQ,W_DLT,W_FLT,ExFac,FSQ,
+     &                      W_CMO)
 
+      use Data_Structures, only: DSBA_Type, Allocate_DSBA,
+     &                           Deallocate_DSBA, Integer_Pointer
       Implicit Real*8 (a-h,o-z)
 #include "real.fh"
-#include "WrkSpc.fh"
+#include "stdalloc.fh"
+
+      Type (DSBA_Type) FSQ
+
       Integer nBas(8), MinMem(8),rc
-      Real*8 FLT(*),CMO(*)
-      Real*8 DSQ(*),DLT(*)
+      Real*8 W_FLT(*),W_CMO(*), W_DSQ(*),W_DLT(*)
       Parameter (MaxDs = 1)
       Logical DoCoulomb(MaxDs),DoExchange(MaxDs)
-      Integer Lunit(8)
       Real*8 FactC(MaxDs),FactX(MaxDs),ExFac
-      Integer ipDLT(MaxDs),ipDSQ(MaxDs),ipFLT(MaxDs),ipFSQ(MaxDs)
-      Integer ipMSQ(MaxDs),ipNocc(MaxDs),nOcc(nSym)
-      Integer nnBSF(8,8),n2BSF(8,8)
-      Integer ALGO
-      Logical REORD,DECO
+      Integer, Target :: nOcc(nSym)
 
-      Common /CHOUNIT / Lunit
-      Common /CHORAS / REORD,DECO,ALGO
-*
-*
-C  **************************************************
+      Integer, Allocatable, Target :: nVec(:)
 
+      Type (Integer_Pointer) :: pNocc(1)
+
+      Type (DSBA_Type) Vec, DDec, DLT, FLT, DSQ, CMO, MSQ(MaxDs)
+
+#include "chounit.fh"
+#include "choras.fh"
+*                                                                      *
+************************************************************************
+*                                                                      *
       rc=0
 
-      do i=1,8
-         Lunit(i)=-1
-      end do
+      Lunit(:)=-1
 
       nDen = 1
       DoCoulomb(1)  = .true.
-      DoExchange(1) = ExFac.ne.0.0d0
-      FactC(1)      = 1.0D0
-      FactX(1)      = 0.5D0*ExFac ! ExFac used for hybrid functionals
+      DoExchange(1) = ExFac.ne.Zero
+      FactC(1)      = One
+      FactX(1)      = Half*ExFac ! ExFac used for hybrid functionals
 
+      Call Allocate_DSBA(CMO,nBas,nBas,nSym,Ref=W_CMO)
 
-      ipDLT(1) = ip_of_Work(DLT(1))
-      ipDSQ(1) = ip_of_Work(DSQ(1))
-      ipFLT(1) = ip_of_Work(FLT(1))
-      ipFSQ(1) = LWFSQ
+      Call Allocate_DSBA(DLT,nBas,nBas,nSym,Case='TRI',Ref=W_DLT)
+      Call Allocate_DSBA(FLT,nBas,nBas,nSym,Case='TRI',Ref=W_FLT)
+
+      Call Allocate_DSBA(DSQ,nBas,nBas,nSym,Ref=W_DSQ)
 
       iUHF=0
 
-      ipNocc(1) = ip_of_iwork(nOcc(1)) ! occup. numbers
-
        IF (DECO) THEN !use decomposed density
 * ==============  Alternative A: Use decomposed density matrix =====
-       call getmem('nVec','Allo','Inte',ipnVec,nSym)
-
-       CALL set_nnBSF(nSym,nBas,nnBSF,n2BSF)
-       lVdim=0
-       do i=1,nSym
-          lVdim = lVdim + n2BSF(i,i)
-       end do
+       Call mma_allocate(nVec,nSym,Label='nVec')
 
 * Allocate vectors representing decomposed density matrix:
-       CALL GETMEM('choMOs','allo','real',ipVec,lVdim)
+       Call Allocate_DSBA(Vec,nBas,nBas,nSym)
 
 * ------------------------------------------------------------------
-       CALL GETMEM('ddec','allo','real',ipddec,lVdim)
-       call dcopy_(lVdim,Work(ipDSQ(1)),1,Work(ipddec),1)
-       ipd = ipddec
-       ipV = ipVec
+       Call Allocate_DSBA(Ddec,nBas,nBas,nSym)
+       DDec%A0(:) = DSQ%A0(:)
        Do i=1,nSym
 * Loop over symmetries
           if(nBas(i).gt.0)then
             Ymax=0.0d0
             do ja=1,nBas(i)
-               jaa=ipd-1+nBas(i)*(ja-1)+ja
-               Ymax=Max(Ymax,Work(jaa))
+               Ymax=Max(Ymax,DDec%SB(i)%A2(ja,ja))
             end do
             Thr = 1.0d-13*Ymax
 * Call for decomposition:
-            CALL CD_InCore(Work(ipd),nBas(i),Work(ipV),nBas(i),
+            CALL CD_InCore(DDec%SB(i)%A2,nBas(i),Vec%SB(i)%A2,nBas(i),
      &                     NumV,Thr,rc)
             If (rc.ne.0) GOTO 999
-            iwork(ipnVec+i-1) = NumV
+            nVec(i) = NumV
 
             if ( NumV .ne. nOcc(i) ) then
                write(6,*)'Warning! The number of occupied from the dec',
@@ -97,24 +89,28 @@ C  **************************************************
             endif
 
           else
-            iwork(ipnVec+i-1) = 0
+            nVec(i) = 0
           endif
-          ipd = ipd + n2BSF(i,i)
-          ipV = ipV + n2BSF(i,i)
 * End of loop over symmetries
        End Do
-       CALL GETMEM('ddec','free','real',ipddec,lVdim)
+       Call Deallocate_DSBA(DDec)
 * ------------------------------------------------------------------
 
 
-       ipNocc(1) = ipnVec ! occup. numbers
+       pNocc(1)%I1(1:)=>nVec(1:)
 
-       ipMSQ(1) = ipVec       ! "Cholesky" MOs
+       Call Allocate_DSBA(MSQ(1),nBas,nBas,nSym,Ref=Vec%A0)
 
 * ========End of  Alternative A: Use decomposed density matrix =====
+      ELSE
+
+       pNocc(1)%I1(1:)=>nOcc(1:)
+
+       Call Allocate_DSBA(MSQ(1),nBas,nBas,nSym,Ref=CMO%A0)
+
       ENDIF
 
-      Call CHOSCF_MEM(nSym,nBas,iUHF,DoExchange,ipNocc,
+      Call CHOSCF_MEM(nSym,nBas,iUHF,DoExchange,pNocc,
      &                ALGO,REORD,MinMem,loff1)
 
 * Here follows a long if nest with six combinations:
@@ -124,13 +120,13 @@ C  **************************************************
         if (REORD) then
 * ALGO.eq.1.and.REORD:
       Call CHO_FOCKTWO(rc,nSym,nBas,nDen,DoCoulomb,DoExchange,FactC,
-     &                FactX,ipDLT,ipDSQ,ipFLT,ipFSQ,ipNocc,MinMem)
+     &                FactX,[DLT],[DSQ],[FLT],[FSQ],pNocc,MinMem)
            If (rc.ne.0) GOTO 999
 
         else
 * ALGO.eq.1.and. .not.REORD:
         CALL CHO_FOCKTWO_RED(rc,nBas,nDen,DoCoulomb,DoExchange,
-     &           FactC,FactX,ipDLT,ipDSQ,ipFLT,ipFSQ,ipNocc,MinMem)
+     &           FactC,FactX,[DLT],[DSQ],[FLT],[FSQ],pNocc,MinMem)
            If (rc.ne.0) GOTO 999
         end if
 
@@ -141,15 +137,15 @@ C  **************************************************
           if (REORD)then
 * ALGO.eq.2.and.DECO.and.REORD:
             Call CHO_FTWO_MO(rc,nSym,nBas,nDen,DoCoulomb,DoExchange,
-     &                  lOff1,FactC,FactX,ipDLT,ipDSQ,ipFLT,ipFSQ,
-     &                  MinMem,ipMSQ,ipNocc)
+     &                  lOff1,FactC,FactX,[DLT],[DSQ],[FLT],[FSQ],
+     &                  MinMem,MSQ,pNocc)
             If (rc.ne.0) GOTO 999
 
           else
 * ALGO.eq.2.and.DECO.and. .not.REORD:
             CALL CHO_FMO_red(rc,nDen,DoCoulomb,DoExchange,
-     &                  lOff1,FactC,FactX,ipDLT,ipDSQ,ipFLT,ipFSQ,
-     &                  MinMem,ipMSQ,ipNocc)
+     &                  lOff1,FactC,FactX,[DLT],[DSQ],[FLT],[FSQ],
+     &                  MinMem,MSQ,pNocc)
             If (rc.ne.0) GOTO 999
           endif
 
@@ -157,19 +153,17 @@ C  **************************************************
         else
           if (REORD) then
 * ALGO.eq.2.and. ..not.DECO.and.REORD:
-            ipMSQ(1) = ip_of_work(CMO(1))
             FactX(1) = 1.0D0*ExFac ! because MOs coeff. are not scaled
             Call CHO_FTWO_MO(rc,nSym,nBas,nDen,DoCoulomb,DoExchange,
-     &                lOff1,FactC,FactX,ipDLT,ipDSQ,ipFLT,ipFSQ,
-     &                MinMem,ipMSQ,ipNocc)
+     &                lOff1,FactC,FactX,[DLT],[DSQ],[FLT],[FSQ],
+     &                MinMem,MSQ,pNocc)
             if (rc.ne.0) GOTO 999
           else
 * ALGO.eq.2.and. ..not.DECO.and.REORD:
-            ipMSQ(1) = ip_of_work(CMO(1))
             FactX(1) = 1.0D0*ExFac ! because MOs coeff. are not scaled
             CALL CHO_FMO_red(rc,nDen,DoCoulomb,DoExchange,
-     &                lOff1,FactC,FactX,ipDLT,ipDSQ,ipFLT,ipFSQ,
-     &                MinMem,ipMSQ,ipNocc)
+     &                lOff1,FactC,FactX,[DLT],[DSQ],[FLT],[FSQ],
+     &                MinMem,MSQ,pNocc)
             if (rc.ne.0) GOTO 999
           end if
         end if
@@ -180,7 +174,7 @@ C  **************************************************
         CALL QUIT(rc)
       endif
 
-      CALL CHO_SUM(rc,nSym,nBas,iUHF,DoExchange,ipFLT,ipFSQ)
+      CALL CHO_SUM(rc,nSym,nBas,iUHF,DoExchange,[FLT],[FSQ])
 
  999    continue
       if (rc.ne.0) then
@@ -188,10 +182,16 @@ C  **************************************************
          CALL QUIT(rc)
       end if
 
+      pNocc(1)%I1=>Null()
+      Call Deallocate_DSBA(MSQ(1))
       IF (DECO) Then
-       CALL GETMEM('choMOs','free','real',ipVec,lVdim)
-       call getmem('nVec','Free','Inte',ipnVec,nSym)
+       Call Deallocate_DSBA(Vec)
+       Call mma_deallocate(nVec)
       End If
+      Call Deallocate_DSBA(DSQ)
+      Call Deallocate_DSBA(DLT)
+      Call Deallocate_DSBA(FLT)
+      Call Deallocate_DSBA(CMO)
 
       Return
       End

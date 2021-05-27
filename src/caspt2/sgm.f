@@ -40,7 +40,6 @@ C so each chunk has all the row indices (full columns).
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
       DIMENSION X1(*)
@@ -48,7 +47,7 @@ C so each chunk has all the row indices (full columns).
       DIMENSION IOFCD(8,8),IOFCEP(8,8),IOFCEM(8,8),IOFCGP(8,8),
      &          IOFCGM(8,8)
 #include "sigma.fh"
-      COMMON /CPLCAS/ IFCOUP(MXCASE,MXCASE)
+#include "cplcas.fh"
 C Various constants:
       SQR2=SQRT(2.0D00)
       SQR3=SQRT(3.0D00)

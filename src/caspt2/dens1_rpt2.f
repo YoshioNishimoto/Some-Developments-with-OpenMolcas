@@ -17,6 +17,7 @@
 * SWEDEN                                     *
 *--------------------------------------------*
       SUBROUTINE DENS1_RPT2 (CI,SGM1,G1)
+      use output_caspt2, only:iPrGlb,debug
 #if defined (_MOLCAS_MPP_) && !defined (_GA_)
       USE Para_Info, ONLY: nProcs, Is_Real_Par, King
 #endif
@@ -24,7 +25,6 @@
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "pt2_guga.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
@@ -142,7 +142,7 @@
       If(NACTEL.GT.1) Then
 *QP: At this point, only load 2RDM of one state, JSTATE=1
         Call chemps2_load2pdm( nlev, G2, MSTATE(1) )
-        Call two2onerdm_bis( nlev, NACTEL, G2, G1 )
+        Call two2onerdm( nlev, NACTEL, G2, G1 )
       Else
         write(6,*) "FATAL ERROR: DMRG-CASPT2 with
      & CHEMPS2 does not work with NACTEL=1"

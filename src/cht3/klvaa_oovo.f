@@ -8,10 +8,10 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
-cmp!      SUBROUTINE klvaa_oovo(G,ix,it,ig,iscr,vblock,N,nug,
-cmpn      SUBROUTINE klvaa_oovo(ix,it,ig,iscr,vblock,N,nug,
       SUBROUTINE klvaa_oovo(ix,ig,iscr,vblock,N,nug,
      $ LU,last,ias)
+cmp!      SUBROUTINE klvaa_oovo(G,ix,it,ig,iscr,vblock,N,nug,
+cmpn      SUBROUTINE klvaa_oovo(ix,it,ig,iscr,vblock,N,nug,
 C
 C  creates L(alpha>alpha,alpha-alpha)
 C  DA files LMATICH(ISP)ICH(ISP)
@@ -49,15 +49,14 @@ c     real*8 ddot_
       integer isp,ias,vblock,n,i,j,k,lu,iasblock
       INTEGER A,A1,A2,B1,B2,NSTEP,ADIM,NUG,NGA,NGB,R,MAXDIM2
       INTEGER IS2,KI, last,indab
-      CHARACTER ich*1
 c      CHARACTER FN*6
-      INTEGER IOPT,NOAB,NNOAB,NUAB,NNUAB,nno
+      INTEGER nno
 c     INTEGER m
 cmp
         integer il1,itmp,il2
 cmp
-      COMMON/UHF/NOAB(2),NNOAB(3),NUAB(2),NNUAB(3),ICH(3)
-      COMMON/IOIND/IOPT(96)
+#include "uhf.fh"
+#include "ioind.fh"
       indab(i,j)=(max(i,j)-1)*max(i,j)/2+min(i,j)
 c
 C

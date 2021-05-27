@@ -8,10 +8,10 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
-cmp      SUBROUTINE klvaa_vvv(G,ix,it,ig,iscr,vblock,N,nug,lu,last,
-cmpn      SUBROUTINE klvaa_vvv(ix,it,ig,iscr,vblock,N,nug,lu,last,
       SUBROUTINE klvaa_vvv(ix,ig,iscr,vblock,N,nug,lu,last,
      $iasblock,K,ias)
+cmp      SUBROUTINE klvaa_vvv(G,ix,it,ig,iscr,vblock,N,nug,lu,last,
+cmpn      SUBROUTINE klvaa_vvv(ix,it,ig,iscr,vblock,N,nug,lu,last,
 C
 C  creates K(alpha>alpha,alpha-alpha) or K(beta>beta,beta,beta)
 C  DA files KMATICH(ISP)ICH(ISP)     ISP=A
@@ -50,11 +50,10 @@ cmpn      integer it,ix,ig,iscr, KADT, IJS, RAD, AADT
       integer isp,ias,vblock,n,i,j,k,lu,iasblock,indab
       INTEGER A,A1,A2,B1,B2,NSTEP,ADIM,NUG,NGA,NGB,R,MAXDIMM,B
       INTEGER KI, last
-      CHARACTER ich*1
 c     CHARACTER FN*6
-      INTEGER IOPT,NOAB,NNOAB,NUAB,NNUAB,NNU
-      COMMON/UHF/NOAB(2),NNOAB(3),NUAB(2),NNUAB(3),ICH(3)
-      COMMON/IOIND/IOPT(96)
+      INTEGER NNU
+#include "uhf.fh"
+#include "ioind.fh"
       indab(i,j)=(max(i,j)-1)*max(i,j)/2+min(i,j)
 C
       ISP=1          !

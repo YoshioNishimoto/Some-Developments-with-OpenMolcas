@@ -1794,7 +1794,7 @@ Keywords associated to one-electron integrals
   Request the computation of vector potential integrals due to an external homogenous radiation.
   The keyword is optionally followed by a line with a single integer entry specifying the number of k-vectors to
   be read. If omitted the number of k-vectors default to 1. Subsequently, for each k-vector, follows a line
-  with 4 values which specifies the direction of the k-vector and specifing the  associated 
+  with 4 values which specifies the direction of the k-vector and specifing the  associated
   wavelength (in au). Other possible units are possible if the line is extended with the wording Angstrom or nanometer.
 
   .. xmldoc:: <KEYWORD MODULE="GATEWAY" NAME="EMFR" APPEAR="Vector potential integrals" KIND="REALS_COMPUTED" SIZE="4" LEVEL="ADVANCED">
@@ -1804,7 +1804,7 @@ Keywords associated to one-electron integrals
               Request the computation of vector potential integrals due to an external homogenous radiation.
               The keyword is optionally followed by a line with a single integer entry specifying the number of k-vectors to
               be read. If omitted the number of k-vectors default to 1. Subsequently, for each k-vector, follows a line
-              with 4 values which specifies the direction of the k-vector and specifing the  associated 
+              with 4 values which specifies the direction of the k-vector and specifing the  associated
               wavelength (in au). Other possible units are possible if the line is extended with the wording Angstrom or nanometer.
               </HELP>
               </KEYWORD>
@@ -1859,6 +1859,23 @@ Keywords associated to one-electron integrals
               shielding will be computed at each nucleus. If nonzero, then the
               coordinates (in au) for each origin has to be supplied, one entry for each
               origin.
+              </HELP>
+              </KEYWORD>
+
+:kword:`MXTC`
+  Requests the computation of X2C transformed hyperfine magnetic integrals (used in subsequent
+  hyperfine calculations), has to be used together with the keyword :kword:`RX2C`.
+  If one wants to calculate the non-relativistic limit, one can simply set up a large
+  speed of light value.
+  See reference for details :cite:`Feng_JChemTheoryComput_Electron_2021`.
+
+  .. xmldoc:: <KEYWORD MODULE="GATEWAY" NAME="MXTC" APPEAR="X2C hyperfine magnetic" KIND="SINGLE" REQUIRE="RX2C" LEVEL="BASIC">
+              %%Keyword: MXTC <basic>
+              <HELP>
+              Requests the computation of X2C transformed hyperfine magnetic integrals (used in subsequent
+              hyperfine calculations), has to be used together with the keyword RX2C.
+              If one wants to calculate the non-relativistic limit, one can simply set up a large
+              speed of light value.
               </HELP>
               </KEYWORD>
 

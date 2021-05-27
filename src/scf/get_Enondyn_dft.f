@@ -9,17 +9,15 @@
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
       Subroutine Get_Enondyn_dft(nh1,Grad,nGrad,DFTFOCK)
+      use SCF_Arrays, only: CMO
       Implicit Real*8 (a-h,o-z)
 #include "real.fh"
 #include "mxdm.fh"
-#include "addr.fh"
 #include "WrkSpc.fh"
 #include "infscf.fh"
       Real*8  Grad(nGrad)
       Character*4 DFTFOCK
-      Real*8 Erest_xc
-      COMMON /dCSCF_xc/ Erest_xc
-
+#include "dcscf.fh"
 *
       Erest_xc=0.0d0
       Call GetMem('F-DS','Allo','Real',ipF_DFT,2*nBT)
@@ -27,20 +25,18 @@
       ip_Da=ip_D_DS
       ip_Db=ip_D_DS+nBT
 *
-      iOff=0
+      iOff=1
       jOff=0
       Do iSym=1,nSym
          ipDaa=ip_Da+jOff
-         mAdCMOO=mAdCMO+iOff
          Call DGEMM_tri('N','T',nBas(iSym),nBas(iSym),nOcc(iSym,1),
-     &                    1.0d0,Work(mAdCMOO),nBas(iSym),
-     &                          Work(mAdCMOO),nBas(iSym),
+     &                    1.0d0,CMO(iOff,1),nBas(iSym),
+     &                          CMO(iOff,1),nBas(iSym),
      &                    0.0d0,Work(ipDaa),nBas(iSym))
          ipDbb=ip_Db+jOff
-         mAdCMOO=mAdCMO_ab+iOff
          Call DGEMM_tri('N','T',nBas(iSym),nBas(iSym),nOcc(iSym,2),
-     &                    1.0d0,Work(mAdCMOO),nBas(iSym),
-     &                          Work(mAdCMOO),nBas(iSym),
+     &                    1.0d0,CMO(iOff,2),nBas(iSym),
+     &                          CMO(iOff,2),nBas(iSym),
      &                    0.0d0,Work(ipDbb),nBas(iSym))
          Do j=1,nBas(iSym)
             Do i=1,j-1
@@ -87,8 +83,7 @@
       Logical Do_MO,Do_TwoEl,Do_Grad
       Character*4 DFTFOCK
       Character*16  KSDFT
-      Real*8 Erest_xc
-      COMMON /dCSCF_xc/ Erest_xc
+#include "dcscf.fh"
 *
       lKSDFT=LEN(KSDFT)
       Debug=.False.

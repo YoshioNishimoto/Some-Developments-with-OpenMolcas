@@ -58,7 +58,6 @@
 #include "WrkSpc.fh"
 #include "timers.fh"
 #include "output_ras.fh"
-      PARAMETER (ROUTINE='EXPLH2  ')
       DIMENSION DIAG(*)
       DIMENSION ONEINT(*)
       DIMENSION TUVX(*)
@@ -121,11 +120,11 @@
           EXPLV(II)=1.0D00
 10      CONTINUE
 *       CALL Jacob(Work(LEXHAM),EXPLV,NSEL,NSEL)
-#ifdef _DEBUGPRINT_
-        CALL NIdiag(Work(LEXHAM),EXPLV,NSEL,NSEL,0)
-#else
-        CALL NIdiag_new(Work(LEXHAM),EXPLV,NSEL,NSEL,0)
-#endif
+*#ifdef _DEBUGPRINT_
+*        CALL NIdiag(Work(LEXHAM),EXPLV,NSEL,NSEL)
+*#else
+        CALL NIdiag_new(Work(LEXHAM),EXPLV,NSEL,NSEL)
+*#endif
         CALL JACORD(Work(LEXHAM),EXPLV,NSEL,NSEL)
         DO 15 I=1,NSEL
           EXPLE(I)=Work(LEXHAM-1+I*(I+1)/2)

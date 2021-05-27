@@ -21,14 +21,12 @@
       Integer nSym,nBas(8), nAux(8), Keep(8)
       Integer nOcc(nSym),nOcc_ab(nSym)
       Logical DoCholesky,GenInt,DoLDF
-      Integer ALGO,nSCREEn
-      Logical REORD,DECO,timings
-      Real*8 DLT(*),DSQ(*),FLT(nFLT),dmpk,dFKmat
+      Real*8 DLT(*),DSQ(*),FLT(nFLT)
       Real*8 DLT_ab(*),DSQ_ab(*),FLT_ab(*)
       Character*50 CFmt
 
-      Common /CHOSCF / REORD,DECO,dmpk,dFKmat,ALGO,nSCREEN
-      Common /CHOTIME / timings
+#include "choscf.fh"
+#include "chotime.fh"
 *
 
       GenInt=.false.
@@ -189,13 +187,13 @@ C zeroing the elements
 
            CALL CHOscf_drv(iUHF,nSym,nBas,DSQ,DLT,DSQ_ab,DLT_ab,
      &                 Work(ipTemp),Work(ipTemp_ab),nFLT,ExFac,
-     &                 LWFSQ,LWFSQ_ab,nOcc,nOcc_ab)
+     &                 Work(LWFSQ),Work(LWFSQ_ab),nOcc,nOcc_ab)
         Else
 *
            CALL CHOscf_drv(iUHF,nSym,nBas,DSQ,DLT,
      &                 Work(ip_Dummy),Work(ip_Dummy),
      &                 Work(ipTemp),Work(ip_Dummy),nFLT,ExFac,
-     &                 LWFSQ,ip_Dummy,nOcc,iWork(ip_iDummy))
+     &                 Work(LWFSQ),Work(ip_Dummy),nOcc,iWork(ip_iDummy))
         EndIf
 
       ENDIF

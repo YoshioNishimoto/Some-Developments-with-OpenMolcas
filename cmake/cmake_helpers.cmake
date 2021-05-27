@@ -37,19 +37,6 @@ function (find_source Name Source_Roots)
   endif ()
 endfunction ()
 
-# Insert element New before Item in List, if Item does
-# not exist, append New at the end
-function (insert_before List Item New)
-  list (GET ${Item} 0 first)
-  list (FIND ${List} ${first} index)
-  if (index GREATER -1)
-    list (INSERT ${List} ${index} ${New})
-  else ()
-    list (APPEND ${List} ${New})
-  endif ()
-  set (${List} ${${List}} PARENT_SCOPE)
-endfunction ()
-
 # Has the same signature as add_library, but adds the
 # Fortran_MODULE_DIRECTORY property in addition.
 function (add_Fortran_library Target)
@@ -130,4 +117,39 @@ function (make_internal Var)
   else ()
     set (${Var} ${${Var}} CACHE INTERNAL "${help}" FORCE)
   endif ()
+endfunction ()
+
+# Replace targets in a list with their output files
+function (target_files Output)
+  foreach (tgt ${ARGN})
+    if (TARGET ${tgt})
+      list (APPEND file_list $<TARGET_FILE:${tgt}>)
+    else ()
+      list (APPEND file_list ${tgt})
+    endif ()
+  endforeach ()
+  set (${Output} ${file_list} PARENT_SCOPE)
+endfunction ()
+
+# Replacement for PATCH_COMMAND
+# (see https://gitlab.kitware.com/cmake/cmake/-/issues/17287)
+function (ExternalProject_add_patches name)
+  ExternalProject_Get_Property (${name} STAMP_DIR)
+  ExternalProject_Get_Property (${name} SOURCE_DIR)
+
+  foreach (patch ${ARGN})
+    list (APPEND absolute_paths "${CMAKE_CURRENT_SOURCE_DIR}/${patch}")
+  endforeach ()
+
+  set (patch_command patch -d "${SOURCE_DIR}" -p1 -N -i)
+  foreach (patch ${absolute_paths})
+    list (APPEND cmd_list COMMAND ${patch_command} "${patch}")
+  endforeach ()
+
+  add_custom_command (
+    APPEND
+    OUTPUT ${STAMP_DIR}/${name}-download
+    ${cmd_list}
+    DEPENDS ${absolute_paths}
+  )
 endfunction ()

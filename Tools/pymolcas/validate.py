@@ -428,11 +428,12 @@ def test_custom(lines, keyword):
 
   elif (module == 'DMRGSCF'):
     if (name == 'SOCCUPY'):
-      ll = 1
+      ll = 0
       while (l+ll < len(lines)):
         try:
-          parts = fortran_split(lines[l+ll])
-          assert all([i in '0ud2' for i in parts])
+          parts = lines[l+ll].split()
+          for part in parts:
+            assert all([i in '0ud2,' for i in part])
           ll += 1
         except:
           break
@@ -916,6 +917,145 @@ def test_custom(lines, keyword):
         parts = fortran_split(lines[l])
         assert (len(parts) >= n)
         l += 1
+      except:
+        return None
+    else:
+      return None
+
+  elif (module == 'MULA'):
+    if (name == 'ATOMS'):
+      try:
+        while (first_word(lines[l]).upper() != 'END'):
+          l += to_next_non_blank(lines[l:])
+        l += to_next_non_blank(lines[l:])
+      except:
+        return None
+    elif (name == 'ENERGIES'):
+      try:
+        word = first_word(lines[l])
+        assert (word.upper() == 'FIRST')
+        l += to_next_non_blank(lines[l:])
+        parts = fortran_split(lines[l])
+        n = fortran_float(parts[0])
+        assert (parts[1].upper() in ['EV', 'AU'])
+        l += to_next_non_blank(lines[l:])
+        word = first_word(lines[l])
+        assert (word.upper() == 'SECOND')
+        l += to_next_non_blank(lines[l:])
+        parts = fortran_split(lines[l])
+        n = fortran_float(parts[0])
+        assert (parts[1].upper() in ['EV', 'AU'])
+        l += to_next_non_blank(lines[l:])
+      except:
+        return None
+    elif (name == 'FORCE'):
+      try:
+        word = first_word(lines[l])
+        assert (word.upper() == 'FIRST')
+        l += to_next_non_blank(lines[l:])
+        while (first_word(lines[l]).upper() != 'SECOND'):
+          l += to_next_non_blank(lines[l:])
+        l += to_next_non_blank(lines[l:])
+        while (first_word(lines[l]).upper() != 'END'):
+          l += to_next_non_blank(lines[l:])
+        l += to_next_non_blank(lines[l:])
+      except:
+        return None
+    elif (name == 'GEOMETRY'):
+      try:
+        word = first_word(lines[l]).upper()
+        if (word == 'FILE'):
+          l += to_next_non_blank(lines[l:])
+        elif (word == 'CARTESIAN'):
+          l += to_next_non_blank(lines[l:])
+          word = first_word(lines[l])
+          assert (word.upper() == 'FIRST')
+          l += to_next_non_blank(lines[l:])
+          while (first_word(lines[l]).upper() != 'END'):
+            parts = fortran_split(lines[l])
+            nums = to_float(parts[1:4])
+            l += to_next_non_blank(lines[l:])
+          l += to_next_non_blank(lines[l:])
+          word = first_word(lines[l])
+          assert (word.upper() == 'SECOND')
+          l += to_next_non_blank(lines[l:])
+          while (first_word(lines[l]).upper() != 'END'):
+            parts = fortran_split(lines[l])
+            nums = to_float(parts[1:4])
+            l += to_next_non_blank(lines[l:])
+          l += to_next_non_blank(lines[l:])
+        elif (word == 'INTERNAL'):
+          l += to_next_non_blank(lines[l:])
+          word = first_word(lines[l])
+          assert (word.upper() == 'FIRST')
+          l += to_next_non_blank(lines[l:])
+          while (first_word(lines[l]).upper() != 'END'):
+            parts = fortran_split(lines[l])
+            if (parts[0].upper() == 'BOND'):
+              assert (len(parts) >= 3)
+            elif (parts[0].upper() == 'ANGLE'):
+              assert (len(parts) >= 4)
+            elif (parts[0].upper() == 'TORSION'):
+              assert (len(parts) >= 5)
+            elif (parts[0].upper() == 'OUTOFPL'):
+              assert (len(parts) >= 5)
+            l += to_next_non_blank(lines[l:])
+          l += to_next_non_blank(lines[l:])
+          word = first_word(lines[l])
+          assert (word.upper() == 'SECOND')
+          l += to_next_non_blank(lines[l:])
+          while (first_word(lines[l]).upper() != 'END'):
+            parts = fortran_split(lines[l])
+            if (parts[0].upper() == 'BOND'):
+              assert (len(parts) >= 3)
+            elif (parts[0].upper() == 'ANGLE'):
+              assert (len(parts) >= 4)
+            elif (parts[0].upper() == 'TORSION'):
+              assert (len(parts) >= 5)
+            elif (parts[0].upper() == 'OUTOFPL'):
+              assert (len(parts) >= 5)
+            l += to_next_non_blank(lines[l:])
+          l += to_next_non_blank(lines[l:])
+        else:
+          return None
+      except:
+        return None
+    elif (name == 'INTERNAL'):
+      try:
+        while (first_word(lines[l]).upper() != 'END'):
+          parts = fortran_split(lines[l])
+          if (parts[0].upper() == 'BOND'):
+            assert (len(parts) >= 3)
+          elif (parts[0].upper() == 'ANGLE'):
+            assert (len(parts) >= 4)
+          elif (parts[0].upper() == 'TORSION'):
+            assert (len(parts) >= 5)
+          elif (parts[0].upper() == 'OUTOFPL'):
+            assert (len(parts) >= 5)
+          l += to_next_non_blank(lines[l:])
+        l += to_next_non_blank(lines[l:])
+      except:
+        return None
+    elif (name == 'MODES'):
+      try:
+        while (first_word(lines[l]).upper() != 'END'):
+          nums = to_int(fortran_split(lines[l]))
+          l += to_next_non_blank(lines[l:])
+        l += to_next_non_blank(lines[l:])
+      except:
+        return None
+    elif (name == 'TRANSITIONS'):
+      try:
+        word = first_word(lines[l])
+        assert (word.upper() == 'FIRST')
+        l += to_next_non_blank(lines[l:])
+        nums = to_int(fortran_split(lines[l]))
+        l += to_next_non_blank(lines[l:])
+        word = first_word(lines[l])
+        assert (word.upper() == 'SECOND')
+        l += to_next_non_blank(lines[l:])
+        nums = to_int(fortran_split(lines[l]))
+        l += to_next_non_blank(lines[l:])
       except:
         return None
     else:

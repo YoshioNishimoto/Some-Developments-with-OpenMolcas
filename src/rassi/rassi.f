@@ -18,13 +18,15 @@
       use kVectors
 #ifdef _HDF5_
       use Dens2HDF5
-      use mh5, only: mh5_put_dset_array_real
+      use mh5, only: mh5_put_dset
 #endif
 #ifdef _DMRG_
       use qcmaquis_interface_cfg
-      use qcmaquis_interface_environment, only: finalize_dmrg
+      use qcmaquis_interface, only: qcmaquis_interface_deinit
       use qcmaquis_info, only : qcmaquis_info_deinit
+      use rasscf_data, only: doDMRG
 #endif
+
       use mspt2_eigenvectors, only : deinit_mspt2_eigenvectors
 
       IMPLICIT REAL*8 (A-H,O-Z)
@@ -45,8 +47,8 @@ C RAS state interaction.
 #include "stdalloc.fh"
       CHARACTER*16 ROUTINE
       PARAMETER (ROUTINE='RASSI')
-      Logical Fake_CMO2,CLOSEONE
-      COMMON / CHO_JOBS / Fake_CMO2
+      Logical CLOSEONE
+#include "cho_jobs.fh"
       INTEGER IRC
       Real*8, Allocatable:: USOR(:,:),
      &                      USOI(:,:), OVLP(:,:), DYSAMPS(:,:),
@@ -123,8 +125,7 @@ C Compute generalized transition density matrices, as needed:
       Call mma_deallocate(IDDET1)
 
 #ifdef _HDF5_
-      CALL mh5_put_dset_array_real(wfn_overlap,
-     &     OVLP,[NSTATE,NSTATE],[0,0])
+      CALL mh5_put_dset(wfn_overlap,OVLP,[NSTATE,NSTATE],[0,0])
 #endif
       Call Put_dArray('State Overlaps',OVLP,NSTATE*NSTATE)
 
@@ -329,7 +330,7 @@ C Will also handle mixing of states (sodiag.f)
 #ifdef _DMRG_
 !     !> finalize MPS-SI interface
       if (doDMRG)then
-        call finalize_dmrg()
+        call qcmaquis_interface_deinit
         call qcmaquis_info_deinit
       end if
 #endif

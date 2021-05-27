@@ -9,11 +9,11 @@
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
       SUBROUTINE TRAONE(CMO)
+      use output_caspt2, only:iPrGlb,verbose
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "warnings.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
       DIMENSION CMO(NCMO)
@@ -169,10 +169,9 @@ c  one-electron hamiltonian.
 *     Look out-- we temporarily allocate all available memory.
 *
       ExFac=1.0D0
-
          Call FTwo_Drv(nSym,nBas,nFro,KEEP,
      &                 WORK(LWDLT),WORK(LWDSQ),WORK(LWFLT),NBTRI,
-     &                 ExFac,nBSQT,nBMX,CMO)
+     &                 ExFac,nBMX,CMO)
 
 *                                                                      *
 ************************************************************************
