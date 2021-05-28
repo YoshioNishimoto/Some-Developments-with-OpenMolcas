@@ -12,7 +12,7 @@
 !***********************************************************************
 Subroutine Kriging_Update(nQQ,iter,qInt,E_Disp)
 Use Slapaf_Info, only: Energy, dqInt, Energy0, BMx_Save, Gx, Gx0, Degen, NAC
-Use Kriging_Mod, only: nSet, iter_actual
+Use Kriging_Mod, only: nSet
 Use Slapaf_Parameters, only: Curvilinear
 Implicit None
 Integer nQQ, iter
@@ -41,7 +41,7 @@ Call mma_allocate(Aux,nQQ,nSet,Label='Aux')
 !
 !#define _DEBUGPRINT_
 #ifdef _DEBUGPRINT_
-Write (6,*) 'Kriging_Update, iter, iter_actual=', iter, iter_actual
+Write (6,*) 'Kriging_Update, iter=', iter
 Call RecPrt('Kriging_Update: qInt',' ',qInt,nQQ,1)
 #endif
 
@@ -80,7 +80,7 @@ End If
 !  For the energy difference
 !
 iSet = 2
-Energy0(iter+iter_actual-1) = Temp(2)
+Energy0(iter) = Temp(2)
 
 ! Right now we do not use the dispersion for the constraints
 
@@ -110,12 +110,12 @@ call DGEMM_('N','N',                                  &
             3*nAtoms,1,nQQ,                           &
             One,BMx_Save,3*nAtoms,                    &
                 Aux(:,1),nQQ,                    &
-           Zero,Gx (:,:,iter+iter_actual-1),3*nAtoms)
+           Zero,Gx (:,:,iter),3*nAtoms)
 call DGEMM_('N','N',                                  &
             3*nAtoms,1,nQQ,                           &
             One,BMx_Save,3*nAtoms,                    &
                 Aux(:,2),nQQ,                      &
-           Zero,Gx0(:,:,iter+iter_actual-1),3*nAtoms)
+           Zero,Gx0(:,:,iter),3*nAtoms)
 
 
 
@@ -125,19 +125,19 @@ if (Curvilinear) then
    do iAtom=1,nAtoms
       do ixyz=1,3
          If (nSet==2)    &
-         Gx (ixyz,iAtom,iter+iter_actual-1) = Gx (ixyz,iAtom,iter+iter_actual-1)/Degen(ixyz,iAtom)
-         Gx0(ixyz,iAtom,iter+iter_actual-1) = Gx0(ixyz,iAtom,iter+iter_actual-1)/Degen(ixyz,iAtom)
+         Gx (ixyz,iAtom,iter) = Gx (ixyz,iAtom,iter)/Degen(ixyz,iAtom)
+         Gx0(ixyz,iAtom,iter) = Gx0(ixyz,iAtom,iter)/Degen(ixyz,iAtom)
       end do
    end do
 end if
 
 If (nSet==2) Then
-   Energy0(iter+iter_actual-1) = Energy0(iter+iter_actual-1) + Energy (iter+iter_actual-1)
-   Gx0(:,:,iter+iter_actual-1) = Gx0(:,:,iter+iter_actual-1) + Gx (:,:,iter+iter_actual-1)
+   Energy0(iter) = Energy(iter) - Energy0(iter)
+   Gx0(:,:,iter) = Gx (:,:,iter) - Gx0(:,:,iter)
 End If
 #ifdef _DEBUGPRINT_
-Call RecPrt('Kriging_Update: Gx ',' ',Gx (:,:,iter+iter_actual-1),3,nAtoms)
-Call RecPrt('Kriging_Update: Gx0',' ',Gx0(:,:,iter+iter_actual-1),3,nAtoms)
+Call RecPrt('Kriging_Update: Gx ',' ',Gx (:,:,iter),3,nAtoms)
+Call RecPrt('Kriging_Update: Gx0',' ',Gx0(:,:,iter),3,nAtoms)
 #endif
 
 
@@ -159,7 +159,7 @@ call DGEMM_('N','N',                                  &
             3*nAtoms,1,nQQ,                           &
             One,BMx_Save,3*nAtoms,                    &
                 Aux(:,iSet),nQQ,                      &
-           Zero,NAC(:,:,iter+iter_actual-1),3*nAtoms)
+           Zero,NAC(:,:,iter),3*nAtoms)
 
 
 ! Modify with degeneracy factors.
@@ -167,12 +167,12 @@ call DGEMM_('N','N',                                  &
 if (Curvilinear) then
    do iAtom=1,nAtoms
       do ixyz=1,3
-         NAC(ixyz,iAtom,iter+iter_actual-1) = NAC(ixyz,iAtom,iter+iter_actual-1)/Degen(ixyz,iAtom)
+         NAC(ixyz,iAtom,iter) = NAC(ixyz,iAtom,iter)/Degen(ixyz,iAtom)
       end do
    end do
 end if
 #ifdef _DEBUGPRINT_
-Call RecPrt('Kriging_Update: NAC',' ',NAC(:,:,iter+iter_actual-1),3,nAtoms)
+Call RecPrt('Kriging_Update: NAC',' ',NAC(:,:,iter),3,nAtoms)
 #endif
 
 ! Right now we do not use the dispersion for the constraints

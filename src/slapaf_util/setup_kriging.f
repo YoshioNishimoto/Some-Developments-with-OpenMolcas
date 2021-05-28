@@ -11,7 +11,7 @@
 * Copyright (C) 2020, Roland Lindh                                     *
 ************************************************************************
       Subroutine SetUp_Kriging(nRaw,iFirst)
-      Use kriging_mod, only: blavAI, set_l, layer_U, iter_actual, nSet
+      Use kriging_mod, only: blavAI, set_l, layer_U, nSet
       use Slapaf_Info, only: qInt, dqInt, Energy, dqInt_Aux,
      &                       Energy0
       Implicit None
@@ -30,8 +30,6 @@
       nInter=Size(qInt,1)
       iS = iFirst
       iE = iFirst + nRaw - 1
-
-      iter_actual = iE  ! Store away the actual iteration count.
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -45,7 +43,7 @@
 *                                                                      *
 !#define _DEBUGPRINT_
 #ifdef _DEBUGPRINT_
-      Write (6,*) 'setup_Kriging, iter_actual=',iter_actual
+      Write (6,*) 'setup_Kriging, nRaw=',nRaw
       Call RecPrt('Setup_kriging: Energy',' ',Energy(iS:iE),1,nRaw)
       Call RecPrt('Setup_kriging: qInt',' ',qInt(:,iS:iE),nInter,nRaw)
       Call RecPrt('Setup_kriging: dqInt',' ',dqInt(:,iS:iE),nInter,nRaw)
@@ -134,7 +132,7 @@
          Energy_s(1:nRaw,2)=Energy0(iS:iE)
          If (nSet==2) Then
             Energy_s(1:nRaw,2) = Energy_s(1:nRaw,1) - Energy_s(1:nRaw,2)
-            dqInt_s(:,:,2) = dqInt_s(:,:,1) - dqInt_s(:,:,2)
+            dqInt_s(:,:,2)     = dqInt_s(:,:,1)     - dqInt_s(:,:,2)
          End If
       End If
 

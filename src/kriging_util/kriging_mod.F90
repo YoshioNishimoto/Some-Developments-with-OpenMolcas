@@ -58,8 +58,6 @@ integer(kind=iwp) :: m_t
 real(kind=wp), parameter :: h = 1e-5, eps = 1e-13, eps2 = 1e-10
 ! eps avoid to become singular in 1st der & eps2 in 2nd der
 
-integer(kind=iwp) :: iter_actual=-1
-
 ! Transformation matrix for kriging_layer routines
 
 real(kind=wp), allocatable :: layer_U(:,:)
@@ -67,7 +65,7 @@ real(kind=wp), allocatable :: layer_U(:,:)
 public :: anMd, blaAI, blAI, blavAI, blvAI, cv, cvMatFder, cvMatSder, cvMatTder, detR, dl, dy, eps, eps2, full_R, full_RInv, &
           gpred, h, hpred, Index_PGEK, Kriging, kv, l, layer_U, lb, lh, ll, Max_MicroIterations, m_t, mblAI, nD, nD_In, nInter, &
           nInter_Eff, nPoints, nspAI, ordinary, pAI, PGEK_On, pred, rl, Rones, sb, sbmev, sbO, set_l, sigma, Thr_MicroIterations, &
-          var, variance, x, x0, y, nSet, iter_actual
+          var, variance, x, x0, y, nSet
 public :: Deallocate_Protected, Prep_Kriging
 
 contains

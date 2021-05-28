@@ -19,15 +19,16 @@
       Character(LEN=8) Label
 *
 *
+      E1 = Energy (lIter)
+      E0 = Energy0(lIter)
 !#define _DEBUGPRINT_
 #ifdef _DEBUGPRINT_
       nAtoms = SIZE(Gx,2)
-      Write (6,*) 'ConInt, lIter=',lIter
+      Write (6,*) 'ConInt: lIter=',lIter
+      Write (6,*) 'ConInt: E1, E0=',E1,E0
       Call RecPrt('ConInt: Gx ',' ',Gx (:,:,lIter),3,nAtoms)
       Call RecPrt('ConInt: Gx0',' ',Gx0(:,:,lIter),3,nAtoms)
 #endif
-      E1 = Energy (lIter)
-      E0 = Energy0(lIter)
 *
 c     iOpt=1 -> Linear
 c     iOpt=2 -> Quadratic

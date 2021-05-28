@@ -212,6 +212,10 @@
          Do iLambda = 1, nLambda
             RR_=Sqrt(DDot_(nInter,drdq(1,iLambda,iIter),1,
      &                          drdq(1,iLambda,iIter),1))
+#ifdef _DEBUGPRINT_
+            Write (6,*) 'iLambda=',iLambda
+            Call RecPrt('drdq',' ',drdq(:,iLambda,iIter),1,nInter)
+#endif
 *
 *           Make sure that we don't mess up gradients which are zero vectors.
 *
