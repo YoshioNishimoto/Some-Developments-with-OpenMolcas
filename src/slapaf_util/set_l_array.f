@@ -28,8 +28,9 @@
 *
 *     l_max=80.0D0
 *     l_max=100.0D0
-*     H_min=0.025D0
-      H_min=0.0025D0
+      H_min=0.025D0
+*     H_min=0.0025D0 ! this low value could result in numerical
+                     ! instabilities.
       Do i = 1, nInter
 *
 *        Make sure that the characteristic length is not too long.
