@@ -48,7 +48,7 @@ logical(kind=iwp), intent(in) :: lOPTO
 #include "relae.fh"
 #include "print.fh"
 #include "localdf.fh"
-integer(kind=iwp) :: i, iCnttp, iDKH_H_Order, iDKH_X_Order, iParam, iPrint, iRout, iTtl, LuWr, nrSym, nTtl
+integer(kind=iwp) :: i, k, iCnttp, iDKH_H_Order, iDKH_X_Order, iParam, iPrint, iRout, iTtl, LuWr, nrSym, nTtl
 real(kind=wp) :: temp
 logical(kind=iwp) :: l_aCD_Thr, Found, lNoPair, lPam2, lECP, lPP
 character(len=80) :: Title(10)
