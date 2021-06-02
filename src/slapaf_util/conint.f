@@ -10,7 +10,7 @@
 ************************************************************************
       Subroutine ConInt(xyz,nCent,dE,Bf,lWrite_,Label,dBf,ldB,lIter)
       use Slapaf_Info, only: Gx, Gx0, Energy, Energy0
-      use Slapaf_Parameters, only: NADC, ApproxNADC
+      use Slapaf_Parameters, only: NADC, ApproxNADC, DEnergy
       Implicit Real*8  (a-h,o-z)
 #include "real.fh"
 #include "constants.fh"
@@ -74,6 +74,7 @@ C------- Absolute value ----------
             dE=Abs(E1-E0)
          End IF
       End If
+      DEnergy=dE
       If (lWrite_) Then
          If (NADC) Then
             Write (6,'(2A,F18.8,A,F18.8,A)')

@@ -48,10 +48,10 @@
 *             University of Lund, SWEDEN                               *
 *             July 2003                                                *
 ************************************************************************
-      Use kriging_mod, only: Max_MicroIterations
+      Use kriging_mod, only: Max_MicroIterations, nSet
       use Slapaf_Info, only: MF
       use Slapaf_Parameters, only: IRC, iOptC, CnstWght, StpLbl,
-     &                             StpMax, GrdMax, E_Delta
+     &                             StpMax, GrdMax, E_Delta, DEnergy
       Implicit Real*8 (a-h,o-z)
 #include "real.fh"
 #include "stdalloc.fh"
@@ -738,12 +738,52 @@ C           Write (6,*) 'gBeta=',gBeta
             Call Backtrans_T(du,dq_xy)
             dydy=Sqrt(DDot_(nInter,dq_xy,1,dq_xy,1))
 
+
             If (dydy.lt.1.0D-6) Go To 667
 *           Restrict dy step during micro iterations based on the
 *           variance only. Hence, initially we will try to take the full
 *           step. The code below will reduce the step until it is within
 *           the limit of the restricted variance.
-            Fact=One
+
+            If (nSet==1) Then
+               Fact=One
+            Else If (nSet==2) Then
+
+!           For containts which themself are subject to estimates from
+!           a surrogate model we will not try to take a step which close
+!           the error in the constraint better than the variance.
+
+
+#ifdef _DEBUGPRINT_
+               Write (6,*) 'Step_Trunc=',Step_Trunc
+#endif
+               q(:,iIter+1)=q(:,iIter)+dq_xy(:)
+               Call Dispersion_Kriging_Layer(q(1,iIter+1),disp,nInter)
+
+               If (Disp(2)/Abs(DEnergy)<5.0D-1 .or.
+     &             Disp(2)<1.0D-4) Then
+                 Fact=one
+                 Write(6,*) 'Case 1'
+               Else If (Disp(2)>=Abs(DEnergy)) Then
+                 Fact = Half   ! just set it to something < 1
+                 If (Step_Trunc.eq.'N') Step_Trunc='*'
+                 Write(6,*) 'Case 2'
+               Else
+                 Fact = (Abs(DEnergy)-Disp(2))/Abs(DEnergy)
+                 If (Step_Trunc.eq.'N') Step_Trunc='*'
+                 Write(6,*) 'Case 3'
+               End If
+               Fact = One/Fact
+#ifdef _DEBUGPRINT_
+               Write (6,*) 'DEnergy=',DEnergy
+               Write (6,*) 'Disp(2)=',Disp(2)
+               Write (6,*) 'Fact=',Fact
+#endif
+            Else If (nSet==3) Then
+               Write (6,*) 'Not implemented yet!'
+               Call Abend()
+            End If
+
 *
             iCount=1
             iCount_Max=100
@@ -755,7 +795,7 @@ C           Write (6,*) 'gBeta=',gBeta
                q(:,iIter+1)=q(:,iIter)+dq_xy(:)
 *
                Call Dispersion_Kriging_Layer(q(1,iIter+1),disp,nInter)
-               Disp_T=Disp(1)+Disp(2)+Disp(3)
+               Disp_T=Sqrt(Disp(1)**2+Disp(2)**2+Disp(3)**2)
 *
                If (iCount.eq.1) Then
                   Fact_long=Fact
@@ -768,6 +808,7 @@ C           Write (6,*) 'gBeta=',gBeta
                Write (6,*) 'disp(1)=', disp(1)
                Write (6,*) 'disp(2)=', disp(2)
                Write (6,*) 'disp(3)=', disp(3)
+               Write (6,*) 'Beta_Disp_=',Beta_Disp_
 #endif
                If (disp_T.gt.Beta_Disp_ .or. iCount.gt.1) Then
                   If (Abs(Beta_Disp_-disp_T).lt.Thr_RS) Go To 667
@@ -1018,7 +1059,7 @@ C           Write (6,*) 'gBeta=',gBeta
 *
             Disp(:)=Zero
             Call Dispersion_Kriging_Layer(q(1,nIter+1),disp,nInter)
-            Disp_T=disp(1)+Disp(2)+Disp(3)
+            Disp_T=Sqrt(disp(1)**2+Disp(2)**2+Disp(3)**2)
             Disp_Save=disp_T
 #ifdef _DEBUGPRINT_
             Write (6,*) 'disp_T=',disp_T
@@ -1098,7 +1139,7 @@ C           Write (6,*) 'gBeta=',gBeta
       If (Recompute_disp) Then
          Disp(:)=Zero
          Call Dispersion_Kriging_Layer(q(1,nIter+1),Disp,nInter)
-         Disp_T=Disp(1)+Disp(2)+Disp(3)
+         Disp_T=Sqrt(Disp(1)**2+Disp(2)**2+Disp(3)**2)
          Disp_Save=Disp_T
       End If
 *

@@ -16,7 +16,7 @@ Private
 Public:: iRow, iRow_c, iInt, nFix, ddV_Schlegel, HWRS, iOptH, HUpMet, HrmFrq_Show, IRC, &
          nBVec, nDimBC, Curvilinear, Redundant, FindTS, User_Def, Analytic_Hessian, MaxItr, &
          UpMeth, iOptC, HSet, BSet, rHidden, CnstWght, PrQ, lOld, Numerical, Beta, Beta_Disp, &
-         Line_Search, iNeg, TSConstraints, GNrm_Threshold, Mode, GrdLbl, GrdMax, &
+         Line_Search, iNeg, TSConstraints, GNrm_Threshold, Mode, GrdLbl, GrdMax, DEnergy, &
          StpLbl, StpMax, E_Delta, ThrEne, ThrGrd, nLambda, iRef, ThrCons, ThrMEP, Baker,  &
          eMEPTest, rMEP, MEP, nMEP, MEPNum, MEPCons, dMEPStep, MEP_Type, MEP_Algo, Header, &
          Max_Center, mTROld, Delta, RtRnc, rFuzz, lNmHss, Cubic, lRP, Request_Alaska, Request_RASSI, &
@@ -106,6 +106,7 @@ Real*8:: dMEPStep=0.1D0
 Real*8:: Delta=1.0D-2
 Real*8:: RtRnc=Three
 Real*8:: rFuzz=Half
+Real*8:: DEnergy=Zero
 
 Character(LEN=8):: GrdLbl='', StpLbl=''
 Character(LEN=10):: MEP_TYPE='SPHERE'
