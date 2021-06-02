@@ -763,15 +763,12 @@ C           Write (6,*) 'gBeta=',gBeta
                If (Disp(2)/Abs(DEnergy)<5.0D-1 .or.
      &             Disp(2)<1.0D-4) Then
                  Fact=one
-                 Write(6,*) 'Case 1'
                Else If (Disp(2)>=Abs(DEnergy)) Then
                  Fact = Half   ! just set it to something < 1
                  If (Step_Trunc.eq.'N') Step_Trunc='*'
-                 Write(6,*) 'Case 2'
                Else
                  Fact = (Abs(DEnergy)-Disp(2))/Abs(DEnergy)
                  If (Step_Trunc.eq.'N') Step_Trunc='*'
-                 Write(6,*) 'Case 3'
                End If
                Fact = One/Fact
 #ifdef _DEBUGPRINT_
