@@ -8,7 +8,7 @@ As a byproduct, analytic gradients for state-averaged RASSCF can be computed. I 
 
 Reference:
 
-Nishimoto, Y. "Analytic Gradients for Restricted Active Space Second-order Perturbation Theory (RASPT2)" DOI: 10.26434/chemrxiv.14197457
+Nishimoto, Y. "Analytic Gradients for Restricted Active Space Second-order Perturbation Theory (RASPT2)" The Journal of Chemical Physics 154, 194103 (2021) DOI: 10.1063/5.0050074
 
 ***
 
