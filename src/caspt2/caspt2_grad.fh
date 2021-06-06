@@ -41,7 +41,7 @@ C     END DO
      *        ipCLag,ipOLag,ipSLag,ipWLag,
      *        nCLag,nOLag,nSLag,nWLag,
      *        nBasTr,nBasSq
-      INTEGER idSDMat !! maybe the dimension can be defined with 11 not 13
+      INTEGER idSDMat !! maybe the dimension can be defined with 11 not 13, but tentatively 13
       COMMON /CASPT2_GRAD/ ipDPT2,ipDPT2C,ipDPT2AO,ipDPT2CAO,
      *                     ipCLag,ipOLag,ipSLag,ipWLag,
      *                     nCLag,nOLag,nSLag,nWLag,
