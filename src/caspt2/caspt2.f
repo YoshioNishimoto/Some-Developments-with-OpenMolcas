@@ -421,8 +421,12 @@ C
            CALL GETMEM('WRK1','ALLO','REAL',ipWRK1,nConf*nRoots)
            CALL GETMEM('WRK2','ALLO','REAL',ipWRK2,nConf*nRoots)
            CALL GETMEM('LCMO','ALLO','REAL',LCMO,nBasT*nBasT)
-           idCI = idTCEX
-           Call dDaFile(LUCIEX,2,Work(ipWRK1),nConf*nRoots,idCI)
+           If (ISCF.EQ.0) Then
+             idCI = idTCEX
+             Call dDaFile(LUCIEX,2,Work(ipWRK1),nConf*nRoots,idCI)
+           Else
+             Work(ipWRK1)=1.0D+00
+           End If
            Call DCopy_(nBasT*nBasT,Work(LCMOPT2),1,Work(LCMO),1)
            Do indCI = 1, Min(nConf*nRoots,500)
              Do iVib = 1, 2
@@ -488,8 +492,12 @@ C          End Do
 C
            write (*,*)
            write (*,*) "Numerical EASUM"
-           idCI = idTCEX
-           Call dDaFile(LUCIEX,1,Work(ipWRK1),nConf,idCI)
+           If (ISCF.EQ.0) Then
+             idCI = idTCEX
+             Call dDaFile(LUCIEX,1,Work(ipWRK1),nConf,idCI)
+           Else
+             Work(ipWRK1)=1.0D+00
+           End If
            CALL STINI
            !! Forward
            EASUM = EASUM + Delta

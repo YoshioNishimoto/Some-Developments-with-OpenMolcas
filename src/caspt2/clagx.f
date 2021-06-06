@@ -87,11 +87,15 @@ C     call sqprt(rdmsa,5)
      *    = Work(LDG1+iT-1+nAsh(1)*(iT-1)) + DEASUM*EPSA(iT)
 C       RDMEIG(iT,iT) = RDMEIG(iT,iT) + DEASUM*EPSA(iT)
 C       DEPSA(iT) = DEPSA(iT) + DEASUM*Work(LG1+iT-1+nAsh(1)*(iT-1))
-        Do iU = 1, nAsh(1)
-          DEPSA(iT,iU) = DEPSA(iT,iU)
-     *      + DEASUM*Work(LG1+iT-1+nAsh(1)*(iU-1))
-C    *      + DEASUM*RDMSA(iT,iU)
-        End Do
+        If (ISCF.EQ.0) Then
+          Do iU = 1, nAsh(1)
+            DEPSA(iT,iU) = DEPSA(iT,iU)
+     *        + DEASUM*Work(LG1+iT-1+nAsh(1)*(iU-1))
+C    *        + DEASUM*RDMSA(iT,iU)
+          End Do
+        Else
+          !! ?
+        End If
       End Do
 C     write (*,*) "G1"
 C     call sqprt(work(lg1),nasht)
@@ -1257,24 +1261,28 @@ C-SVC20100831: allocate local G3 matrices
 * number of nonzero elements, that is why here we allocate
 * with NG3MAX, but we only store (PT2_PUT) the first NG3
 * elements of the G3 and F3
-      NG3=NG3MAX
+      IF (ISCF.EQ.0) NG3=NG3MAX
 
       CALL GETMEM('LCI','ALLO','REAL',LCI,NCONF)
-      IDCI=IDTCEX
-      DO J=1,JSTATE-1
-        CALL DDAFILE(LUCIEX,0,WORK(LCI),NCONF,IDCI)
-      END DO
-      CALL DDAFILE(LUCIEX,2,WORK(LCI),NCONF,IDCI)
-      IF (IPRGLB.GE.VERBOSE) THEN
-        WRITE(6,*)
-        IF (NSTATE.GT.1) THEN
-          WRITE(6,'(A,I4)')
-     &    ' With new orbitals, the CI array of state ',MSTATE(JSTATE)
-        ELSE
-          WRITE(6,*)' With new orbitals, the CI array is:'
+      If (ISCF.EQ.0) Then
+        IDCI=IDTCEX
+        DO J=1,JSTATE-1
+          CALL DDAFILE(LUCIEX,0,WORK(LCI),NCONF,IDCI)
+        END DO
+        CALL DDAFILE(LUCIEX,2,WORK(LCI),NCONF,IDCI)
+        IF (IPRGLB.GE.VERBOSE) THEN
+          WRITE(6,*)
+          IF (NSTATE.GT.1) THEN
+            WRITE(6,'(A,I4)')
+     &      ' With new orbitals, the CI array of state ',MSTATE(JSTATE)
+          ELSE
+            WRITE(6,*)' With new orbitals, the CI array is:'
+          END IF
+          CALL PRWF_CP2(LSYM,NCONF,WORK(LCI),CITHR)
         END IF
-        CALL PRWF_CP2(LSYM,NCONF,WORK(LCI),CITHR)
-      END IF
+      Else
+        WORK(LCI) = 1.0D+00
+      End If
 C
       !! construct transformation matrix for active only
       CALL GETMEM('LTRF','ALLO','REAL',LTRF,NLEV*NLEV)
@@ -1290,8 +1298,13 @@ C
 C     CALL MKFG3mod(IFF,WORK(LCI),WORK(LG1),WORK(LF1),WORK(LG2),
 C    &              WORK(LF2),WORK(LG3),WORK(LF3),i1WORK(LidxG3))
       CALL TIMING(CPTF0,CPE,TIOTF0,TIOE)
-      CALL DERFG3(IFF,WORK(LCI),CLAG,DG1,DG2,DG3,DF1,DF2,DF3,
-     &            i1WORK(LidxG3),DEPSA,G1,G2,G3,F1,F2,F3,Work(LTRF))
+      If (ISCF.EQ.0) Then
+        CALL DERFG3(IFF,WORK(LCI),CLAG,DG1,DG2,DG3,DF1,DF2,DF3,
+     &              i1WORK(LidxG3),DEPSA,G1,G2,G3,F1,F2,F3,Work(LTRF))
+      Else
+        CALL DERSPE(DG1,DG2,DG3,DF1,DF2,DF3,
+     &              i1WORK(LidxG3),DEPSA,G1,G2,G3,F1,F2,F3)
+      End If
       CALL TIMING(CPTF10,CPE,TIOTF10,TIOE)
       CPUT =CPTF10-CPTF0
       WALLT=TIOTF10-TIOTF0
@@ -1568,14 +1581,22 @@ C     write (*,*) "nconf = ", nconf
 C     call dcopy(50,0.0d+00,0,clag,1)
       Do iState = 1, nState
         If (IFSADREF) Then
-          Call LoadCI(Work(LCI),iState)
+          If (ISCF.EQ.0) Then
+            Call LoadCI(Work(LCI),iState)
+          Else
+            Work(LCI) = 1.0D+00
+          End If
 C         Wgt = Work(LDWgt+iState-1+nState*(iState-1))
           WGT = 1.0D+00/nState
           Call DScal_(NLEV*NLEV,WGT,RDMEIG,1)
           Call Poly1_CLag(Work(LCI),CLag(1,iState),RDMEIG)
           Call DScal_(NLEV*NLEV,1.0D+00/WGT,RDMEIG,1)
         Else If (iState.eq.jState) Then
-          Call LoadCI(Work(LCI),jState)
+          If (ISCF.EQ.0) Then
+            Call LoadCI(Work(LCI),jState)
+          Else
+            Work(LCI) = 1.0D+00
+          End If
           Call Poly1_CLag(Work(LCI),CLag(1,jState),RDMEIG)
         End If
       End Do
@@ -1628,9 +1649,17 @@ C
       !! Construct SLag
       ijst = 0
       do ilStat = 1, nState
-        Call LoadCI(Work(LCI1),ilStat)
+        If (ISCF.EQ.0) Then
+          Call LoadCI(Work(LCI1),ilStat)
+        Else
+          Work(LCI1) = 1.0D+00
+        End If
         do jlStat = 1, ilStat-1
-          Call LoadCI(Work(LCI2),jlStat)
+          If (ISCF.EQ.0) Then
+            Call LoadCI(Work(LCI2),jlStat)
+          Else
+            Work(LCI2) = 1.0D+00
+          End If
           ijst = ijst + 1
           SLag(ijst) = SLag(ijst)
      *      + DDOT_(nConf,Work(LCI1),1,CLag(1,jlStat),1)
@@ -1649,7 +1678,11 @@ C       do i = 1, nconf
 C         write (*,'(i3,f20.10)') i,clag(i,ilstat)
 C       end do
         Do jlStat = 1, nState
-          Call LoadCI(Work(LCI2),jlStat)
+          If (ISCF.EQ.0) Then
+            Call LoadCI(Work(LCI2),jlStat)
+          Else
+            Work(LCI2) = 1.0D+00
+          End If
           Ovl = DDot_(nConf,Work(LCI1),1,Work(LCI2),1)
 C         Ovl = DDot_(nConf,CLag(1,ilStat),1,Work(LCI2),1)
 C         write (*,*) "projection coeff = ",ovl
@@ -3105,7 +3138,11 @@ C     If (nFroT.ne.0.and.IfChol) Then
         ID = IDCIEX
         Do iState = 1, nState
 C         write(*,*) (RIn_Ene+PotNuc-REFENE(iState))
-          Call DDaFile(LUCIEX,2,Work(ipCIT+nConf*(iState-1)),nConf,ID)
+          If (ISCF.EQ.0) Then
+            Call DDaFile(LUCIEX,2,Work(ipCIT+nConf*(iState-1)),nConf,ID)
+          Else
+            Work(ipCIT+iState-1) = 1.0D+00
+          End If
           !! The second term should be removed
           Eact(iState)=0.0d+00
         End Do
@@ -3204,6 +3241,12 @@ C     Call DMinvCI_sa(ipST,Work(ipIn(ipS2)),rdum,isym,work(ipS))
      &      '  DeltaC'
       Call DCopy_(nConf*nState,0.0D+00,0,Work(ipCIT),1)
       Do Iter = 1, MaxIter
+        If (nConf.EQ.1) Then
+          Do iState = 1, nState
+            Work(ipCIT+iState-1)=1.0d+00
+          End Do
+          Exit
+        End If
         !! Compute Ap
         !! ipS2 is used as a workind array
         Call TimesE2(Work(ipCId),Work(ipS1),Work(ipINT1),Work(ipINT2))
@@ -3266,7 +3309,11 @@ C     ----- Construct the active contribution -----
 C
       ID = IDCIEX
       Do iState = 1, nState
-        Call LoadCI(Work(ipST+nConf*(iState-1)),iState)
+        If (ISCF.EQ.0) Then
+          Call LoadCI(Work(ipST+nConf*(iState-1)),iState)
+        Else
+          Work(ipST+iState-1) = 1.0D+00
+        End If
 C       call ddafile(LUCIEX,2,Work(ipST+nConf*(iState-1)),nConf,ID)
       End Do
       Call GetMem('G2  ','ALLO','REAL',ipG2,nAshT**4)
