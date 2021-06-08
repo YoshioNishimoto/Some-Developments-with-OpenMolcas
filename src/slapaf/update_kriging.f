@@ -165,6 +165,7 @@
 *
 *        Compute the Kriging Hessian
 *
+         First_MicroIteration=iterAI.eq.iter
          If (Kriging_Hessian) Then
             Call Hessian_Kriging_Layer(qInt(:,iterAI),Hessian,nQQ)
             Call Put_dArray('Hss_Q',Hessian,nQQ**2)
@@ -177,7 +178,6 @@
 *                                                                      *
 *        Compute the updated structure.
 *
-         First_MicroIteration=iterAI.eq.iter
          nWndw_=nWndw/2 + (iterAI-iter)
 
          Call Update_inner(iterAI,Beta_,Beta_Disp_,Step_Trunc,nWndw_,

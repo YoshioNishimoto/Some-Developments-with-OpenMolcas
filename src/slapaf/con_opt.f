@@ -774,18 +774,13 @@ C           Write (6,*) 'gBeta=',gBeta
                If (Disp(2)/Abs(DEnergy)<1.0D-1 .or.
      &             Disp(2)<1.0D-4) Then
                  Fact=one
-                 iCase=1
                Else If (Disp(2)>=Abs(DEnergy)) Then
                  Fact = 0.1D0   ! just set it to something < 1
                  If (Step_Trunc.eq.'N') Step_Trunc='*'
-                 iCase=2
                Else
                  Fact = (Abs(DEnergy)-Disp(2))/Abs(DEnergy)
                  If (Step_Trunc.eq.'N') Step_Trunc='*'
-                 iCase=3
                End If
-*              Fact = One
-*              Step_Trunc='N'
                Fact = One/Fact
 #ifdef _DEBUGPRINT_
                Write (6,*)
@@ -793,7 +788,6 @@ C           Write (6,*) 'gBeta=',gBeta
                Write (6,*) 'DEnergy=',DEnergy
                Write (6,*) 'Disp(2)=',Disp(2)
                Write (6,*) 'Fact=',One/Fact
-               Write (6,*) 'iCase=',iCase
                Write (6,*)
 #endif
             Else If (nSet==3) Then
@@ -980,8 +974,17 @@ C           Write (6,*) 'gBeta=',gBeta
 #endif
       If (Step_Trunc.eq.'N') Step_Trunc=' '
 
+!     The GEK will produce an analytic Hessian, which sometimes will
+!     have low eigenvalues, while the gradient still is large due to
+!     contributions from higher order terms. Here a Hessian update
+!     method will produce effective second order terms containing the
+!     contributions of these hight order terms. Hence, in association
+!     with GEK and second order optimization schemes it makes sense to
+!     use Hessian update methods since those will produce effective
+!     second order force constants.
+
       If (RVO .and. .NOT.First_Microiteration) Then
-         nWndw_=nIter-iFirst+1
+         nWndw_=nIter-iFirst
          iOptH_=4
       Else
          nWndw_=nWndw

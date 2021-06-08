@@ -16,15 +16,18 @@
       Real*8 H(nInter,nInter), dq(nInter,nIter), g(nInter,nIter+1)
       Logical Found, DoMask,Test
 *                                                                      *
+!#define _DEBUGPRINT_
+*                                                                      *
 ************************************************************************
 *                                                                      *
 *     Statement function
 *
+#ifdef _DEBUGPRINT_
       Test(i)=iAnd(iOptH,2**(i-1)).eq.2**(i-1)
+#endif
 *                                                                      *
 ************************************************************************
 *                                                                      *
-!#define _DEBUGPRINT_
 *                                                                      *
 ************************************************************************
 *                                                                      *
