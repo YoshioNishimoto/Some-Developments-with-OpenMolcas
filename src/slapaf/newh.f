@@ -40,14 +40,15 @@
 *                                                                      *
       iRout = 112
       iPrint = nPrint(iRout)
-      If (iPrint.ge.99) Then
-         Write (6,*)
-         Write (6,*) ' NewH: lIter=',nIter
-         Call RecPrt(' NewH: dq_orig',' ',dq_orig,nInter,nIter)
-         Call RecPrt(' NewH: g',' ',g,nInter,nIter)
-         Call RecPrt(' NewH: H(Old)',' ',H,nInter,nInter)
-         Write(6,*)' NewH: Test(i)==',(Test(i),i=1,8)
-      End If
+!#define _DEBUGPRINT_
+#ifdef _DEBUGPRINT_
+      Write (6,*)
+      Write (6,*) ' NewH: lIter=',nIter
+      Call RecPrt(' NewH: dq_orig',' ',dq_orig,nInter,nIter)
+      Call RecPrt(' NewH: g',' ',g,nInter,nIter)
+      Call RecPrt(' NewH: H(Old)',' ',H,nInter,nInter)
+      Write(6,*)' NewH: Test(i)==',(Test(i),i=1,8)
+#endif
 *
 *     Branch out if the first iteration
 *
@@ -83,7 +84,9 @@
             End If
          End If
       End Do
-      If (iPrint.ge.99) Call RecPrt(' NewH: dg',' ',dg,nInter,1)
+#ifdef _DEBUGPRINT_
+      Call RecPrt(' NewH: dg',' ',dg,nInter,1)
+#endif
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -163,9 +166,9 @@
 *                                                                      *
 ************************************************************************
 *                                                                      *
-      If (iPrint.ge.99) Then
-         Call RecPrt(' NewH:  H(New)',' ',H,nInter,nInter)
-      End If
+#ifdef _DEBUGPRINT_
+      Call RecPrt(' NewH:  H(New)',' ',H,nInter,nInter)
+#endif
 *                                                                      *
 ************************************************************************
 *                                                                      *

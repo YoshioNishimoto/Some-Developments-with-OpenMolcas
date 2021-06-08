@@ -70,7 +70,7 @@
      &       A(nA), d2rdq2(nInter,nInter,nLambda)
       Integer iP(nInter)
       Logical Found, IRC_setup, First_MicroIteration,
-     &        Recompute_disp
+     &        Recompute_disp, RVO
       Character Step_Trunc*1, Lbl(nInter+nLambda)*8,
      &          StpLbl_Save*8, Step_Trunc_*1
       Real*8, Allocatable:: dq_xy(:), Trans(:), Tmp1(:), Tmp2(:,:)
@@ -79,6 +79,7 @@
      &                      Hessian(:,:)
       Real*8, Save:: Beta_Disp_Save=Zero,Disp_Save=Zero
       Real*8 :: Disp(3)=[Zero,Zero,Zero]
+      Integer, Save:: iFirst=0
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -96,8 +97,10 @@
       Call RecPrt('Con_Opt: Energy',' ',Energy,nIter,1)
       Call RecPrt('Con_Opt: q',' ',q,nInter,nIter)
       Call RecPrt('Con_Opt: dEdq',' ',dEdq,nInter,nIter)
+      Call RecPrt('Con_Opt: dq',' ',dq,nInter,nIter)
       Call RecPrt('Con_Opt: Hess(in)',' ',Hess,nInter,nInter)
       Call RecPrt('Con_Opt: r',' ',r,nLambda,nIter)
+      Call RecPrt('Con_Opt: dx',' ',dx,nInter-nLambda,nIter)
       Do iIter = 1, nIter
          Write (6,*)' iIter=',iIter
          Call RecPrt('Con_Opt: drdq(orig)',' ',drdq(1,1,iIter),
@@ -107,10 +110,15 @@
          Call RecPrt('Con_Opt: d2rdq2(iLambda)',' ',
      &                            d2rdq2(1,1,iLambda),nInter,nInter)
       End Do
+      Write (6,*) '****************************************************'
+      Write (6,*) '****************************************************'
 #endif
 *                                                                      *
 ************************************************************************
 *                                                                      *
+      If (First_MicroIteration) iFirst=nIter
+      RVO=iOpt_RS/=0
+
       ipTb=1
       ipTti=ipTb+nLambda
 *
@@ -128,6 +136,7 @@
       Call Get_iScalar('iOff_Iter',iOff_Iter)
       Call mma_allocate(dq_xy,nInter,Label='dq_xy')
       Call mma_allocate(Hessian,nInter,nInter,Label='Hessian')
+      dEdx(:,:)=Zero
 *                                                                      *
 ************************************************************************
 ************************************************************************
@@ -398,7 +407,7 @@ C              Call DScal_(nInter,One/RR_,drdq(1,iLambda,iIter),1)
 *        The Hessian of the Lagrangian expressed in the full space.
 *
 *        W^0 = H^0 - Sum(i) l_{0,i} d2rdq2(q_0)
-         If (iOpt_RS.eq.0) Then
+         If (.Not.RVO) Then
             Hessian(:,:) = Hess(:,:)
             If (iIter.eq.nIter) Then
                Do iLambda = 1, nLambda
@@ -446,9 +455,10 @@ C              Call DScal_(nInter,One/RR_,drdq(1,iLambda,iIter),1)
 *
 *           Compute step restriction based on information from the
 *           minimization in the x subspace. This restriction is based
-*           on the step length in the x subspace.
+*           on the step length in the x subspace. Do not do this if
+*           it is a RVO optimization.
 *
-            If (iIter.ne.nIter) Then
+            If (.NOT.RVO.and.iIter/=nIter) Then
 *
 *              Compute dq step in the x subspace
 *
@@ -460,24 +470,25 @@ C              Call DScal_(nInter,One/RR_,drdq(1,iLambda,iIter),1)
                call dcopy_(nInter-nLambda,dx(1,iIter),1,du(1+nLambda),1)
                Call Backtrans_T(du,dq_xy)
                dxdx=Sqrt(DDot_(nInter,dq_xy,1,dq_xy,1))
-*              dxdx=Sqrt(DDot_(nInter-nLambda,dx(1,iIter),1,
-*    &                                        dx(1,iIter),1))
 *
+#ifdef _DEBUGPRINT_
+               Write (6,*) 'dxdx=',dxdx
+               Write (6,*) 'dxdx_last=',dxdx_last
+#endif
+
                If (dxdx.lt.0.75D0*dxdx_last.and.
      &             dxdx.lt.(Beta-Thr)) Then
 *                 Increase trust radius
                   xBeta=Min(One,xBeta*Sf)
-C                 xBeta=xBeta*Sf
-C
-C
                Else If (dxdx.gt.1.25D0*dxdx_last.or.
      &                  dxdx.ge.(Beta+Thr)) Then
 *                 Reduce trust radius
                   xBeta=Max(One/Five,xBeta/Sf)
                End If
                dxdx_last=dxdx
-C              Write (6,*) 'dxdx=',dxdx
-C              Write (6,*) 'xBeta=',xBeta
+#ifdef _DEBUGPRINT_
+               Write (6,*) 'xBeta=',xBeta
+#endif
             End If
 *                                                                      *
 ************************************************************************
@@ -642,7 +653,7 @@ C           Write (6,*) 'gBeta=',gBeta
          Write (6,*) 'Start: dy(:)=',dy(:)
          Write (6,*)
 #endif
-         If (iOpt_RS.eq.0) Then
+         If (.NOT.RVO) Then
 *
 *           Compute dq step in the y subspace
 *
@@ -760,21 +771,30 @@ C           Write (6,*) 'gBeta=',gBeta
                q(:,iIter+1)=q(:,iIter)+dq_xy(:)
                Call Dispersion_Kriging_Layer(q(1,iIter+1),disp,nInter)
 
-               If (Disp(2)/Abs(DEnergy)<5.0D-1 .or.
+               If (Disp(2)/Abs(DEnergy)<1.0D-1 .or.
      &             Disp(2)<1.0D-4) Then
                  Fact=one
+                 iCase=1
                Else If (Disp(2)>=Abs(DEnergy)) Then
-                 Fact = Half   ! just set it to something < 1
+                 Fact = 0.1D0   ! just set it to something < 1
                  If (Step_Trunc.eq.'N') Step_Trunc='*'
+                 iCase=2
                Else
                  Fact = (Abs(DEnergy)-Disp(2))/Abs(DEnergy)
                  If (Step_Trunc.eq.'N') Step_Trunc='*'
+                 iCase=3
                End If
+*              Fact = One
+*              Step_Trunc='N'
                Fact = One/Fact
 #ifdef _DEBUGPRINT_
+               Write (6,*)
+               Write (6,*) 'Step_Trunc=',Step_Trunc
                Write (6,*) 'DEnergy=',DEnergy
                Write (6,*) 'Disp(2)=',Disp(2)
-               Write (6,*) 'Fact=',Fact
+               Write (6,*) 'Fact=',One/Fact
+               Write (6,*) 'iCase=',iCase
+               Write (6,*)
 #endif
             Else If (nSet==3) Then
                Write (6,*) 'Not implemented yet!'
@@ -867,7 +887,9 @@ C           Write (6,*) 'gBeta=',gBeta
 *        Twist for MEP optimizations.
 *
          If (iIter.eq.iOff_iter+1 .and. dydy.lt.1.0D-4
-     &       .and. iIter.ne.1) xBeta=xBeta*Half
+     &       .and. iIter.ne.1) Then
+             xBeta=xBeta*Half
+         End If
          dydy_last=dydy
 *
 #ifdef _DEBUGPRINT_
@@ -952,16 +974,27 @@ C           Write (6,*) 'gBeta=',gBeta
          iOptC_Temp=iOptC
       End If
 *
-      Dummy = Zero
 #ifdef _DEBUGPRINT_
       Call RecPrt('Con_Opt: Hessian(raw)',' ',Hessian,nInter,nInter)
       Write (6,*) 'iOptH=',iOptH
 #endif
       If (Step_Trunc.eq.'N') Step_Trunc=' '
-      Call Update_H(nWndw,Hessian,nInter,
-     &              nIter,iOptC_Temp,
-     &              dq,dEdq_,iOptH,
-     &              jPrint,Dummy,nsAtom,.False.,.False.)
+
+      If (RVO .and. .NOT.First_Microiteration) Then
+         nWndw_=nIter-iFirst+1
+         iOptH_=4
+      Else
+         nWndw_=nWndw
+         iOptH_=iOptH
+      End If
+#ifdef _DEBUGPRINT_
+      Write (6,*) 'nIter,iFirst=',nIter,iFirst
+      Write (6,*) 'nWndw_=',nWndw_
+      Write (6,*) 'iOptH_=',iOptH_
+#endif
+      Dummy = Zero
+      Call Update_H(nWndw_,Hessian,nInter,nIter,iOptC_Temp,dq,
+     &              dEdq_,iOptH_,jPrint,Dummy,nsAtom,.False.,.False.)
 
 #ifdef _DEBUGPRINT_
       Call RecPrt('Con_Opt: Hessian(updated)',' ',Hessian,nInter,nInter)
@@ -999,7 +1032,7 @@ C           Write (6,*) 'gBeta=',gBeta
 *        Set threshold depending on if restriction is w.r.t. step-size
 *        or variance.
 *
-         If (iOpt_RS.eq.0) Then
+         If (.NOT.RVO) Then
             Beta_Disp_= One ! Dummy assign
          Else
 *
@@ -1033,7 +1066,10 @@ C           Write (6,*) 'gBeta=',gBeta
          Thr_RS=1.0D-7
 #ifdef _DEBUGPRINT_
          Write (6,*) 'Step_Trunc(0)=',Step_Trunc
-         Write (6,*)  Beta,yBeta,xBeta,gBeta
+         Write (6,*)  'Beta=', Beta
+         Write (6,*) 'yBeta=',yBeta
+         Write (6,*) 'xBeta=',xBeta
+         Write (6,*) 'gBeta=',gBeta
          Write (6,*) 'tBeta=',tBeta
 #endif
          Do
@@ -1042,11 +1078,13 @@ C           Write (6,*) 'gBeta=',gBeta
      &                RHS,A,nA,tBeta,nFix,ip,Energy,Step_Trunc_,
      &                Thr_RS)
             If (Step_Trunc.eq.'N') Step_Trunc=' '
-            If (iOpt_RS.eq.0) Then
+
+            If (.NOT.RVO) Then
                If (Step_Trunc_.eq.'N') Step_Trunc_=' '
                Step_Trunc=Step_Trunc_
                Exit
             End If
+
             If (Step_Trunc//Step_Trunc_.eq.' *') Step_Trunc='.'
 *
             du(1:nLambda)=dy(:)
@@ -1060,6 +1098,7 @@ C           Write (6,*) 'gBeta=',gBeta
             Disp_Save=disp_T
 #ifdef _DEBUGPRINT_
             Write (6,*) 'disp_T=',disp_T
+            Write (6,*) 'Beta_Disp_=',Beta_Disp_
 #endif
             fact=Half*fact
             tBeta=Half*tBeta
