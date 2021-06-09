@@ -14,15 +14,16 @@
       Implicit Real*8 (a-h,o-z)
 #include "real.fh"
       Real*8 H(nInter,nInter), dq(nInter,nIter), g(nInter,nIter+1)
-      Logical Found, DoMask,Test
+      Logical Found, DoMask
 *                                                                      *
 !#define _DEBUGPRINT_
+#ifdef _DEBUGPRINT_
+      Logical Test
 *                                                                      *
 ************************************************************************
 *                                                                      *
 *     Statement function
 *
-#ifdef _DEBUGPRINT_
       Test(i)=iAnd(iOptH,2**(i-1)).eq.2**(i-1)
 #endif
 *                                                                      *
