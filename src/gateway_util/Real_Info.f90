@@ -41,6 +41,7 @@ Real*8 :: rMI(6)=[(0.0D0,i=1,6)]
 Real*8 :: Prin(3)=[(0.0D0,i=1,3)]
 Real*8 :: PAX(9)=[(0.0D0,i=1,9)]
 Real*8 :: CoC(3)=[(0.0D0,i=1,3)]
+Real*8 :: kVector(3)=[(0.0D0,i=1,3)]
 
 Contains
 
