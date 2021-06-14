@@ -61,7 +61,7 @@
 *                                                                      *
 ************************************************************************
 *                                                                      *
-*#define _DEBUGPRINT_
+!#define _DEBUGPRINT_
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -107,18 +107,20 @@
       If (Allocated(qInt).and.SIZE(qInt,1)/=nQQ) Then
          Call mma_deallocate(qInt)
          Call mma_deallocate(dqInt)
-         If (Allocated(dqInt_Aux)) Call mma_deallocate(dqInt_aux)
+      End If
+      If (Allocated(dqInt_Aux).and.SIZE(dqInt_Aux,1)/=nQQ) Then
+         Call mma_deallocate(dqInt_aux)
       End If
       If (.NOT.Allocated(qInt)) Then
          Call mma_allocate( qInt,nQQ,MaxItr,Label=' qInt')
          Call mma_allocate(dqInt,nQQ,MaxItr,Label='dqInt')
           qInt(:,:)=Zero
          dqInt(:,:)=Zero
-         If (nSet>1) Then
-            Call mma_allocate(dqInt_Aux,nQQ,MaxItr,nSet,
-     &                        Label='dqInt_Aux')
-            dqInt_aux(:,:,:)=Zero
-         End If
+      End If
+      If (.NOT.Allocated(dqInt_Aux).and.nSet>1) Then
+         Call mma_allocate(dqInt_Aux,nQQ,MaxItr,nSet-1,
+     &                     Label='dqInt_Aux')
+         dqInt_Aux(:,:,:)=Zero
       End If
 *
       Call mma_allocate(Degen2,nDimBC)
@@ -549,7 +551,7 @@
                Call Eq_Solver('N',M,N,NRHS,KtBt,.False.,
      &                        Degen2,GxR(:),dqInt_Aux(:,jIter,1))
             End If
-            If (nAux>0) Then
+            If (nAux>1) Then
                Call NRed(NAC(:,:,jIter),GxR(:),3*nsAtom,nDimBC,Smmtrc)
                Call Eq_Solver('N',M,N,NRHS,KtBt,.False.,
      &                        Degen2,GxR(:),dqInt_Aux(:,jIter,2))

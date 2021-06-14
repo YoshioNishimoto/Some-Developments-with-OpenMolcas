@@ -47,18 +47,20 @@
          If (Allocated(qInt).and.SIZE(qInt,1)/=nQQ) Then
             Call mma_deallocate(qInt)
             Call mma_deallocate(dqInt)
-            If (Allocated(dqInt_Aux)) Call mma_deallocate(dqInt_Aux)
+         End If
+         If (Allocated(dqInt_Aux).and.SIZE(dqInt_Aux,1)/=nQQ) Then
+            Call mma_deallocate(dqInt_Aux)
          End If
          If (.NOT.Allocated(qInt)) Then
             Call mma_allocate(qInt,nQQ,MaxItr,Label='qInt')
             Call mma_allocate(dqInt,nQQ,MaxItr,Label='dqInt')
             qInt(:,:) = Zero
             dqInt(:,:) = Zero
-            If (nSet>1) Then
-               Call mma_allocate(dqInt_aux,nQQ,MaxItr,nSet,
-     &                           Label='dqInt_Aux')
-               dqInt_aux(:,:,:)=Zero
-            End If
+         End If
+         If (.NOT.Allocated(dqInt_Aux).and.nSet>1) Then
+            Call mma_allocate(dqInt_aux,nQQ,MaxItr,nSet-1,
+     &                        Label='dqInt_Aux')
+            dqInt_aux(:,:,:)=Zero
          End If
          Call mma_allocate(EVec,nDimBC**2,Label='EVec')
          EVec(:)=Zero
@@ -216,16 +218,23 @@
 *     N O N - R E D U N D A N T  C A R T E S I A N  C O O R D S
 *
          nQQ=nDimBC - mTR
+         If (Allocated(qInt).and.SIZE(qInt,1)/=nQQ) Then
+            Call mma_deallocate(qInt)
+            Call mma_deallocate(dqInt)
+         End If
+         If (Allocated(dqInt_Aux).and.SIZE(dqInt_Aux,1)/=nQQ) Then
+            Call mma_deallocate(dqInt_Aux)
+         End If
          If (.NOT.Allocated(qInt)) Then
             Call mma_allocate(qInt,nQQ,MaxItr,Label='qInt')
             Call mma_allocate(dqInt,nQQ,MaxItr,Label='dqInt')
             qInt(:,:) = Zero
             dqInt(:,:) = Zero
-            If (nSet>1) Then
-               Call mma_allocate(dqInt_aux,nQQ,MaxItr,nSet,
-     &                           Label='dqInt_Aux')
-               dqInt_aux(:,:,:)=Zero
-            End If
+         End If
+         If (.NOT.Allocated(dqInt_Aux).and.nSet>1) Then
+            Call mma_allocate(dqInt_aux,nQQ,MaxItr,nSet-1,
+     &                        Label='dqInt_Aux')
+            dqInt_aux(:,:,:)=Zero
          End If
 *
 *------- Project the model Hessian with respect to rotations and

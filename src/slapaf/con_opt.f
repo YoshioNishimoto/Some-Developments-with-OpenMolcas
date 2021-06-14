@@ -758,7 +758,7 @@ C           Write (6,*) 'gBeta=',gBeta
 
             If (nSet==1) Then
                Fact=One
-            Else If (nSet==2) Then
+            Else If (nSet>=2) Then
 
 !           For containts which themself are subject to estimates from
 !           a surrogate model we will not try to take a step which close
@@ -790,9 +790,6 @@ C           Write (6,*) 'gBeta=',gBeta
                Write (6,*) 'Fact=',One/Fact
                Write (6,*)
 #endif
-            Else If (nSet==3) Then
-               Write (6,*) 'Not implemented yet!'
-               Call Abend()
             End If
 
 *

@@ -39,16 +39,19 @@
          Call mma_deallocate(dqInt)
          If (Allocated(dqInt_Aux)) Call mma_deallocate(dqInt_Aux)
       End If
+      If (Allocated(qInt).and.SIZE(dqInt_Aux,1)/=nQQ) Then
+         Call mma_deallocate(dqInt_Aux)
+      End If
       If (.NOT.Allocated(qInt)) Then
          Call mma_allocate(qInt,nQQ,MaxItr,Label='qInt')
          Call mma_allocate(dqInt,nQQ,MaxItr,Label='dqInt')
          qInt(:,:) = Zero
          dqInt(:,:) = Zero
-        If (nSet>1) Then
-           Call mma_allocate(dqInt_aux,nQQ,MaxItr,nSet,
-     &                       Label='dqInt_Aux')
-           dqInt_aux(:,:,:)=Zero
-        End If
+      End If
+      If (.NOT.Allocated(dqInt_Aux).and.nSet>1) Then
+         Call mma_allocate(dqInt_aux,nQQ,MaxItr,nSet-1,
+     &                     Label='dqInt_Aux')
+         dqInt_aux(:,:,:)=Zero
       End If
       Call mma_allocate(BMx,3*nsAtom,nQQ,Label='BMx')
       BMx(:,:)=Zero

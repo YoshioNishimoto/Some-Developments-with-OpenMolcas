@@ -285,6 +285,7 @@ C              Write (6,*) 'iRoot=',iRoot
 *                                                                      *
 ************************************************************************
 *                                                                      *
+
       If (iter/=1) Then
 *                                                                      *
 ************************************************************************
@@ -297,7 +298,7 @@ C              Write (6,*) 'iRoot=',iRoot
             Call Get_dArray( 'qInt', qInt,nQQ*MaxItr)
             Call Get_dArray('dqInt',dqInt,nQQ*MaxItr)
 
-            If (nSet>1) Call mma_allocate(dqInt_Aux,nQQ,MaxItr,nSet,
+            If (nSet>1) Call mma_allocate(dqInt_Aux,nQQ,MaxItr,nSet-1,
      &                                    Label='dqInt_Aux')
          End If
 *                                                                      *
