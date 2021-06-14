@@ -223,6 +223,16 @@ C ------------------------------------------
         GOTO 100
       END IF
 C ------------------------------------------
+      IF (LINE(1:4).EQ.'CIH5') THEN
+        CIH5=.TRUE.
+        GOTO 100
+      END IF
+C ------------------------------------------
+      IF (LINE(1:4).EQ.'NOTD') THEN
+        NOTDM=.TRUE.
+        GOTO 100
+      END IF
+C ------------------------------------------
       IF(LINE(1:4).EQ.'THRS')THEN
         Read(LuIn,*,ERR=997) CITHR
         LINENR=LINENR+1

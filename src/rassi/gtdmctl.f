@@ -991,7 +991,10 @@ C In AO basis:
       DYSAMPS(ISTATE,JSTATE)=DYSAMP
       DYSAMPS(JSTATE,ISTATE)=DYSAMP
 ! +++
-
+CC VK/GG 2021 CC
+C  skip the tdm computation if ci and mo only required
+      if (.not.CIH5 .or. .not.NOTDM) then
+CC CC
 C General 1-particle transition density matrix:
       IF (IF11) THEN
         CALL MKTDM1(LSYM1,MPLET1,MSPROJ1,IWORK(LFSBTAB1),
@@ -1192,6 +1195,10 @@ C             Write density 1-matrices in AO basis to disk.
      &      HTWO=DDOT_(NTDM2,TDM2,1,TUVX,1)
 
           END IF ! IF22
+CC VK/GG 2021 CC
+C  end of notdm condition
+          end if
+CC CC
 
           !> PAM 2011 Nov 3, writing transition matrices if requested
           IF ((IFTRD1.or.IFTRD2).and..not.mstate_dens) THEN

@@ -119,6 +119,8 @@ C DEFAULT FLAGS:
       PRORB=.FALSE.
       PRTRA=.FALSE.
       PRCI=.FALSE.
+      CIH5=.FALSE.
+      NOTDM=.FALSE.
       IFHAM=.FALSE.
       IFEJOB=.FALSE.
       IFSHFT=.FALSE.
