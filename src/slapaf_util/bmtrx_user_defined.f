@@ -37,9 +37,8 @@
       If (Allocated(qInt).and.SIZE(qInt,1)/=nQQ) Then
          Call mma_deallocate(qInt)
          Call mma_deallocate(dqInt)
-         If (Allocated(dqInt_Aux)) Call mma_deallocate(dqInt_Aux)
       End If
-      If (Allocated(qInt).and.SIZE(dqInt_Aux,1)/=nQQ) Then
+      If (Allocated(dqInt_Aux).and.SIZE(dqInt_Aux,1)/=nQQ) Then
          Call mma_deallocate(dqInt_Aux)
       End If
       If (.NOT.Allocated(qInt)) Then
