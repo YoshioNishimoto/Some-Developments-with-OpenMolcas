@@ -768,14 +768,26 @@ C           Write (6,*) 'gBeta=',gBeta
 #ifdef _DEBUGPRINT_
                Write (6,*) 'Step_Trunc=',Step_Trunc
 #endif
+               If (iIter>1) Then
+                  Call Dispersion_Kriging_Layer(q(1,iIter),disp,nInter)
+                  D0=Disp(2)
+               Else
+                  D0=Zero
+               End If
                q(:,iIter+1)=q(:,iIter)+dq_xy(:)
                Call Dispersion_Kriging_Layer(q(1,iIter+1),disp,nInter)
 
+!              If the dipersion is small relative to the energy change
+!              take the full step.
                If (Disp(2)/Abs(DEnergy)<1.0D-1 .or.
      &             Disp(2)<1.0D-4) Then
                  Fact=one
                Else If (Disp(2)>=Abs(DEnergy)) Then
                  Fact = 0.1D0   ! just set it to something < 1
+                 Fact = 0.4D0   ! just set it to something < 1
+                 Fact = 0.5D0   ! just set it to something < 1
+                 Fact = 0.6D0   ! just set it to something < 1
+                 Fact = 0.3D0   ! just set it to something < 1
                  If (Step_Trunc.eq.'N') Step_Trunc='*'
                Else
                  Fact = (Abs(DEnergy)-Disp(2))/Abs(DEnergy)
@@ -786,7 +798,10 @@ C           Write (6,*) 'gBeta=',gBeta
                Write (6,*)
                Write (6,*) 'Step_Trunc=',Step_Trunc
                Write (6,*) 'DEnergy=',DEnergy
+               Write (6,*) 'D0=',D0
+               Write (6,*) 'Disp(1)=',Disp(1)
                Write (6,*) 'Disp(2)=',Disp(2)
+               Write (6,*) 'Disp(3)=',Disp(3)
                Write (6,*) 'Fact=',One/Fact
                Write (6,*)
 #endif
@@ -980,7 +995,7 @@ C           Write (6,*) 'gBeta=',gBeta
 !     use Hessian update methods since those will produce effective
 !     second order force constants.
 
-      If (RVO .and. .NOT.First_Microiteration) Then
+      If (RVO) Then
          nWndw_=nIter-iFirst
          iOptH_=4
       Else
@@ -988,6 +1003,7 @@ C           Write (6,*) 'gBeta=',gBeta
          iOptH_=iOptH
       End If
 #ifdef _DEBUGPRINT_
+      Write (6,*) 'RVO=',RVO
       Write (6,*) 'nIter,iFirst=',nIter,iFirst
       Write (6,*) 'nWndw_=',nWndw_
       Write (6,*) 'iOptH_=',iOptH_

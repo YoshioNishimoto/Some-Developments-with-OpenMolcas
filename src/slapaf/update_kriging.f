@@ -170,8 +170,8 @@
             Call Hessian_Kriging_Layer(qInt(:,iterAI),Hessian,nQQ)
             Call Put_dArray('Hss_Q',Hessian,nQQ**2)
 *           Make fixhess.f treat the Hessian as if it was analytic.
-            If (First_MicroIteration)
-     &         Call Put_iScalar('HessIter',iterAI)
+*           If (First_MicroIteration)
+*    &         Call Put_iScalar('HessIter',iterAI)
          End If
 *                                                                      *
 ************************************************************************

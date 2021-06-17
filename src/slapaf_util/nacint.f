@@ -8,9 +8,8 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
-      Subroutine NACInt(xyz,nCent,H12,Bf,lWrite_,Label,dBf,ldB)
+      Subroutine NACInt(xyz,nCent,H12,Bf,lWrite_,Label,dBf,ldB,lIter)
       use Slapaf_Info, only: NAC
-      use Slapaf_Parameters, only: iter
       Implicit Real*8  (a-h,o-z)
 #include "real.fh"
 #include "constants.fh"
@@ -28,12 +27,13 @@
 *
 *---- Compute the WDC B-matrix
 *
-C     Call RecPrt('NAC',' ',NAC(1,1,iter),3,nCent)
+C     Write (*,*) 'NACInt, lIter:',lIter
+C     Call RecPrt('NAC',' ',NAC(1,1,lIter),3,nCent)
       Do iCent = 1, nCent
          Fact=DBLE(iDeg(xyz(1,iCent)))
 C        Write (6,*) 'Fact=',Fact
          Do iCar = 1, 3
-            Bf(iCar,iCent)=Fact*NAC(iCar,iCent,iter)
+            Bf(iCar,iCent)=Fact*NAC(iCar,iCent,lIter)
          End Do
       End Do
 C     Call RecPrt('Bf',' ',Bf,3,nCent)
@@ -42,7 +42,7 @@ C     Call RecPrt('Bf',' ',Bf,3,nCent)
 *
       If (ldB) Then
          Call FZero(dBf,(3*nCent)**2)
-*        Call RecPrt('dBf','(9F9.1)',dBf,3*nCent,3*nCent)
+C        Call RecPrt('dBf','(9F9.1)',dBf,3*nCent,3*nCent)
 *
       End If
 *
