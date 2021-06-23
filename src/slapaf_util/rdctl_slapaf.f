@@ -1131,6 +1131,9 @@ c        iOptH = iOr(2,iAnd(iOptH,32))
          Call Process_Gradients()
 
       End If
+
+*     If (iter==2) Max_Microiterations=1
+*     If (iter==4) Max_Microiterations=1
 *                                                                      *
 ************************************************************************
 *                                                                      *

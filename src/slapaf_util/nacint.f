@@ -41,7 +41,10 @@ C     Call RecPrt('Bf',' ',Bf,3,nCent)
 *---- Compute the cartesian derivative of the B-Matrix.
 *
       If (ldB) Then
-         Call FZero(dBf,(3*nCent)**2)
+         dBf(:,:)=Zero
+*        Do i = 1, 3*nCent
+*           dBf(i,i)=0.1D-1
+*        End Do
 C        Call RecPrt('dBf','(9F9.1)',dBf,3*nCent,3*nCent)
 *
       End If

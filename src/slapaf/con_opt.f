@@ -11,12 +11,12 @@
 * Copyright (C) 2003,2020, Roland Lindh                                *
 *               2020, Ignacio Fdez. Galvan                             *
 ************************************************************************
-      Subroutine Con_Opt(r,drdq,T,dEdq,rLambda,q,dq,dy,dx,dEdq_,du,x,
+      Subroutine Con_Opt(r,drdq,T,dEdq,rLambda,q,dq,dy,dx,hql,du,x,
      &                   dEdx,W,GNrm,nWndw,
      &                   Hess,nInter,nIter,
      &                   iOptH,jPrint,Energy,nLambda,
      &                   Err,EMx,RHS,A,nA,
-     &                   Beta,Beta_Disp,nFix,iP,
+     &                   Beta,Beta_Disp_Seed,nFix,iP,
      &                   Step_Trunc,Lbl,
      &                   d2rdq2,nsAtom,
      &                   iOpt_RS,Thr_RS,iter_,
@@ -60,7 +60,7 @@
      &       T(nInter,nInter), dEdq(nInter,nIter),
      &       rLambda(nLambda,nIter+1), q(nInter,nIter+1),
      &       dq(nInter,nIter), dy(nLambda), dx(nInter-nLambda,nIter),
-     &       dEdq_(nInter,nIter), du(nInter),
+     &       hql(nInter,nIter), du(nInter),
      &       x(nInter-nLambda,nIter+1),
      &       dEdx(nInter-nLambda,nIter),
      &       W(nInter-nLambda,nInter-nLambda),
@@ -79,11 +79,12 @@
      &                      Hessian(:,:)
       Real*8, Save:: Beta_Disp_Save=Zero,Disp_Save=Zero
       Real*8 :: Disp(3)=[Zero,Zero,Zero]
+      Real*8, Parameter:: Beta_Disp_Min=1.0D-10
       Integer, Save:: iFirst=0
 *                                                                      *
 ************************************************************************
 *                                                                      *
-!#define _DEBUGPRINT_
+#define _DEBUGPRINT_
 #ifdef _DEBUGPRINT_
       Write (6,*)
       Write (6,*) '****************************************************'
@@ -97,20 +98,21 @@
       Call RecPrt('Con_Opt: Energy',' ',Energy,nIter,1)
       Call RecPrt('Con_Opt: q',' ',q,nInter,nIter)
       Call RecPrt('Con_Opt: dEdq',' ',dEdq,nInter,nIter)
-      Call RecPrt('Con_Opt: dq',' ',dq,nInter,nIter)
+      If (nIter>1) Call RecPrt('Con_Opt: dq',' ',dq,nInter,nIter-1)
       Call RecPrt('Con_Opt: Hess(in)',' ',Hess,nInter,nInter)
       Call RecPrt('Con_Opt: r',' ',r,nLambda,nIter)
-      Call RecPrt('Con_Opt: dx',' ',dx,nInter-nLambda,nIter)
       Do iIter = 1, nIter
          Write (6,*)' iIter=',iIter
          Call RecPrt('Con_Opt: drdq(orig)',' ',drdq(1,1,iIter),
      &               nInter,nLambda)
       End Do
       Do iLambda = 1, nLambda
+         Write (6,*)' iLambda=',iLambda
          Call RecPrt('Con_Opt: d2rdq2(iLambda)',' ',
      &                            d2rdq2(1,1,iLambda),nInter,nInter)
       End Do
       Write (6,*) '****************************************************'
+      Write (6,*) ' End of input arrays'
       Write (6,*) '****************************************************'
 #endif
 *                                                                      *
@@ -132,7 +134,6 @@
       dxdx=Zero
       dydy=Zero
       Thr=1.0D-6
-      Beta_Disp_Min=1.0D-10
       Call Get_iScalar('iOff_Iter',iOff_Iter)
       Call mma_allocate(dq_xy,nInter,Label='dq_xy')
       Call mma_allocate(Hessian,nInter,nInter,Label='Hessian')
@@ -142,6 +143,12 @@
 ************************************************************************
 *                                                                      *
       iSt=Max(iOff_Iter+1,nIter-nWndw+1)
+
+#ifdef _DEBUGPRINT_
+      Write (6,*) '****************************************************'
+      Write (6,*) ' Compute the lambda values'
+      Write (6,*) '****************************************************'
+#endif
       Do iIter = iSt, nIter
 #ifdef _DEBUGPRINT_
          Write (6,*)
@@ -196,10 +203,20 @@
          Call RecPrt('rLambda(iIter)',' ',rLambda(1,iIter),nLambda,1)
 #endif
       End Do
+#ifdef _DEBUGPRINT_
+      Write (6,*) '****************************************************'
+      Write (6,*) ' End of computing the lambda values'
+      Write (6,*) '****************************************************'
+#endif
 *                                                                      *
 ************************************************************************
 ************************************************************************
 *                                                                      *
+#ifdef _DEBUGPRINT_
+      Write (6,*) '****************************************************'
+      Write (6,*) ' Check that grads of constraint are not null vectors'
+      Write (6,*) '****************************************************'
+#endif
       Do iIter = iSt, nIter
 *     Do iIter = iOff_Iter+1, nIter
 #ifdef _DEBUGPRINT_
@@ -218,6 +235,11 @@
 *        In case of the first macro iteration of an IRC search replace
 *        it with the reaction vector.
 *
+#ifdef _DEBUGPRINT_
+      Write (6,*) '****************************************************'
+      Write (6,*) ' Check that grads of constraint are not null vectors'
+      Write (6,*) '****************************************************'
+#endif
          Do iLambda = 1, nLambda
             RR_=Sqrt(DDot_(nInter,drdq(1,iLambda,iIter),1,
      &                          drdq(1,iLambda,iIter),1))
@@ -320,11 +342,16 @@ C              Call DScal_(nInter,One/RR_,drdq(1,iLambda,iIter),1)
 #endif
             End If
          End Do
+#ifdef _DEBUGPRINT_
+      Write (6,*) '****************************************************'
+      Write (6,*) ' End Check'
+      Write (6,*) '****************************************************'
+#endif
 ************************************************************************
 *                                                                      *
 *        NOTE: for historical reasons the code stores the force rather *
 *              than the gradient. Hence, be careful of the sign when   *
-*              ever the term dEdq, dEdq_h show up.                     *
+*              ever the term dEdq, hql show up.                        *
 *                                                                      *
 ************************************************************************
 ************************************************************************
@@ -379,13 +406,16 @@ C              Call DScal_(nInter,One/RR_,drdq(1,iLambda,iIter),1)
      &                   T(1,ipTb),nInter,
      &               Zero,RT,nLambda)
 #ifdef _DEBUGPRINT_
+         Write (6,*) 'drdq^T T_b'
          Call RecPrt('Con_Opt: RT',' ',RT,nLambda,nLambda)
 #endif
 *
          Call MInv(RT,RTInv,iSing,Det,nLambda)
          Call mma_deallocate(RT)
 #ifdef _DEBUGPRINT_
+         Write (6,*) '(drdq^T T_b)^{-1}'
          Call RecPrt('Con_Opt: RTInv',' ',RTInv,nLambda,nLambda)
+         Call RecPrt('Con_Opt: r',' ',r(1,iIter),nLambda,1)
 #endif
 *
 *        dy = - (drdq^T T_b)^{-1} r(q)
@@ -396,6 +426,7 @@ C              Call DScal_(nInter,One/RR_,drdq(1,iLambda,iIter),1)
      &               Zero,dy,nLambda)
          Call mma_deallocate(RTInv)
 #ifdef _DEBUGPRINT_
+         Write (6,*) 'dy = - (drdq^T T_b)^{-1} r(q)'
          Call RecPrt('Con_Opt: dy(full)',' ',dy,nLambda,1)
 #endif
 *                                                                      *
@@ -405,6 +436,11 @@ C              Call DScal_(nInter,One/RR_,drdq(1,iLambda,iIter),1)
 *        iterations. See Eqn. 7,
 *
 *        The Hessian of the Lagrangian expressed in the full space.
+*
+*        Note that for contraints as energy differences and
+*        non-adiabatic coupling vectors that the second order derivative
+*        is approximative, and that a subsequent update of the Hessian
+*        makes sense even if the original Hessian is analytic.
 *
 *        W^0 = H^0 - Sum(i) l_{0,i} d2rdq2(q_0)
          If (.Not.RVO) Then
@@ -459,6 +495,10 @@ C              Call DScal_(nInter,One/RR_,drdq(1,iLambda,iIter),1)
 *           it is a RVO optimization.
 *
             If (.NOT.RVO.and.iIter/=nIter) Then
+#ifdef _DEBUGPRINT_
+               Write (6,*) 'dx = T_{ti}^T dq'
+               Call RecPrt('dx(:,iIter)',' ',dq(1,iIter),nInter,1)
+#endif
 *
 *              Compute dq step in the x subspace
 *
@@ -564,8 +604,10 @@ C              gBeta=gBeta*Sf
                gBeta=Max(One/Five,gBeta/Sf)
             End If
             gg_last=gg
-C           Write (6,*) 'gg=',gg
-C           Write (6,*) 'gBeta=',gBeta
+#ifdef _DEBUGPRINT_
+            Write (6,*) 'gg=',gg
+            Write (6,*) 'gBeta=',gBeta
+#endif
 *
          End If
 *                                                                      *
@@ -726,23 +768,23 @@ C           Write (6,*) 'gBeta=',gBeta
             tmp=Min(tmp,0.30D0) ! Some constraints can have huge
                                 ! gradients. So be a bit careful.
 *           Allowed dispersion in the y subspace
-            Beta_Disp_=Max(Beta_Disp_Min,
-     &                     tmp*CnstWght/(CnstWght+One)*Beta_Disp)
+            Beta_Disp=Max(Beta_Disp_Min,
+     &                     tmp*CnstWght/(CnstWght+One)*Beta_Disp_Seed)
             If (.Not.First_MicroIteration) Then
-               Beta_Disp_=Min(Disp_Save+Beta_Disp_,Beta_Disp_Save)
+               Beta_Disp=Min(Disp_Save+Beta_Disp,Beta_Disp_Save)
             End If
 *
 #ifdef _DEBUGPRINT_
             Write (6,*) 'Step_trunc=',Step_trunc
-            Write (6,*) 'Beta_Disp_=',Beta_Disp_
+            Write (6,*) 'Beta_Disp=',Beta_Disp
             Write (6,*) 'Beta=',Beta
 #endif
 *
 #ifdef _DEBUGPRINT_
-            If (Disp_Save/Beta_Disp_.gt.0.99D0)
+            If (Disp_Save/Beta_Disp.gt.0.99D0)
      &         Write (6,*) 'Go to 667'
 #endif
-            If (Disp_Save/Beta_Disp_.gt.0.99D0) Go To 667
+            If (Disp_Save/Beta_Disp.gt.0.99D0) Go To 667
 
             du(:)=Zero
             du(1:nLambda)=dy(:)
@@ -818,7 +860,7 @@ C           Write (6,*) 'gBeta=',gBeta
                q(:,iIter+1)=q(:,iIter)+dq_xy(:)
 *
                Call Dispersion_Kriging_Layer(q(1,iIter+1),disp,nInter)
-               Disp_T=Sqrt(Disp(1)**2+Disp(2)**2+Disp(3)**2)
+               Disp_T=Sqrt(disp(1)**2+Disp(2)**2+Disp(3)**2)
 *
                If (iCount.eq.1) Then
                   Fact_long=Fact
@@ -831,10 +873,10 @@ C           Write (6,*) 'gBeta=',gBeta
                Write (6,*) 'disp(1)=', disp(1)
                Write (6,*) 'disp(2)=', disp(2)
                Write (6,*) 'disp(3)=', disp(3)
-               Write (6,*) 'Beta_Disp_=',Beta_Disp_
+               Write (6,*) 'Beta_Disp=',Beta_Disp
 #endif
-               If (disp_T.gt.Beta_Disp_ .or. iCount.gt.1) Then
-                  If (Abs(Beta_Disp_-disp_T).lt.Thr_RS) Go To 667
+               If (disp_T.gt.Beta_Disp .or. iCount.gt.1) Then
+                  If (Abs(Beta_Disp-disp_T).lt.Thr_RS) Go To 667
                   iCount=iCount+1
                   If (iCount.gt.iCount_Max) Then
                      Write (6,*) 'iCount.gt.iCount_Max'
@@ -842,7 +884,7 @@ C           Write (6,*) 'gBeta=',gBeta
                   End If
                   Call Find_RFO_Root(Fact_long,disp_long,
      &                               Fact_short,disp_short,
-     &                               Fact,disp_T,Beta_Disp_)
+     &                               Fact,disp_T,Beta_Disp)
                   Step_Trunc='*'
                   Go To 666
                End If
@@ -915,7 +957,7 @@ C           Write (6,*) 'gBeta=',gBeta
       Call RecPrt('Con_Opt: dEdx',' ',dEdx,nInter-nLambda,nIter)
       Call RecPrt('Con_Opt: Lambda',' ',rLambda,nLambda,nIter)
       Call RecPrt('Con_Opt: x',' ',x,nInter-nLambda,nIter)
-      Call RecPrt('Con_Opt: dx',' ',dx,nInter-nLambda,nIter)
+      Call RecPrt('Con_Opt: dx',' ',dx,nInter-nLambda,nIter-1)
 #endif
 *                                                                      *
 ************************************************************************
@@ -928,17 +970,18 @@ C           Write (6,*) 'gBeta=',gBeta
 *     gradient.
 #ifdef _DEBUGPRINT_
       Call RecPrt('Con_Opt: dEdq',' ',dEdq,nInter,nIter)
+      Write (6,*) 'iOff_iter=',iOff_iter
 #endif
-      dEdq_(:,:) = dEdq(:,:)
+      hql(:,:) = dEdq(:,:)
       Do iIter = iOff_iter+1, nIter
          Do iLambda = 1, nLambda
             Call DaXpY_(nInter,rLambda(iLambda,nIter),   ! Sign conflict
      &                          drdq(1,iLambda,iIter),1,
-     &                          dEdq_(1,iIter),1)
+     &                          hql(1,iIter),1)
          End Do
       End Do
 #ifdef _DEBUGPRINT_
-      Call RecPrt('Con_Opt: dEdq_',' ',dEdq_,nInter,nIter)
+      Call RecPrt('Con_Opt: h(q,l)',' ',hql,nInter,nIter)
 #endif
 *                                                                      *
 ************************************************************************
@@ -1010,7 +1053,7 @@ C           Write (6,*) 'gBeta=',gBeta
 #endif
       Dummy = Zero
       Call Update_H(nWndw_,Hessian,nInter,nIter,iOptC_Temp,dq,
-     &              dEdq_,iOptH_,jPrint,Dummy,nsAtom,.False.,.False.)
+     &              hql,iOptH_,jPrint,Dummy,nsAtom,.False.,.False.)
 
 #ifdef _DEBUGPRINT_
       Call RecPrt('Con_Opt: Hessian(updated)',' ',Hessian,nInter,nInter)
@@ -1038,6 +1081,7 @@ C           Write (6,*) 'gBeta=',gBeta
      &               Zero,W,nInter-nLambda)
          Call mma_deallocate(Tmp2)
 #ifdef _DEBUGPRINT_
+         Write (6,*) 'the reduced Hessian, T_{ti}^T W T_{ti}'
          Call RecPrt('Con_Opt: W',' ',W,nInter-nLambda,nInter-nLambda)
 #endif
 *                                                                      *
@@ -1049,14 +1093,14 @@ C           Write (6,*) 'gBeta=',gBeta
 *        or variance.
 *
          If (.NOT.RVO) Then
-            Beta_Disp_= One ! Dummy assign
+            Beta_Disp= One ! Dummy assign
          Else
 *
 *           Note that we use the dEdx data for the last point on the
 *           real PES.
 *
 #ifdef _DEBUGPRINT_
-            Write (6,*) 'Beta_Disp_=',Beta_Disp_
+            Write (6,*) 'Beta_Disp=',Beta_Disp
 #endif
             tmp=Zero
             Do i = 1, nInter-nLambda
@@ -1064,12 +1108,12 @@ C           Write (6,*) 'gBeta=',gBeta
             End Do
 *           Add the allowed dispersion in the x subspace.
             If (First_MicroIteration) Then
-               Beta_Disp_Save=Max(Beta_Disp_+tmp*Beta_Disp,
+               Beta_Disp_Save=Max(Beta_Disp+tmp*Beta_Disp_Seed,
      &                            Beta_Disp_Min)
             End If
-            Beta_Disp_=Beta_Disp_Save
+            Beta_Disp=Beta_Disp_Save
 #ifdef _DEBUGPRINT_
-            Write (6,*) 'tmp,Beta_Disp_=',tmp,Beta_Disp_
+            Write (6,*) 'tmp,Beta_Disp=',tmp,Beta_Disp
 #endif
          End If
 *                                                                      *
@@ -1112,14 +1156,16 @@ C           Write (6,*) 'gBeta=',gBeta
             Call Dispersion_Kriging_Layer(q(1,nIter+1),disp,nInter)
             Disp_T=Sqrt(disp(1)**2+Disp(2)**2+Disp(3)**2)
             Disp_Save=disp_T
-#ifdef _DEBUGPRINT_
-            Write (6,*) 'disp_T=',disp_T
-            Write (6,*) 'Beta_Disp_=',Beta_Disp_
-#endif
             fact=Half*fact
             tBeta=Half*tBeta
-            If (One-disp_T/Beta_Disp_.gt.1.0D-3) Exit
-            If ((fact.lt.1.0D-5) .or. (disp_T.lt.Beta_Disp_)) Exit
+#ifdef _DEBUGPRINT_
+            Write (6,*) 'disp_T=',disp_T
+            Write (6,*) 'Beta_Disp=',Beta_Disp
+            Write (6,*) 'Fact =', Fact
+            Write (6,*) 'tBeta =', tBeta
+#endif
+            If (One-disp_T/Beta_Disp.gt.1.0D-3) Exit
+            If ((fact.lt.1.0D-5) .or. (disp_T.lt.Beta_Disp)) Exit
             Step_Trunc='*'
          End Do
 #ifdef _DEBUGPRINT_
@@ -1151,20 +1197,20 @@ C           Write (6,*) 'gBeta=',gBeta
       du(:)=Zero
       du(1:nLambda)=dy(:)
       Call Backtrans_T(du,dq_xy)
-      dydy=Sqrt(DDot_(nInter,dq,1,dq,1))
-      Call RecPrt('dq(dy)',' ',dq,nInter,nIter)
-      Write (6,*) '<R(q_0)|dy>=',DDot_(nInter,
-     &              dRdq(1,1,nIter),1,dq(1,nIter),1)
+      dydy=Sqrt(DDot_(nInter,dq_xy,1,dq_xy,1))
+      Call RecPrt('dq(dy)',' ',dq_xy,nInter,1)
+      Write (6,*) '<dr(q_0)/dq|dy>=',DDot_(nInter,
+     &              dRdq(1,1,nIter),1,dq_xy,1)
 *
 *     dx only, constrained minimization
 *
       du(:)=Zero
       du(nLambda+1:nInter)=dx(:,nIter)
       Call Backtrans_T(du,dq_xy)
-      dxdx=Sqrt(DDot_(nInter,dq,1,dq,1))
-      Call RecPrt('dq(dx)',' ',dq,nInter,nIter)
-      Write (6,*) '<R(q_0)|dx>=',DDot_(nInter,
-     &              dRdq(1,1,nIter),1,dq(1,nIter),1)
+      dxdx=Sqrt(DDot_(nInter,dq_xy,1,dq_xy,1))
+      Call RecPrt('dq(dx)',' ',dq_xy,nInter,1)
+      Write (6,*) '<dr(q_0)/dq|dx>=',DDot_(nInter,
+     &              dRdq(1,1,nIter),1,dq_xy,1)
 #endif
 *
 *     dy+dx, full step
@@ -1174,8 +1220,10 @@ C           Write (6,*) 'gBeta=',gBeta
       du(:)=Zero
       du(1:nLambda)=dy(1:nLambda)
       du(1+nLambda:nInter)=dx(:,nIter)
+
 *     For kriging, in the last 10 micro iterations, give up trying to
 *     optimize and just focus on fulfilling the constraints.
+
       Recompute_disp=.False.
       If ((Max_MicroIterations.ge.50) .and.
      &    (niter-iter_+1.gt.Max_Microiterations-10)) Then
@@ -1203,7 +1251,7 @@ C           Write (6,*) 'gBeta=',gBeta
 *                                                                      *
 *     StpMax from q
 *
-      Call MxLbls(nInter,dEdq_(1,nIter),dq(1,nIter),Lbl)
+      Call MxLbls(nInter,hql(1,nIter),dq(1,nIter),Lbl)
 *
 *     GrdMax for dEdx
 *

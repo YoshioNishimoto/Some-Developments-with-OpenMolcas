@@ -169,7 +169,10 @@ C------------- Absolute value ----------
       If (ldB) Then
          If (iOpt.eq.1) Then
 C---------- Linear ------------------
-            Call FZero(dBf,(3*nCent)**2)
+            dBf(:,:)=Zero
+*           Do i = 1, 3*nCent
+*             dBf(i,i)=0.1D-1
+*           End Do
          Else If (iOpt.eq.2) Then
 C---------- Quadratic ---------------
             Call FZero(dBf,(3*nCent)**2)
@@ -201,7 +204,10 @@ C---------- Quadratic ---------------
 
          Else If (iOpt.eq.3) Then
 C------------- Absolute value ----------
-            Call FZero(dBf,(3*nCent)**2)
+            dBf(:,:)=Zero
+*           Do i = 1, 3*nCent
+*             dBf(i,i)=0.1D-1
+*           End Do
 *
          End If
 *        Call RecPrt('dBf','(9F9.1)',dBf,3*nCent,3*nCent)

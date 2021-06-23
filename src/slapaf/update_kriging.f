@@ -22,7 +22,8 @@
      &                       Thr_microiterations
       Use Slapaf_Info, only: Cx, Gx, Shift, GNrm, Energy, qInt, dqInt,
      &                       Lbl
-      use Slapaf_Parameters, only: UpMeth, Beta, Beta_Disp, GrdLbl,
+      use Slapaf_Parameters, only: UpMeth, Beta_Seed => Beta,
+     &                             Beta_Disp_Seed => Beta_Disp, GrdLbl,
      &                             GrdMax, E_Delta, ThrEne, ThrGrd,
      &                             nLambda, iter
       Implicit Real*8 (a-h,o-z)
@@ -35,6 +36,7 @@
       Character GrdLbl_Save*8
       Real*8 Dummy(1)
       Real*8, Allocatable:: Hessian(:,:), Temp(:,:,:)
+      Real*8, Parameter :: Beta_Disp_Min=1.0D-10
 #ifdef _OVERSHOOT_
       Real*8 :: OS_Disp(3)=[Zero,Zero,Zero]
 #endif
@@ -70,8 +72,8 @@
       dEner=Thr_microiterations
       iterK=0
       dqdq=Zero
-      qBeta=Beta
-      qBeta_Disp=Beta_Disp
+      qBeta=Beta_Seed
+      qBeta_Disp=Beta_Disp_Seed
       GrdMax_Save=GrdMax
       GrdLbl_Save=GrdLbl
 #ifdef _DEBUGPRINT_
@@ -108,11 +110,10 @@
 *     Find the fraction value to be used to define the restricted
 *     variance threshold.
 *
-*
-      Beta_Disp_Min=1.0D-10
 *     Let the accepted variance be set as a fraction of the
 *     largest component in the gradient.
-      tmp=0.0D0
+
+      tmp=Zero
       Do i = 1, SIZE(Gx,2)
          Do j = 1, 3
             tmp = Max(tmp,Abs(Gx(j,i,iter)))
@@ -122,28 +123,10 @@
 *     Temporary code until we have figured out this for constrained
 *     optimizations.
 *
-      Beta_Disp_=Max(Beta_Disp_Min,tmp*Beta_Disp)
-      Beta_=Min(1.0D3*GNrm(iter),Beta)
-*
-#ifdef _RS_RFO_
-*     Switch over to RS-RFO once the gradient is low.
-*
-      tmp=99.0D0
-      Do j = 1, iter
-         tmp0=0.0D0
-         Do i = 1, SIZE(Gx,2)
-            Do k = 1, 3
-               tmp0 = Max(tmp0,Abs(Gx(k,i,j)))
-            End Do
-         End Do
-         tmp=Min(tmp,tmp0)
-      End Do
+      Beta_Disp=Max(Beta_Disp_Min,tmp*Beta_Disp_Seed)
 
-      If (tmp.lt.4.0D-4) Then
-         iOpt_RS=0
-         Beta_=0.03D0
-      End If
-#endif
+      Beta=Min(1.0D3*GNrm(iter),Beta_Seed)
+*
       Call mma_Allocate(Hessian,nQQ,nQQ,Label='Hessian')
 *                                                                      *
 ************************************************************************
@@ -180,7 +163,7 @@
 *
          nWndw_=nWndw/2 + (iterAI-iter)
 
-         Call Update_inner(iterAI,Beta_,Beta_Disp_,Step_Trunc,nWndw_,
+         Call Update_inner(iterAI,Beta,Beta_Disp,Step_Trunc,nWndw_,
      &                     kIter,Kriging_Hessian,qBeta,iOpt_RS,
      &                      First_MicroIteration,iter,qBeta_Disp)
 
@@ -319,7 +302,7 @@
             Temp(:,:,1)=Cx(:,:,iterAI)-Cx(:,:,iter)
             RMS = Sqrt(DDot_(3*SIZE(Cx,2),Temp,1,Temp,1)
      &          / DBLE(3*SIZE(Cx,2)) )
-            If (RMS.gt.(Three*Beta_)) Step_trunc='*'
+            If (RMS.gt.(Three*Beta)) Step_trunc='*'
             Call mma_deAllocate(Temp)
          End If
          If (Not_Converged.and.(Step_trunc.eq.' ') .and.
@@ -385,8 +368,8 @@
          Call Energy_Kriging_Layer(qInt(1,iterAI),OS_Energy,nQQ)
          Call Dispersion_Kriging_Layer(qInt(1,iterAI),OS_Disp,nQQ)
          Write(6,*) 'Max_OS=',Max_OS
-         Write(6,*) OS_Disp(1),E_Disp,Beta_Disp_
-         If ((OS_Disp(1).gt.E_Disp).And.(OS_Disp(1).lt.Beta_Disp_)) Then
+         Write(6,*) OS_Disp(1),E_Disp,Beta_Disp
+         If ((OS_Disp(1).gt.E_Disp).And.(OS_Disp(1).lt.Beta_Disp)) Then
             Call dAXpY_(nQQ,OS_Factor,Step_k(1,2),1,
      &                                   Shift(1,iterAI-1),1)
             iRef_Save=iRef
