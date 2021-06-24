@@ -711,6 +711,7 @@ C             write(6,'(A,I18)')'OCSP = ',ocsp
      &          '     ',detcoeff1(i),'     ',detcoeff1(i)**2
               enddo
               write(6,*)('*',i=1,80)
+            endif
           endif
 C put them to hdf5
           if (CIH5) then
@@ -722,7 +723,7 @@ C put them to hdf5
             enddo
           endif
         else
-C JOB1=JOB2, put original coefficents to hdf5
+C JOB1=JOB2, put original coefficients to hdf5
           if (CIH5) then
             call mh5_put_dset_array_real(wfn_detcoeff_or,detcoeff1,
      &                               [ndt1,1,1],[0,istate-1,JOB1-1])
