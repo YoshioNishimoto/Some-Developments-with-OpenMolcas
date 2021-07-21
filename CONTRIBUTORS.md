@@ -68,6 +68,7 @@ John Burkardt
 Yannick Carissan  
 Liviu Chibotaru  
 Christophe Chipot  
+Jonathan R. Church  
 Aron Cohen  
 David L. Cooper  
 Maurizio Cossi  
@@ -80,8 +81,10 @@ Michael Diedenhofen
 Werner Dobrautz  
 Sijia S. Dong  
 Thomas Dresselhaus  
+Thomas J. Duignan  
 Daniel Fairhead  
 Ignacio Fdez. Galván  
+Rulin Feng  
 Nicolas Ferré  
 Timo Fleig  
 Niclas Forsberg  
