@@ -146,6 +146,7 @@ option (MSYM     "Activate MSYM support (requires External/libmsym submodule)." 
 option (NECI     "Activate NECI support (requires External/NECI submodule)."                                  OFF)
 option (NEVPT2   "Activate (DMRG)-NEVPT2 support."                                                            OFF)
 option (WFA      "Activate extended wavefunction analysis (requires External/libwfa submodule)."              OFF)
+option (SOMPSOO  "Activate soMPSoo support." OFF)
 
 ################################################################################
 #                                                                              #
@@ -160,7 +161,7 @@ set (ENV{CMAKE_SESSION} "OpenMolcas")
 #=====================================
 message ("Configuring compilers:")
 
-if (WFA OR MolGUI OR DMRG)
+if (WFA OR MolGUI OR DMRG OR SOMPSOO)
   enable_language (CXX)
 endif ()
 
@@ -2173,7 +2174,7 @@ endif ()
 # NEVPT2
 if (NEVPT2)
   if (NOT DMRG)
-    message (FATAL_ERROR "NEVPT2 support requires enabling DMRG too.")
+    message (FATAL_ERROR "NEVPT2 support requires enabling QCMaquis (via the DMRG option) too.")
   endif ()
   if (NOT (HDF5 AND HDF5_FOUND))
     message (FATAL_ERROR "NEVPT2 support requires enabling HDF5 too.")
@@ -2230,6 +2231,33 @@ if (MolGUI)
   list (APPEND EXTRA_INSTALL_DIRS ${projinstall})
 else ()
   message ("MolGUI DISABLED")
+endif ()
+
+# NECI Full-CI Quantum Monte-Carlo
+if (SOMPSOO)
+  message ("Configuring soMPSoo support:")
+  set (proj ${extprojsdir}/soMPSoo)
+  set (proj_bin ${PROJECT_BINARY_DIR}/External/soMPSoo)
+  set (custom_dir ${PROJECT_SOURCE_DIR}/cmake/custom)
+  configure_file (${custom_dir}/sompsoo.cmake ${proj_bin}/CMakeLists.txt COPYONLY)
+
+  get_cmake_property (_in_vars VARIABLES)
+  add_subdirectory (${proj_bin} ${proj_bin})
+  get_cmake_property (_out_vars VARIABLES)
+  foreach (var ${_out_vars})
+    get_property (in_cache CACHE ${var} PROPERTY TYPE)
+    if (in_cache AND NOT var IN_LIST _in_vars)
+      make_internal (${var})
+    endif ()
+  endforeach ()
+
+  get_directory_property (${SOMPSOO_INCLUDE} DIRECTORY ${proj_bin} DEFINITION ${SOMPSOO_INCLUDE})
+  get_directory_property (${SOMPSOO_LIBRARIES} DIRECTORY ${proj_bin} DEFINITION ${SOMPSOO_LIBRARIES})
+
+  message ("-- soMPSoo_LIBRARIES: ${SOMPSOO_LIBRARIES}")
+  message ("-- soMPSoo_INCLUDE_PATH: ${SOMPSOO_INCLUDE}")
+else ()
+  message ("soMPSoo support DISABLED")
 endif ()
 
 # Add the "bigot" flags after processing the external projects, so they are not affected
