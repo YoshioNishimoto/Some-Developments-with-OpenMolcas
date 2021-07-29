@@ -794,8 +794,8 @@ set (NAG_TRAP "-ieee=stop") # not compatible with -ieee=full
 # Generate the actual flags used in the build
 #============================================
 
-if (DMRG OR WFA)
-  # C++ compiler required for DMRG and WFA projects
+if (DMRG OR WFA OR SOMPSOO)
+  # C++ compiler required for DMRG, SOMPSOO and WFA projects
   foreach (CXX_COMPILER ${SUPPORTED_CXX_COMPILERS})
     if (CXX_COMPILER STREQUAL "${CMAKE_CXX_COMPILER_ID}")
       set (CXXCID ${CMAKE_CXX_COMPILER_ID})
@@ -1097,7 +1097,7 @@ if (HDF5)
       message ("-- HDF5_INCLUDE_DIRS: ${HDF5_INCLUDE_DIRS}")
       message ("-- HDF5_C_LIBRARIES: ${HDF5_C_LIBRARIES}")
       if (HDF5_VERSION)
-        if (DMRG AND HDF5_VERSION VERSION_EQUAL "1.10.0.1")
+        if ((DMRG OR SOMPSOO) AND HDF5_VERSION VERSION_EQUAL "1.10.0.1")
           message (FATAL_ERROR "This HDF5 version (${HDF5_VERSION}) is not supported by QCMaquis.")
         endif ()
       endif ()
@@ -2233,7 +2233,7 @@ else ()
   message ("MolGUI DISABLED")
 endif ()
 
-# NECI Full-CI Quantum Monte-Carlo
+# SOMPSOO
 if (SOMPSOO)
   message ("Configuring soMPSoo support:")
   set (proj ${extprojsdir}/soMPSoo)
@@ -2423,6 +2423,7 @@ list (REMOVE_ITEM progs
   nevpt2
   dmrgscf
   mpssi
+  sompsoo_
 )
 
 # set the location of the sources for the utilities
@@ -2580,6 +2581,13 @@ if (DMRG)
   list (APPEND progs mpssi)
 endif ()
 
+if (SOMPSOO)
+  set (prog sompsoo_)
+  list (APPEND progs ${prog})
+  list (APPEND ${prog}_incs ${SOMPSOO_INCLUDE})
+  list (APPEND ${prog}_deplibs ${SOMPSOO_LIBRARIES})
+endif ()
+
 # finally, sort the list
 list (SORT utils)
 
@@ -2617,6 +2625,7 @@ if (HDF5 AND HDF5_FOUND)
     guessorb
     mcpdft
     nevpt2
+    sompsoo_
     poly_aniso
     rasscf
     rassi
@@ -2660,6 +2669,16 @@ if (DMRG)
     list (APPEND ${prog}_deplibs ${MAQUIS_DMRG_LIBRARIES} -lstdc++)
   endforeach ()
 endif ()
+# same for soMPSoo
+if (SOMPSOO)
+  # Link QCMaquis libraries
+  list (APPEND sompsoo_progs
+    sompsoo_
+  )
+  foreach (prog ${sompsoo_progs})
+    list (APPEND ${prog}_deplibs ${SOMPSOO_LIBRARIES} -lstdc++)
+  endforeach ()
+endif ()
 
 if (GA AND MPI)
   foreach (prog
@@ -2684,6 +2703,9 @@ set (casvb_deplibs
   rasscf
 )
 set (dmrgscf_deplibs
+  rasscf
+)
+set (sompsoo_deplibs
   rasscf
 )
 set (last_energy_deplibs
@@ -2727,6 +2749,9 @@ set (seward_deplibs
 
 if (DMRG)
   list (APPEND last_energy_deplibs dmrgscf)
+endif ()
+if (SOMPSOO)
+  list (APPEND last_energy_deplibs sompsoo_)
 endif ()
 
 ################################################################################
