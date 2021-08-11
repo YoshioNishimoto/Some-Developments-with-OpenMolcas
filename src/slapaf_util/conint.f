@@ -21,7 +21,7 @@
 *
       E1 = Energy (lIter)
       E0 = Energy0(lIter)
-!#define _DEBUGPRINT_
+#define _DEBUGPRINT_
 #ifdef _DEBUGPRINT_
       nAtoms = SIZE(Gx,2)
       Write (6,*) 'ConInt: lIter=',lIter
@@ -95,6 +95,14 @@ C------- Absolute value ----------
             Write (6,'( A,F18.8,A)') '           E(j)              = ',
      &                               E0   , ' hartree'
          End If
+         Select Case (iOpt)
+         Case (1)
+           Write (6,*) 'Option: Linear'
+         Case (2)
+           Write (6,*) 'Option: Quadratic'
+         Case (3)
+           Write (6,*) 'Option: Absolute value'
+         End Select
       End If
 *
 *---- Compute the WDC B-matrix
@@ -152,7 +160,7 @@ C------------- Absolute value ----------
          End Do
       End Do
 #ifdef _DEBUGPRINT_
-      Call RecPrt('Bf',' ',Bf,3,nCent)
+      Call RecPrt('ConInt: Bf',' ',Bf,3,nCent)
 #endif
       If (lWrite_.and.iOpt.eq.1) Then
          XX=Sqrt(DDot_(3*nCent,Bf,1,Bf,1))

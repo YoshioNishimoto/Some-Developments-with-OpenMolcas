@@ -27,16 +27,18 @@
 *
 *---- Compute the WDC B-matrix
 *
-C     Write (*,*) 'NACInt, lIter:',lIter
-C     Call RecPrt('NAC',' ',NAC(1,1,lIter),3,nCent)
       Do iCent = 1, nCent
          Fact=DBLE(iDeg(xyz(1,iCent)))
-C        Write (6,*) 'Fact=',Fact
          Do iCar = 1, 3
             Bf(iCar,iCent)=Fact*NAC(iCar,iCent,lIter)
          End Do
       End Do
-C     Call RecPrt('Bf',' ',Bf,3,nCent)
+#define _DEBUGPRINT_
+#ifdef _DEBUGPRINT_
+      Write (6,*) 'NACInt, lIter:',lIter
+      Call RecPrt('NAC',' ',NAC(1,1,lIter),3,nCent)
+      Call RecPrt('Bf',' ',Bf,3,nCent)
+#endif
 *
 *---- Compute the cartesian derivative of the B-Matrix.
 *

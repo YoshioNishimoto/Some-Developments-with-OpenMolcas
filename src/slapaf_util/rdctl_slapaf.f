@@ -1133,7 +1133,7 @@ c        iOptH = iOr(2,iAnd(iOptH,32))
       End If
 
 *     If (iter==2) Max_Microiterations=1
-*     If (iter==4) Max_Microiterations=1
+*     If (iter==4) Max_Microiterations=2
 *                                                                      *
 ************************************************************************
 *                                                                      *

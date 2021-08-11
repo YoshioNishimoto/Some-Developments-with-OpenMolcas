@@ -92,6 +92,8 @@
       Write (6,*) '****************************************************'
       Write (6,*)
       Write (6,*) 'iOpt_RS=',iOpt_RS
+      Write (6,*) 'Beta=',Beta
+      Write (6,*) 'Beta_Disp_Seed=',Beta_Disp_Seed
       Write (6,*)
       Write (6,*) 'First_Microiteration=',First_Microiteration
       Write (6,*)
@@ -200,7 +202,7 @@
      &               Zero,rLambda(1,iIter),nLambda)
          Call mma_deallocate(RRR)
 #ifdef _DEBUGPRINT_
-         Call RecPrt('rLambda(iIter)',' ',rLambda(1,iIter),nLambda,1)
+         Call RecPrt('Lambda(:,iIter)',' ',rLambda(1,iIter),nLambda,1)
 #endif
       End Do
 #ifdef _DEBUGPRINT_
@@ -251,9 +253,6 @@
 *           Make sure that we don't mess up gradients which are zero vectors.
 *
             If ( RR_.lt.1.0D-12 ) Then
-*           If ( RR_.lt.1.0D-12 .and.
-*    &           Abs(r(iLambda,iIter)).gt.1.0D-12 ) Then
-*
                xBeta = xBeta*Half
 *
                If (Abs(IRC).ne.0) Then
@@ -301,8 +300,6 @@
                End If
 *
                Do iInter = 1, nInter
-c                 drdq(iInter,iLambda,iIter) =
-c    &              dEdq(iInter,iIter)
                   drdq(iInter,iLambda,iIter) =
      &              Sign(One,dEdq(iInter,iIter))
                   If (Abs(dEdq(iInter,iIter)).le.1.0D-6)
@@ -322,7 +319,6 @@ c    &              dEdq(iInter,iIter)
      &                                drdq(1,iLambda,iIter),1)
                RR_=Sqrt(DDot_(nInter,drdq(1,iLambda,iIter),1,
      &                             drdq(1,iLambda,iIter),1))
-C              Call DScal_(nInter,One/RR_,drdq(1,iLambda,iIter),1)
                Do jLambda = 1, nLambda
                   If (jLambda.ne.iLambda) Then
                      RG=DDot_(nInter,drdq(1,iLambda,iIter),1,
@@ -406,16 +402,16 @@ C              Call DScal_(nInter,One/RR_,drdq(1,iLambda,iIter),1)
      &                   T(1,ipTb),nInter,
      &               Zero,RT,nLambda)
 #ifdef _DEBUGPRINT_
-         Write (6,*) 'drdq^T T_b'
-         Call RecPrt('Con_Opt: RT',' ',RT,nLambda,nLambda)
+         Call RecPrt('Con_Opt: RT = drdq^T T_b',' ',
+     &               RT,nLambda,nLambda)
 #endif
 *
          Call MInv(RT,RTInv,iSing,Det,nLambda)
          Call mma_deallocate(RT)
 #ifdef _DEBUGPRINT_
-         Write (6,*) '(drdq^T T_b)^{-1}'
-         Call RecPrt('Con_Opt: RTInv',' ',RTInv,nLambda,nLambda)
-         Call RecPrt('Con_Opt: r',' ',r(1,iIter),nLambda,1)
+         Call RecPrt('Con_Opt: RTInv = (drdq^T T_b)^{-1}',' ',
+     &               RTInv,nLambda,nLambda)
+         Call RecPrt('Con_Opt: r(:,iIter)',' ',r(1,iIter),nLambda,1)
 #endif
 *
 *        dy = - (drdq^T T_b)^{-1} r(q)
@@ -426,8 +422,8 @@ C              Call DScal_(nInter,One/RR_,drdq(1,iLambda,iIter),1)
      &               Zero,dy,nLambda)
          Call mma_deallocate(RTInv)
 #ifdef _DEBUGPRINT_
-         Write (6,*) 'dy = - (drdq^T T_b)^{-1} r(q)'
-         Call RecPrt('Con_Opt: dy(full)',' ',dy,nLambda,1)
+         Call RecPrt('Con_Opt: dy(full) = - (drdq^T T_b)^{-1} r(q)',' ',
+     &               dy,nLambda,1)
 #endif
 *                                                                      *
 ************************************************************************
@@ -459,7 +455,8 @@ C              Call DScal_(nInter,One/RR_,drdq(1,iLambda,iIter),1)
             End Do
          End If
 #ifdef _DEBUGPRINT_
-         Call RecPrt('W',' ',Hessian,nInter,nInter)
+         Call RecPrt('W^0 = H^0 - Sum(i) l_{0,i} d2rdq2(q_0)',' ',
+     &                Hessian,nInter,nInter)
 #endif
 *                                                                      *
 ************************************************************************
@@ -547,7 +544,6 @@ C              Call DScal_(nInter,One/RR_,drdq(1,iLambda,iIter),1)
             Call RecPrt('Con_Opt: dEdq',' ',dEdq(1,iIter),1,nInter)
             Call RecPrt('Con_Opt: W',' ',Hessian,nInter,nInter)
             Call RecPrt('Con_Opt: T',' ',T,nInter,nInter)
-            Write (6,*) 'ipTb,ipTti=',ipTb,ipTti
             Call RecPrt('Con_Opt: dy',' ',dy,1,nLambda)
 #endif
 *
@@ -691,7 +687,7 @@ C              gBeta=gBeta*Sf
 *
 #ifdef _DEBUGPRINT_
          Write (6,*)
-         Write (6,*) 'Restrict actual dy step.'
+         Write (6,*) 'Restricting the dy step.'
          Write (6,*) 'Start: dy(:)=',dy(:)
          Write (6,*)
 #endif
@@ -776,6 +772,7 @@ C              gBeta=gBeta*Sf
 *
 #ifdef _DEBUGPRINT_
             Write (6,*) 'Step_trunc=',Step_trunc
+            Write (6,*) 'tmp=',tmp
             Write (6,*) 'Beta_Disp=',Beta_Disp
             Write (6,*) 'Beta=',Beta
 #endif
@@ -802,7 +799,7 @@ C              gBeta=gBeta*Sf
                Fact=One
             Else If (nSet>=2) Then
 
-!           For containts which themself are subject to estimates from
+!           For constraints which themself are subject to estimates from
 !           a surrogate model we will not try to take a step which close
 !           the error in the constraint better than the variance.
 
@@ -825,10 +822,6 @@ C              gBeta=gBeta*Sf
      &             Disp(2)<1.0D-4) Then
                  Fact=one
                Else If (Disp(2)>=Abs(DEnergy)) Then
-                 Fact = 0.1D0   ! just set it to something < 1
-                 Fact = 0.4D0   ! just set it to something < 1
-                 Fact = 0.5D0   ! just set it to something < 1
-                 Fact = 0.6D0   ! just set it to something < 1
                  Fact = 0.3D0   ! just set it to something < 1
                  If (Step_Trunc.eq.'N') Step_Trunc='*'
                Else
@@ -849,7 +842,6 @@ C              gBeta=gBeta*Sf
 #endif
             End If
 
-*
             iCount=1
             iCount_Max=100
             If (Step_Trunc.eq.'N') Step_Trunc=' '
@@ -890,14 +882,17 @@ C              gBeta=gBeta*Sf
                End If
  667        Continue
 #ifdef _DEBUGPRINT_
-            Write (6,*) 'Scaling Factor:', (One/Fact)
+            Write (6,*) 'Final scaling Factor:', (One/Fact)
 #endif
             dy(:)=(One/Fact)*dy(:)
 #ifdef _FindTS_
 *
 *           If a FindTS optimization hold back a bit. The purpose of
 *           the constrained optimization phase is actually not to
-*           find the constrained structure.
+*           find the constrained structure, but to sample some
+*           structures around where the constraints presumes the TS
+*           might be. In that process picking up the negative
+*           curvature.
 *
             If (iAnd(iOptC,4096).eq.4096) Then
                du(:)=Zero
@@ -981,7 +976,8 @@ C              gBeta=gBeta*Sf
          End Do
       End Do
 #ifdef _DEBUGPRINT_
-      Call RecPrt('Con_Opt: h(q,l)',' ',hql,nInter,nIter)
+      Call RecPrt('Con_Opt: h(q,l) = dEdq - drdq l_0^T',' ',
+     &            hql,nInter,nIter)
 #endif
 *                                                                      *
 ************************************************************************
@@ -998,7 +994,8 @@ C              gBeta=gBeta*Sf
          Energy(iIter)=Temp
       End Do
 #ifdef _DEBUGPRINT_
-      Call RecPrt('Con_Opt: Lagrangian',' ',Energy,nIter,1)
+      Call RecPrt('Con_Opt: Lagrangian, L = E + l r(q)',' ',
+     &            Energy,nIter,1)
 #endif
 *                                                                      *
 ************************************************************************
@@ -1024,7 +1021,8 @@ C              gBeta=gBeta*Sf
       End If
 *
 #ifdef _DEBUGPRINT_
-      Call RecPrt('Con_Opt: Hessian(raw)',' ',Hessian,nInter,nInter)
+      Call RecPrt('Con_Opt: Hessian before the update',' ',
+     &            Hessian,nInter,nInter)
       Write (6,*) 'iOptH=',iOptH
 #endif
       If (Step_Trunc.eq.'N') Step_Trunc=' '
@@ -1037,6 +1035,10 @@ C              gBeta=gBeta*Sf
 !     with GEK and second order optimization schemes it makes sense to
 !     use Hessian update methods since those will produce effective
 !     second order force constants.
+
+!     Moreover, for the energy difference and the non-adiabatic
+!     coupling vector we do not have analytic gradients. Hence, the
+!     Hessian is approximative and a Hessian update make sense.
 
       If (RVO) Then
          nWndw_=nIter-iFirst
@@ -1081,8 +1083,8 @@ C              gBeta=gBeta*Sf
      &               Zero,W,nInter-nLambda)
          Call mma_deallocate(Tmp2)
 #ifdef _DEBUGPRINT_
-         Write (6,*) 'the reduced Hessian, T_{ti}^T W T_{ti}'
-         Call RecPrt('Con_Opt: W',' ',W,nInter-nLambda,nInter-nLambda)
+         Call RecPrt('Con_Opt: the reduced Hessian, T_{ti}^T W T_{ti}',
+     &               ' ',W,nInter-nLambda,nInter-nLambda)
 #endif
 *                                                                      *
 ************************************************************************
@@ -1125,6 +1127,9 @@ C              gBeta=gBeta*Sf
          tBeta= Max(Beta*yBeta*Min(xBeta,gBeta),Beta/Ten)
          Thr_RS=1.0D-7
 #ifdef _DEBUGPRINT_
+         Write (6,*)
+         Write (6,*)  'Compute dx'
+         Write (6,*)
          Write (6,*) 'Step_Trunc(0)=',Step_Trunc
          Write (6,*)  'Beta=', Beta
          Write (6,*) 'yBeta=',yBeta
@@ -1181,7 +1186,7 @@ C              gBeta=gBeta*Sf
 *
 #ifdef _DEBUGPRINT_
       Write (6,*) 'Step_Trunc=',Step_trunc
-      Call RecPrt('Con_Opt: dx',' ',dx,nInter-nLambda,nIter)
+      Call RecPrt('Con_Opt: dx(actual)',' ',dx,nInter-nLambda,nIter)
 #endif
 *                                                                      *
 ************************************************************************
