@@ -67,14 +67,13 @@
     - docker
 
 .pgi:
-  image: ${CI_REGISTRY}/molcas/dockerfiles/pgi:latest
+  image: ${CI_REGISTRY}/molcas/dockerfiles/pgi:testing
   variables:
     cache_file: |
       set (DEFMOLCASMEM "1536" CACHE STRING "reduce memory")
-    # Add -tp=px flag to make the result more portable
-    CC: "pgcc '-tp=px'"
-    CXX: "pgc++ '-tp=px'"
-    FC: "pgfortran '-tp=px'"
+    CC: "pgcc"
+    CXX: "pgc++"
+    FC: "pgfortran"
   tags:
     - docker
 
