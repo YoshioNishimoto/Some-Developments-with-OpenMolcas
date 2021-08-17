@@ -13,12 +13,31 @@
 
 subroutine sompsoo_(iReturn)
 
+
+
+!> soMPSoo stuff
+use orbopt_header, only: print_orbopt_header    
+!> OpenMOLCAS stuff    
 use Definitions, only: iwp
+use Para_Info, only: King
+use Definitions, only: iwp, u6, r4
 
 implicit none
 
 integer(kind=iwp), intent(inout) :: iReturn
+character(len=256) :: refwfnfile
+logical(kind=iwp), parameter :: rel_ham = .false., from_molcas = .true.
 ! ----------------------------------------------------------------------
+
+if (KING()) then
+    !> initialize
+    refwfnfile = ''
+    !> print soMPSoo header
+    call print_orbopt_header(u6)
+    call xflush(u6)
+    write(u6,*) ' I was in soMPSoo ...'
+endif
+iReturn = 0
 
 !!> set DMRG driver as active space solver
 !call set_as_solver()
@@ -27,8 +46,7 @@ integer(kind=iwp), intent(inout) :: iReturn
 !call set_dmrg_settings()
 
 !> call wave function optimizer
-iReturn = 0
-write(6,*) ' I was in soMPSoo ...'
+
 !call rasscf(iReturn)
 
 !#ifdef _DMRG_
