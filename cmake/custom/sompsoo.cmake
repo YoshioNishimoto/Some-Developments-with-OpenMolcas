@@ -70,7 +70,7 @@ list(APPEND soMPSooCMakeArgs hasVeclib)
 ######################################
 # git references for soMPSoo         #
 ######################################
-set(reference_git_repo https://github.com/soMPSoo/beta-release.git)
+set(reference_git_repo git@github.com:soMPSoo/beta-release.git)
 set(reference_git_commit 0d59196)
 
 

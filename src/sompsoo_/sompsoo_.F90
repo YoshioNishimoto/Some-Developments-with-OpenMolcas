@@ -28,6 +28,7 @@ integer(kind=iwp), intent(inout) :: iReturn
 
 !> call wave function optimizer
 iReturn = 0
+write(6,*) ' I was in soMPSoo ...'
 !call rasscf(iReturn)
 
 !#ifdef _DMRG_
