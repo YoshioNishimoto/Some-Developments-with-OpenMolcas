@@ -60,8 +60,11 @@
       Real*8 Norm_fac
 CC VK2020 CC
 C     parallelization
+      integer :: itask, ltask, ltaski, ltaskj, ntasks
+#ifdef _MOLCAS_MPP_
       logical :: Rsv_Tsk
-      integer :: itask, ltask, ltaski, ltaskj, ntasks, ID
+      integer :: ID
+#endif
 C     transformed CI expansion in determinant basis
       real*8 :: rdetcoeff(ndetmax)
       real*8, allocatable :: detcoeff1(:), detcoeff2(:)
