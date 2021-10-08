@@ -29,11 +29,15 @@ character(len=256) :: refwfnfile
 logical(kind=iwp), parameter :: rel_ham = .false., from_molcas = .true.
 ! ----------------------------------------------------------------------
 
+!> make sure that in an MPI parallel setting, soMPSoo is called exclusively by the KING
 if (KING()) then
     !> initialize
     refwfnfile = ''
     !> print soMPSoo header
     call print_orbopt_header(u6)
+    call xflush(u6)
+    !> read and process input
+    call rdinput(refwfnfile)
     call xflush(u6)
     write(u6,*) ' I was in soMPSoo ...'
 endif
