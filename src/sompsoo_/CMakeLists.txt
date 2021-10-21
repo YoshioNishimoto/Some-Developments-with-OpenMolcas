@@ -13,6 +13,7 @@ set (sources
      main.F90
      sompsoo_.F90
      rdinput.F90
+     sompsoo_init.F90
 )
 
 include (${PROJECT_SOURCE_DIR}/cmake/prog_template.cmake)

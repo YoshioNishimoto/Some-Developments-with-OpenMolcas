@@ -16,7 +16,8 @@ subroutine sompsoo_(iReturn)
 
 
 !> soMPSoo stuff
-use orbopt_header, only: print_orbopt_header    
+use orbopt_header, only: print_orbopt_header
+use global_control, only: sopri  
 !> OpenMOLCAS stuff    
 use Definitions, only: iwp
 use Para_Info, only: King
@@ -33,8 +34,9 @@ logical(kind=iwp), parameter :: rel_ham = .false., from_molcas = .true.
 if (KING()) then
     !> initialize
     refwfnfile = ''
+    call sompsoo_init(refwfnfile)
     !> print soMPSoo header
-    call print_orbopt_header(u6)
+    call print_orbopt_header(sopri)
     call xflush(u6)
     !> read and process input
     call rdinput(refwfnfile)

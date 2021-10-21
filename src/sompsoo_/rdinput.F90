@@ -22,7 +22,7 @@ use global_control
 use Definitions, only: iwp, u6
 
 implicit none
-character(len=*), intent(out) :: refwfnfile
+character(len=*), intent(inout) :: refwfnfile
 character(len=180) :: Line, key
 integer(kind=iwp) :: LuSpool, iError
 integer(kind=iwp), external :: isFreeUnit
@@ -33,50 +33,7 @@ integer(kind=iwp) :: istep, estep, k, l, ierr, nstep
 character(len=10) :: local_method
 
 
-! Initial values
-ifcore           = .false.
-do_soMPSoo_srdft = .false.
-sopri            = u6;
-
-! If (default) further SA-DMRG-SCF is needed for
-!     Coupled-Perturbation/Lagrange calculations
-DMRG_SCF= .true.
-! include active-active rotations
-aaRotations = .false.
-
-!> number of point-group irreps
-orb%nsub = -1
-
-!> number of states to optimize
-dmrg_nstates = 1
-
-!> always allow a coupling between orbitals and MPS in WMK solver
-CP_integrals=.true.
-ith_INTE = 2
-
-!> default NL solver is AH
-do i=1,MAX_macro_iterations
-  method(i)="AH        "
-end do
-
 istep = 1; estep = 0; i = 0; j=0; k = 0; l = 0;
-
-! initialize optimization parameters
-thrs%r         = 1.0d-8   ! rotation
-thrs%s         = 1.0d-8   ! symmetry
-thrs%e         = 1.0d-8   ! energy
-thrs%d         = 1.0d-12  ! davidson
-thrs%c         = 1.0d-4   ! coupling
-Nmps_update    = 10
-Nint_update    = 0
-!> max micro-iterations
-Max_iter             = 10
-!> max macro-iterations
-num_macro_iterations = -1
-
-
-!> OpenMolcas initial values
-refwfnfile = 'JOBIPH'
 
 LuSpool = isFreeUnit(18)
 call SpoolInp(LuSpool)
