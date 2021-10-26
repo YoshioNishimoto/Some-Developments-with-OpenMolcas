@@ -82,11 +82,11 @@ rones(:) = B(:)     ! Move result over to storage for later use, (R^{-1} f)
 
 detR = Zero
 do i=1,m_t
-#ifdef _DPOSV_
+# ifdef _DPOSV_
   detR = detR+Two*log(A(i,i))
-#else
+# else
   detR = detR+log(abs(A(i,i)))
-#endif
+# endif
 end do
 
 !
@@ -132,7 +132,7 @@ else
 
   ordinary = .true.
 
-  ! Note dy only containes gradients for the set of points which we are considering
+  ! Note dy only contains gradients for the set of points which we are considering
   ! B(:) = [y(:),dy(:)]  original code before PGEK implementation
 
   B(1:nPoints) = y(1:nPoints,1)
