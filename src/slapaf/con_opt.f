@@ -77,6 +77,7 @@
       Real*8, Allocatable:: RT(:,:), RTInv(:,:), RRR(:,:), RRInv(:,:),
      &                      RR(:,:), Tdy(:), Tr(:), WTr(:),
      &                      Hessian(:,:)
+      Character*8, Allocatable :: LblSave(:)
       Real*8, Save:: Beta_Disp_Save=Zero,Disp_Save=Zero
       Real*8 :: Disp(3)=[Zero,Zero,Zero]
       Real*8, Parameter:: Beta_Disp_Min=1.0D-10
