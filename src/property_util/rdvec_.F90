@@ -23,7 +23,8 @@ subroutine RDVEC_(FName,LU_,LABEL,IUHF,NSYM,NBAS,NORB,CMO,CMO_ab,OCC,OCC_ab,EORB
 !           5  -- Orbitals for unrestricted DFT
 !           6  -- Natural orbitals for unrestricted HF
 !           7  -- Natural orbitals for unrestricted DFT
-!           8  --
+!           8  -- Natural orbitals for RASSI-SO wave functions
+!           9  --
 !-----------------------------------------------------------------------
 
 use InpOrbFmt, only: FmtEne, FmtInd, FmtOcc, FmtOrb, mxVer, Magic, nDivEne, nDivInd, nDivOcc, nDivOrb, nSkpInd
@@ -133,6 +134,9 @@ if (istatus /= 0) call Error()
 !----------------------------------------------------------------------*
 ! Do checks                                                            *
 !----------------------------------------------------------------------*
+if(iWFtype == 8)then
+  iEne = 0; iInd =0
+end if
 do i=1,NSYM
   if (myNBAS(i) /= NBAS(i)) then
     Line = 'NBAS does not match'

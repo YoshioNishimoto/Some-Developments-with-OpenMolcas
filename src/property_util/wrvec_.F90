@@ -22,7 +22,8 @@ subroutine WRVEC_(FName,LU_,LABEL,IUHF,NSYM,NBAS,NORB,CMO,CMO_ab,OCC,OCC_ab,EORB
 !           5  -- Orbitals for unrestricted DFT
 !           6  -- Natural orbitals for unrestricted HF
 !           7  -- Natural orbitals for unrestricted DFT
-!           8  --
+!           8  -- Natural orbitals for RASSI-SO wave functions
+!           9  --
 !-----------------------------------------------------------------------
 
 use InpOrbFmt, only: FmtEne, FmtInd, FmtOcc, FmtOccHR, FmtOrb, iVer22, Magic, mxVer, nDivEne, nDivInd, nDivOcc, nDivOccHR, &

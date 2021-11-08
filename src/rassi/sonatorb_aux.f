@@ -28,6 +28,7 @@
       CHARACTER CDIR
       INTEGER ASS,BSS
       DIMENSION Dummy(1),iDummy(7,8)
+      DIMENSION VDUM(2)
 
 
 
@@ -264,9 +265,9 @@ C WRITE OUT THIS SET OF NATURAL SPIN ORBITALS
         LuxxVec=50
         LuxxVec=isfreeunit(LuxxVec)
 
-        CALL WRVEC(FNAME,LUXXVEC,'CO',NSYM,NBASF,NBASF,
-     &     WORK(LVNAT), WORK(LOCC), Dummy, iDummy,
-     &     '* DENSITY FOR PROPERTY TYPE ' // CHARTYPE // KNUM )
+        CALL WRVEC_(FNAME,LUXXVEC,'CO',0,NSYM,NBASF,NBASF,
+     &     WORK(LVNAT), vDum,WORK(LOCC), vDum, Dummy, vDum, iDummy,
+     &     '* DENSITY FOR PROPERTY TYPE ' // CHARTYPE // KNUM, 8)
 
 c       Test a few values
 C        CALL ADD_INFO("SONATORB_PLOT", WORK(LVNAT), 1, 4)
@@ -312,6 +313,8 @@ c    ONLYFOR NATURAL ORBITALS
       CHARACTER CDIR
       INTEGER ASS,BSS
       DIMENSION IDUM(1),Dummy(1),iDummy(7,8)
+      DIMENSION vDum(2)
+
 
 
 
@@ -741,9 +744,9 @@ C REAL PART
         LuxxVec=50
         LuxxVec=isfreeunit(LuxxVec)
 
-        CALL WRVEC(FNAME,LUXXVEC,'CO',NSYM,NBASF,NBASF,
-     &     WORK(LVNAT), WORK(LOCC), Dummy, iDummy,
-     &     '* DENSITY FOR PROPERTY TYPE ' // CHARTYPE // KNUM )
+        CALL WRVEC_(FNAME,LUXXVEC,'CO',0,NSYM,NBASF,NBASF,
+     &     WORK(LVNAT), vDum,WORK(LOCC), vDum, Dummy, vDum, iDummy,
+     &     '* DENSITY FOR PROPERTY TYPE ' // CHARTYPE // KNUM, 8)
 
 C IMAGINARY PART
        IF(ITYPE.LE.2) THEN
@@ -767,9 +770,10 @@ C IMAGINARY PART
         LuxxVec=50
         LuxxVec=isfreeunit(LuxxVec)
 
-        CALL WRVEC(FNAME,LUXXVEC,'CO',NSYM,NBASF,NBASF,
-     &     WORK(LVNATI), WORK(LOCC), Dummy, iDummy,
-     &     '* DENSITY FOR PROPERTY TYPE ' // CHARTYPE // KNUM )
+        CALL WRVEC_(FNAME,LUXXVEC,'CO',0,NSYM,NBASF,NBASF,
+     &     WORK(LVNATI), vDum,WORK(LOCC), vDum, Dummy, vDum, iDummy,
+     &     '* DENSITY FOR PROPERTY TYPE ' // CHARTYPE // KNUM, 8)
+
 
 c       Test a few values
 C        CALL ADD_INFO("SONATORB_CPLOTR", WORK(LVNAT), 1, 4)
