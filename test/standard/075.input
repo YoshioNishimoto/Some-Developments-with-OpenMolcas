@@ -38,6 +38,7 @@
   RlxRoot = 1
 
 &ALASKA
+CutOff=1.0D-9
 
 >>> COPY $Project.RunFile $Project.RunFile2
 
