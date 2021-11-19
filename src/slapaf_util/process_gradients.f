@@ -19,10 +19,11 @@
 #include "real.fh"
 #include "stdalloc.fh"
       Logical Found, Exist
-      Integer i,nRoots,RC,Read_Grad,Columbus, nsAtom
+      Integer i,nRoots,RC,Columbus, nsAtom,jter,kter
       Real*8, Allocatable :: Grads(:,:), Ener(:)
-      Real*8 E0, E1
-      External Read_Grad
+      Real*8 E0, E1, plop
+      Integer, External:: Read_Grad
+      Real*8, External:: DDot_
 *
       Request_Alaska=.False.
       nsAtom=SIZE(Gx,2)
@@ -145,7 +146,30 @@
               ApproxNADC=.True.
               Call Branching_Plane_Update(Gx,Gx0,NAC(1,1,iter),
      &                                    3*nsAtom,iter)
+*             Since this NAC is approximative it can not be used for
+*             updating of the Hessian. Thus, we will disable that by
+*             setting all NACs to the same vector.
+*
+              If (iter>1) Then
+                 Do jter = 1, iter-1
+                    NAC(:,:,jter)=NAC(:,:,iter)
+                 End Do
+              End If
             End If
+*
+*           The non-adiabatic vector is only used to define the
+*           branching supspace. In this sense the asolute direction
+*           is not of interest. However, for updating the Hessian, W,
+*           the direction makes a huge difference. To avoid problems
+*           we will let the last NAC vector define the standard direction.
+*
+            If (iter>2) Then
+            Do jter = iter-1, 1, -1
+               kter=jter+1
+               plop=DDot_(3*nsAtom,NAC(1,1,jter),1,NAC(1,1,kter),1)
+               NAC(:,:,jter)=Sign(One,plop)*NAC(:,:,jter)
+            End Do
+          End If
           End If
           nSet = 3
         Else
@@ -155,6 +179,7 @@
           nSet = 2
         End If
       End If
+*
 *
       Call mma_Deallocate(Ener)
       Call mma_Deallocate(Grads)

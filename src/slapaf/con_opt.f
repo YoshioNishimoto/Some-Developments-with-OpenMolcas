@@ -85,7 +85,7 @@
 *                                                                      *
 ************************************************************************
 *                                                                      *
-#define _DEBUGPRINT_
+*#define _DEBUGPRINT_
 #ifdef _DEBUGPRINT_
       Write (6,*)
       Write (6,*) '****************************************************'
@@ -1059,8 +1059,9 @@ C              gBeta=gBeta*Sf
      &              hql,iOptH_,jPrint,Dummy,nsAtom,.False.,.False.)
 
 #ifdef _DEBUGPRINT_
-      Call RecPrt('Con_Opt: Hessian(updated)',' ',Hessian,nInter,nInter)
+      Call RecPrt('Con_Opt: W(updated)',' ',Hessian,nInter,nInter)
       Write (6,*) 'Step_Trunc=',Step_trunc
+      Call DiagMtrx(Hessian,nInter,iNeg)
 #endif
 *                                                                      *
 ************************************************************************
@@ -1086,6 +1087,7 @@ C              gBeta=gBeta*Sf
 #ifdef _DEBUGPRINT_
          Call RecPrt('Con_Opt: the reduced Hessian, T_{ti}^T W T_{ti}',
      &               ' ',W,nInter-nLambda,nInter-nLambda)
+         Call DiagMtrx(W,nInter-nLambda,iNeg)
 #endif
 *                                                                      *
 ************************************************************************
@@ -1226,6 +1228,10 @@ C              gBeta=gBeta*Sf
       du(:)=Zero
       du(1:nLambda)=dy(1:nLambda)
       du(1+nLambda:nInter)=dx(:,nIter)
+#ifdef _DEBUGPRINT_
+      Call RecPrt('du',' ',du,1,nInter)
+#endif
+
 
 *     For kriging, in the last 10 micro iterations, give up trying to
 *     optimize and just focus on fulfilling the constraints.
@@ -1238,6 +1244,10 @@ C              gBeta=gBeta*Sf
          Recompute_disp=.True.
       End If
       Call Backtrans_T(du,dq(1,nIter))
+#ifdef _DEBUGPRINT_
+      Call RecPrt('dq(dx+dy)',' ',dq(:,nIter),1,nInter)
+#endif
+
 *
 *     Compute q for the next iteration
 *

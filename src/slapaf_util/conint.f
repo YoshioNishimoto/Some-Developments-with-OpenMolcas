@@ -21,7 +21,7 @@
 *
       E1 = Energy (lIter)
       E0 = Energy0(lIter)
-#define _DEBUGPRINT_
+*#define _DEBUGPRINT_
 #ifdef _DEBUGPRINT_
       nAtoms = SIZE(Gx,2)
       Write (6,*) 'ConInt: lIter=',lIter
@@ -95,6 +95,7 @@ C------- Absolute value ----------
             Write (6,'( A,F18.8,A)') '           E(j)              = ',
      &                               E0   , ' hartree'
          End If
+#ifdef _DEBUGPRINT_
          Select Case (iOpt)
          Case (1)
            Write (6,*) 'Option: Linear'
@@ -103,6 +104,7 @@ C------- Absolute value ----------
          Case (3)
            Write (6,*) 'Option: Absolute value'
          End Select
+#endif
       End If
 *
 *---- Compute the WDC B-matrix

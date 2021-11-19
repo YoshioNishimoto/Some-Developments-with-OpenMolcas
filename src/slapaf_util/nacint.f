@@ -33,7 +33,7 @@
             Bf(iCar,iCent)=Fact*NAC(iCar,iCent,lIter)
          End Do
       End Do
-#define _DEBUGPRINT_
+*#define _DEBUGPRINT_
 #ifdef _DEBUGPRINT_
       Write (6,*) 'NACInt, lIter:',lIter
       Call RecPrt('NAC',' ',NAC(1,1,lIter),3,nCent)

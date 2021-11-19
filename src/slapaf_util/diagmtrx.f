@@ -23,6 +23,7 @@
       Lu=6
       iRout=21
       iPrint=nPrint(iRout)
+      iprint=99
 *
       Call mma_allocate(EVal,nH*(nH+1)/2,Label='EVal')
       Call mma_allocate(EVec,nH*nH,Label='EVec')
