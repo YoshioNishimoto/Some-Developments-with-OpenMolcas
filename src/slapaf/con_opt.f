@@ -810,9 +810,11 @@ C              gBeta=gBeta*Sf
 #endif
                If (iIter>1) Then
                   Call Dispersion_Kriging_Layer(q(1,iIter),disp,nInter)
+#ifdef _DEBUGPRINT_
                   D0=Disp(2)
                Else
                   D0=Zero
+#endif
                End If
                q(:,iIter+1)=q(:,iIter)+dq_xy(:)
                Call Dispersion_Kriging_Layer(q(1,iIter+1),disp,nInter)
