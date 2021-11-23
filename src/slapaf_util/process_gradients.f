@@ -14,7 +14,7 @@
       use Slapaf_Info, only: Gx, Gx0, NAC, Energy, Energy0, RootMap
       use Slapaf_Parameters, only: Request_Alaska, TwoRunFiles, iter,
      &                             NADC, ApproxNADC, iState
-      use Kriging_Mod, only: nSet
+      use Kriging_Mod, only: nSet, Max_Microiterations
       Implicit None
 #include "real.fh"
 #include "stdalloc.fh"
@@ -31,7 +31,7 @@
 *
 *     First check that all the needed gradients are available
 *     and stop to compute them if they are not.
-*     For a two-RunFile job, this behaves as if it's one state.
+*     For a two-RunFile job, this behaves as if it is one state.
 *
       If (TwoRunFiles) Then
         iState(1)=0
@@ -155,6 +155,7 @@
                     NAC(:,:,jter)=NAC(:,:,iter)
                  End Do
               End If
+              Max_Microiterations=1
             End If
 *
 *           The non-adiabatic vector is only used to define the
