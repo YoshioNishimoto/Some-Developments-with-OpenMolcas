@@ -756,6 +756,8 @@ C              gBeta=gBeta*Sf
 #endif
             If (iIter.ne.nIter) Go to 667
 *
+*           Pick up the largest element of the gradient of the
+*           constraints.
             tmp=Zero
             Do i = 1, nLambda
                Do j = 1, nInter
@@ -773,9 +775,10 @@ C              gBeta=gBeta*Sf
 *
 #ifdef _DEBUGPRINT_
             Write (6,*) 'Step_trunc=',Step_trunc
+            Write (6,*) 'CnstWght=',CnstWght
+            Write (6,*) 'Beta=',Beta
             Write (6,*) 'tmp=',tmp
             Write (6,*) 'Beta_Disp=',Beta_Disp
-            Write (6,*) 'Beta=',Beta
 #endif
 *
 #ifdef _DEBUGPRINT_
@@ -800,14 +803,20 @@ C              gBeta=gBeta*Sf
                Fact=One
             Else If (nSet>=2) Then
 
-!           For constraints which themself are subject to estimates from
-!           a surrogate model we will not try to take a step which close
-!           the error in the constraint better than the variance.
+!              We have now two or three different functions we are
+!              kriging -- the energy difference and possibly the
+!              H12 term in addition to the ground state energy.
+
+!              For constraints which themself are subject to estimates
+!              from a surrogate model we will not try to take a step
+!              which smaller in the error in the constraint than the
+!              actual variance.
 
 
 #ifdef _DEBUGPRINT_
                Write (6,*) 'Step_Trunc=',Step_Trunc
 #endif
+!              Compute the dispersion at the reference point.
                If (iIter>1) Then
                   Call Dispersion_Kriging_Layer(q(1,iIter),disp,nInter)
 #ifdef _DEBUGPRINT_
@@ -816,26 +825,55 @@ C              gBeta=gBeta*Sf
                   D0=Zero
 #endif
                End If
+
+!              Compute the dispersion at the new point.
                q(:,iIter+1)=q(:,iIter)+dq_xy(:)
                Call Dispersion_Kriging_Layer(q(1,iIter+1),disp,nInter)
 
-!              If the dipersion is small relative to the energy change
-!              take the full step.
-               If (Disp(2)/Abs(DEnergy)<1.0D-1 .or.
-     &             Disp(2)<1.0D-4) Then
-                 Fact=one
-               Else If (Disp(2)>=Abs(DEnergy)) Then
-                 Fact = 0.3D0   ! just set it to something < 1
+!              If the energy difference is small don't even try to
+!              microiterate.
+               Ds = Sqrt(Disp(2)**2+Disp(3)**2)
+*              Ds = Disp(2)
+
+#define _NEWCODE_
+#ifdef _NEWCODE_
+               If (Abs(DEnergy)<5.0D-4  .AND.
+     &             Abs(DEnergy)>1.0D-7) Then
+                  If (Step_Trunc.eq.'N') Step_Trunc='*'
+               End If
+
+!              If the dipersion of the energy difference is small
+!              relative to the energy gap take the full step.
+!              Note that the threshold
+!              here are completely empirical (at best).
+
+               If (Ds/Abs(DEnergy)<1.0D-1 .or.
+     &             Ds<1.0D-4) Then
+                  Fact = One
+               Else If (Ds<=Abs(DEnergy)) Then
+                  Fact = (Abs(DEnergy) - Ds)/Abs(DEnergy)
+                  If (Step_Trunc.eq.'N') Step_Trunc='*'
+               Else
+                  Fact = 3.0D-1
+                  If (Step_Trunc.eq.'N') Step_Trunc='*'
+               End If
+#else
+               If (Ds/Abs(DEnergy)<1.0D-1 .or.
+     &             Ds<1.0D-4) Then
+                 Fact=One
+               Else If (Ds<=Abs(DEnergy)) Then
+                 Fact = (Abs(DEnergy)-Ds)/Abs(DEnergy)
                  If (Step_Trunc.eq.'N') Step_Trunc='*'
                Else
-                 Fact = (Abs(DEnergy)-Disp(2))/Abs(DEnergy)
+                 Fact = 0.3D0   ! just set it to something < 1
                  If (Step_Trunc.eq.'N') Step_Trunc='*'
                End If
+#endif
                Fact = One/Fact
 #ifdef _DEBUGPRINT_
                Write (6,*)
-               Write (6,*) 'Step_Trunc=',Step_Trunc
                Write (6,*) 'DEnergy=',DEnergy
+               Write (6,*) 'Step_Trunc=',Step_Trunc
                Write (6,*) 'D0=',D0
                Write (6,*) 'Disp(1)=',Disp(1)
                Write (6,*) 'Disp(2)=',Disp(2)
@@ -844,6 +882,8 @@ C              gBeta=gBeta*Sf
                Write (6,*)
 #endif
             End If
+
+!           start iterative procedure to find the correct step
 
             iCount=1
             iCount_Max=100
@@ -854,6 +894,7 @@ C              gBeta=gBeta*Sf
                Call Backtrans_T(du,dq_xy)
                q(:,iIter+1)=q(:,iIter)+dq_xy(:)
 *
+!              Compute the norm of the dispersion.
                Call Dispersion_Kriging_Layer(q(1,iIter+1),disp,nInter)
                Disp_T=Sqrt(disp(1)**2+Disp(2)**2+Disp(3)**2)
 *
@@ -864,10 +905,13 @@ C              gBeta=gBeta*Sf
                   disp_short=disp_long+One
                End If
 #ifdef _DEBUGPRINT_
-               Write (6,*) 'disp_T,Fact,iCount=', disp_T,Fact,iCount
+               Write (6,*)
+               Write (6,*) 'iCount=', iCount
+               Write (6,*) 'Fact=', Fact
                Write (6,*) 'disp(1)=', disp(1)
                Write (6,*) 'disp(2)=', disp(2)
                Write (6,*) 'disp(3)=', disp(3)
+               Write (6,*) 'disp_T=', disp_T
                Write (6,*) 'Beta_Disp=',Beta_Disp
 #endif
                If (disp_T.gt.Beta_Disp .or. iCount.gt.1) Then
