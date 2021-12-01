@@ -69,7 +69,6 @@
          iCmp  = iSD( 2,iSkal)
          iBas  = iSD( 3,iSkal)
          iBas_Eff=list_bas(1,ilist_s)
-         ix = iDAMax_(mAO*mGrid*iBas_Eff*iCmp,TabAO(ipTabAO(iList_s)),1)
          kDCRE=list_s(2,ilist_s)
          index_i=list_bas(2,ilist_s)
          mdci  = iSD(10,iSkal)

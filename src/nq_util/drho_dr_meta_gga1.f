@@ -76,7 +76,6 @@
          kDCRE = list_s(2,ilist_s)
          iCmp  = iSD( 2,iS)
          iBas_Eff=list_bas(1,ilist_s)
-         ix = iDAMax_(mAO*mGrid*iBas_Eff*iCmp,TabAO(ipTabAO(iList_s)),1)
          iBas  = iSD( 3,iS)
          mdci  = iSD(10,iS)
          iShell= iSD(11,iS)

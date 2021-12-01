@@ -77,7 +77,6 @@
 *        Get the number of basis functions in the shell
          iBas_Eff=list_bas(1,ilist_s)
 *        Get the index of the largest AO value
-         ix = iDAMax_(mAO*mGrid*iBas_Eff*iCmp,TabAO(ipTabAO(iList_s)),1)
          kDCRE=list_s(2,ilist_s)
          iShell= iSD(11,iSkal)
          mdci  = iSD(10,iSkal)
