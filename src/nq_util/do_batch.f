@@ -1863,7 +1863,7 @@ cGLM     write(6,*) 'Func in do_batch =', Func
      &                      FckInt,nFckInt,SOTemp,nSOTemp,
      &                      TabAO,ipTabAO,nTabAO,dF_dRho,ndF_dRho,
      &                      nSym,nD,Flop,Rho,nRho,Work(ipTmp),nTmp,
-     &                      Work(ip_Fact),ndc,mAO,Work(ipTabAOMax),T_Y,
+     &                      Work(ip_Fact),ndc,mAO,
      &                      list_bas,Functional_type,nAOMax)
              End If
            End If
@@ -1970,14 +1970,14 @@ cGLM     write(6,*) 'Func in do_batch =', Func
 !     &                      FckInt,nFckInt,SOTemp,nSOTemp,
 !     &                      TabAO,ipTabAO,nTabAO,dF_dRho,ndF_dRho,
 !     &                      nSym,nD,Flop,Rho,nRho,Work(ipTmp),nTmp,
-!     &                      Work(ip_Fact),ndc,mAO,Work(ipTabAOMax),T_Y,
+!     &                      Work(ip_Fact),ndc,mAO,
 !     &                      list_bas,Functional_type,nAOMax)
              If(.not.l_casdft) then
                Call DFT_Int(Weights,mGrid,list_s,nlist_s,AOInt,nAOInt,
      &                      FckInt,nFckInt,SOTemp,nSOTemp,
      &                      TabAO,ipTabAO,nTabAO,dF_dRho,ndF_dRho,
      &                      nSym,nD,Flop,Rho,nRho,Work(ipTmp),nTmp,
-     &                      Work(ip_Fact),ndc,mAO,Work(ipTabAOMax),T_Y,
+     &                      Work(ip_Fact),ndc,mAO,
      &                      list_bas,Functional_type,nAOMax)
              end if
            End If
@@ -2006,7 +2006,7 @@ cGLM     write(6,*) 'Func in do_batch =', Func
      &                 FckInt,nFckInt,SOTemp,nSOTemp,
      &                 TabAO,ipTabAO,nTabAO,dF_dRho,ndF_dRho,
      &                 nSym,nD,Flop,Rho,nRho,Work(ipTmp),nTmp,
-     &                 Work(ip_Fact),ndc,mAO,Work(ipTabAOMax),T_Y,
+     &                 Work(ip_Fact),ndc,mAO,
      &                 list_bas,Functional_type,nAOMax)
 *                                                                      *
 ************************************************************************

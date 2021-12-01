@@ -16,7 +16,7 @@
      &                    FckInt,nFckInt,SOTemp,nSOTemp,
      &                    TabAO,ipTabAO,nTabAO,dF_dRho,ndF_dRho,
      &                    nSym,iSpin,Flop,Rho,nRho,Scr,nScr,
-     &                    Fact,ndc,mAO,TabAOMax,T_X,list_bas,nFn)
+     &                    Fact,ndc,mAO,list_bas,nFn)
 ************************************************************************
 *                                                                      *
 * Object: to compute contributions to                                  *
@@ -44,7 +44,7 @@
       Real*8 Weights(mGrid), SOTemp(nSOTemp,iSpin), Fact(ndc**2),
      &       TabAO(nTabAO), Scr(nScr*mGrid), Rho(nRho,mGrid),
      &       AOInt(nAOInt*nAOInt,iSpin), FckInt(nFckInt,iSpin),
-     &       dF_dRho(ndF_dRho,mGrid), TabAOMax(nlist_s)
+     &       dF_dRho(ndF_dRho,mGrid)
       Integer nOp(2), list_s(2,nlist_s), ipTabAO(nlist_s),
      &        list_bas(2,nlist_s)
 *                                                                      *
@@ -63,8 +63,6 @@
       nGrid_Tot=0
       Do ilist_s=1,nlist_s
          iSkal = list_s(1,ilist_s)
-         TMax_i=TabAOMax(ilist_s)
-         If (TMax_i.le.T_X) Go To 999
          kDCRE = list_s(2,ilist_s)
          iShll = iSD( 0,iSkal)
          iAng  = iSD( 1,iSkal)
@@ -79,8 +77,6 @@
 *
          Do jlist_s=ilist_s,nlist_s
             jSkal = list_s(1,jlist_s)
-            TMax_j=TabAOMax(jlist_s)
-            If (TMax_j.le.T_X) Go To 998
             kDCRR = list_s(2,jlist_s)
             jShll = iSD( 0,jSkal)
             jAng  = iSD( 1,jSkal)
@@ -107,7 +103,6 @@
                jx = iDAMax_(iSpin*mAO*mGrid*iBas_Eff*iCmp,Scr,1)
                VMax=Abs(Scr(jx))
             Else
-               If (VMax*TMax_j.le.T_X) Go To 998
                Call Do_NInt(AOInt,nAOInt,mGrid,
      &                      Scr,iCmp,iBas_Eff,
      &                      TabAO(ipTabAO(jList_s)),jCmp,jBas_Eff,

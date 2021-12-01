@@ -65,11 +65,18 @@
 ************************************************************************
 *                                                                      *
 *
+*     Loop over the shells
+*
       Do ilist_s=1,nlist_s
+
+*        Pick up shell information
          iSkal = list_s(1,ilist_s)
          iCmp  = iSD( 2,iSkal)
          iBas  = iSD( 3,iSkal)
+
+*        Get the number of basis functions in the shell
          iBas_Eff=list_bas(1,ilist_s)
+*        Get the index of the largest AO value
          ix = iDAMax_(mAO*mGrid*iBas_Eff*iCmp,TabAO(ipTabAO(iList_s)),1)
          TabAOMax(ilist_s)=Abs(TabAO(ipTabAO(ilist_s)-1+ix))
          TMax_i=TabAOMax(ilist_s)

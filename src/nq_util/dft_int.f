@@ -14,8 +14,7 @@
      &                   FckInt,nFckInt,SOTemp,nSOTemp,
      &                   TabAO,ipTabAO,nTabAO,dF_dRho,ndF_dRho,
      &                   nSym,iSpin,Flop,Rho,nRho,Scr,mScr,
-     &                   Fact,ndc,mAO,TabAOMax,T_X,
-     &                   list_bas,Functional_type,nAOMax)
+     &                   Fact,ndc,mAO,list_bas,Functional_type,nAOMax)
 ************************************************************************
 *                                                                      *
 * Object: Front-end for compting DFT integrals                         *
@@ -33,7 +32,7 @@
       Real*8 Weights(mGrid), SOTemp(nSOTemp,iSpin), Fact(ndc**2),
      &       TabAO(nTabAO), Scr(mScr), Rho(nRho,mGrid),
      &       AOInt(nAOInt*nAOInt,iSpin), FckInt(nFckInt,iSpin),
-     &       dF_dRho(ndF_dRho,mGrid), TabAOMax(nlist_s)
+     &       dF_dRho(ndF_dRho,mGrid)
       Integer list_s(2,nlist_s), ipTabAO(nlist_s), list_bas(2,nlist_s)
 *                                                                      *
 ************************************************************************
@@ -46,8 +45,7 @@
      &                 FckInt,nFckInt,SOTemp,nSOTemp,
      &                 TabAO,ipTabAO,nTabAO,dF_dRho,ndF_dRho,
      &                 nSym,iSpin,Flop,Rho,nRho,Scr,nScr,
-     &                 Fact,ndc,mAO,TabAOMax,T_X,
-     &                 list_bas,nFn)
+     &                 Fact,ndc,mAO,list_bas,nFn)
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -59,8 +57,7 @@
      &                 FckInt,nFckInt,SOTemp,nSOTemp,
      &                 TabAO,ipTabAO,nTabAO,dF_dRho,ndF_dRho,
      &                 nSym,iSpin,Flop,Rho,nRho,Scr,nScr,
-     &                 Fact,ndc,mAO,TabAOMax,T_X,
-     &                 list_bas,nFn)
+     &                 Fact,ndc,mAO,list_bas,nFn)
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -72,8 +69,7 @@
      &                 FckInt,nFckInt,SOTemp,nSOTemp,
      &                 TabAO,ipTabAO,nTabAO,dF_dRho,ndF_dRho,
      &                 nSym,iSpin,Flop,Rho,nRho,Scr,nScr,
-     &                 Fact,ndc,mAO,TabAOMax,T_X,
-     &                 list_bas,nFn)
+     &                 Fact,ndc,mAO,list_bas,nFn)
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -85,8 +81,7 @@
      &                 FckInt,nFckInt,SOTemp,nSOTemp,
      &                 TabAO,ipTabAO,nTabAO,dF_dRho,ndF_dRho,
      &                 nSym,iSpin,Flop,Rho,nRho,Scr,nScr,
-     &                 Fact,ndc,mAO,TabAOMax,T_X,
-     &                 list_bas,nFn)
+     &                 Fact,ndc,mAO,list_bas,nFn)
 *                                                                      *
 ************************************************************************
 *                                                                      *
