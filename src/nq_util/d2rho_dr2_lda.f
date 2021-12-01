@@ -139,12 +139,6 @@
             ip_D_b=ip_D_a
             If (nD.ne.1) ip_D_b=ipDSij+lDCRER*mDij
 *
-            ix=iDAMax_(mDij,DeDe(ip_D_a),1)
-            DMax_ij=Abs(DeDe(ip_D_a-1+ix))
-            If (nD.ne.1) Then
-               ix=iDAMax_(mDij,DeDe(ip_D_b),1)
-               DMax_ij=DMax_ij+Abs(DeDe(ip_D_a-1+ix))
-            End If
 #ifdef _DEBUGPRINT_
             If (Debug) Then
                Write (6,*) 'd2Rho_dR2_LDA'

@@ -90,15 +90,6 @@
          ip_D_b=ip_D_a
          If (nD.ne.1) ip_D_b=ipDSij+lDCRER*mDij
 *
-         If (nD.ne.1) Then
-            ix=iDAMax_(mDij,DeDe(ip_D_a),1)
-            iy=iDAMax_(mDij,DeDe(ip_D_b),1)
-            DMax_ii=Half*( Abs(DeDe(ip_D_a-1+ix))
-     &                    +Abs(DeDe(ip_D_b-1+iy)) )
-         Else
-            ix=iDAMax_(mDij,DeDe(ip_D_a),1)
-            DMax_ii=Abs(DeDe(ip_D_a-1+ix))
-         End If
          If (nD.eq.1) Then
             Call Do_Rho9a_d(Rho,nRho,mGrid,
      &                      DeDe(ip_D_a),mAO,
@@ -150,15 +141,6 @@
             ip_D_b=ip_D_a
             If (nD.ne.1) ip_D_b=ipDSij+lDCRER*mDij
 *
-            If (nD.ne.1) Then
-               ix=iDAMax_(mDij,DeDe(ip_D_a),1)
-               iy=iDAMax_(mDij,DeDe(ip_D_b),1)
-               DMax_ij=Half*( Abs(DeDe(ip_D_a-1+ix))
-     &                       +Abs(DeDe(ip_D_b-1+iy)) )
-            Else
-               ix=iDAMax_(mDij,DeDe(ip_D_b),1)
-               DMax_ij=Abs(DeDe(ip_D_a-1+ix))
-            End If
 #ifdef _DEBUGPRINT_
             If (Debug) Then
                Write (6,*) 'Rho_meta_GGA2'
