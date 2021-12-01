@@ -792,7 +792,7 @@ C    &                         ndRho_dr,mGrid,list_s,nlist_s,
 C    &                         TabAO,ipTabAO,mAO,nTabAO,
 C    &                         nGrad_Eff,list_g,
 C    &                         Grid_Type,Fixed_Grid,
-C    &                         Work(ip_Fact),ndc,Work(ipTmp),T_X,
+C    &                         Work(ip_Fact),ndc,
 C    &                         list_bas,Index,nIndex)
 *
       Else If (Functional_type.eq.GGA_type) Then
@@ -807,7 +807,7 @@ C    &                         list_bas,Index,nIndex)
      &                       TabAO,ipTabAO,mAO,nTabAO,
      &                       nGrad_Eff,list_g,
      &                       Grid_Type,Fixed_Grid,
-     &                       Work(ip_Fact),ndc,Work(ipTmp),T_X,
+     &                       Work(ip_Fact),ndc,
      &                       list_bas,Index,nIndex)
 
 ************************************************************************
