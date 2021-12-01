@@ -157,9 +157,7 @@
 ************************************************************************
 *                                                                      *
 *
- 998        Continue
          End Do                     ! jlist_s
- 999     Continue
       End Do                        ! ilist_s
       Flop=Flop+DBLE(nGrid_Tot)
 *
