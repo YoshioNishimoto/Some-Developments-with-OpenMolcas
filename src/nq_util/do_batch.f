@@ -1597,7 +1597,7 @@ C    &                       ndRho_dr,mGrid,list_s,nlist_s,
 C    &                       TabAO,ipTabAO,mAO,nTabAO,
 C    &                       nGrad_Eff,list_g,
 C    &                       Grid_Type,Fixed_Grid,
-C    &                       Work(ip_Fact),ndc,Work(ipTmp),T_X,
+C    &                       Work(ip_Fact),ndc,
 C    &                       list_bas,Index,nIndex)
 *
       Else If (Functional_type.eq.CASDFT_type) Then
@@ -1612,7 +1612,7 @@ C    &                       mGrid,list_s,nlist_s,
 C    &                       TabAO,ipTabAO,mAO,nTabAO,
 C    &                       nGrad_Eff,list_g,
 C    &                       Grid_Type,Fixed_Grid,
-C    &                       Work(ip_Fact),ndc,Work(ipTmp),T_X,
+C    &                       Work(ip_Fact),ndc,
 C    &                       list_bas,Index,nIndex)
 C        If (Do_Hess)
 C    &      Call dRho_dR_CAS(Dens,nDens,nD,dRho_dR,d2Rho_dR2,
@@ -1620,7 +1620,7 @@ C    &                       ndRho_dr,mGrid,list_s,nlist_s,
 C    &                       TabAO,ipTabAO,mAO,nTabAO,
 C    &                       nGrad_Eff,list_g,
 C    &                       Grid_Type,Fixed_Grid,
-C    &                       Work(ip_Fact),ndc,Work(ipTmp),T_X,
+C    &                       Work(ip_Fact),ndc,
 C    &                       list_bas,Index,nIndex)
 *------- Compute P2_OnTop at the grid
          Call Do_P2new(P2mo,np2act,D1mo,nd1mo,TabMO,mAO,mGrid,
