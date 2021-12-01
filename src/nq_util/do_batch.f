@@ -1604,8 +1604,7 @@ C    &                       list_bas,Index,nIndex)
 *
          Call Rho_CAS(Dens,nDens,nD,Rho,nRho,mGrid,
      &                list_s,nlist_s,TabAO,ipTabAO,mAO,nTabAO,nSym,
-     &                Work(ip_Fact),ndc,Work(ipTabAOMax),
-     &                list_bas,Index,nIndex)
+     &                Work(ip_Fact),ndc,list_bas,Index,nIndex)
 *
 C        If (Do_Grad)
 C    &      Call dRho_dR_CAS(Dens,nDens,nD,dRho_dR,ndRho_dr,
