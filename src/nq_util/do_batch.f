@@ -431,7 +431,7 @@ cGLM            kAO   = iCmp*iBas_Eff*mGrid
      &                       TabAO,ipTabAO,mAO,nTabAO,
      &                       nGrad_Eff,list_g,
      &                       Grid_Type,Fixed_Grid,
-     &                       Work(ip_Fact),ndc,Work(ipTmp),T_X,
+     &                       Work(ip_Fact),ndc,
      &                       list_bas,Index,nIndex)
 
 **************************************************************************
