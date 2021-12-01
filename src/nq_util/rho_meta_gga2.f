@@ -203,9 +203,7 @@
                End If
             End If
 *
- 998        Continue
          End Do                      ! jlist_s
- 999     Continue
       End Do                         ! ilist_s
 *
 #ifdef _DEBUGPRINT_
@@ -278,8 +276,6 @@ c        End Do
      &                     + Two*(Prod_22+Prod_33+Prod_44)
      &                                   +  Prod_X1) *DAij_
             End Do    ! iGrid
-*
- 99         Continue
 *
          End Do          ! iCB
       End Do             ! jCB
@@ -354,8 +350,6 @@ c        End Do
      &                     + Two*(Prod_22+Prod_33+Prod_44)
      &                                   +  Prod_X1) *DBij_
             End Do    ! iGrid
-*
- 99         Continue
 *
          End Do          ! iCB
       End Do             ! jCB
@@ -446,8 +440,6 @@ c        End Do
      &                     + Two*(Prod_22+Prod_33+Prod_44)
      &                                   +  Prod_X1) *DAij_
             End Do    ! iGrid
-*
- 99         Continue
 *
          End Do          ! iCB
       End Do             ! jCB
@@ -561,8 +553,6 @@ c        End Do
      &                     + Two*(Prod_22+Prod_33+Prod_44)
      &                                   +  Prod_X1) *DBij_
             End Do    ! iGrid
-*
- 99         Continue
 *
          End Do          ! iCB
       End Do             ! jCB
