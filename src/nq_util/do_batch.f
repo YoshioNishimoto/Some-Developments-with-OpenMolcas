@@ -1631,8 +1631,7 @@ C    &                       list_bas,Index,nIndex)
 *
          Call Rho_meta_GGA1(nD,Rho,nRho,mGrid,
      &                     list_s,nlist_s,TabAO,ipTabAO,mAO,nTabAO,
-     &                     Work(ip_Fact),ndc,Work(ipTabAOMax),
-     &                     list_bas,Index,nIndex)
+     &                     Work(ip_Fact),ndc,list_bas,Index,nIndex)
 *
          If (Do_Grad)
      &      Call dRho_dR_meta_GGA1
@@ -1640,15 +1639,14 @@ C    &                       list_bas,Index,nIndex)
      &                       mGrid,list_s,nlist_s,
      &                       TabAO,ipTabAO,mAO,nTabAO,
      &                       nGrad_Eff,list_g,
-     &                       Work(ip_Fact),ndc,Work(ipTmp),T_X,
+     &                       Work(ip_Fact),ndc,
      &                       list_bas,Index,nIndex)
 *
       Else If (Functional_type.eq.meta_GGA_type2) Then
 *
          Call Rho_meta_GGA2(nD,Rho,nRho,mGrid,
      &                     list_s,nlist_s,TabAO,ipTabAO,mAO,nTabAO,
-     &                     Work(ip_Fact),ndc,Work(ipTabAOMax),
-     &                     list_bas,Index,nIndex)
+     &                     Work(ip_Fact),ndc,list_bas,Index,nIndex)
 *
          If (Do_Grad)
      &      Call dRho_dR_meta_GGA2
@@ -1656,7 +1654,7 @@ C    &                       list_bas,Index,nIndex)
      &                       mGrid,list_s,nlist_s,
      &                       TabAO,ipTabAO,mAO,nTabAO,
      &                       nGrad_Eff,list_g,
-     &                       Work(ip_Fact),ndc,Work(ipTmp),T_X,
+     &                       Work(ip_Fact),ndc,
      &                       list_bas,Index,nIndex)
       End If
 *

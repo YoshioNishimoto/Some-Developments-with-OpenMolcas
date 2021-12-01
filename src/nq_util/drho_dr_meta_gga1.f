@@ -14,8 +14,7 @@
      &                      (nD,dRho_dR,ndRho_dR,mGrid,
      &                       list_s,nlist_s,TabAO,ipTabAO,mAO,nTabAO,
      &                       nGrad_Eff,list_g,
-     &                       Fact,ndc,TabAOMax,T_X,
-     &                       list_bas,Index,nIndex)
+     &                       Fact,ndc,list_bas,Index,nIndex)
 ************************************************************************
 *                                                                      *
 * Object: to compute the gradient of rho, grad rho, and nabla rho      *
@@ -38,7 +37,7 @@
       Integer list_s(2,nlist_s), list_g(3,nlist_s),
      &        ipTabAO(nlist_s), list_bas(2,nlist_s), Index(nIndex)
       Real*8 dRho_dR(ndRho_dR,mGrid,nGrad_Eff),
-     &       TabAO(nTabAO), Fact(ndc**2), TabAOMax(nlist_s)
+     &       TabAO(nTabAO), Fact(ndc**2)
       Integer IndGrd_Eff(3,2)
 *                                                                      *
 ************************************************************************
@@ -78,9 +77,6 @@
          iCmp  = iSD( 2,iS)
          iBas_Eff=list_bas(1,ilist_s)
          ix = iDAMax_(mAO*mGrid*iBas_Eff*iCmp,TabAO(ipTabAO(iList_s)),1)
-         TabAOMax(ilist_s)=Abs(TabAO(ipTabAO(ilist_s)-1+ix))
-         TMax_i=TabAOMax(ilist_s)
-         If (TMax_i.le.T_X) Go To 999
          iBas  = iSD( 3,iS)
          mdci  = iSD(10,iS)
          iShell= iSD(11,iS)
@@ -90,9 +86,6 @@
          n1 = IndGrd_Eff(1,1) + IndGrd_Eff(2,1) + IndGrd_Eff(3,1)
 *
          Do jlist_s=1,ilist_s
-            TMax_j=TabAOMax(jlist_s)
-            If (TMax_j.le.T_X) Go To 98
-            If (TMax_i*TMax_j.lt.T_X) Go To 98
             jS    = list_s(1,jlist_s)
             kDCRR = list_s(2,jlist_s)
             jCmp  = iSD( 2,jS)
@@ -144,7 +137,6 @@
                DMax_ij=Abs(DeDe(ip_D_a-1+ix))
             End If
             DMax_ij=DMax_ij*Fact(ij)
-            If (TMax_i*TMax_j*DMax_ij.lt.T_X) Go To 98
 #ifdef _DEBUGPRINT_
             If (Debug) Then
                Write (6,*) 'dRho_dR_meta_GGA1'
@@ -175,7 +167,6 @@
      &                       TabAO(ipTabAO(iList_s)),iBas,iBas_Eff,iCmp,
      &                       TabAO(ipTabAO(jList_s)),jBas,jBas_Eff,jCmp,
      &                       Fact(ij)*Deg,IndGrd_Eff,
-     &                       T_X,TMax_i*TMax_j,
      &                       Index(index_i),Index(index_j))
                Else
                Call Do_Rho5da(dRho_dR,    mGrid,nGrad_Eff,
@@ -183,7 +174,6 @@
      &                       TabAO(ipTabAO(jList_s)),jBas,jBas_Eff,jCmp,
      &                       TabAO(ipTabAO(iList_s)),iBas,iBas_Eff,iCmp,
      &                       Fact(ij)*Deg,IndGrd_Eff,
-     &                       T_X,TMax_i*TMax_j,
      &                       Index(index_i),Index(index_j))
                End If
             Else
@@ -193,7 +183,6 @@
      &                       TabAO(ipTabAO(iList_s)),iBas,iBas_Eff,iCmp,
      &                       TabAO(ipTabAO(jList_s)),jBas,jBas_Eff,jCmp,
      &                       Fact(ij)*Deg,IndGrd_Eff,
-     &                       T_X,TMax_i*TMax_j,
      &                       Index(index_i),Index(index_j))
                Else
                Call Do_Rho5d_(dRho_dR,    mGrid,nGrad_Eff,
@@ -201,14 +190,12 @@
      &                       TabAO(ipTabAO(jList_s)),jBas,jBas_Eff,jCmp,
      &                       TabAO(ipTabAO(iList_s)),iBas,iBas_Eff,iCmp,
      &                       Fact(ij)*Deg,IndGrd_Eff,
-     &                       T_X,TMax_i*TMax_j,
      &                       Index(index_i),Index(index_j))
                End If
             End If
 *
  98         Continue
          End Do                      ! jlist_s
- 999     Continue
       End Do                         ! ilist_s
 *                                                                      *
 ************************************************************************
@@ -224,8 +211,7 @@
      &                     DAij,          mAO,
      &                     TabAO1,iBas,iBas_Eff,iCmp,
      &                     TabAO2,jBas,jBas_Eff,jCmp,
-     &                     Fact,IndGrd_Eff,T_X,TMax_ij,
-     &                     Index_i,Index_j)
+     &                     Fact,IndGrd_Eff,Index_i,Index_j)
       Implicit Real*8 (A-H,O-Z)
 #include "real.fh"
 #include "WrkSpc.fh"
@@ -276,7 +262,6 @@
             iCB = Index_i(iCB_Eff)
 *
             DAij_=DAij(iCB,jCB)*Fact
-            If (TMax_ij*Abs(DAij_).lt.T_X) Go To 99
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -692,8 +677,6 @@
 ************************************************************************
 *                                                                      *
 *
- 99         Continue
-*
          End Do          ! iCB
       End Do             ! jCB
 *
@@ -703,8 +686,7 @@
      &                     DAij,DBij,     mAO,
      &                     TabAO1,iBas,iBas_Eff,iCmp,
      &                     TabAO2,jBas,jBas_Eff,jCmp,
-     &                     Fact,IndGrd_Eff,T_X,TMax_ij,
-     &                     Index_i,Index_j)
+     &                     Fact,IndGrd_Eff,Index_i,Index_j)
       Implicit Real*8 (A-H,O-Z)
 #include "real.fh"
 #include "WrkSpc.fh"
@@ -758,7 +740,6 @@
             DAij_=DAij(iCB,jCB)*Fact
             DBij_=DBij(iCB,jCB)*Fact
             Dij_ =Half*(Abs(DAij_)+Abs(DBij_))
-            If (TMax_ij*Abs(Dij_).lt.T_X) Go To 99
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -1301,8 +1282,6 @@
 *                                                                      *
 ************************************************************************
 *                                                                      *
-*
- 99         Continue
 *
          End Do          ! iCB
       End Do             ! jCB
