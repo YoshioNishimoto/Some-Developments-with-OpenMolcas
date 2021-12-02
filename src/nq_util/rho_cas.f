@@ -284,7 +284,6 @@ c Avoid unused argument warnings
 *
             DAij_=DAij(iCB,jCB)*Fact
             DBij_=DBij(iCB,jCB)*Fact
-            Dij_ =Half*(Abs(DAij_)+Abs(DBij_))
 *
             Do iGrid = 1, mGrid
                Prod_11=TabAO1(1,iGrid,iCB_Eff)*TabAO2(1,iGrid,jCB_Eff)
@@ -404,7 +403,6 @@ c Avoid unused argument warnings
 *
          DAii_=DAii(jCB,jCB)*Fact
          DBii_=DBii(jCB,jCB)*Fact
-         Dii_ =Half*(Abs(DAii_)+Abs(DBii_))
          Do iGrid = 1, mGrid
             Prod_11=TabAO1(1,iGrid,jCB_Eff)*TabAO1(1,iGrid,jCB_Eff)
             Prod_21=TabAO1(2,iGrid,jCB_Eff)*TabAO1(1,iGrid,jCB_Eff)
@@ -433,7 +431,6 @@ c Avoid unused argument warnings
 *
             DAij_=DAii(iCB,jCB)*Fact*Two
             DBij_=DBii(iCB,jCB)*Fact*Two
-            Dij_ =Half*(Abs(DAij_)+Abs(DBij_))
 *
             Do iGrid = 1, mGrid
                Prod_11= TabAO1(1,iGrid,iCB_Eff)*TabAO1(1,iGrid,jCB_Eff)

@@ -57,7 +57,6 @@
 #ifdef _DEBUGPRINT_
       Debug=.True.
 #endif
-      VMax=0.0D0
       iSmLbl=1
 *
       nGrid_Tot=0
@@ -101,7 +100,6 @@
      &                        Scr, TabAO(ipTabAO(iList_s)),iCmp,
      &                        iBas_Eff,nGrid_Tot,iSpin,mAO,nFn)
                jx = iDAMax_(iSpin*mAO*mGrid*iBas_Eff*iCmp,Scr,1)
-               VMax=Abs(Scr(jx))
             Else
                Call Do_NInt(AOInt,nAOInt,mGrid,
      &                      Scr,iCmp,iBas_Eff,

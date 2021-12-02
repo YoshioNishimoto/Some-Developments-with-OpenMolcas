@@ -365,7 +365,6 @@ c Avoid unused argument warnings
 *
          DAjj_=DAii(jCB,jCB)*Fact
          DBjj_=DBii(jCB,jCB)*Fact
-         Djj_ =Half*(Abs(DAjj_)+Abs(DBjj_))
          Do iGrid = 1, mGrid
             Prod_jj=TabAO1(1,iGrid,jCB_Eff)*TabAO1(1,iGrid,jCB_Eff)
             Rho(1,iGrid)=Rho(1,iGrid)+Prod_jj*DAjj_
@@ -377,7 +376,6 @@ c Avoid unused argument warnings
 *
             DAij_=DAii(iCB,jCB)*Fact*Two
             DBij_=DBii(iCB,jCB)*Fact*Two
-            Dij_ = Half*(Abs(DAij_)+Abs(DBij_))
 *
             Do iGrid = 1, mGrid
                Prod_ij=TabAO1(1,iGrid,iCB_Eff)*TabAO1(1,iGrid,jCB_Eff)

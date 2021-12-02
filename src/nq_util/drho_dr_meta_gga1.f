@@ -728,7 +728,6 @@
 *
             DAij_=DAij(iCB,jCB)*Fact
             DBij_=DBij(iCB,jCB)*Fact
-            Dij_ =Half*(Abs(DAij_)+Abs(DBij_))
 *                                                                      *
 ************************************************************************
 *                                                                      *
