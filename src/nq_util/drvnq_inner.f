@@ -130,10 +130,12 @@ c        Call append_file(LuMT)
 
       CALL CalcOrbOff()
       NASHT4=NASHT**4
-      CALL mma_allocate(P2Unzip,NASHT4)
-      CALL mma_allocate(D1Unzip,NASHT**2)
-      CALL UnzipD1(D1Unzip,D1MO,nD1MO)
-      CALL UnzipP2(P2Unzip,P2MO,nP2Act)
+      CALL mma_allocate(P2Unzip,MAX(1,NASHT4))
+      CALL mma_allocate(D1Unzip,MAX(1,NASHT**2))
+      If (l_casdft) Then
+         CALL UnzipD1(D1Unzip,D1MO,nD1MO)
+         CALL UnzipP2(P2Unzip,P2MO,nP2Act)
+      End If
 ************************************************************************
 *
 *----- Desymmetrize the 1-particle density matrix
@@ -331,10 +333,8 @@ C     End Do ! number_of_subblocks
       End If
 #endif
 
-      IF(l_casdft) THEN
         CALL mma_deallocate(D1Unzip)
         CALL mma_deallocate(P2Unzip)
-      END IF
 *                                                                      *
 ************************************************************************
 *                                                                      *
