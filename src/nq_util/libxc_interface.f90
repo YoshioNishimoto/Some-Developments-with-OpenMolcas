@@ -8,14 +8,15 @@
 ! For more details see the full text of the license in the file        *
 ! LICENSE or in <http://www.gnu.org/licenses/>.                        *
 !                                                                      *
-! Copyright (C) 2022, Roland Lindh                                     *
+! Copyright (C) 2022, Susi Lehtola                                     *
+!               2022, Roland Lindh                                     *
 !***********************************************************************
 Subroutine libxc_interface(xc_func,xc_info,mGrid,nD,F_xc,Coeff)
 use xc_f03_lib_m
 use nq_Grid, only: Rho,  Sigma,  Tau,  Lapl
 use nq_Grid, only:vRho, vSigma, vTau, vLapl
 use nq_Grid, only: l_casdft
-use KSDFT_Info, only: F_xca, F_xcb
+use nq_Grid, only: F_xca, F_xcb
 use libxc
 use Definitions, only: wp, iwp, LibxcReal, LibxcSize
 implicit none

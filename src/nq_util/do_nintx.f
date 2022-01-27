@@ -10,8 +10,6 @@
 ************************************************************************
 ************************************************************************
 *                                                                      *
-#define _ALTERNATIVE_CODE_
-#ifdef _ALTERNATIVE_CODE_
       Subroutine Do_NIntX(AOInt,mGrid,TabAO1,TabAO2,nBfn,nD,mAO,nFn)
 *                                                                      *
 ************************************************************************
@@ -27,14 +25,68 @@
 ************************************************************************
 ************************************************************************
 *                                                                      *
+*#define _ANALYSIS_
+#ifdef _ANALYSIS_
+      Write (6,*)
+      Write (6,*)  ' Analysing TabAO1'
+      Thr=1.0D-14
+      Do iD = 1, nD
+      Do iFn = 1, nFn
+         lBfn = 0
+         Total=0.0D0
+         Do iBfn = 1, nBfn
+            lGrid = 0
+            Do iGrid = 1, mGrid
+               If (Abs(TabAO1(iFn,iGrid,iBfn,iD))<Thr) lGrid = lGrid + 1
+            End Do
+            If (lGrid==mGrid) lBfn=lBfn+1
+            Total = Total + DBLE(lGrid)/DBLE(mGrid)
+         End Do
+         Total = Total / DBLE(nBfn)
+         Write (6,*) 'Sparsity analysis, iD, iFn', iD, iFn
+         Write (6,*) ' Total parcity in %:', 1.0D2 * Total
+         Write (6,*) ' Complete Bfn sparcity in %:',
+     &                1.0D2*DBLE(lBfn)/DBLE(nBfn)
+         Write (6,*)
+      End Do
+      End Do
+      Write (6,*)
+      Write (6,*)  ' Analysing TabAO2'
+      Do iAO = 1, mAO
+         lBfn = 0
+         Total=0.0D0
+         Do iBfn = 1, nBfn
+            lGrid = 0
+            Do iGrid = 1, mGrid
+               If (Abs(TabAO2(iAO,iGrid,iBfn))<Thr) lGrid = lGrid + 1
+            End Do
+            If (lGrid==mGrid) lBfn=lBfn+1
+            Total = Total + DBLE(lGrid)/DBLE(mGrid)
+         End Do
+         Total = Total / DBLE(nBfn)
+         Write (6,*) 'Sparsity analysis, iAO', iAO
+         Write (6,*) ' Total parcity in %:', 1.0D2 * Total
+         Write (6,*) ' Complete Bfn sparcity in %:',
+     &                1.0D2*DBLE(lBfn)/DBLE(nBfn)
+         Write (6,*)
+      End Do
+#endif
       Call mma_allocate(A1,mGrid,nBfn,Label='A1')
       Call mma_allocate(A2,mGrid,nBfn,Label='A2')
-      If (Functional_type.eq.LDA_type) Then
+
 *                                                                      *
 ************************************************************************
 ************************************************************************
+*                                                                      *
+      Select Case (Functional_type)
+*                                                                      *
+************************************************************************
+************************************************************************
+*                                                                      *
+      Case (LDA_type)
 *                                                                      *
       Do iD = 1, nD
+      ! Rho part
       Call DCopy_(mGrid*nBfn,TabAO1(1,1,1,iD),nFn,A1,1)
       Call DCopy_(mGrid*nBfn,TabAO2(1,1,1)   ,mAO,A2,1)
       Call DGEMM_('T','N',nBfn,nBfn,mGrid,
@@ -42,17 +94,11 @@
      &                 A2,mGrid,
      &             Zero,AOInt(1,1,iD),nBfn)
       End Do
-      Call mma_deallocate(A1)
-      Call mma_deallocate(A2)
-      Return
 *                                                                      *
 ************************************************************************
 ************************************************************************
 *                                                                      *
-      Else If (Functional_type.eq.GGA_type) Then
-*                                                                      *
-************************************************************************
-************************************************************************
+      Case (GGA_type)
 *                                                                      *
       Do iD = 1, nD
       Call DCopy_(mGrid*nBfn,TabAO1(1,1,1,iD),nFn,A1,1)
@@ -61,6 +107,34 @@
      &             One,A1,mGrid,
      &                 A2,mGrid,
      &             Zero,AOInt(1,1,iD),nBfn)
+      Do iBfn = 1, nBfn
+         Do jBfn = 1, iBfn
+            AOInt_Sym = AOInt(iBfn,jBfn,iD) +  AOInt(jBfn,iBfn,iD)
+            AOInt(iBfn,jBfn,iD) = AOInt_Sym
+            AOInt(jBfn,iBfn,iD) = AOInt_Sym
+         End Do
+      End Do
+      End Do
+*                                                                      *
+************************************************************************
+************************************************************************
+*                                                                      *
+      Case (meta_GGA_type1)
+*                                                                      *
+      Do iD = 1, nD
+      Call DCopy_(mGrid*nBfn,TabAO1(1,1,1,iD),nFn,A1,1)
+      Call DCopy_(mGrid*nBfn,TabAO2(1,1,1)   ,mAO,A2,1)
+      Call DGEMM_('T','N',nBfn,nBfn,mGrid,
+     &             One,A1,mGrid,
+     &                 A2,mGrid,
+     &             Zero,AOInt(1,1,iD),nBfn)
+      Do iBfn = 1, nBfn
+         Do jBfn = 1, iBfn
+            AOInt_Sym = AOInt(iBfn,jBfn,iD) +  AOInt(jBfn,iBfn,iD)
+            AOInt(iBfn,jBfn,iD) = AOInt_Sym
+            AOInt(jBfn,iBfn,iD) = AOInt_Sym
+         End Do
+      End Do
       Call DCopy_(mGrid*nBfn,TabAO1(2,1,1,iD),nFn,A1,1)
       Call DCopy_(mGrid*nBfn,TabAO2(2,1,1)   ,mAO,A2,1)
       Call DGEMM_('T','N',nBfn,nBfn,mGrid,
@@ -80,79 +154,27 @@
      &                 A2,mGrid,
      &             One ,AOInt(1,1,iD),nBfn)
       End Do
-      Call mma_deallocate(A1)
-      Call mma_deallocate(A2)
-      Return
 *                                                                      *
 ************************************************************************
 ************************************************************************
 *                                                                      *
-      Else If (Functional_type.eq.meta_GGA_type2) Then
-*                                                                      *
-************************************************************************
-************************************************************************
+      Case (meta_GGA_type2)
 *                                                                      *
       Do iD = 1, nD
+      ! Lapl part first because we need to symmetrize
       Call DCopy_(mGrid*nBfn,TabAO1(1,1,1,iD),nFn,A1,1)
       Call DCopy_(mGrid*nBfn,TabAO2(1,1,1)   ,mAO,A2,1)
       Call DGEMM_('T','N',nBfn,nBfn,mGrid,
      &             One,A1,mGrid,
      &                 A2,mGrid,
      &             Zero,AOInt(1,1,iD),nBfn)
-      Call DCopy_(mGrid*nBfn,TabAO1(2,1,1,iD),nFn,A1,1)
-      Call DCopy_(mGrid*nBfn,TabAO2(2,1,1)   ,mAO,A2,1)
-      Call DGEMM_('T','N',nBfn,nBfn,mGrid,
-     &             One,A1,mGrid,
-     &                 A2,mGrid,
-     &             One ,AOInt(1,1,iD),nBfn)
-      Call DCopy_(mGrid*nBfn,TabAO1(3,1,1,iD),nFn,A1,1)
-      Call DCopy_(mGrid*nBfn,TabAO2(3,1,1)   ,mAO,A2,1)
-      Call DGEMM_('T','N',nBfn,nBfn,mGrid,
-     &             One,A1,mGrid,
-     &                 A2,mGrid,
-     &             One ,AOInt(1,1,iD),nBfn)
-      Call DCopy_(mGrid*nBfn,TabAO1(4,1,1,iD),nFn,A1,1)
-      Call DCopy_(mGrid*nBfn,TabAO2(4,1,1)   ,mAO,A2,1)
-      Call DGEMM_('T','N',nBfn,nBfn,mGrid,
-     &             One,A1,mGrid,
-     &                 A2,mGrid,
-     &             One ,AOInt(1,1,iD),nBfn)
-      Call DCopy_(mGrid*nBfn,TabAO1(5,1,1,iD),nFn,A1,1)
-      Call DCopy_(mGrid*nBfn,TabAO2(5,1,1)   ,mAO,A2,1)
-      Call DGEMM_('T','N',nBfn,nBfn,mGrid,
-     &             One,A1,mGrid,
-     &                 A2,mGrid,
-     &             One ,AOInt(1,1,iD),nBfn)
-      Call DCopy_(mGrid*nBfn,TabAO2(8,1,1)   ,mAO,A2,1)
-      Call DGEMM_('T','N',nBfn,nBfn,mGrid,
-     &             One,A1,mGrid,
-     &                 A2,mGrid,
-     &             One ,AOInt(1,1,iD),nBfn)
-      Call DCopy_(mGrid*nBfn,TabAO2(10,1,1)   ,mAO,A2,1)
-      Call DGEMM_('T','N',nBfn,nBfn,mGrid,
-     &             One,A1,mGrid,
-     &                 A2,mGrid,
-     &             One ,AOInt(1,1,iD),nBfn)
+      Do iBfn = 1, nBfn
+         Do jBfn = 1, iBfn
+            AOInt_Sym = AOInt(iBfn,jBfn,iD) +  AOInt(jBfn,iBfn,iD)
+            AOInt(iBfn,jBfn,iD) = AOInt_Sym
+            AOInt(jBfn,iBfn,iD) = AOInt_Sym
+         End Do
       End Do
-      Call mma_deallocate(A1)
-      Call mma_deallocate(A2)
-      Return
-*                                                                      *
-************************************************************************
-************************************************************************
-*                                                                      *
-      Else If (Functional_type.eq.meta_GGA_type1) Then
-*                                                                      *
-************************************************************************
-************************************************************************
-*                                                                      *
-      Do iD = 1, nD
-      Call DCopy_(mGrid*nBfn,TabAO1(1,1,1,iD),nFn,A1,1)
-      Call DCopy_(mGrid*nBfn,TabAO2(1,1,1)   ,mAO,A2,1)
-      Call DGEMM_('T','N',nBfn,nBfn,mGrid,
-     &             One,A1,mGrid,
-     &                 A2,mGrid,
-     &             Zero,AOInt(1,1,iD),nBfn)
       Call DCopy_(mGrid*nBfn,TabAO1(2,1,1,iD),nFn,A1,1)
       Call DCopy_(mGrid*nBfn,TabAO2(2,1,1)   ,mAO,A2,1)
       Call DGEMM_('T','N',nBfn,nBfn,mGrid,
@@ -172,17 +194,11 @@
      &                 A2,mGrid,
      &             One ,AOInt(1,1,iD),nBfn)
       End Do
-      Call mma_deallocate(A1)
-      Call mma_deallocate(A2)
-      Return
 *                                                                      *
 ************************************************************************
 ************************************************************************
 *                                                                      *
-      Else
-*                                                                      *
-************************************************************************
-************************************************************************
+      Case default
 *                                                                      *
          Write (6,*) 'DFT_Int: Illegal functional type!'
          Call Abend()
@@ -190,187 +206,33 @@
 ************************************************************************
 ************************************************************************
 *                                                                      *
-      End If
+      End Select
 *                                                                      *
 ************************************************************************
 ************************************************************************
 *                                                                      *
-      End
-#else
-      Subroutine Do_NIntX(AOInt,mGrid,TabAO1,TabAO2,nBfn,nD,mAO,nFn)
-*                                                                      *
-************************************************************************
-************************************************************************
-      Implicit Real*8 (A-H,O-Z)
-#include "real.fh"
-#include "nq_info.fh"
-      Real*8 AOInt(nBfn,nBfn,nD), TabAO1(nFn,mGrid,nBfn,nD),
-     &       TabAO2(mAO,mGrid,nBfn)
-*                                                                      *
-************************************************************************
-************************************************************************
-*                                                                      *
-      If (Functional_type.eq.LDA_type) Then
-*                                                                      *
-************************************************************************
-************************************************************************
-*                                                                      *
+      Call mma_deallocate(A1)
+      Call mma_deallocate(A2)
+
+*#define _ANALYSIS_
+#ifdef _ANALYSIS_
+      Write (6,*)
+      Write (6,*)  ' Analysing AOInt'
+      Thr=1.0D-14
       Do iD = 1, nD
-      Do iCB = 1, nBfn
-*                                                                      *
-************************************************************************
-*                                                                      *
-         Do jCB = 1, iCB
-*                                                                      *
-************************************************************************
-*                                                                      *
-            ToAdd1=Zero
-            Do iGrid = 1, mGrid
-               ToAdd1 = ToAdd1
-     &                + TabAO1(1,iGrid,iCB,iD)*TabAO2(1,iGrid,jCB)
+         lBfn = 0
+         Do iBfn = 1, nBfn
+            Do jBfn = 1, nBfn
+               If (Abs(AOInt(iBfn,jBfn,iD))<Thr) lBfn = lBfn + 1
             End Do
-            AOInt(iCB,jCB,iD) = ToAdd1
-            AOInt(jCB,iCB,iD) = ToAdd1
-*                                                                      *
-************************************************************************
-*                                                                      *
          End Do
+         Total = DBLE(lBfn)/DBLE(nBfn**2)
+         Write (6,*) 'Sparsity analysis, iD', iD
+         Write (6,*) ' Total parcity in %:', 1.0D2 * Total
       End Do
-      End Do
-      Return
-*                                                                      *
-************************************************************************
-************************************************************************
-*                                                                      *
-      Else If (Functional_type.eq.GGA_type) Then
-*                                                                      *
-************************************************************************
-************************************************************************
-*                                                                      *
-      Do iD = 1, nD
-      Do iCB = 1, nBfn
-*                                                                      *
-************************************************************************
-*                                                                      *
-*
-         Do jCB = 1, iCB
-*                                                                      *
-************************************************************************
-*                                                                      *
-            ToAdd1=Zero
-*
-            Do iGrid = 1, mGrid
-               ToAdd1= ToAdd1
-     &               + TabAO1(1,iGrid,iCB,iD) * TabAO2(1,iGrid,jCB)
-     &               + TabAO1(2,iGrid,iCB,iD) * TabAO2(2,iGrid,jCB)
-     &               + TabAO1(3,iGrid,iCB,iD) * TabAO2(3,iGrid,jCB)
-     &               + TabAO1(4,iGrid,iCB,iD) * TabAO2(4,iGrid,jCB)
-            End Do
-            AOInt(iCB,jCB,iD) = ToAdd1
-            AOInt(jCB,iCB,iD) = ToAdd1
-*                                                                      *
-************************************************************************
-*                                                                      *
-         End Do
-      End Do
-      End Do
-      Return
-*                                                                      *
-************************************************************************
-************************************************************************
-*                                                                      *
-      Else If (Functional_type.eq.meta_GGA_type2) Then
-*                                                                      *
-************************************************************************
-************************************************************************
-*                                                                      *
-      Do iD = 1, nD
-      Do iCB = 1, nBfn
-*                                                                      *
-************************************************************************
-*                                                                      *
-*
-         Do jCB = 1, iCB
-*                                                                      *
-************************************************************************
-*                                                                      *
-            ToAdd1=Zero
-*
-            Do iGrid = 1, mGrid
-               ToAdd1= ToAdd1
-     &               + TabAO1(1,iGrid,iCB,iD) * TabAO2(1,iGrid,jCB)
-     &               + TabAO1(2,iGrid,iCB,iD) * TabAO2(2,iGrid,jCB)
-     &               + TabAO1(3,iGrid,iCB,iD) * TabAO2(3,iGrid,jCB)
-     &               + TabAO1(4,iGrid,iCB,iD) * TabAO2(4,iGrid,jCB)
-     &               + TabAO1(5,iGrid,iCB,iD) *(TabAO2(5,iGrid,jCB)
-     &                                         +TabAO2(8,iGrid,jCB)
-     &                                        +TabAO2(10,iGrid,jCB))
-            End Do
-            AOInt(iCB,jCB,iD) = ToAdd1
-            AOInt(jCB,iCB,iD) = ToAdd1
-*                                                                      *
-************************************************************************
-*                                                                      *
-         End Do
-      End Do
-      End Do
-      Return
-*                                                                      *
-************************************************************************
-************************************************************************
-*                                                                      *
-      Else If (Functional_type.eq.meta_GGA_type1) Then
-*                                                                      *
-************************************************************************
-************************************************************************
-*                                                                      *
-      Do iD = 1, nD
-      Do iCB = 1, nBfn
-*                                                                      *
-************************************************************************
-*                                                                      *
-*
-         Do jCB = 1, iCB
-*                                                                      *
-************************************************************************
-*                                                                      *
-            ToAdd1=Zero
-*
-            Do iGrid = 1, mGrid
-               ToAdd1= ToAdd1
-     &               + TabAO1(1,iGrid,iCB,iD) * TabAO2(1,iGrid,jCB)
-     &               + TabAO1(2,iGrid,iCB,iD) * TabAO2(2,iGrid,jCB)
-     &               + TabAO1(3,iGrid,iCB,iD) * TabAO2(3,iGrid,jCB)
-     &               + TabAO1(4,iGrid,iCB,iD) * TabAO2(4,iGrid,jCB)
-            End Do
-            AOInt(iCB,jCB,iD) = ToAdd1
-            AOInt(jCB,iCB,iD) = ToAdd1
-*                                                                      *
-************************************************************************
-*                                                                      *
-         End Do
-      End Do
-      End Do
-      Return
-*                                                                      *
-************************************************************************
-************************************************************************
-*                                                                      *
-      Else
-*                                                                      *
-************************************************************************
-************************************************************************
-*                                                                      *
-         Write (6,*) 'DFT_Int: Illegal functional type!'
-         Call Abend()
-*                                                                      *
-************************************************************************
-************************************************************************
-*                                                                      *
-      End If
-*                                                                      *
-************************************************************************
-************************************************************************
-*                                                                      *
-      End
 #endif
+*                                                                      *
+************************************************************************
+************************************************************************
+*                                                                      *
+      End

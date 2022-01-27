@@ -1564,12 +1564,20 @@ message ("Configuring Libxc:")
 
 if (EXTERNAL_LIBXC)
   message ("-- External Libxc root specified at: ${EXTERNAL_LIBXC}")
-  find_library (xcf03 xcf03 ${EXTERNAL_LIBXC} PATH_SUFFIXES lib lib32 lib64)
+  find_library (xc xc PATHS ${EXTERNAL_LIBXC} PATH_SUFFIXES lib lib32 lib64)
+  find_library (xcf03 xcf03 PATHS ${EXTERNAL_LIBXC} PATH_SUFFIXES lib lib32 lib64)
   if (NOT xc OR NOT xcf03)
     message (FATAL_ERROR "Libxc could not be found in ${EXTERNAL_LIBXC}.")
   endif ()
+  # find Libxc version
+  file (READ ${EXTERNAL_LIBXC}/include/xc_version.h header)
+  string (REGEX MATCH "#define XC_VERSION \"[0-9.]+\"" macrodef "${header}")
+  string (REGEX MATCH "[0-9.]+" LIBXC_VERSION "${macrodef}")
+  if (LIBXC_VERSION VERSION_LESS "5.2.0")
+    message (FATAL_ERROR "Libxc version >= 5.2.0 is required (found ${LIBXC_VERSION})")
+  endif ()
   set (Libxc_INCLUDE_DIRS ${EXTERNAL_LIBXC}/include)
-  set (Libxc_LIBRARIES ${xcf03})
+  set (Libxc_LIBRARIES ${xcf03} ${xc})
 else ()
   message ("-- Configuring built-in Libxc")
   include (ExternalProject)
@@ -1578,7 +1586,7 @@ else ()
   set (EP_INSTALL ${PROJECT_BINARY_DIR}/External/${EP_PROJECT}_install)
 
   set (Libxc_REPO https://gitlab.com/libxc/libxc.git)
-  set (Libxc_HASH df9ba8d9) # Release 5.1.7
+  set (Libxc_HASH fc5132c5) # Release 5.2.0
 
   # Note shared libraries won't work here because of installation issues.
   # TODO: Solving this will require creating a wrapper main project that includes
@@ -1625,10 +1633,6 @@ else ()
                        UPDATE_DISCONNECTED ${LibxcSkipUpdate}
   )
 
-  if (NOT LibxcSkipUpdate)
-    ExternalProject_add_patches (${EP_PROJECT} "cmake/custom/libxc.patch")
-  endif ()
-
   ExternalProject_Add_Step (${EP_PROJECT} update_hash
                             COMMAND echo ${Libxc_HASH} > ${hash_file}
                             DEPENDEES build
@@ -1646,7 +1650,7 @@ list (APPEND EXTERNAL_LIBRARIES ${Libxc_LIBRARIES})
 
 foreach (prog
   dft_util
-  libxc_util
+  nq_util
 )
   list (APPEND ${prog}_incs ${Libxc_INCLUDE_DIRS})
 endforeach ()
@@ -3078,11 +3082,12 @@ file (COPY "${OPENMOLCAS_DIR}/CONTRIBUTORS.md" DESTINATION ${PROJECT_BINARY_DIR}
 
 # copy the necessary files from data
 file (REMOVE_RECURSE ${PROJECT_BINARY_DIR}/data)
-configure_file (${OPENMOLCAS_DIR}/data/rysrw.ascii  data/rysrw        COPYONLY)
-configure_file (${OPENMOLCAS_DIR}/data/abdata.ascii data/abdata       COPYONLY)
-configure_file (${OPENMOLCAS_DIR}/data/banner.src   data/banner.txt   COPYONLY)
-configure_file (${OPENMOLCAS_DIR}/data/modalias.src data/modalias.txt COPYONLY)
-configure_file (${OPENMOLCAS_DIR}/data/landing.src  data/landing.txt  COPYONLY)
+configure_file (${OPENMOLCAS_DIR}/data/rysrw.ascii      data/rysrw            COPYONLY)
+configure_file (${OPENMOLCAS_DIR}/data/abdata.ascii     data/abdata           COPYONLY)
+configure_file (${OPENMOLCAS_DIR}/data/banner.src       data/banner.txt       COPYONLY)
+configure_file (${OPENMOLCAS_DIR}/data/modalias.src     data/modalias.txt     COPYONLY)
+configure_file (${OPENMOLCAS_DIR}/data/landing.src      data/landing.txt      COPYONLY)
+configure_file (${OPENMOLCAS_DIR}/data/isotope_data.src data/isotope_data.txt COPYONLY)
 file (COPY ${OPENMOLCAS_DIR}/data/inputs.tpl DESTINATION ${PROJECT_BINARY_DIR}/data)
 if (DEFINED EXTRA_DIR)
   foreach (f alias.plx auto.prgm landing.txt)
