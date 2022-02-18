@@ -38,6 +38,7 @@
       use nq_pdft
       use nq_MO, only: CMO, D1MO, P2_ontop
       use Grid_On_Disk
+      use nq_Info
       Implicit Real*8 (A-H,O-Z)
       External Kernel
 #include "SysDef.fh"
@@ -45,7 +46,6 @@
 #include "stdalloc.fh"
 #include "debug.fh"
 #include "ksdft.fh"
-#include "nq_info.fh"
 #include "nsd.fh"
 #include "setup.fh"
 #include "pamint.fh"
@@ -54,7 +54,7 @@
       Real*8 A(3), RA(3), Grad(nGrad), FckInt(nFckInt,nFckDim),
      &       TabMO(mAO,mGrid,nMOs),TabSO(mAO,mGrid,nMOs),
      &       PDFTPot1(nPot1),PDFTFocI(nPot1),PDFTFocA(nPot1)
-      Logical Do_Grad,Do_Mo,Unpack
+      Logical Do_Grad,Do_Mo
       Logical l_tanhr
       Real*8 P2_ontop_d(nP2_ontop,nGrad_Eff,mGrid)
       Real*8,DIMENSION(:),ALLOCATABLE::P2MOCube,P2MOCubex,P2MOCubey,
@@ -78,7 +78,6 @@
 ************************************************************************
 *                                                                      *
       nCMO  =Size(CMO)
-      T_Rho=T_X*1.0D-4
       l_tanhr=.false.
 
       If (l_casdft ) Then
@@ -111,12 +110,18 @@
 *
       TabAO(:,:,:)=Zero
       TabAO_Size(:)=0
-      UnPack=.False.
+*                                                                      *
+************************************************************************
+*                                                                      *
+!     Compute AO's or retrive from disk
+!
       If (NQ_Direct.eq.Off .and. (Grid_Status.eq.Use_Old .and.
      &      .Not.Do_Grad         .and.
      &    Functional_Type.eq.Old_Functional_Type)) Then
-*
-*------- Retrieve the AOs from disc
+*                                                                      *
+************************************************************************
+*                                                                      *
+*------- Retrieve (and unpack) the AOs from disc
 *
          Call iDaFile(Lu_Grid,2,TabAO_Size,2,iDisk_Grid)
          If (TabAO_Size(1)==0) Then
@@ -128,11 +133,30 @@
          Call iDaFile(Lu_Grid,2,iBfn_Index,Size(iBfn_Index),iDisk_Grid)
 
          nByte=TabAO_Size(2)
-         mTabAO = (nByte+RtoB-1)/RtoB
+         If (Packing.eq.On) Then
+            mTabAO = (nByte+RtoB-1)/RtoB
+         Else
+            mTabAO = nByte
+         End If
          Call dDaFile(Lu_Grid,2,TabAO,mTabAO,iDisk_Grid)
-         Unpack=Packing.eq.On
 *
+         If (Packing.eq.On) Then
+            nData=Size(TabAO)
+            Call mma_Allocate(TabAO_Tmp,nData,Label='TabAO_Tmp')
+            nByte=TabAO_Size(2)
+            Call UpkR8(0,nData,nByte,TabAO_Pack,TabAO_Tmp)
+            TabAO_Pack(:)=TabAO_Tmp(:)
+            Call mma_deAllocate(TabAO_Tmp)
+         End If
+*                                                                      *
+************************************************************************
+*                                                                      *
       Else
+*                                                                      *
+************************************************************************
+*                                                                      *
+!        Compute the AO's
+!
          Call mma_Allocate(iBfn_Index,6,nBfn,Label='iBfn_Index')
          iBfn_Index(:,:)=0
 *
@@ -143,7 +167,7 @@
 *
 *#define _ANALYSIS_
 #ifdef _ANALYSIS_
-      Thr=1.0D-15
+      Thr=T_Y
       Write (6,*)
       Write (6,*) ' Sparsity analysis of AO blocks'
       mlist_s=0
@@ -217,7 +241,7 @@
             Call AOEval(iAng,mGrid,Grid,Mem(ipxyz),RA,
      &                  Shells(iShll)%Transf,
      &                  RSph(ipSph(iAng)),nElem(iAng),iCmp,
-     &                  Angular,nTerm,nForm,T_X,mRad,
+     &                  Angular,nTerm,nForm,T_Y,mRad,
      &                  iPrim,iPrim_Eff,Shells(iShll)%Exp,
      &                  Mem(ipRadial),iBas_Eff,
      &                  Shells(iShll)%pCff(1,iBas-iBas_Eff+1),
@@ -237,7 +261,7 @@
 !           an insignificant contribution to any of the grid points we
 !           are processing at this stage.
 !
-            Thr=1.0D-11
+            Thr=T_Y
             iSkip=0
             kBfn = iBfn_s - 1
             Do jBfn = iBfn_s, iBfn_e
@@ -256,8 +280,13 @@
 
 !           iOff = iBfn*mAO*mGrid + 1
 *
+*                                                                      *
+************************************************************************
+*                                                                      *
          End Do
-
+*                                                                      *
+************************************************************************
+*                                                                      *
          ! reduced the size of the table to be exactly that of the
          ! number of functions that have non-zero contributions.
          If (iBfn/=nBfn) Then
@@ -275,63 +304,16 @@
             iBfn_Index(:,:) = Tmp_Index(:,:)
             Call mma_deallocate(Tmp_Index)
          End If
+         TabAO_Size(1)=nBfn
 
 #ifdef _ANALYSIS_
          Write (6,*) ' % AO blocks that can be eliminated: ',
      &             1.0D2*DBLE(mlist_s)/DBLE(nlist_s)
          Write (6,*)
 #endif
-         TabAO_Size(1)=nBfn
-*
-*        AOs are packed and written to disk.
-*
-         If (NQ_Direct.eq.Off .and. (Grid_Status.eq.Regenerate .and.
-     &       .Not.Do_Grad)) Then
-*
-            If (Packing.eq.On) Then
-               Unpack=.True.
-*
-*------------- Pack before they are put on disc
-*
-               nData=mAO*mGrid*nBfn
-               Call mma_Allocate(TabAO_Tmp,nData,Label='TabAO_Tmp')
-               TabAO_Tmp(1:nData)=TabAO_Pack(1:nData)
-               Call PkR8(0,nData,nByte,TabAO_Tmp,TabAO_Pack)
-               mData = (nByte+RtoB-1)/RtoB
-               If (mData.gt.nData) Then
-                  Call WarningMessage(2,'mData.gt.nData')
-                  Write (6,*) 'nData=',nData
-                  Write (6,*) 'nData=',nData
-                  Call Abend()
-               End If
-               TabAO_Size(2)=nByte
-               Call mma_deAllocate(TabAO_Tmp)
-            Else
-               mData=mAO*mGrid*nBfn
-               TabAO_Size(2)=mAO*mGrid*TabAO_Size(1)
-            End If
-*
-            Call iDaFile(Lu_Grid,1,TabAO_Size,2,iDisk_Grid)
-            mTabAO=mData
-            Call iDaFile(Lu_Grid,1,iBfn_Index,Size(iBfn_Index),
-     &                   iDisk_Grid)
-            Call dDaFile(Lu_Grid,1,TabAO,mTabAO,iDisk_Grid)
-*
-         End If
-*
-      End If
-*
-*---- Unpack AOs
-*
-      If (Unpack) Then
-*
-         nData=Size(TabAO)
-         Call mma_Allocate(TabAO_Tmp,nData,Label='TabAO_Tmp')
-         nByte=TabAO_Size(2)
-         Call UpkR8(0,nData,nByte,TabAO_Pack,TabAO_Tmp)
-         TabAO_Pack(:)=TabAO_Tmp(:)
-         Call mma_deAllocate(TabAO_Tmp)
-*
+*                                                                      *
+************************************************************************
+*                                                                      *
       End If
 *                                                                      *
 ************************************************************************
@@ -376,9 +358,9 @@
 ************************************************************************
 *                                                                      *
       If (l_casdft) then
-         Dens_t1=Dens_t1+Comp_d(Weights,mGrid,Rho,nRho,nD,T_Rho,0)
-         Dens_a1=Dens_a1+Comp_d(Weights,mGrid,Rho,nRho,nD,T_Rho,1)
-         Dens_b1=Dens_b1+Comp_d(Weights,mGrid,Rho,nRho,nD,T_Rho,2)
+         Dens_t1=Dens_t1+Comp_d(Weights,mGrid,Rho,nRho,nD,0)
+         Dens_a1=Dens_a1+Comp_d(Weights,mGrid,Rho,nRho,nD,1)
+         Dens_b1=Dens_b1+Comp_d(Weights,mGrid,Rho,nRho,nD,2)
 
          nPMO3p=1
          IF (lft.and.lGGA) nPMO3p=mGrid*NASHT
@@ -429,9 +411,9 @@
          CALL mma_deallocate(MOz)
 
 *        Integrate out the number of electrons
-         Dens_t2=Dens_t2+Comp_d(Weights,mGrid,Rho,nRho,nD,T_Rho,0)
-         Dens_a2=Dens_a2+Comp_d(Weights,mGrid,Rho,nRho,nD,T_Rho,1)
-         Dens_b2=Dens_b2+Comp_d(Weights,mGrid,Rho,nRho,nD,T_Rho,2)
+         Dens_t2=Dens_t2+Comp_d(Weights,mGrid,Rho,nRho,nD,0)
+         Dens_a2=Dens_a2+Comp_d(Weights,mGrid,Rho,nRho,nD,1)
+         Dens_b2=Dens_b2+Comp_d(Weights,mGrid,Rho,nRho,nD,2)
 
       End If
 *                                                                      *
@@ -465,14 +447,14 @@
 *                                                                      *
 *     Integrate out the number of electrons, |grad|, and tau
 *
-      Dens_I=Dens_I+Compute_Rho (Weights,mGrid,nD,T_Rho)
+      Dens_I=Dens_I+Compute_Rho (Weights,mGrid,nD)
       Select Case (Functional_type)
       Case (LDA_Type)
       Case (GGA_type)
-         Grad_I=Grad_I+Compute_Grad(Weights,mGrid,nD,T_Rho)
+         Grad_I=Grad_I+Compute_Grad(Weights,mGrid,nD)
       Case (meta_GGA_type1,meta_GGA_type2)
-         Grad_I=Grad_I+Compute_Grad(Weights,mGrid,nD,T_Rho)
-         Tau_I =Tau_I +Compute_Tau (Weights,mGrid,nD,T_Rho)
+         Grad_I=Grad_I+Compute_Grad(Weights,mGrid,nD)
+         Tau_I =Tau_I +Compute_Tau (Weights,mGrid,nD)
       End Select
 *                                                                      *
 ************************************************************************
@@ -563,6 +545,43 @@
 *                                                                      *
 ************************************************************************
 *                                                                      *
+      End If
+*                                                                      *
+************************************************************************
+*                                                                      *
+*     AOs on the grid are (packed and) written to disk.
+*
+      If (NQ_Direct.eq.Off .and. (Grid_Status.eq.Regenerate .and.
+     &    .Not.Do_Grad)) Then
+*
+         TabAO_Size(1)=nBfn
+         If (Packing.eq.On) Then
+*
+*---------- Pack before they are put on disc
+*
+            nData=mAO*mGrid*nBfn
+            Call mma_Allocate(TabAO_Tmp,nData,Label='TabAO_Tmp')
+            TabAO_Tmp(1:nData)=TabAO_Pack(1:nData)
+            Call PkR8(0,nData,nByte,TabAO_Tmp,TabAO_Pack)
+            mData = (nByte+RtoB-1)/RtoB
+            If (mData.gt.nData) Then
+               Call WarningMessage(2,'mData.gt.nData')
+               Write (6,*) 'nData=',nData
+               Write (6,*) 'nData=',nData
+               Call Abend()
+            End If
+            TabAO_Size(2)=nByte
+            Call mma_deAllocate(TabAO_Tmp)
+         Else
+            mData=mAO*mGrid*nBfn
+            TabAO_Size(2)=mData
+         End If
+*
+         Call iDaFile(Lu_Grid,1,TabAO_Size,2,iDisk_Grid)
+         Call iDaFile(Lu_Grid,1,iBfn_Index,Size(iBfn_Index),iDisk_Grid)
+         mTabAO=mData
+         Call dDaFile(Lu_Grid,1,TabAO,mTabAO,iDisk_Grid)
+*
       End If
 *                                                                      *
 ************************************************************************
