@@ -330,7 +330,7 @@ test:intel13:
   <<: *run-tests
   needs:
     - build:intel13
-  parallel: 1
+  parallel: 2
   tags:
     - docker
 
