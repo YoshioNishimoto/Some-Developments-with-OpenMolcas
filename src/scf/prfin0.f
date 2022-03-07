@@ -35,10 +35,12 @@
 #ifdef _HDF5_
       Use mh5, Only: mh5_put_dset
 #endif
+      Use KSDFT_Info, Only: CoefR, CoefX
       use OFembed, only: Do_OFemb
 #ifdef _FDE_
       use Embedding_Global, only: embPot
 #endif
+      use SpinAV, only: Do_SpinAV
       Implicit Real*8 (a-h,o-z)
 *
       Real*8 Dens(nDT),Dens_ab(nDT), EOrb(nEO),CMO(nCMO), KntE(nDT)
@@ -52,11 +54,9 @@
 #include "rctfld.fh"
 #include "oneswi.fh"
 #include "scfwfn.fh"
-#include "ksdft.fh"
 
 #include "addcorr.fh"
 #include "dcscf.fh"
-#include "spave.fh"
 
       Integer  Cho_X_GetTol
       External Cho_X_GetTol
