@@ -36,15 +36,14 @@
       Use SCF_Arrays
       Use Interfaces_SCF, Only: OccDef
       use OFembed, only: Do_OFemb
+      use InfSO
       Implicit Real*8 (a-h,o-z)
 *
 #include "mxdm.fh"
 #include "infscf.fh"
-#include "infso.fh"
 #include "stdalloc.fh"
 #include "twoswi.fh"
 #include "file.fh"
-#include "hflda.fh"
 #include "warnings.h"
 *
       Character*8 EMILOOP
@@ -56,7 +55,6 @@
 *----------------------------------------------------------------------*
 *
       Call CWTime(TCPU1,TWall1)
-      HFLDA=0.0
       Call SCF_Init()
       iTerm=0
 *
@@ -152,17 +150,14 @@
 ************************************************************************
       SubRoutine IniLLs
 *     initialize the diverse linked lists
+      use LnkLst
       Implicit Real*8 (a-h,o-z)
 
 #include "mxdm.fh"
 #include "infscf.fh"
-#include "infso.fh"
 #include "llists.fh"
-#include "lnklst.fh"
 *
 *
-*     MemRsv set tentatively to the size of six density matrices
-c     MemRsv=6*nBT
       LLlist=0
       LLGrad=0
       Call IniLst(LLGrad,20)
@@ -211,8 +206,8 @@ c     MemRsv=6*nBT
       End
 *----------------------------------------------------------------------*
       Subroutine RclLLs(iDskPt)
+      use InfSO, only: MemRsv
       Implicit Real*8 (a-h,o-z)
-#include "infso.fh"
 #include "file.fh"
 #include "llists.fh"
       Integer iDskPt(5)
@@ -246,8 +241,8 @@ c     MemRsv=6*nBT
       End
 *----------------------------------------------------------------------*
       Subroutine StlLst(LLink)
+      use LnkLst, only: nLList
       Implicit Real*8 (a-h,o-z)
-#include "WrkSpc.fh"
       return
        Write (6,*)
        Write (6,*) '*********** Status of Linked List *************'
@@ -255,27 +250,27 @@ c     MemRsv=6*nBT
        Write (6,*) ' LLink:',LLink
        Write (6,*)
        Write (6,*) ' CNOD data'
-       Write (6,*) 'Error code:                       ',iWork(LLink  )
-       Write (6,*) 'Pointer to first NODE in the list:',iWork(LLink+1)
-       Write (6,*) 'Actual length of list:            ',iWork(LLink+2)
-       Write (6,*) '# of vectors in core:             ',iWork(LLink+3)
+       Write (6,*) 'Error code:                       ',nLList(LLink,0)
+       Write (6,*) 'Pointer to first NODE in the list:',nLList(LLink,1)
+       Write (6,*) 'Actual length of list:            ',nLList(LLink,2)
+       Write (6,*) '# of vectors in core:             ',nLList(LLink,3)
        Write (6,*)
-       iRoot=iWork(LLink+1)
+       iRoot=nLList(LLink,1)
        Do while (iRoot.ne.0)
           Write (6,*) ' NODE data'
           Write (6,*) 'NODE @:                         ',iRoot
-          Write (6,*) 'Pointer to next NODE:           ',iWork(iRoot  )
-          Write (6,*) 'Pointer to stored vector:       ',iWork(iRoot+1)
-          If (iWork(iRoot+5).ge.1) Then
+          Write (6,*) 'Pointer to next NODE:           ',nLList(iRoot,0)
+          Write (6,*) 'Pointer to stored vector:       ',nLList(iRoot,1)
+          If (nLList(iRoot,5).ge.1) Then
              Write (6,*) 'Vector status:                  in Core'
           Else
              Write (6,*) 'Vector status:                  on Disk'
           End If
-          Write (6,*) 'Next free position:             ',iWork(iRoot+2)
-          Write (6,*) 'Length of vector:               ',iWork(iRoot+3)
-          Write (6,*) 'Iteration number:               ',iWork(iRoot+4)
+          Write (6,*) 'Next free position:             ',nLList(iRoot,2)
+          Write (6,*) 'Length of vector:               ',nLList(iRoot,3)
+          Write (6,*) 'Iteration number:               ',nLList(iRoot,4)
           Write (6,*)
-          iRoot=iWork(iRoot)
+          iRoot=nLList(iRoot,0)
        End Do
        Write (6,*) '************ End of Status Report *************'
        Write (6,*)
@@ -299,12 +294,12 @@ c     MemRsv=6*nBT
       End
 *----------------------------------------------------------------------*
       Subroutine Reduce_Thresholds(EThr_,SIntTh)
+      use InfSO, only: DltNTh
       Implicit Real*8 (a-h,o-z)
 #include "real.fh"
 *
 #include "mxdm.fh"
 #include "infscf.fh"
-#include "infso.fh"
 #include "save.fh"
 *
       Write (6,*)
@@ -336,11 +331,11 @@ c     MemRsv=6*nBT
       Return
       End
       Subroutine Reset_Thresholds
+      use InfSO, only: DltNTh
       Implicit Real*8 (a-h,o-z)
 *
 #include "mxdm.fh"
 #include "infscf.fh"
-#include "infso.fh"
 #include "save.fh"
 *
       Write (6,*)

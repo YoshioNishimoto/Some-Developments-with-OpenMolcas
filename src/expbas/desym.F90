@@ -168,7 +168,7 @@ subroutine desym(ireturn)
   mdc = 0
   kk = 0
   do iCnttp=1,nCnttp                ! loop over unique basis sets
-    if (.not.(dbsc(iCnttp)%Aux .or. dbsc(iCnttp)%Frag)) then
+    if (.not. (dbsc(iCnttp)%Aux .or. dbsc(iCnttp)%Frag)) then
       do iCntr=1,dbsc(iCnttp)%nCntr ! loop over symmetry unique centers
         mdc = mdc+1
         nDeg = nIrrep/dc(mdc)%nStab
@@ -501,7 +501,7 @@ subroutine reorder_orbitals()
   ! There was a wrong and stupid warning from GFortran 4.8
   ! If we stop supporting this compiler remove this ugly workaround.
   if (.false.) then
-    if (compare(1,2)) continue
+    if (compare(1,2)) return
   end if
 # endif
 

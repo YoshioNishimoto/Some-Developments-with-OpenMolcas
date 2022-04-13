@@ -20,7 +20,7 @@
 # Gerardo Raggi - AppleClang
 
 cmake_minimum_required (VERSION 3.12)
-cmake_policy (VERSION 3.12...3.13)
+cmake_policy (VERSION 3.12...3.21)
 
 project (OpenMolcas
          LANGUAGES Fortran C
@@ -110,6 +110,8 @@ set_property (CACHE LINALG PROPERTY STRINGS Internal Runtime MKL OpenBLAS AOCL A
 
 option (CUBLAS "Enable CUDA BLAS library." OFF)
 option (NVBLAS "Enable NVidia BLAS library." OFF)
+
+set (EXTERNAL_LIBXC "" CACHE STRING "Location for an external Libxc build")
 
 option (FDE "Enable Frozen-density-embedding (FDE) interface." OFF)
 option (GROMACS "Compile Gromacs interface." OFF)
@@ -614,7 +616,7 @@ set (CXXFLAGS_Intel_RELEASE "-O2")
 set (CXXFLAGS_Intel_FAST "-O2")
 # C compiler
 list (APPEND SUPPORTED_C_COMPILERS "Intel")
-set (CFLAGS_Intel_BASIC "-std=gnu99")
+set (CFLAGS_Intel_BASIC "-std=gnu99 -gcc-sys")
 set (CFLAGS_Intel_OPENMP "-qopenmp")
 # build targets
 set (CFLAGS_Intel_DEBUG "-debug -w3")
@@ -627,7 +629,7 @@ list (APPEND SUPPORTED_Fortran_COMPILERS "Intel")
 set (FFLAGS_Intel_BASIC "")
 set (FFLAGS_Intel_PREPROCESS "-fpp")
 set (FFLAGS_Intel_OPENMP "-qopenmp")
-set (FFLAGS_Intel_ILP64 "-i8 -r8 -heap-arrays")
+set (FFLAGS_Intel_ILP64 "-i8 -heap-arrays")
 # build targets
 set (FFLAGS_Intel_DEBUG "-debug -traceback -warn all,nodeclarations")
 set (FFLAGS_Intel_GARBLE "-O2 -debug -traceback -warn all,nodeclarations -check all,nobounds,noarg_temp_created")
@@ -780,7 +782,7 @@ set (FFLAGS_NAG_FAST "-O4 -ieee=full")
 #set (FFLAGS_NAG_GARBLE "${FFLAGS_GNU_GARBLE} -C=alias -C=bits -C=dangling -C=do -C=intovf -C=present -C=pointer -C=recursion")
 
 # Fix for NAG compiler (similar to GNU Fortran)
-if (CMAKE_Fortran_COMPILER_ID STREQUAL "NAG" AND CMAKE_C_COMPILER_ID STREQUAL "GNU")
+if (CMAKE_Fortran_COMPILER_ID STREQUAL "NAG" AND CMAKE_C_COMPILER_ID STREQUAL "GNU" AND (NOT ${CMAKE_SYSTEM_NAME} STREQUAL "Darwin"))
   set (FFLAGS_NAG_BASIC "${FFLAGS_NAG_BASIC} -Wc,-fno-aggressive-loop-optimizations")
 endif ()
 
@@ -1556,6 +1558,119 @@ else ()
   mark_as_advanced (FORCE CUDAROOT)
 endif ()
 
+# Libxc settings
+#===============
+message ("Configuring Libxc:")
+
+if (EXTERNAL_LIBXC)
+  message ("-- External Libxc root specified at: ${EXTERNAL_LIBXC}")
+  find_library (xc xc PATHS ${EXTERNAL_LIBXC} PATH_SUFFIXES lib lib32 lib64)
+  find_library (xcf03 xcf03 PATHS ${EXTERNAL_LIBXC} PATH_SUFFIXES lib lib32 lib64)
+  if (NOT xc OR NOT xcf03)
+    message (FATAL_ERROR "Libxc could not be found in ${EXTERNAL_LIBXC}.")
+  endif ()
+  # find Libxc version
+  file (READ ${EXTERNAL_LIBXC}/include/xc_version.h header)
+  string (REGEX MATCH "#define XC_VERSION \"[0-9.]+\"" macrodef "${header}")
+  string (REGEX MATCH "[0-9.]+" LIBXC_VERSION "${macrodef}")
+  if (LIBXC_VERSION VERSION_LESS "5.2.0")
+    message (FATAL_ERROR "Libxc version >= 5.2.0 is required (found ${LIBXC_VERSION})")
+  endif ()
+  set (Libxc_INCLUDE_DIRS ${EXTERNAL_LIBXC}/include)
+  set (Libxc_LIBRARIES ${xcf03} ${xc})
+else ()
+  message ("-- Configuring built-in Libxc")
+  include (ExternalProject)
+  set (EP_PROJECT Libxc)
+  set (EP_PATH ${PROJECT_BINARY_DIR}/External/${EP_PROJECT})
+  set (EP_INSTALL ${PROJECT_BINARY_DIR}/External/${EP_PROJECT}_install)
+
+  set (Libxc_REPO https://gitlab.com/libxc/libxc.git)
+  set (Libxc_HASH 9bf3b642) # Release 5.2.2
+
+  if (";Debug;Release;RelWithDebInfo;" MATCHES ";${CMAKE_BUILD_TYPE};")
+    set (LIBXC_BUILD_TYPE ${CMAKE_BUILD_TYPE})
+  elseif (";Garble;" MATCHES ";${CMAKE_BUILD_TYPE};")
+    set (LIBXC_BUILD_TYPE "Debug")
+  else ()
+    set (LIBXC_BUILD_TYPE "Release")
+  endif ()
+
+  # Note shared libraries won't work here because of installation issues.
+  # TODO: Solving this will require creating a wrapper main project that includes
+  #       both Libxc and OpenMolcas as ExternalProject. This could also simplify
+  #       the handling of other codes like GlobalArrays or QCMaquis.
+  list (APPEND LibxcCMakeArgs
+        -D CMAKE_BUILD_TYPE=${LIBXC_BUILD_TYPE}
+        -D CMAKE_INSTALL_PREFIX=${EP_INSTALL}
+        -D BUILD_SHARED_LIBS=NO
+        -D CMAKE_C_COMPILER=${CMAKE_C_COMPILER}
+        -D CMAKE_Fortran_COMPILER=${CMAKE_Fortran_COMPILER}
+        -D CMAKE_Fortran_FLAGS=${CMAKE_Fortran_FLAGS_DEFAULT}
+        -D CMAKE_INSTALL_LIBDIR=lib
+        -D ENABLE_FORTRAN=ON
+        -D ENABLE_PYTHON=OFF
+        -D DISABLE_FXC=ON
+        -D DISABLE_KXC=ON
+        -D DISABLE_LXC=ON
+        -D BUILD_TESTING=NO
+  )
+  # "Hidden" option to pass extra arguments to Libxc CMake
+  list (APPEND LibxcCMakeArgs ${Libxc_EXTRA_CMakeArgs})
+
+  # Workaround for ExternalProject's shortcoming
+  # (see https://gitlab.kitware.com/cmake/cmake/-/issues/16419)
+  # UPDATE_DISCONNECTED is ON if the current commit has already
+  # been built, and OFF when the commit changes, but it requires
+  # to run cmake for detection
+  set (last_hash "None")
+  set (hash_file ${EP_PATH}/${EP_PROJECT}.hash)
+  if (EXISTS ${hash_file})
+    file (READ ${hash_file} last_hash)
+    string (REGEX REPLACE "\n$" "" last_hash "${last_hash}")
+  endif ()
+  if (last_hash STREQUAL ${Libxc_HASH})
+    set (LibxcSkipUpdate ON)
+  else ()
+    set (LibxcSkipUpdate OFF)
+  endif ()
+
+  ExternalProject_Add (${EP_PROJECT}
+                       PREFIX ${EP_PATH}
+                       GIT_REPOSITORY ${Libxc_REPO}
+                       GIT_TAG ${Libxc_HASH}
+                       CMAKE_ARGS ${LibxcCMakeArgs}
+                       UPDATE_DISCONNECTED ${LibxcSkipUpdate}
+  )
+
+  ExternalProject_Add_Step (${EP_PROJECT} update_hash
+                            COMMAND echo ${Libxc_HASH} > ${hash_file}
+                            DEPENDEES build
+  )
+
+  link_directories(${EP_INSTALL}/lib)
+
+  set (Libxc_INCLUDE_DIRS ${EP_INSTALL}/include)
+  set (Libxc_LIBRARIES xcf03 xc)
+
+endif ()
+message ("-- Libxc_INCLUDE_DIRS: ${Libxc_INCLUDE_DIRS}")
+message ("-- Libxc_LIBRARIES: ${Libxc_LIBRARIES}")
+list (APPEND EXTERNAL_LIBRARIES ${Libxc_LIBRARIES})
+
+# Some compilers seem to have issues with nested modules
+set (_comp_list PGI NAG)
+if (${FCID} IN_LIST _comp_list)
+  include_directories (${Libxc_INCLUDE_DIRS})
+else ()
+  foreach (prog
+    dft_util
+    nq_util
+  )
+    list (APPEND ${prog}_incs ${Libxc_INCLUDE_DIRS})
+  endforeach ()
+endif ()
+
 # Global Arrays settings
 #=======================
 
@@ -1601,11 +1716,7 @@ if (GA AND MPI)
       )
     endif ()
 
-    # Workaround for ExternalProject's shortcoming
-    # (see https://gitlab.kitware.com/cmake/cmake/-/issues/16419)
-    # UPDATE_DISCONNECTED is ON if the current GA commit has already
-    # been built, and OFF when the commit changes, but it requires
-    # to run cmake for detection
+    # Same workaround as for Libxc (see above)
     set (last_hash "None")
     set (hash_file ${EP_PATH}/${EP_PROJECT}.hash)
     if (EXISTS ${hash_file})
@@ -1649,9 +1760,8 @@ if (GA AND MPI)
     else ()
       set (lib_ext ".a")
     endif ()
-    set (ga_file ${EP_INSTALL}/lib/libga${lib_ext})
-    set (armci_file ${EP_INSTALL}/lib/libarmci${lib_ext})
     foreach (lib ${GA_LIBRARIES})
+      set (${lib}_file ${EP_INSTALL}/lib/lib${lib}${lib_ext})
       add_library (${lib} UNKNOWN IMPORTED)
       set_target_properties (${lib} PROPERTIES IMPORTED_LOCATION ${${lib}_file})
     endforeach ()
@@ -1959,7 +2069,7 @@ if (DMRG)
     set (QCMaquis_ROOT $ENV{QCMaquis_ROOT})
   endif ()
   if (QCMaquis_ROOT)
-    message (STATUS "External QCMaquis root specified at: ${QCMaquis_ROOT}")
+    message ("-- External QCMaquis root specified at: ${QCMaquis_ROOT}")
     set (QCMaquis_ROOT ${QCMaquis_ROOT} CACHE STRING "Specify path to existing QCMaquis installation. This will allow to skip the installation of QCMaquis.")
     set (MAQUIS_DMRG_DIR ${QCMaquis_ROOT}/share/cmake)
     find_package (MAQUIS_DMRG PATHS ${QCMaquis_ROOT} NO_DEFAULT_PATH)
@@ -1969,6 +2079,7 @@ if (DMRG)
     dmrgscf
     last_energy
     mclr
+    mcpdft
     mpssi
     nevpt2
     rasscf
@@ -2224,7 +2335,7 @@ if (MolGUI)
   include (ExternalProject)
   ExternalProject_Add (${projname}
                        GIT_REPOSITORY https://gitlab.com/Molcas/MolGUI.git
-                       GIT_TAG 2667899eac1195c28e1a33c6f3ae28b6350fe52c
+                       GIT_TAG 599b75e79fab49501adb313f3e2dfab9d8211795
                        PREFIX ${projdir}
                        CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${projinstall}
                                   -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
@@ -2781,6 +2892,9 @@ endif ()
 # dependency using the "mods_obj" target.
 # note that mods_obj is empty at the beginning, source files will be added later
 add_library (mods_obj OBJECT)
+if (TARGET Libxc)
+  add_dependencies (mods_obj Libxc)
+endif ()
 if (GA_BUILD AND MPI)
   add_dependencies (mods_obj GlobalArrays)
 endif ()
@@ -2812,6 +2926,10 @@ foreach (util ${utils})
   endif ()
   list (APPEND utils_obj ${util}_obj)
   list (APPEND ALL_SOURCES ${${util}_sources} ${${util}_mods})
+  # get the list of "public" include directories, since these may be needed
+  # when compiling programs, and not just for linking
+  get_target_property(inc ${util}_obj INTERFACE_INCLUDE_DIRECTORIES)
+  list (APPEND public_incs ${inc})
 endforeach (util)
 
 # build an actual libmolcas library
@@ -2980,11 +3098,13 @@ file (COPY "${OPENMOLCAS_DIR}/CONTRIBUTORS.md" DESTINATION ${PROJECT_BINARY_DIR}
 
 # copy the necessary files from data
 file (REMOVE_RECURSE ${PROJECT_BINARY_DIR}/data)
-configure_file (${OPENMOLCAS_DIR}/data/rysrw.ascii  data/rysrw        COPYONLY)
-configure_file (${OPENMOLCAS_DIR}/data/abdata.ascii data/abdata       COPYONLY)
-configure_file (${OPENMOLCAS_DIR}/data/banner.src   data/banner.txt   COPYONLY)
-configure_file (${OPENMOLCAS_DIR}/data/modalias.src data/modalias.txt COPYONLY)
-configure_file (${OPENMOLCAS_DIR}/data/landing.src  data/landing.txt  COPYONLY)
+configure_file (${OPENMOLCAS_DIR}/data/rysrw.ascii      data/rysrw            COPYONLY)
+configure_file (${OPENMOLCAS_DIR}/data/abdata.ascii     data/abdata           COPYONLY)
+configure_file (${OPENMOLCAS_DIR}/data/banner.src       data/banner.txt       COPYONLY)
+configure_file (${OPENMOLCAS_DIR}/data/modalias.src     data/modalias.txt     COPYONLY)
+configure_file (${OPENMOLCAS_DIR}/data/landing.src      data/landing.txt      COPYONLY)
+configure_file (${OPENMOLCAS_DIR}/data/isotope_data.src data/isotope_data.txt COPYONLY)
+configure_file (${OPENMOLCAS_DIR}/data/functionals.src  data/functionals.txt  COPYONLY)
 file (COPY ${OPENMOLCAS_DIR}/data/inputs.tpl DESTINATION ${PROJECT_BINARY_DIR}/data)
 if (DEFINED EXTRA_DIR)
   foreach (f alias.plx auto.prgm landing.txt)
@@ -2993,7 +3113,7 @@ if (DEFINED EXTRA_DIR)
 endif ()
 # copy the necessary files from sbin
 file (REMOVE_RECURSE ${PROJECT_BINARY_DIR}/sbin)
-foreach (f setup verify version find_sources have_feature help_basis help_doc)
+foreach (f setup verify version find_sources have_feature help_basis help_func help_doc)
   file (COPY ${OPENMOLCAS_DIR}/sbin/${f} DESTINATION ${PROJECT_BINARY_DIR}/sbin)
 endforeach ()
 if (DEFINED EXTRA_DIR)
@@ -3287,6 +3407,7 @@ install (TARGETS
 
 install (PROGRAMS
   ${PROJECT_BINARY_DIR}/sbin/help_basis
+  ${PROJECT_BINARY_DIR}/sbin/help_func
   ${PROJECT_BINARY_DIR}/sbin/help_doc
   ${PROJECT_BINARY_DIR}/sbin/setup
   ${PROJECT_BINARY_DIR}/sbin/version

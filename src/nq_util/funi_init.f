@@ -8,11 +8,11 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
-      Subroutine Funi_Init
+      Subroutine Funi_Init()
+      use nq_Info
       Implicit Real*8 (A-H,O-Z)
 #include "real.fh"
 #include "itmax.fh"
-#include "nq_info.fh"
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -31,19 +31,18 @@
 *
       ntotgp=0
 *
-*     Various idefault thresholds for the integral evaluation.
+*     Various default thresholds for the integral evaluation.
 *
-      T_X      =1.0D-18
       T_Y      =1.0D-11
       Threshold=1.0D-25
 *
       Angular_Prunning = On
       Grid_Type=Moving_Grid
       Rotational_Invariance= On
-      NQ_Direct=On
-      nGridMax=128
-      Packing=On
-C     Packing=Off
+      NQ_Direct=Off
+!     NQ_Direct=On
+!     Packing=On
+      Packing=Off
 *
 *     Bit 1: set Lobatto, not set Gauss and Gauss-Legendre
 *     Bit 2: set scan the whole atomic grid, not set use subset
@@ -52,7 +51,6 @@ C     Packing=Off
 *                                                                      *
 ************************************************************************
 *                                                                      *
-      Flop=Zero
       Do i = 0, LMax_NQ
          R_Max(i)=Zero
       End Do

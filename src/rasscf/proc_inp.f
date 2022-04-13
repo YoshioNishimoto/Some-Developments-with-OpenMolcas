@@ -25,6 +25,8 @@
       use Para_Info, Only: mpp_procid, mpp_nprocs
 #endif
 #endif
+      use csfbas, only: CONF, KCFTP
+      use Fock_util_global, only: DoCholesky
       use write_orbital_files, only: OrbFiles
       use fcidump, only: DumpOnly
       use fcidump_reorder, only: ReOrInp, ReOrFlag
@@ -40,7 +42,7 @@
      &               mh5_exists_dset, mh5_fetch_attr, mh5_fetch_dset,
      &               mh5_close_file
 #endif
-
+      use KSDFT_Info, only: CoefR, CoefX
       use OFembed, only: Do_OFemb,KEonly, OFE_KSDFT,
      &                   ThrFThaw, Xsigma, dFMD
       Implicit Real*8 (A-H,O-Z)
@@ -56,12 +58,10 @@
 #include "general.fh"
 #include "output_ras.fh"
 #include "orthonormalize.fh"
-#include "ksdft.fh"
 #include "casvb.fh"
 #include "pamint.fh"
 * Lucia-stuff:
 #include "ciinfo.fh"
-#include "csfbas.fh"
 #include "spinfo.fh"
 #include "lucia_ini.fh"
 #include "rasscf_lucia.fh"
@@ -88,11 +88,7 @@
 #endif
       Logical DBG, exist
 
-#include "chlcas.fh"
-#include "chodensity.fh"
 #include "chotime.fh"
-#include "cholk.fh"
-#include "choscreen.fh"
 #include "chopar.fh"
 
       Integer IScratch(10)
@@ -766,33 +762,12 @@ C   No changing about read in orbital information from INPORB yet.
        If (Line(1:4).eq.'ROKS') DFTFOCK='ROKS'
        If (Line(1:6).eq.'CASDFT') DFTFOCK='DIFF'
        Read(LUInput,*,End=9910,Err=9920) Line
-       KSDFT=Line(1:16)
+       KSDFT=Line(1:80)
        Call UpCase(KSDFT)
-       l_casdft = KSDFT(1:5).eq.'TLSDA'   .or.
-     &            KSDFT(1:6).eq.'TLSDA5'  .or.
-     &            KSDFT(1:5).eq.'TBLYP'   .or.
-     &            KSDFT(1:6).eq.'TSSBSW'  .or.
-     &            KSDFT(1:5).eq.'TSSBD'   .or.
-     &            KSDFT(1:5).eq.'TS12G'   .or.
-     &            KSDFT(1:4).eq.'TPBE'    .or.
-     &            KSDFT(1:5).eq.'FTPBE'   .or.
-     &            KSDFT(1:5).eq.'TOPBE'   .or.
-     &            KSDFT(1:6).eq.'FTOPBE'  .or.
-     &            KSDFT(1:7).eq.'TREVPBE' .or.
-     &            KSDFT(1:8).eq.'FTREVPBE'.or.
-     &            KSDFT(1:6).eq.'FTLSDA'  .or.
-     &            KSDFT(1:6).eq.'FTBLYP'
+       l_casdft = KSDFT(1:2).eq.'T:' .or. KSDFT(1:3).eq.'FT:'
        If (.NOT.l_casdft) GoTo 9920
        If (IPRLOC(1).GE.DEBUG.and.l_casdft)
      &     write(6,*) ' MCPDFT with functional:', KSDFT
-CGG Calibration of A, B, C, and D coefficients in SG's NewFunctional 1
-       If ( KSDFT(1:4).eq.'NEWF') Then
-         ReadStatus=' Failure reading data following KSDF=NEWF.'
-         Read(LUInput,*,End=9910,Err=9920)
-     &                                       Acoef,Bcoef,Ccoef,Dcoef
-         ReadStatus=' O.K. after reading data following KSDF=NEWF.'
-       End If
-CGG This part will be removed. (PAM 2009: What on earth does he mean??)
       ExFac=Get_ExFac(KSDFT)
 *---  Process DFCF command --------------------------------------------*
       If (KeyDFCF) Then
@@ -869,6 +844,22 @@ CGG This part will be removed. (PAM 2009: What on earth does he mean??)
        ICMSP=1
        Call SetPos(LUInput,'CMSI',Line,iRc)
        Call ChkIfKey()
+      End If
+*---  Process CMSS command --------------------------------------------*
+      CMSStartMat='XMS'
+      If (KeyCMSS.and.(iCMSP.eq.1)) Then
+       If (DBG) Then
+         Write(6,*)' Reading CMS inital rotation matrix'
+       End If
+       Call SetPos(LUInput,'CMSS',Line,iRc)
+       Line=Get_Ln(LUInput)
+       If(iRc.ne._RC_ALL_IS_WELL_) GoTo 9810
+       Call ChkIfKey()
+       If (DBG) Then
+         Write(6,*) ' Reading CMS starting rotation matrix from'
+         Write(6,*) trim(Line)
+       End If
+       IF(.not.(trim(Line).eq.'XMS'))  call fileorb(Line,CMSStartMat)
       End If
 *---  Process CMMA command --------------------------------------------*
       If (KeyCMMA) Then
@@ -1194,7 +1185,6 @@ CIgorS End
 
 * CORE is probably becoming obsolete.
 *---  Process CORE command --------------------------------------------*
-      Continue
       If (KeyCORE) Then
        If (DBG) Write(6,*)' CORE command was used.'
         IF (IPRLEV.ge.VERBOSE) Write(LF,*)
@@ -2234,7 +2224,6 @@ C orbitals accordingly
       END IF
 *
 *---  Process CLEA command ---
-      Continue
       If (KeyCLEA) Then
        If (DBG) Write(6,*) ' CLEAN (Orbital Cleaning) keyword.'
        If (DBG) Write(6,*) ' (Awkward input -- replace??).'
@@ -2484,7 +2473,7 @@ C orbitals accordingly
        Read(LUInput,'(A)',End=9910,Err=9920) OFE_KSDFT
        ReadStatus=' O.K. after reading data after OFEM keyword.'
        Call UpCase(OFE_KSDFT)
-       Call LeftAd(OFE_KSDFT)
+       OFE_KSDFT = adjustl(OFE_KSDFT)
        write(6,*)
        write(6,*)  '  --------------------------------------'
        write(6,*)  '   Orbital-Free Embedding Calculation'
@@ -3355,7 +3344,7 @@ C Test read failed. JOBOLD cannot be used.
       IF (ICICH.EQ.1) THEN
         CALL GETMEM('UG2SG','ALLO','INTE',LUG2SG,NCONF)
         CALL UG2SG(NROOTS,NCONF,NAC,NACTEL,STSYM,IPR,
-     *             IWORK(KICONF(1)),IWORK(KCFTP),IWORK(LUG2SG),
+     *             CONF,IWORK(KCFTP),IWORK(LUG2SG),
      *             ICI,JCJ,CCI,MXROOT)
         CALL GETMEM('UG2SG','FREE','INTE',LUG2SG,NCONF)
       END IF

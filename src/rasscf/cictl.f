@@ -61,6 +61,7 @@
 #ifdef _HDF5_
       use mh5, only: mh5_put_dset
 #endif
+      use csfbas, only: CONF, KCFTP
       Implicit Real* 8 (A-H,O-Z)
 
       Dimension CMO(*),D(*),DS(*),P(*),PA(*),FI(*),FA(*),D1I(*),D1A(*),
@@ -81,7 +82,6 @@
 #include "output_ras.fh"
       Character*16 ROUTINE
       Parameter (ROUTINE='CICTL   ')
-#include "csfbas.fh"
 #include "gugx.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
@@ -443,44 +443,6 @@ C     kh0_pointer is used in Lucia to retrieve H0 from Molcas.
       if(IfVB.eq.1)then
         call cvbmn_rvb(max(ifinal,1))
       else
-        If (KSDFT(1:3).ne.'SCF'
-     &      .and.DFTFOCK(1:4).eq.'DIFF'.and.nac.ne.0) Then
-          nTmpPUVX=nFint
-          Call GetMem('TmpPUVX','Allo','Real',ipTmpPUVX,nTmpPUVX)
-          Call GetMem('TmpTUVX','Allo','Real',ipTmpTUVX,NACPR2)
-          Call dCopy_(NACPR2,[0.0d0],0,Work(ipTmpTUVX),1)
-          Call Get_dArray('DFT_TwoEl',Work(ipTmpPUVX),nTmpPUVX)
-          Call Get_TUVX(Work(ipTmpPUVX),Work(ipTmpTUVX))
-          Call DaXpY_(NACPR2,1.0d0,TUVX,1,Work(ipTmpTUVX),1)
-         if (DoSplitCAS) then  ! (GLMJ)
-           Call SplitCtl(Work(LW1),Work(ipTmpTUVX),IFINAL,iErrSplit)
-           Call GetMem('TmpTUVX','Free','Real',ipTmpTUVX,NACPR2)
-           Call GetMem('TmpPUVX','Free','Real',ipTmpPUVX,nTmpPUVX)
-           if (iErrSplit.eq.1) then
-            write(LF,*) ('*',i=1,120)
-            write(LF,*)'WARNING!!!'
-            write(LF,*) 'SplitCAS iterations don''t converge.'
-            write(LF,*) 'The program will continue'
-            write(LF,*) 'Hopefully your calculation will converge',
-     &                 'next iteration!'
-            write(LF,*) ('*',i=1,120)
-           end if
-           if (iErrSplit.eq.2) then
-            write(LF,*) ('*',i=1,120)
-            write(LF,*)'WARNING!!!'
-            write(LF,*) 'SplitCAS iterations don''t converge.'
-          write(LF,*)'Try to increase MxIterSplit or SplitCAS threshold'
-            write(LF,*) 'The program will STOP!!!'
-            write(LF,*) ('*',i=1,120)
-            call xQuit(96)
-           end if
-         end if
-         If (.not.DoSplitCAS) then
-           Call DavCtl(Work(LW1),Work(ipTmpTUVX),IFINAL)
-           Call GetMem('TmpTUVX','Free','Real',ipTmpTUVX,NACPR2)
-           Call GetMem('TmpPUVX','Free','Real',ipTmpPUVX,nTmpPUVX)
-         end if
-        Else
          if (DoSplitCAS) then !(GLMJ)
            Call SplitCtl(Work(LW1),TUVX,IFINAL,iErrSplit)
            if (iErrSplit.eq.1) then
@@ -549,7 +511,6 @@ C     kh0_pointer is used in Lucia to retrieve H0 from Molcas.
              Call DavCtl(Work(LW1),TUVX,IFINAL)
            end if
          end if
-        End If
       endif
 
 *
@@ -589,7 +550,9 @@ C     kh0_pointer is used in Lucia to retrieve H0 from Molcas.
          CALL XMSRot(CMO,FI,FA)
         End If
         IF(ICMSP.eq.1) THEN
-         CALL XMSRot(CMO,FI,FA)
+         If(trim(CMSStartMat).eq.'XMS') Then
+          CALL XMSRot(CMO,FI,FA)
+         End If
          CALL CMSRot(TUVX)
         END IF
         If(IRotPsi==1) Then
@@ -820,7 +783,7 @@ c
           call getmem('kcnf','allo','inte',ivkcnf,nactel)
          if(.not.iDoGas)then
           Call Reord2(NAC,NACTEL,STSYM,0,
-     &                iWork(KICONF(1)),iWork(KCFTP),
+     &                CONF,iWork(KCFTP),
      &                Work(LW4),Work(LW11),iWork(ivkcnf))
 c        end if
 c         call getmem('kcnf','free','inte',ivkcnf,nactel)
@@ -864,7 +827,7 @@ C.. printout of the wave function
      c                 prwthr,' for root', i
             Write(LF,'(6X,A,F15.6)')
      c                'energy=',ener(i,iter)
-          call gasprwf(iwork(lw12),nac,nactel,stsym,iwork(kiconf(1)),
+          call gasprwf(iwork(lw12),nac,nactel,stsym,conf,
      c                 iwork(kcftp),work(lw4),iwork(ivkcnf))
           End If
          end if
@@ -888,7 +851,7 @@ C.. printout of the wave function
 * reorder it according to the split graph GUGA conventions
           call getmem('kcnf','allo','inte',ivkcnf,nactel)
           Call Reord2(NAC,NACTEL,STSYM,0,
-     &                iWork(KICONF(1)),iWork(KCFTP),
+     &                CONF,iWork(KCFTP),
      &                Work(LW4),Work(LW11),iWork(ivkcnf))
           call getmem('kcnf','free','inte',ivkcnf,nactel)
 * save reorder CI vector on disk
@@ -978,7 +941,7 @@ C     the relative CISE root given in the input by the 'CIRF' keyword.
         !point for numerical gradient calculations)
 #ifdef _DMRG_
         if(doDMRG.and.exist)then
-          inquire(file="rf.results_state.h5", exist=rfh5DMRG)
+          call f_inquire('rf.results_state.h5', rfh5DMRG)
           if(.not.rfh5DMRG)then
             maquis_name_states  = ""
             maquis_name_results = ""

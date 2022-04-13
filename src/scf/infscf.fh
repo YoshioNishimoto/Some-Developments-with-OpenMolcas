@@ -195,7 +195,7 @@
       Character*(LENIN)  Atom(MxBS)
       Character*8   Type(MxBS)
       Character*4   Neg2_Action
-      Character*16  KSDFT
+      Character*80  KSDFT
       Character*512 SCF_FileOrb
       Logical isHDF5
       Integer fileorb_id
@@ -213,7 +213,7 @@
 * TotCpu - total CPU time                                              *
 * TotIO  - total I/O time                                              *
 * TimFld - time of specified sections of the program                   *
-* NamFld - names of those sections (set up in scf.f)                   *
+* NamFld - names of those sections (set up in scf_init)                *
 *----------------------------------------------------------------------*
       Integer    nFld
       Parameter (nFld = 16)

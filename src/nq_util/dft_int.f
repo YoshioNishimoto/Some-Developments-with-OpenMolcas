@@ -8,97 +8,55 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 2008, Roland Lindh                                     *
+* Copyright (C) 2000,2022, Roland Lindh                                *
+*               Ajitha Devarajan                                       *
 ************************************************************************
-      Subroutine DFT_Int(Weights,mGrid,list_s,nlist_s,AOInt,nAOInt,
-     &                   FckInt,nFckInt,SOTemp,nSOTemp,
-     &                   TabAO,ipTabAO,nTabAO,dF_dRho,ndF_dRho,
-     &                   nSym,iSpin,Flop,Rho,nRho,Scr,mScr,
-     &                   Fact,ndc,mAO,TabAOMax,T_X,
-     &                   list_bas,Functional_type,nAOMax)
+      Subroutine DFT_Int(list_s,nlist_s,FckInt,nFckInt,nD,Fact,ndc)
 ************************************************************************
 *                                                                      *
-* Object: Front-end for compting DFT integrals                         *
+* Object: to compute contributions to                                  *
 *                                                                      *
-*      Author:Roland Lindh, Dept. of Theor. Chem., Lund Unibersity,   ,*
-*             SWEDEN. November 2008                                    *
+*         <m|dF/drho|n> ; integrals over the potential                 *
+*                                                                      *
+*         where                                                        *
+*                                                                      *
+*         F(r)=rho(r)*e(rho(r),grad[rho(r)])                           *
+*                                                                      *
+*      Author:Roland Lindh, Department of Chemical Physics, University *
+*             of Lund, SWEDEN. November 2000                           *
+*             D.Ajitha:Modifying for the new Kernel outputs            *
 ************************************************************************
+      use iSD_data
+      use Symmetry_Info, only: nIrrep
       Implicit Real*8 (A-H,O-Z)
-      External Do_NInt1_d, Do_nInt1,
-     &         Do_NInt2_d, Do_nInt2,
-     &         Do_NInt3_d, Do_nInt3,
-     &         Do_NInt4_d, Do_nInt4
-#include "functional_types.fh"
-      Integer Functional_type
-      Real*8 Weights(mGrid), SOTemp(nSOTemp,iSpin), Fact(ndc**2),
-     &       TabAO(nTabAO), Scr(mScr), Rho(nRho,mGrid),
-     &       AOInt(nAOInt*nAOInt,iSpin), FckInt(nFckInt,iSpin),
-     &       dF_dRho(ndF_dRho,mGrid), TabAOMax(nlist_s)
-      Integer list_s(2,nlist_s), ipTabAO(nlist_s), list_bas(2,nlist_s)
+#include "real.fh"
+#include "print.fh"
+#include "debug.fh"
+#include "nsd.fh"
+#include "setup.fh"
+#include "stdalloc.fh"
+      Real*8 Fact(ndc**2), FckInt(nFckInt,nD)
+      Integer list_s(2,nlist_s)
 *                                                                      *
 ************************************************************************
 *                                                                      *
-      If (Functional_type.eq.LDA_type) Then
-         nFn=1
-         nScr=iSpin*nFn*nAOMax
-         Call DFT_IntX(Do_NInt1_d,Do_NInt1,
-     &                 Weights,mGrid,list_s,nlist_s,AOInt,nAOInt,
-     &                 FckInt,nFckInt,SOTemp,nSOTemp,
-     &                 TabAO,ipTabAO,nTabAO,dF_dRho,ndF_dRho,
-     &                 nSym,iSpin,Flop,Rho,nRho,Scr,nScr,
-     &                 Fact,ndc,mAO,TabAOMax,T_X,
-     &                 list_bas,nFn)
+*---- Evaluate the desired AO integrand here from the AOs, accumulate
+*     contributions to the SO integrals on the fly.
+*
+
+      Call Do_NInt_d()
+      Call Do_NIntX()
 *                                                                      *
 ************************************************************************
 *                                                                      *
-      Else If (Functional_type.eq.GGA_type) Then
-         nFn=4
-         nScr=iSpin*nFn*nAOMax
-         Call DFT_IntX(Do_NInt2_d,Do_NInt2,
-     &                 Weights,mGrid,list_s,nlist_s,AOInt,nAOInt,
-     &                 FckInt,nFckInt,SOTemp,nSOTemp,
-     &                 TabAO,ipTabAO,nTabAO,dF_dRho,ndF_dRho,
-     &                 nSym,iSpin,Flop,Rho,nRho,Scr,nScr,
-     &                 Fact,ndc,mAO,TabAOMax,T_X,
-     &                 list_bas,nFn)
-*                                                                      *
-************************************************************************
-*                                                                      *
-      Else If (Functional_type.eq.meta_GGA_type1) Then
-         nFn=4
-         nScr=iSpin*nFn*nAOMax
-         Call DFT_IntX(Do_NInt4_d,Do_NInt4,
-     &                 Weights,mGrid,list_s,nlist_s,AOInt,nAOInt,
-     &                 FckInt,nFckInt,SOTemp,nSOTemp,
-     &                 TabAO,ipTabAO,nTabAO,dF_dRho,ndF_dRho,
-     &                 nSym,iSpin,Flop,Rho,nRho,Scr,nScr,
-     &                 Fact,ndc,mAO,TabAOMax,T_X,
-     &                 list_bas,nFn)
-*                                                                      *
-************************************************************************
-*                                                                      *
-      Else If (Functional_type.eq.meta_GGA_type2) Then
-         nFn=5
-         nScr=iSpin*nFn*nAOMax
-         Call DFT_IntX(Do_NInt3_d,Do_NInt3,
-     &                 Weights,mGrid,list_s,nlist_s,AOInt,nAOInt,
-     &                 FckInt,nFckInt,SOTemp,nSOTemp,
-     &                 TabAO,ipTabAO,nTabAO,dF_dRho,ndF_dRho,
-     &                 nSym,iSpin,Flop,Rho,nRho,Scr,nScr,
-     &                 Fact,ndc,mAO,TabAOMax,T_X,
-     &                 list_bas,nFn)
-*                                                                      *
-************************************************************************
-*                                                                      *
+*     Distribute result on to the full integral matrix.
+*
+      If (nIrrep.eq.1) Then
+         Call AOAdd_Full(FckInt,nFckInt,nD)
       Else
-         Write (6,*) 'DFT_Int: Illegal functional type!'
-         Call Abend()
-*                                                                      *
-************************************************************************
-*                                                                      *
+         Call SymAdp_Full(FckInt,nFckInt,list_s,nlist_s,Fact,ndc,nD)
       End If
 *                                                                      *
 ************************************************************************
 *                                                                      *
-      Return
       End

@@ -22,15 +22,14 @@
 * G. Li Manni (GLM)
 * S Dong, 2018 (added print outs related to scaling)
 ******************************************************************
-       use KSDFT_Info, only: Funcaa, Funcbb, Funccc
+      use KSDFT_Info, only: CoefR, CoefX, Funcaa, Funcbb, Funccc
+      use nq_Info
       Implicit Real*8 (A-H,O-Z)
       Real*8 CASDFT_E,E_nuc,E_cor,E_cas,E_ot
       Real*8 CASDFT_E_1,E_ot_1,Funcaa1,Funcbb1,Funccc1
       Dimension Ref_Ener(*)
       integer jroot
 #include "WrkSpc.fh"
-#include "ksdft.fh"
-#include "nq_info.fh"
 #include "mspdft.fh"
 
       write(6,'(6X,80A)')
@@ -58,6 +57,11 @@
      &           ' after functional transformation:', Dens_a2
       write(6,'(6X,A,12X,F10.3)') 'Integrated  beta density '//
      &           ' after functional transformation:', Dens_b2
+      write(6,'(6X,A)') 'NOTE:'
+      write(6,'(6X,2A)') 'Densities after transformation are ',
+     &           'intermediate quantities'
+      write(6,'(6X,2A)') 'and should not be interpreted as ',
+     &           'real spin densities'
       write(6,'(6X,80A)')
       write(6,'(6X,A,32X,F18.6)') 'Exchange energy scaling factor',
      &          CoefX

@@ -50,7 +50,9 @@
 *     Modified AMS Feb 2016 - separate MCPDFT from RASSCF              *
 ************************************************************************
 
+      use csfbas, only: CONF, KCFTP
       use stdalloc, only : mma_allocate, mma_deallocate
+      use Fock_util_global, only: ALGO, DoActive, DoCholesky
       use OFembed, only: Do_OFemb, FMaux
       Implicit Real*8 (A-H,O-Z)
 
@@ -71,7 +73,6 @@
 #include "casvb.fh"
 #include "rasscf_lucia.fh"
 #include "lucia_ini.fh"
-#include "csfbas.fh"
 #include "gugx.fh"
 #include "pamint.fh"
 #include "qnctl_mcpdft.fh"
@@ -101,11 +102,9 @@
       Logical Gradient
 
 * --------- Cholesky stuff:
-#include "chotodo.fh"
-#include "chlcas.fh"
 #include "chopar.fh"
 #include "chotime.fh"
-#include "cholk.fh"
+#include "qmat_m.fh"
 * --------- End Cholesky stuff
       Character*8 EMILOOP
 
@@ -215,7 +214,7 @@
 
 
 * Process the input:
-      Call Proc_InpX(DSCF,lOPTO,iRc)
+      Call Proc_InpX(DSCF,iRc)
 * If something goes wrong in proc_inp:
       If (iRc.ne._RC_ALL_IS_WELL_) Then
        If (IPRLEV.ge.TERSE) Then
@@ -324,12 +323,6 @@
 *
       CALL ALLOC_m
 *
-* Create job interphase on unit JOBIPH (FT15)
-*
-      if(ifvb.ne.2) then
-!        CALL CREIPH
-!        call cre_raswfn
-      end if
       if(ifvb.eq.1)call casinfo2_cvb()
 
       Call Timing(Swatch,Swatch,Ebel_1,Swatch)
@@ -360,17 +353,8 @@ CGG03 Aug 03
 *                                                                      *
 
 !      goto 413 !Jump 1
-      if(KSDFT(1:5).eq.'TLSDA'.or. !GLM
-     &   KSDFT(1:5).eq.'TBLYP'.or.
-     &   KSDFT(1:5).eq.'FTPBE'.or.
-     &   KSDFT(1:7).eq.'TREVPBE'.or.
-     &   KSDFT(1:8).eq.'FTREVPBE'.or.
-     &   KSDFT(1:6).eq.'FTLSDA'.or.
-     &   KSDFT(1:6).eq.'FTBLYP'.or.
-     &   KSDFT(1:4).eq.'TPBE'.or.
-     &   KSDFT(1:5).eq.'TOPBE'.or.
-     &   KSDFT(1:6).eq.'FTOPBE' ) then
-      KSDFT_TEMP=KSDFT
+      if (KSDFT(1:5).eq.'T:'.or. KSDFT(1:3).eq.'FT:') Then
+         KSDFT_TEMP=KSDFT
         KSDFT='SCF'
         ExFac=1.0D0
       else
@@ -392,10 +376,7 @@ CGG03 Aug 03
            DoActive = .true.
         Else
            lRf = .false.
-           IF(KSDFT_TEMP(1:5).ne.'TLSDA'.and. !GLM
-     &        KSDFT_TEMP(1:5).ne.'TBLYP'.and.
-     &        KSDFT_TEMP(1:4).ne.'TPBE'.and.
-     &        KSDFT_TEMP(1:5).ne.'TOPBE')  then
+           IF(KSDFT_TEMP(1:2).ne.'T:') Then
             KSDFT='SCF'
             ExFac=1.0D0
            end IF
@@ -533,21 +514,10 @@ CGG03 Aug 03
          Write(IterFile,'(15X,A,I3)') 'RASSCF iteration: ',Iter
       End If
 *
-        IF(KSDFT_TEMP(1:5).eq.'TLSDA'.or. !GLM
-     &     KSDFT_TEMP(1:5).eq.'TBLYP'.or.
-     &     KSDFT_TEMP(1:5).eq.'FTPBE'.or.
-     &     KSDFT_TEMP(1:7).eq.'TREVPBE'.or.
-     &     KSDFT_TEMP(1:8).eq.'FTREVPBE'.or.
-     &     KSDFT_TEMP(1:6).eq.'FTLSDA'.or.
-     &     KSDFT_TEMP(1:6).eq.'FTBLYP'.or.
-     &     KSDFT_TEMP(1:4).eq.'TPBE'.or.
-     &     KSDFT_TEMP(1:5).eq.'TOPBE'.or.
-     &     KSDFT_TEMP(1:6).eq.'FTOPBE') then
-            KSDFT=KSDFT_TEMP
-            ExFac=0.0d0
-*        ExFac=Get_ExFac(KSDFT)
+        IF (KSDFT_TEMP(1:2).eq.'T:'.or.KSDFT_TEMP(1:3).eq.'FT:') Then
+           KSDFT=KSDFT_TEMP
+           ExFac=0.0d0
         end IF
-
 *
 * Transform two-electron integrals and compute at the same time
 * the Fock matrices FI and FA
@@ -590,6 +560,7 @@ c      call triprt('P-mat 1',' ',WORK(LPMAT),nAc*(nAc+1)/2)
 
        Call Put_CMO(Work(LCMO),ntot2)
 
+       !write(6,*) 'doGSOR is ... ',doGSOR
        if (doGSOR) then
         Call f_Inquire('JOBOLD',Found)
         if (.not.found) then
@@ -632,7 +603,7 @@ c      call triprt('P-mat 1',' ',WORK(LPMAT),nAc*(nAc+1)/2)
            Call DDafile(JOBOLD,1,Work(LW4),nConf,iDisk)
           call getmem('kcnf','allo','inte',ivkcnf,nactel)
           Call Reord2(NAC,NACTEL,STSYM,1,
-     &                iWork(KICONF(1)),iWork(KCFTP),
+     &                CONF,iWork(KCFTP),
      &                Work(LW4),Work(LW11),iWork(ivkcnf))
           Call dcopy_(nconf,Work(LW11),1,Work(LW4),1)
           call getmem('kcnf','free','inte',ivkcnf,nactel)
@@ -678,16 +649,7 @@ c      call triprt('P-mat 1',' ',WORK(LPMAT),nAc*(nAc+1)/2)
 !      end do
 
 
-      IF(KSDFT_TEMP(1:5).eq.'TLSDA'.or. !GLM
-     &    KSDFT_TEMP(1:5).eq.'TBLYP'.or.
-     &     KSDFT_TEMP(1:5).eq.'FTPBE'.or.
-     &     KSDFT_TEMP(1:7).eq.'TREVPBE'.or.
-     &     KSDFT_TEMP(1:8).eq.'FTREVPBE'.or.
-     &     KSDFT_TEMP(1:6).eq.'FTLSDA'.or.
-     &     KSDFT_TEMP(1:6).eq.'FTBLYP'.or.
-     &    KSDFT_TEMP(1:4).eq.'TPBE'.or.
-     &     KSDFT_TEMP(1:5).eq.'TOPBE'.or.
-     &     KSDFT_TEMP(1:6).eq.'FTOPBE') THEN
+      IF(KSDFT_TEMP(1:2).eq.'T:'.or. KSDFT_TEMP(1:3).eq.'FT:') Then
        IF(DoGradMSPD) THEN
         Call GetMem('F1MS' ,'Allo','Real',iF1MS ,nTot1*nRoots)
         Call GetMem('FocMS','Allo','Real',iFocMS,nTot1*nRoots)
@@ -701,8 +663,12 @@ c      call triprt('P-mat 1',' ',WORK(LPMAT),nAc*(nAc+1)/2)
         Call FZero(Work(iP2MOt),lRoots*NACPR2)
        END IF
         CALL GETMEM('CASDFT_Fock','ALLO','REAL',LFOCK,NACPAR)
+
+        !write(6,*) 'call msctl ...'
+
         Call MSCtl(Work(LCMO),Work(LFOCK),Work(LFI),Work(LFA),
      &       Work(iRef_E))
+
         If(IWJOB==1.and.(.not.Do_Rotate)) Call writejob(iadr19)
 
         If (Do_Rotate) Then
@@ -829,6 +795,7 @@ c      call triprt('P-mat 1',' ',WORK(LPMAT),nAc*(nAc+1)/2)
 !         Call GetMem('Q-mat','Free','Real',ipQmat,NTav)
 !      EndIf
 
+       !write(6,*) 'done mcpdft...'
 
 *                                                                      *
 ************************************************************************

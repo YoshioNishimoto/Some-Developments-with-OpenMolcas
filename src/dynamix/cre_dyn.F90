@@ -22,7 +22,7 @@ use Definitions, only: wp, iwp
 
 implicit none
 integer(kind=iwp) :: natoms, nsym, nstates, nconfs, dyn_dsetid, surf_dsetid, wfn_fileid, ii
-real(kind=wp), allocatable :: coord(:,:), ener(:), ciarray(:)
+real(kind=wp), allocatable :: coord(:,:), ener(:), ciarray(:), overlap_save(:)
 #include "Molcas.fh"
 character(len=LenIn), allocatable :: atomlbl(:)
 logical(kind=iwp) :: found
@@ -220,7 +220,19 @@ if (mh5_exists_attr(wfn_fileid,'NSTATES') .and. mh5_exists_attr(wfn_fileid,'NCON
     call mma_deallocate(Amatrix)
   end if
 
+  ! <t-2dt|t-dt> RASSI overlap
+  call qpg_darray('SH_Ovlp_Save',Found,nstates*nstates)
+  if (Found) then
+    surf_dsetid = mh5_create_dset_real(dyn_fileid,'RASSI_SAVE_OVLP',1,[nstates*nstates])
+    call mh5_init_attr(surf_dsetid,'DESCRIPTION','RASSI overlap between t-2dt and t-dt')
+    call mma_allocate(overlap_save,nstates*nstates)
+    call get_darray('SH_Ovlp_Save',overlap_save,nstates*nstates)
+    call mh5_put_dset(surf_dsetid,overlap_save)
+    call mma_deallocate(overlap_save)
+    call mh5_close_dset(surf_dsetid)
+  end if
 end if
+
 call mh5_close_file(wfn_fileid)
 
 #endif

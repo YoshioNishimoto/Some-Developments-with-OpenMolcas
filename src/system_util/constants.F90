@@ -11,6 +11,8 @@
 
 module Constants
 
+use Definitions, only: wp
+
 implicit none
 private
 
@@ -19,7 +21,11 @@ public :: Zero, One, Two, Three, Four, Five, Six, Seven, Eight, Nine, Ten, Eleve
 public :: Half, Quart, OneHalf, Pi, SqrtP2, TwoP34, TwoP54, One2C2
 
 #include "constants2.fh"
-public :: diel, rPi, UTOAU, elmass, ATOKG, elcharge, rNAVO, cLight, auTocm, rPlanck, kBoltzmann, rBohr, cm_s, Debye, Angstrom, RF, &
-          auToHz, auTofs, auToN, auToeV, auTokJ, auTokcalmol, c_in_au, cal_to_J, Rgas
+public :: diel, deg2rad, UTOAU, elmass, ATOKG, elcharge, rNAVO, cLight, auTocm, rPlanck, kBoltzmann, rBohr, cm_s, Debye, Angstrom, &
+          RF, auToHz, auTofs, auToN, auToeV, auTokJ, auTokcalmol, c_in_au, cal_to_J, Rgas, mu2elmass, cLightAU, atmToau
+
+complex(kind=wp), parameter :: cZero = (Zero,Zero), cOne = (One,Zero), Onei = (Zero,One)
+
+public :: cZero, cOne, Onei
 
 end module Constants

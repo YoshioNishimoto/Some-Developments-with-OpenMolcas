@@ -332,7 +332,6 @@
                   End If
                End Do
 *
-               Continue
 #ifdef _DEBUGPRINT_
                Call RecPrt('Con_Opt; drdq(2)',' ',drdq,nInter,
      &                                            nLambda*nIter)

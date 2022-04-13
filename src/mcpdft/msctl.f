@@ -28,6 +28,8 @@
 *     GLM, Minneapolis,   May 2013
 *     AMS, Minneapolis,   Feb 2016
 *
+      Use Fock_util_global, only: ALGO, DoCholesky
+      Use KSDFT_Info, only: do_pdftpot, ifav, ifiv
       Implicit Real*8 (A-H,O-Z)
       Dimension CMO(*) ,F(*) , FI(*), FA(*), Ref_Ener(*)
 *
@@ -41,16 +43,11 @@
 #include "pamint.fh"
 #include "timers.fh"
 #include "SysDef.fh"
-#include "csfbas.fh"
 #include "gugx.fh"
 #include "casvb.fh"
 #include "wadr.fh"
 #include "rasscf_lucia.fh"
-#include "ksdft.fh"
 !      Logical TraOnly
-
-#include "chotodo.fh"
-#include "chlcas.fh"
 
 *
       Character*8 Label
