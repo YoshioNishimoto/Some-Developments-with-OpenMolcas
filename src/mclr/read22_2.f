@@ -20,20 +20,22 @@
 *          MOtilde:MO (one index transformed integrals)            *
 *                                                                  *
 ********************************************************************
+      use Arrays, only: W_CMO=>CMO, W_CMO_Inv=>CMO_Inv, Int1, G1t, G2t
+      use Data_Structures, only: Allocate_DT, Deallocate_DT, DSBA_Type
       Implicit Real*8(a-h,o-z)
+#include "real.fh"
 #include "Pointers.fh"
 #include "standard_iounits.fh"
 #include "Input.fh"
-#include "WrkSpc.fh"
-#include "glbbas_mclr.fh"
+#include "stdalloc.fh"
 #include "Files_mclr.fh"
-      Real*8 Fock(nDens2),FockI(nDens2),FockA(nDens),
+      Real*8 Fock(nDens2),FockI(nDens2),FockA(nDens2),
      &       Temp2(nDens2),Temp3(ndens2),Q(nDens2),
      &       MO1(*), Scr(*)
       Logical Fake_CMO2,DoAct
-      Parameter ( half  = 0.5d0 )
-      Parameter ( two  = 2.0d0 )
-      Parameter ( one  = 1.0d0 )
+      Real*8, Allocatable:: G2x(:)
+      Type (DSBA_Type) CVa(2), DLT, DI, DA, Kappa, JI(1), KI, JA, KA,
+     &                 FkI, FkA, QVec, CMO, CMO_Inv
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -41,15 +43,35 @@
 *                                                                      *
 ************************************************************************
 *                                                                      *
-      call dcopy_(ndens2,0.0d0,0,focki,1)
-      call dcopy_(ndens2,0.0d0,0,focka,1)
+      call dcopy_(ndens2,[0.0d0],0,focki,1)
+      call dcopy_(ndens2,[0.0d0],0,focka,1)
+      If(TwoStep.and.(StepType.eq.'RUN2')) Then
+        iaddressQDAT=0
+        Call dcopy_(ndens2,[0.0d0],0,fock,1)
+        Call dcopy_(ndens2,[0.0d0],0,Q,1)
+        Call ddafile(LuQDAT,2,FockA,nDens2,iaddressQDAT)
+        Call ddafile(LuQDAT,2,FockI,nDens2,iaddressQDAT)
+        Call ddafile(LuQDAT,2,Fock ,nDens2,iaddressQDAT)
+        Call ddafile(LuQDAT,2,Q    ,nDens2,iaddressQDAT)
+        goto 101
+      End If
+
 *
       nas=0
       Do is=1,nSym
        nAS=nAS+nAsh(is)
       end do
-*
-      If (newCho) Go to 50
+*                                                                      *
+************************************************************************
+*                                                                      *
+      Select Case (NewCho)
+*                                                                      *
+************************************************************************
+*                                                                      *
+       Case (.False.)   ! Cho-MO algorithm
+*                                                                      *
+************************************************************************
+*                                                                      *
       Do iS=1,nSym
          Do jS=1,iS
             ijS=iEOr(iS-1,jS-1)+1
@@ -103,11 +125,11 @@
      &                            ((jB.gt.nIsh(js)).and.(nAsh(jS).ne.0))
      &                           ) Then
                                  ipD=iTri(jB-nIsh(jS)+nA(jS),
-     &                               iB-nIsh(is)+nA(iS))+ipG1t-1
+     &                               iB-nIsh(is)+nA(iS))
                                  Fact=Two
                                  If (iB.eq.jB) Fact=one
                                  Call DaXpY_(nOrb(kS)*nOrb(lS),
-     &                                      Fact*Work(ipD),
+     &                                      Fact*G1t(ipD),
      &                                      Temp2,1,FockA(ipCM(kS)),1)
                               End If
                            End If
@@ -131,8 +153,10 @@
 *                                                                      *
 *    Construct Q matrix: Q = sum(jkl)(pj|kl)d
 *                         pi                 ijkl
+
       If (iMethod.eq.iCASSCF) Then
-         Call CreQ2(Q,Work(ipG2),1,Temp2,Scr,nDens2)
+
+         Call CreQ2(Q,G2t,1,Temp2,Scr,nDens2)
 *
 *        Sort out MO (ij|kl)
 *
@@ -184,12 +208,8 @@
          kS=iS
          Do js=1,nSym
             lS=jS
-            If (iEor(iEor(is-1,js-1),iEor(ks-1,ls-1)).ne.0) Go To 200
-            If (nOrb(iS)*nOrb(jS)*nOrb(ks)*nOrb(lS).eq.0)   Go To 200
-            JLB=1
-            JLB1=0
-            JLBas=0
-            jlBB=0
+            If (iEor(iEor(is-1,js-1),iEor(ks-1,ls-1)).ne.0) Cycle
+            If (nOrb(iS)*nOrb(jS)*nOrb(ks)*nOrb(lS).eq.0)   Cycle
             Do LB=1,nB(LS)
                Do JB=1,nB(JS)
 *                                                                      *
@@ -223,8 +243,8 @@
      &                      ((lB.gt.nIsh(ls)).and.(nAsh(lS).ne.0))
      &                     ) Then
                           ipD=iTri(lB-nIsh(lS)+nA(lS),
-     &                             jB-nIsh(js)+nA(jS))+ipG1t-1
-                          Call DaXpY_(nOrb(iS)*nOrb(kS),-half*Work(ipD),
+     &                             jB-nIsh(js)+nA(jS))
+                          Call DaXpY_(nOrb(iS)*nOrb(kS),-half*G1t(ipD),
      &                               Temp2,1,FockA(ipCM(iS)),1)
                         End If
                      End If
@@ -234,23 +254,21 @@
 *                                                                      *
                End Do
             End Do
- 200        Continue
-         End Do
-      End Do
-*
-************************************************************************
-*                                                                      *
-*     Cholesky code                                                    *
+         End Do ! jS
+      End Do ! iS
 *                                                                      *
 ************************************************************************
- 50   Continue
-      If (NewCho) Then
+*                                                                      *
+      Case (.TRUE.)   ! Cho-Fock Algorithm
+*                                                                      *
+************************************************************************
+*                                                                      *
         Fake_CMO2=.true.
         DoAct=.true.
 *
 **      Construct inactive density matrix
 *
-        call dcopy_(nDens2,0.0d0,0,temp2,1)
+        call dcopy_(nDens2,[0.0d0],0,temp2,1)
         Do is=1,nSym
           Do iB=1,nIsh(is)
             ip=ipCM(iS)+(ib-1)*nOrb(is)+ib-1
@@ -265,27 +283,25 @@
               jS=iS
               Call DGEMM_('T','T',nIsh(jS),nOrb(iS),nIsh(iS),
      &                    1.0d0,Temp2(ipCM(iS)),nOrb(iS),
-     &                    Work(ipCMO+ipCM(is)-1),nOrb(iS),
+     &                    W_CMO(ipCM(is)),nOrb(iS),
      &                    0.0d0,Temp3(ipMat(jS,iS)),nOrb(jS))
               Call DGEMM_('T','T',nOrb(jS),nOrb(jS),nIsh(iS),
      &                    1.0d0,Temp3(ipMat(jS,iS)),nOrb(iS),
-     &                    Work(ipCMO+ipCM(js)-1),nOrb(jS),
+     &                    W_CMO(ipCM(js)),nOrb(jS),
      &                    0.0d0,Temp2(ipCM(iS)),nOrb(jS))
            EndIf
         End Do
 *
-        Call GetMem('DI','Allo','Real',ipDLT,nDens2)
-        call Fold_Mat(nSym,nOrb,Temp2,Work(ipDLT))
+        Call Allocate_DT(DLT,nBas,nBas,nSym,aCase='TRI')
+        call Fold_Mat(nSym,nOrb,Temp2,DLT%A0)
 *
 **      Form active CMO and density
 *
         nAct=0
         If (iMethod.eq.iCASSCF) Then
-          nVB=0
           na2=0
           nG2=0
           Do iSym=1,nSym
-            nVB = nVB + nAsh(iSym)*nOrb(iSym)
             na2=na2+nAsh(iSym)**2
             nAct=nAct+nAsh(iSym)
             nAG2=0
@@ -295,42 +311,37 @@
             End Do
             nG2=nG2+nAG2**2
           End Do
-          Call GetMem('Cva','Allo','Real',ipAsh,nVB)
-          Call GetMem('DA','Allo','Real',ipDA,na2)
+          Call Allocate_DT(CVa(1),nAsh,nOrb,nSym)
+          CVa(1)%A0(:)=0.0D0
+          Call Allocate_DT(CVa(2),nAsh,nOrb,nSym)
+          CVa(2)%A0(:)=0.0D0
+          Call Allocate_DT(DA,nAsh,nAsh,nSym)
 *
           ioff=0
-          ioff1=0
-          ioffA=0
           Do iSym=1,nSym
             ioff2 = ioff + nOrb(iSym)*nIsh(iSym)
             do ikk=1,nAsh(iSym)
                ioff3=ioff2+nOrb(iSym)*(ikk-1)
-               call dcopy_(nOrb(iSym),Work(ipCMO+ioff3),1,
-     &                   Work(ipAsh+ioff1+ikk-1),nAsh(iSym))
+               CVa(1)%SB(iSym)%A2(ikk,:) =
+     &            W_CMO(ioff3+1:ioff3+nOrb(iSym))
                ik=ikk+nA(iSym)
                Do ill=1,ikk-1
                  il=ill+nA(iSym)
-                 ikl=ik*(ik-1)/2+il-1
-                 Work(ipDA+ioffA+(ikk-1)*nAsh(iSym)+ill-1)=
-     &               Work(ipG1t+ikl)
-                 Work(ipDA+ioffA+(ill-1)*nAsh(iSym)+ikk-1)=
-     &               Work(ipG1t+ikl)
+                 ikl=ik*(ik-1)/2+il
+                 DA%SB(iSym)%A2(ill,ikk)=G1t(ikl)
+                 DA%SB(iSym)%A2(ikk,ill)=G1t(ikl)
                End Do
-               ikl=ik*(ik-1)/2+ik-1
-               Work(ipDA+ioffA+(ikk-1)*nAsh(iSym)+ikk-1)=
-     &              Work(ipG1t+ikl)
+               ikl=ik*(ik-1)/2+ik
+               DA%SB(iSym)%A2(ikk,ikk)=G1t(ikl)
             End Do
             ioff=ioff+nOrb(iSym)**2
-            ioff1=ioff1+nAsh(iSym)*nOrb(iSym)
-            ioffA=ioffA+nAsh(iSym)*nAsh(iSym)
-*            iofftA=ioffA+nAsh(iSym)*(nAsh(iSym)+1)/2
           End Do
-          Call DScal_(na2,half,Work(ipDA),1)
+          DA%A0(:) = Half * DA%A0(:)
 *
 **      Expand 2-body density matrix
 *
-          Call GetMem('G2x','ALLO','REAL',ipG2x,nG2)
-          ipGx=ipG2x
+          Call mma_allocate(G2x,nG2,Label='G2x')
+          ipGx=0
           Do ijS=1,nSym
             Do iS=1,nSym
               jS=iEOR(is-1,ijS-1)+1
@@ -342,9 +353,8 @@
                     Do iAsh=1,nAsh(is)
                       Do jAsh=1,nAsh(js)
                         iij =itri(iAsh+nA(is),jAsh+nA(jS))
-                        ipG=ipG2+itri(iij,ikl)-1
-                        Work(ipGx)=Work(ipG)
                         ipGx=ipGx+1
+                        G2x(ipGx)=G2t(itri(iij,ikl))
                       End Do
                     End Do
                   End Do
@@ -352,62 +362,93 @@
               End Do
             End Do
           End Do
+        Else
+          na2=1
+          nG2=1
+          Call Allocate_DT(CVa(1),[1],[1],1) ! dummy allocation
+          Call Allocate_DT(CVa(2),[1],[1],1)
+          Call Allocate_DT(DA,nAsh,nAsh,nSym)
+          Call mma_allocate(G2x,nG2,Label='G2x')
         EndIf
 *
 **      Let's go
 *
-        ipDI    = ip_of_work(Temp2)
-        ipkappa = ip_Dummy
-        ipJI    = ip_of_work(Temp3)
-        ipKI    = ip_of_work(Scr)
-        ipFockI = ip_of_work(FockI)
-        ipFockA = ip_of_work(FockA)
-        ipMO1   = ip_of_work(MO1)
-        ipQ     = ip_of_work(Q)
-        Call GetMem('ScrJA','Allo','Real',ipJA,nDens2)
-        Call GetMem('ScrKA','Allo','Real',ipKA,nDens2)
+        Call Allocate_DT(JA,nBas,nBas,nSym)
+        JA%A0(:)=Zero
+        Call Allocate_DT(KA,nBas,nBas,nSym)
+        KA%A0(:)=Zero
 *
-        call dcopy_(nDens2,0.0d0,0,Temp3,1)
-        call dcopy_(nDens2,0.0d0,0,Scr,1)
-        call dcopy_(nDens2,0.0d0,0,FockI,1)
-        call dcopy_(nDens2,0.0d0,0,FockA,1)
-        call dcopy_(nDens2,0.0d0,0,Work(ipJA),1)
-        call dcopy_(nDens2,0.0d0,0,Work(ipKA),1)
-        call dcopy_(nDens2,0.0d0,0,Q,1)
+        call dcopy_(nDens2,[0.0d0],0,Q,1)
 *
+        Call Allocate_DT(DI,nBas,nBas,nSym,Ref=Temp2)
+        Call Allocate_DT(JI(1),nBas,nBas,nSym,aCase='TRI',Ref=Temp3)
+        JI(1)%A0(:)=Zero
+        Call Allocate_DT(KI,nBas,nBas,nSym,Ref=Scr)
+        KI%A0(:)=Zero
+        Call Allocate_DT(FkI,nBas,nBas,nSym,Ref=FockI)
+        FkI%A0(:)=Zero
+        Call Allocate_DT(FkA,nBas,nBas,nSym,Ref=FockA)
+        FkA%A0(:)=Zero
+        Call Allocate_DT(QVec,nBas,nAsh,nSym,Ref=Q)
+        Call Allocate_DT(CMO,nBas,nBas,nSym,Ref=W_CMO)
+        Call Allocate_DT(CMO_Inv,nBas,nBas,nSym,Ref=W_CMO_Inv)
         istore=1 ! Ask to store the half-transformed vectors
-        Call CHO_LK_MCLR(ipDLT,ipDI,ipDA,ipG2x,ipkappa,
-     &                   ipJI,ipKI,ipJA,ipKA,ipFockI,ipFockA,
-     &                   ipMO1,ipQ,ipAsh,ipCMO,ip_CMO_inv,
-     &                   nIsh, nAsh,nIsh,DoAct,Fake_CMO2,
+
+        CALL CHO_LK_MCLR(DLT,DI,DA,G2x,Kappa,JI,KI,JA,KA,FkI,FkA,
+     &                   MO1,QVec,CVa,CMO,CMO_inv,
+     &                   nIsh,nAsh,doAct,Fake_CMO2,
      &                   LuAChoVec,LuIChoVec,istore)
+
         nAtri=nAct*(nAct+1)/2
         nAtri=nAtri*(nAtri+1)/2
         Call DScal_(nAtri,0.25D0,MO1,1)
-        Call DScal_(nDens2,-0.5d0,FockI,1)
+        FkI%A0(:) = -Half * FkI%A0(:)
 *
-        Call GetMem('ScrJA','Free','Real',ipJA,nDens2)
-        Call GetMem('ScrKA','Free','Real',ipKA,nDens2)
-        Call GetMem('DI','Free','Real',ipDLT,nDens2)
-        If (iMethod.eq.iCASSCF) Then
-          Call GetMem('G2x','FREE','REAL',ipG2x,nG2)
-          Call GetMem('Cva','Free','Real',ipAsh,nVB)
-          Call GetMem('DA','Free','Real',ipDA,na2)
-        EndIf
-      EndIf
+        Call Deallocate_DT(CMO_Inv)
+        Call Deallocate_DT(CMO)
+        Call Deallocate_DT(QVec)
+        Call Deallocate_DT(FkA)
+        Call Deallocate_DT(FkI)
+        Call Deallocate_DT(KI)
+        Call Deallocate_DT(JI(1))
+        Call Deallocate_DT(DI)
+        Call Deallocate_DT(JA)
+        Call Deallocate_DT(KA)
+        Call deallocate_DT(DLT)
+        Call mma_deallocate(G2x)
+        Call Deallocate_DT(CVa(2))
+        Call Deallocate_DT(CVa(1))
+        Call deallocate_DT(DA)
+*
+        Call GADSum(FockI,nDens2)
+        Call GADSum(FockA,nDens2)
+        Call GADSum(    Q,nDens2)
+        Call GADSum(  MO1,nAtri)
+*                                                                      *
 ************************************************************************
 *                                                                      *
-*     End of new Cho                                                   *
+      End Select
 *                                                                      *
 ************************************************************************
-*
-      Call DaXpY_(ndens2,One,Work(kint1),1,FockI,1)
-      call dcopy_(ndens2,0.0d0,0,Fock,1)
+*                                                                      *
+*#define _DEBUGPRINT_
+#ifdef _DEBUGPRINT_
+      Do iSym = 1, nSym
+        Write (6,*) 'iSym=',iSym
+        Call RecPrt('FockI',' ',FockI(ipCM(iSym)),nOrb(iSym),nIsh(iSym))
+        Call RecPrt('FockA',' ',FockA(ipCM(iSym)),nOrb(iSym),nIsh(iSym))
+        Call RecPrt('Q',' ',Q(ipMatba(iSym,iSym)),nOrb(iSym),nAsh(iSym))
+      End Do
+      nAtri=nas*(nas+1)/2
+      nAtri=nAtri*(nAtri+1)/2
+      Call RecPrt('MO1',' ',MO1,1,nAtri)
+#endif
+      Call DaXpY_(ndens2,One,Int1,1,FockI,1)
+      call dcopy_(ndens2,[0.0d0],0,Fock,1)
 *
       Do iS=1,nSym
          If (nOrb(iS).eq.0) Go To 300
 *
-         ip_1 = ipCM(iS)
          If (nIsh(iS).gt.0)
      &      Call DYaX(nOrb(iS)*nIsh(is),2.0d0,
      &                FockI(ipCM(iS)),1,
@@ -428,7 +469,7 @@
                   ni=nA(is)+iAsh
                   nj=nA(is)+jAsh
                   ipD=iTri(ni,nj)
-                  call daxpy_(nOrb(is),Work(ipG1t+ipD-1),
+                  call daxpy_(nOrb(is),G1t(ipD),
      &                       FockI(ipi),1,
      &                       Fock (ipj),1)
                End Do
@@ -437,6 +478,7 @@
 *
  300     Continue
       End Do
+ 101  Continue
       renergy=0.0d0
       rcora=0.0d0
       Do iS=1,nSym
@@ -450,7 +492,7 @@
       Do iS=1,nSym
        iptmp=ipCM(iS)
        Do iB=1,nIsh(is)
-       rcorei=rcorei+2.0d0*Work(kint1-1+iptmp)
+       rcorei=rcorei+2.0d0*Int1(iptmp)
        rcor=rcor+2.0d0*Focki(iptmp)
        iptmp=iptmp+nOrb(iS)+1
        End Do
@@ -462,11 +504,9 @@
          iij=iTri(iib,ijb)
          iiB=nIsh(iS)+ib
          ijB=nIsh(iS)+jb
-         rcorea=rcorea+Work(ipG1t+iij-1)*
-     &           Work(kint1+ipCM(is)-1+nOrb(is)*(iib-1)+ijB-1)
+         rcorea=rcorea+G1t(iij)*Int1(ipCM(is)-1+nOrb(is)*(iib-1)+ijB)
 
-         rcora=rcora+Work(ipG1t+iij-1)*
-     &           Focki(ipCM(is)+nOrb(is)*(iib-1)+ijB-1)
+         rcora=rcora+G1t(iij)*Focki(ipCM(is)+nOrb(is)*(iib-1)+ijB-1)
         End Do
        End Do
       End Do
@@ -477,10 +517,16 @@
          Write(6,*) 'Checking energy',0.5d0*renergy,potnuc,half*rcore
          write(6,*)
       End if
+
+      If(TwoStep.and.(StepType.eq.'RUN1')) Then
+        iaddressQDAT=0
+        Call ddafile(LuQDAT,1,FockA,nDens2,iaddressQDAT)
+        Call ddafile(LuQDAT,1,FockI,nDens2,iaddressQDAT)
+        Call ddafile(LuQDAT,1,Fock ,nDens2,iaddressQDAT)
+        Call ddafile(LuQDAT,1,Q    ,nDens2,iaddressQDAT)
+      End If
 *                                                                      *
 ************************************************************************
 *                                                                      *
       Return
-c Avoid unused argument warnings
-      If (.False.) Call Unused_real_array(Temp1)
       End

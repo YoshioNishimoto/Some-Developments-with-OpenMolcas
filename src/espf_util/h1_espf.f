@@ -9,6 +9,7 @@
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
       Subroutine h1_espf (h1,RepNuc,nh1,First,Do_DFT)
+      use Basis_Info, only: nBas
       Implicit Real*8 (A-H,O-Z)
 *
 * Driver for computing the ESPF one-electron modification
@@ -24,8 +25,28 @@
       Logical StandAlone,First,Do_DFT
       Logical DynExtPot,Exist,DoTinker,DoGromacs,lMorok,UpdateVMM
       Logical DoDirect
+*                                                                      *
+************************************************************************
+*                                                                      *
+      Interface
+      Subroutine RunTinker(nAtom,Cord,ipMltp,IsMM,MltOrd,DynExtPot,
+     &                     iQMChg,nAtMM,StandAlone,DoDirect)
+      Integer, Intent(In):: nAtom
+      Real*8, Intent(In):: Cord(3,nAtom)
+      Integer, Intent(In):: ipMltp
+      Integer, Intent(In):: IsMM(nAtom)
+      Integer, Intent(In):: MltOrd
+      Logical, Intent(InOut):: DynExtPot
+      Integer, Intent(In):: iQMChg
+      Integer, Intent(InOut):: nAtMM
+      Logical, Intent(In):: StandAlone
+      Logical, Intent(In):: DoDirect
+      End Subroutine RunTinker
+      End Interface
+*                                                                      *
+************************************************************************
+*                                                                      *
 *
-      Call QEnter('h1_espf')
       iPL = iPrintLevel(-1)
 *
       RealDummy = Zero
@@ -45,18 +66,18 @@
 10       Line = Get_Ln(IPotFl)
          ESPFKey = Line(1:10)
          If (ESPFKey.eq.'MLTORD    ') Then
-            Call Get_I(2,MltOrd,1)
+            Call Get_I1(2,MltOrd)
             ibla = 0
             Do ii = 0, MltOrd
                ibla = ibla + (ii+2)*(ii+1)/2
             End Do
             MltOrd = ibla
          Else If (ESPFKey.eq.'IRMAX     ') Then
-            Call Get_I(2,iRMax,1)
+            Call Get_I1(2,iRMax)
          Else If (ESPFKey.eq.'DELTAR    ') Then
-            Call Get_F(2,DeltaR,1)
+            Call Get_F1(2,DeltaR)
          Else If (ESPFKey.eq.'GRIDTYPE  ') Then
-            Call Get_I(2,iGrdTyp,1)
+            Call Get_I1(2,iGrdTyp)
          Else If (ESPFKey.eq.'TINKER    ') Then
             DoTinker = .True.
          Else If (ESPFKey.eq.'GROMACS   ') Then
@@ -66,11 +87,11 @@
          Else If (ESPFKey.eq.'DIRECT    ') Then
             DoDirect = .True.
          Else If (ESPFKey.eq.'MULTIPOLE ') Then
-            Call Get_I(2,nMult,1)
+            Call Get_I1(2,nMult)
             Call Allocate_Work(ipOldMltp,nMult)
             Do iMlt = 1, nMult, MltOrd
                Line = Get_Ln(IPotFl)
-               Call Get_I(1,iAt,1)
+               Call Get_I1(1,iAt)
                Call Get_F(2,Work(ipOldMltp+iMlt-1),MltOrd)
             End Do
          Else If (ESPFKey.eq.'ENDOFESPF ') Then
@@ -105,7 +126,7 @@
       End If
       If(.not. DynExtPot) Then
         If (ipOldMltp .ne. ip_Dummy) Call Free_Work(ipOldMltp)
-        Goto 9999
+        Return
       End If
 *
       ipIsMM = ip_iDummy
@@ -150,14 +171,14 @@
       IPotFl=IsFreeUnit(IPotFl)
       Call Molcas_Open(IPotFl,'ESPF.EXTPOT')
       Line = Get_Ln(IPotFl)
-      Call Get_I(1,nChg,1)
+      Call Get_I1(1,nChg)
       If (nChg .ne. 0) Then
          Write(6,*) 'ESPF: nChg ne 0 in h1_espf'
          Call Abend()
       End If
       Do iAt = 1, natom
          Line = Get_Ln(IPotFl)
-         Call Get_I(1,jAt,1)
+         Call Get_I1(1,jAt)
          Call Get_F(2,Work(ipExt+(jAt-1)*MxExtPotComp),MxExtPotComp)
       End Do
       Close(IPotFl)
@@ -185,7 +206,6 @@
             sum4 = sum4+(Work(ipMltp+iMlt+2)-Work(ipOldMltp+iMlt+2))**2
             End If
          End Do
-         rms1 = sqrt(sum1/nMult)
          rms2 = sqrt(sum2/nMult)
          rms3 = sqrt(sum3/nMult)
          rms4 = sqrt(sum4/nMult)
@@ -200,7 +220,8 @@
       End If
       iQMchg = 1
       If (First .and. Do_DFT) UpdateVMM = .True.
-      If (UpdateVMM) Call RunTinker(natom,ipCord,ipMltp,ipIsMM,MltOrd,
+      If (UpdateVMM) Call RunTinker(natom,Work(ipCord),ipMltp,
+     &                              iWork(ipIsMM),MltOrd,
      &                    DynExtPot,iQMchg,natMM,StandAlone,DoDirect)
 *
 * Read the MM electrostatic potential (and derivatives) from PotFile
@@ -208,14 +229,14 @@
       IPotFl=IsFreeUnit(IPotFl)
       Call Molcas_Open(IPotFl,'ESPF.EXTPOT')
       Line = Get_Ln(IPotFl)
-      Call Get_I(1,nChg,1)
+      Call Get_I1(1,nChg)
       If (nChg .ne. 0) Then
          Write(6,*) 'ESPF: nChg ne 0 in h1_espf'
          Call Abend()
       End If
       Do iAt = 1, natom
          Line = Get_Ln(IPotFl)
-         Call Get_I(1,jAt,1)
+         Call Get_I1(1,jAt)
          Call Get_F(2,Work(ipExt+(jAt-1)*MxExtPotComp),MxExtPotComp)
       End Do
       Close(IPotFl)
@@ -236,10 +257,10 @@
 * Save the modified h1 matrix
 *
       Call Put_Temp('h1    XX',h1,nh1)
-      Call Put_Temp('PotNucXX',RepNuc,1)
+      Call Put_Temp('PotNucXX',[RepNuc],1)
       If (.not.DynExtPot) Then
          Call Put_Temp('h1_raw  ',h1,nh1)
-         Call Put_Temp('PotNuc00',RepNuc,1)
+         Call Put_Temp('PotNuc00',[RepNuc],1)
       End If
 *
 * Save data in the ESPF.DATA file
@@ -260,7 +281,5 @@
       Call GetMem('IsMM for atoms','Free','Inte',ipIsMM,natom)
       Call GetMem('AtomCoord','Free','Real',ipCord,3*natom)
 *
-9999  Call QExit('h1_espf')
-      iReturn=0
       Return
       End

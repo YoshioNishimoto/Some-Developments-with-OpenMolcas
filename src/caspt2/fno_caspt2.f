@@ -30,9 +30,7 @@
       Integer irc,IFQCAN
       Real*8  EMP2, vfrac
       Logical DoMP2
-      Real*8  DeMP2
-      Logical MP2_small
-      Common / ChFNOPT/ DeMP2, MP2_small
+#include "chfnopt.fh"
 *
       Integer ns_V(8), nAct(8)
       Integer lnOrb(8), lnOcc(8), lnFro(8), lnDel(8), lnVir(8)
@@ -189,9 +187,9 @@
      &                              Work(jD),nSsh(iSym),
      &                        0.0d0,Work(kto),nBas(iSym))
            iOff=iOff+nSsh(iSym)**2
-           TrDF(iSym)=ddot_(nSsh(iSym),Work(ip_Z),1,1.0d0,0)
+           TrDF(iSym)=ddot_(nSsh(iSym),Work(ip_Z),1,[1.0d0],0)
            ns_V(iSym)=int(vfrac*dble(nSsh(iSym)))
-           TrDP(iSym)=ddot_(ns_V(iSym),Work(ip_Z),1,1.0d0,0)
+           TrDP(iSym)=ddot_(ns_V(iSym),Work(ip_Z),1,[1.0d0],0)
          endif
          jOff=jOff+nBas(iSym)**2
       End Do
@@ -240,7 +238,7 @@
             jD=ip_X+iOff
             Call Get_Can_Lorb(Work(kEVir+lOff),Work(ipOrbE+jOff),
      &                        nSsh(iSym),lnVir(iSym),
-     &                        iWork(ip_iD),Work(jD),iSym)
+     &                        iWork(ip_iD),Work(jD))
 
             kfr=LCMO+kOff+nBas(iSym)*(nFro(iSym)+nIsh(iSym)+nAsh(iSym))
             kto=iCMO+kOff+nBas(iSym)*(nFro(iSym)+lnOcc(iSym))
@@ -275,9 +273,9 @@
 *
       Return
       End
-***********************************************************************
-*                                                                     *
-***********************************************************************
+************************************************************************
+*                                                                      *
+************************************************************************
       SubRoutine FnoCASPT2_putInf(mSym,lnOrb,lnOcc,lnFro,lnDel,lnVir,
      &                            ip_X,ip_Y)
 C
@@ -328,9 +326,9 @@ C
       Return
       End
 
-***********************************************************************
-*                                                                     *
-***********************************************************************
+************************************************************************
+*                                                                      *
+************************************************************************
       Subroutine Check_Amp(nSym,nOcc,nVir,iSkip)
 
       Implicit Real*8 (a-h,o-z)

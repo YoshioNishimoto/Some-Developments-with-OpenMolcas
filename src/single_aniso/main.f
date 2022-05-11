@@ -18,6 +18,6 @@
 #endif
 
       Call Start('single_aniso')
-      Call single_aniso(iReturn)
+      Call single_aniso_open(iReturn)
       Call Finish(iReturn)
       End

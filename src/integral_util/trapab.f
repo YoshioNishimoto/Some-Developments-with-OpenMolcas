@@ -13,14 +13,6 @@
       SubRoutine TraPAB(nZeta,la,lb,AB,GInt,jSum,rKappa,Fac1,Fac2,
      &                  Fac3,Fac4,Fac5,A,B,P)
 ************************************************************************
-*                                                                      *
-* Object:                                                              *
-*                                                                      *
-* Called from:                                                         *
-*                                                                      *
-* Calling    : QEnter                                                  *
-*              QExit                                                   *
-*                                                                      *
 *     Author: Roland Lindh, Dept. of Theoretical Chemistry,            *
 *             University of Lund, SWEDEN                               *
 ************************************************************************
@@ -39,7 +31,6 @@
 *
       iRout = 239
       iPrint = nPrint(iRout)
-      Call QEnter('TraPAB')
       If (iPrint.ge.99) Then
          Call RecPrt(' In TraPAB: GInt',' ',GInt,nZeta,jSum)
          Call RecPrt(' In TraPAB: P   ',' ',P   ,nZeta,3)
@@ -47,7 +38,7 @@
 *
 *-----Initilize
 *
-      call dcopy_(nZeta*(la+1)*(la+2)/2*(lb+1)*(lb+2)/2,Zero,0,AB,1)
+      call dcopy_(nZeta*(la+1)*(la+2)/2*(lb+1)*(lb+2)/2,[Zero],0,AB,1)
 *
 *-----Remove redundant elements in GInt. This is done in place.
 *
@@ -211,6 +202,5 @@
          Call RecPrt(' In TraPAB: AB',' ', AB, nZeta,nab)
       End If
 *
-      Call QExit('TraPAB')
       Return
       End

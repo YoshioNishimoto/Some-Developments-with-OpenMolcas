@@ -8,19 +8,19 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine getfree_cvb(nfrr,n_div,nfrdim,iter,fx)
       implicit real*8 (a-h,o-z)
       logical orb_is_cheap
-#include "ext_cvb.fh"
 #include "main_cvb.fh"
 #include "optze_cvb.fh"
 #include "files_cvb.fh"
 #include "print_cvb.fh"
 
 #include "formats_cvb.fh"
-#include "malloc_cvb.fh"
+#include "WrkSpc.fh"
       save fxlast
 
       dxmove=.true.
@@ -40,11 +40,11 @@
      >      write(6,formE)' Evb chg. : ',fx-fxlast
         endif
         if(ip(3).ge.2)then
-          call report_cvb(w(lv(1)),norb)
+          call report_cvb(work(lv(1)),norb)
           if(strucopt)then
             write(6,'(/,a)')' Structure coefficients :'
             write(6,'(a)')' ------------------------'
-            call vecprint_cvb(w(lv(2)),nvb)
+            call vecprint_cvb(work(lv(2)),nvb)
           endif
         endif
       endif

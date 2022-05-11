@@ -48,7 +48,7 @@ pymolcas.py
 
 molcas_wrapper.py
   Defines the Molcas class (main driver) and the Molcas_module class (to run a
-  program). 
+  program).
 
 molcas_aux.py
 simpleeval.py
@@ -70,6 +70,9 @@ python_parse.py
 
 check_test.py
   Checks the results of a test file against the reference.
+
+validate.py
+  Validates input against the XML definitions.
 
 export.py
 pack.py

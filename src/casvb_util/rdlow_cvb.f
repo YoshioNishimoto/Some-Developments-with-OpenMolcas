@@ -8,12 +8,14 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine rdlow_cvb(vec,n,fileid,ioffset)
       implicit real*8(a-h,o-z)
 #include "io_cvb.fh"
 #include "idbl_cvb.fh"
+      !integer vec
       dimension vec(n)
       logical newfile,debug
       data debug/.false./

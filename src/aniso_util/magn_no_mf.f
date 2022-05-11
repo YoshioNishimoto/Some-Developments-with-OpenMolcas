@@ -16,55 +16,54 @@ c definition of the variables:
 c   EXCH -- total number of exchange states, Integer, input
 c      N -- size of the Zeeman matrix, Integer, input, NM .LE. EXCH !
 c  X,Y,Z -- projections of the magnetic field, specIfying the orientation of the applied
-c           magnetic field, Real(kind=wp) ::, input;  rule: ( X**2 + Y**2 + Z**2 = 1);
-c      H -- strength of the magnetic field in Tesla, Real(kind=wp) ::, input;
-c      W -- energies of the exchange states; Real(kind=wp) :: array (EXCH);
-c     dM -- matrix of the magnetic moment, Complex(kind=wp) :: (3,EXCH,EXCH) array, input;
-c     sM -- matrix of the     spin moment, Complex(kind=wp) :: (3,EXCH,EXCH) array, input;
+c           magnetic field, Real(kind=8) ::, input;  rule: ( X**2 + Y**2 + Z**2 = 1);
+c      H -- strength of the magnetic field in Tesla, Real(kind=8) ::, input;
+c      W -- energies of the exchange states; Real(kind=8) :: array (EXCH);
+c     dM -- matrix of the magnetic moment, Complex(kind=8) :: (3,EXCH,EXCH) array, input;
+c     sM -- matrix of the     spin moment, Complex(kind=8) :: (3,EXCH,EXCH) array, input;
 c     nT -- number of temperature points for which magnetisation is computed, input;
 c      T -- temperature values(in Kelvin) for which magnetisation is computed, input;
 c   sopt -- logical parameter. If sopt=.true. Then spin magnetisation is computed.
 c                              If sopt=.false. Then spin part is skipped.
 c
-c     WZ -- Zeeman energies, true values (not shifted to 0), in cm-1, Real(kind=wp) :: (N) array, output;
-c     ZB -- statistical Boltzmann distribution, for each temperature, Real(kind=wp) :: (nT) array, output;
-c      S -- spin magnetisation, Real(kind=wp) :: (3,nT) array, output;
-c      M -- magnetisation, Real(kind=wp) :: (3,nT) array, output;
+c     WZ -- Zeeman energies, true values (not shifted to 0), in cm-1, Real(kind=8) :: (N) array, output;
+c     ZB -- statistical Boltzmann distribution, for each temperature, Real(kind=8) :: (nT) array, output;
+c      S -- spin magnetisation, Real(kind=8) :: (3,nT) array, output;
+c      M -- magnetisation, Real(kind=8) :: (3,nT) array, output;
 c m_paranoid --  logical parameter.
 c            If m_paranoid = .true.  Then the average spin is computed for each temperature point exactly
 c            If m_paranoid = .false. Then  the average spin is computed only for the lowest temperature point
 c---------
 c  temporary (local) variables:
-c    MZ -- matrix of the magnetic moment, Complex(kind=wp) :: (3,EXCH,EXCH) array
-c    SZ -- matrix of the     spin moment, Complex(kind=wp) :: (3,EXCH,EXCH) array
+c    MZ -- matrix of the magnetic moment, Complex(kind=8) :: (3,EXCH,EXCH) array
+c    SZ -- matrix of the     spin moment, Complex(kind=8) :: (3,EXCH,EXCH) array
 c    WM -- array containing the Zeeman eigenstates and, If N<EXCH the exchange eigenstates
-c          for the states higher in energy than N, Real(kind=wp) ::, (EXCH) array;
-c    ZM -- Zeeman eigenvectors, (N,N) Complex(kind=wp) :: array,
+c          for the states higher in energy than N, Real(kind=8) ::, (EXCH) array;
+c    ZM -- Zeeman eigenvectors, (N,N) Complex(kind=8) :: array,
 c   i,j -- labers of the states;
 c     l -- labels the cartesian component of the momentum (convention: x=1, y=2, z=3)
 c    iT -- labes the temperature points;
       Implicit None
 #include "stdalloc.fh"
-      Integer, parameter           :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter        :: wp=kind(0.d0)
       Integer, intent(in)          :: EXCH, N, nT
-      Real(kind=wp), intent(in)    :: X, Y, Z, H
-      Real(kind=wp), intent(in)    :: W(EXCH), T(nT)
-      Real(kind=wp), intent(out)   :: ZB(nT), WZ(N)
-      Real(kind=wp), intent(out)   :: S(3,nT), M(3,nT)
-      Complex(kind=wp), intent(in) :: dM(3,EXCH,EXCH)
-      Complex(kind=wp), intent(in) :: sM(3,EXCH,EXCH)
+      Real(kind=8), intent(in)    :: X, Y, Z, H
+      Real(kind=8), intent(in)    :: W(EXCH), T(nT)
+      Real(kind=8), intent(out)   :: ZB(nT), WZ(N)
+      Real(kind=8), intent(out)   :: S(3,nT), M(3,nT)
+      Complex(kind=8), intent(in) :: dM(3,EXCH,EXCH)
+      Complex(kind=8), intent(in) :: sM(3,EXCH,EXCH)
       Logical, intent(in)          :: sopt
 c local variables:
       Integer          :: i, l, iT
-      Real(kind=wp)    :: kB, mB, zJ
-      Real(kind=wp), allocatable :: WM(:), ST(:), RWORK(:) !WM(EXCH), ST(3)
-      Complex(kind=wp), allocatable :: HZEE(:), WORK(:), W_c(:)
-      Complex(kind=wp), allocatable :: ZM(:,:) !ZM(N,N)
-      Complex(kind=wp), allocatable :: SZ(:,:,:), MZ(:,:,:) !SZ(3,EXCH,EXCH), MZ(3,EXCH,EXCH)
+      Real(kind=8)    :: zJ
+      Real(kind=8), allocatable :: WM(:), ST(:), RWORK(:)
+!                                   WM(EXCH), ST(3)
+      Complex(kind=8), allocatable :: HZEE(:), WORK(:), W_c(:)
+      Complex(kind=8), allocatable :: ZM(:,:) !ZM(N,N)
+      Complex(kind=8), allocatable :: SZ(:,:,:), MZ(:,:,:)
+!                                      SZ(3,EXCH,EXCH), MZ(3,EXCH,EXCH)
       Logical          :: DBG
-      Call qEnter('MAGN_NO_MF')
-      kB=0.6950356000_wp   ! Boltzmann constant,  in cm^-1*K-1
-      mB=0.4668643740_wp   ! Bohr magneton,       in cm-1*T-1
 
 c a few checks, before proceeding:
       Do iT=1,nT
@@ -87,17 +86,17 @@ c initialization:
       Call mma_allocate(W_c,N,'ZEEM_W_c')
 
       ! zero everything:
-      Call dcopy_(3*N-2,0.0_wp,0,RWORK,1)
-      Call zcopy_(N*(N+1)/2,(0.0_wp,0.0_wp),0,HZEE,1)
-      Call zcopy_(2*N-1,(0.0_wp,0.0_wp),0,WORK,1)
-      Call zcopy_(N,(0.0_wp,0.0_wp),0,W_c,1)
+      Call dcopy_(3*N-2,[0.0_wp],0,RWORK,1)
+      Call zcopy_(N*(N+1)/2,[(0.0_wp,0.0_wp)],0,HZEE,1)
+      Call zcopy_(2*N-1,[(0.0_wp,0.0_wp)],0,WORK,1)
+      Call zcopy_(N,[(0.0_wp,0.0_wp)],0,W_c,1)
 
-      Call dcopy_(   3,0.0_wp,0,ST,1)
-      Call dcopy_(   N,0.0_wp,0,WZ,1)
-      Call dcopy_(exch,0.0_wp,0,WM,1)
-      Call zcopy_(  exch*exch,(0.0_wp,0.0_wp),0,ZM,1)
-      Call zcopy_(3*exch*exch,(0.0_wp,0.0_wp),0,SZ,1)
-      Call zcopy_(3*exch*exch,(0.0_wp,0.0_wp),0,MZ,1)
+      Call dcopy_(   3,[0.0_wp],0,ST,1)
+      Call dcopy_(   N,[0.0_wp],0,WZ,1)
+      Call dcopy_(exch,[0.0_wp],0,WM,1)
+      Call zcopy_(  exch*exch,[(0.0_wp,0.0_wp)],0,ZM,1)
+      Call zcopy_(3*exch*exch,[(0.0_wp,0.0_wp)],0,SZ,1)
+      Call zcopy_(3*exch*exch,[(0.0_wp,0.0_wp)],0,MZ,1)
 c start calculations:
       If (DBG) Write(6,*) 'Enter ZEEM::'
       If (DBG) Write(6,*) 'Input data:   N = ', N
@@ -110,7 +109,7 @@ c start calculations:
       If (DBG) Write(6,*) 'Input data: ST()= ', ST(1:3)
       If (DBG) Call prmom('INput data dM:',dM,N)
       If (DBG) Call prmom('INput data sM:',sM,N)
-      If (DBG) Call xFlush
+      If (DBG) Call xFlush(6)
 
       ! Build and diagonalize the Zeeman Hamiltonian
       ! most important output are: WM (energies) and ZM (eigenvectors)
@@ -118,7 +117,7 @@ c start calculations:
      &             sM(1:3,1:N,1:N), ST, zJ, WM(1:N), ZM,
      &             DBG, RWORK, HZEE, WORK, W_c )
       If (DBG) Write(6,*) 'Exit ZEEM::'
-      If (DBG) Call xFlush
+      If (DBG) Call xFlush(6)
 
 
       Call DCOPY_(N, WM(1:N), 1, WZ(1:N), 1)
@@ -135,9 +134,9 @@ c start calculations:
 
 
       ! compute magnetization at different temperatures:
-      Call dcopy_(  nT,0.0_wp,0,ZB,1)
-      Call dcopy_(3*nT,0.0_wp,0,M,1)
-      Call dcopy_(3*nT,0.0_wp,0,S,1)
+      Call dcopy_(  nT,[0.0_wp],0,ZB,1)
+      Call dcopy_(3*nT,[0.0_wp],0,M,1)
+      Call dcopy_(3*nT,[0.0_wp],0,S,1)
 
       If (N==EXCH) Then
         Do iT=1,nT
@@ -175,6 +174,5 @@ c start calculations:
       Call mma_deallocate(SZ)
       Call mma_deallocate(MZ)
 
-      Call qExit('MAGN_NO_MF')
       Return
       End

@@ -29,7 +29,7 @@
 #ifdef _DMRG_
 !     module dependencies
       use qcmaquis_interface_cfg
-      use qcmaquis_interface_environment, only: print_dmrg_info
+      use qcmaquis_interface_utility_routines, only: print_dmrg_info
 #endif
 
       Implicit Real*8 (A-H,O-Z)
@@ -39,10 +39,12 @@
 #include "general.fh"
 #include "gas.fh"
 #include "output_ras.fh"
+      Character*16 ROUTINE
       Parameter (ROUTINE='OUTCTL  ')
 #include "ciinfo.fh"
 #include "rctfld.fh"
 #include "WrkSpc.fh"
+#include "stdalloc.fh"
 #include "SysDef.fh"
 #include "input_ras.fh"
 
@@ -54,26 +56,23 @@
       Character*3 SNAC
 #endif
       Logical FullMlk, get_BasisType
-cnf
       Logical Do_ESPF,lSave, lOPTO, Do_DM
-cnf
       DIMENSION CMO(*),OCCN(*),SMAT(*)
       Dimension Temp(2,mxRoot)
+      Real*8, Allocatable:: DSave(:)
 
 ** (SVC) added for new supsym vector input
 *      DIMENSION NXSYM(mxOrb),nUND(mxOrb)
 
       Integer  Cho_X_GetTol
       External Cho_X_GetTol
-#ifndef _DMRG_
-      logical :: doDMRG = .false.
-#else
+#ifdef _DMRG_
       character(len=100) :: dmrg_start_guess
 #endif
+      Dimension Dum(1),iDum(56)
 *----------------------------------------------------------------------*
 *     Start and define the paper width                                 *
 *----------------------------------------------------------------------*
-      Call qEnter('OutCtl')
 C Local print level (if any)
       IPRLEV=IPRLOC(6)
       IF(IPRLEV.ge.DEBUG) THEN
@@ -121,12 +120,12 @@ C Local print level (if any)
       Write(LF,Fmt2//'A,T45,F6.1)')'Spin quantum number',
      &                           (DBLE(ISPIN-1))/2.0d0
       Write(LF,Fmt2//'A,T45,I6)')'State symmetry',
-     &                           LSYM
+     &                           STSYM
       Call CollapseOutput(0,'Wave function specifications:')
 *
       Call Get_cArray('Irreps',lIrrep,24)
       Do iSym = 1, nSym
-         Call RightAd(lIrrep(iSym))
+         lIrrep(iSym) = adjustr(lIrrep(iSym))
       End Do
 *
       Write(LF,*)
@@ -165,6 +164,12 @@ C Local print level (if any)
      &                            (nDel(iSym),iSym=1,nSym)
       Write(LF,Fmt2//'A,T47,8I4)') 'Number of basis functions',
      &                            (nBas(iSym),iSym=1,nSym)
+      If (kIVO) Then
+        Write(LF,Fmt2//'A,T47)') 'Improved Virtual Orbitals '//
+     &                           'option is used'
+        Write(LF,Fmt2//'A,T47)') 'Molecular Orbitals are NOT '//
+     &                           'suitable for CASPT2 & MRCI!'
+      End If
       Call CollapseOutput(0,'Orbital specifications:')
       Write(LF,*)
 
@@ -241,9 +246,9 @@ C Local print level (if any)
         Write(LF,Fmt2//'A)')'----------------------------'
         Write(LF,*)
         Write(LF,Fmt2//'A,T40,I11)')'Number of CSFs',
-     &                           NCSASM(LSYM)
+     &                           NCSASM(STSYM)
         Write(LF,Fmt2//'A,T40,I11)')'Number of determinants',
-     &                           NDTASM(LSYM)
+     &                           NDTASM(STSYM)
       end if
       Write(LF,Fmt2//'A,T45,I6)')'Number of root(s) required',
      &                           NROOTS
@@ -299,7 +304,6 @@ C Local print level (if any)
             Write(LF,*) 'OutCtl: iRc from Call RdOne not 0'
             Write(LF,*) 'Label = ',Label
             Write(LF,*) 'iRc = ',iRc
-            Call QTrace
             Call Abend
          Endif
          Call GetMem('Ovrlp','Free','Real',iTmp0,nTot1+4)
@@ -432,7 +436,7 @@ C Local print level (if any)
 * End of long if-block B over IPRLEV
       END IF
 
-      call dcopy_(2*mxRoot,0.0d0,0,Temp,1)
+      call dcopy_(2*mxRoot,[0.0d0],0,Temp,1)
       iRc1=0
       iRc2=0
       iOpt=1
@@ -440,8 +444,10 @@ C Local print level (if any)
       iSyLbl=1
       nMVInt=0
       nDCInt=0
-      Call iRdOne(iRc1,iOpt,'MassVel ',iComp,nMVInt,iSyLbl)
-      Call iRdOne(iRc2,iOpt,'Darwin  ',iComp,nDCInt,iSyLbl)
+      Call iRdOne(iRc1,iOpt,'MassVel ',iComp,iDum,iSyLbl)
+      If (iRc1.eq.0) nMVInt=iDum(1)
+      Call iRdOne(iRc2,iOpt,'Darwin  ',iComp,iDum,iSyLbl)
+      If (iRc2.eq.0) nDCInt=iDum(1)
       If ( (nMVInt+nDCInt).ne.0 ) Then
         IAD12=IADR15(12)
         CALL GETMEM('OPER','ALLO','REAL',LX1,NTOT1)
@@ -519,7 +525,29 @@ C Local print level (if any)
 
       iTol = Cho_X_GetTol(8)
       if(doDMRG) iTol = 6
-      Call Add_Info('E_RASSCF',ENER(1,ITER),NRoots,iTol)
+*
+      Line(1:8)='E_RASSCF'
+      j=8
+      Do i=1, nRoots
+         If (nRoots.gt.1) Then
+            If (i-1.lt.10) Then
+               j=11
+               Write (Line(9:j),'(A,I1,A)') '[',i-1,']'
+            Else If (i-1.lt.100) Then
+               j=12
+               Write (Line(9:j),'(A,I2,A)') '[',i-1,']'
+            Else If (i-1.lt.1000) Then
+               j=13
+               Write (Line(9:j),'(A,I3,A)') '[',i-1,']'
+            Else If (i-1.lt.10000) Then
+               j=14
+               Write (Line(9:j),'(A,I4,A)') '[',i-1,']'
+            End If
+         Else
+            j=8
+         End If
+         Call Add_Info(Line(1:j),ENER(iRoot(i),ITER),1,iTol)
+      End Do
 *---------------------------------------------------------------
 * New JOBIPH layout: Also write hamiltonian matrix at IADR15(17):
 *---------------------------------------------------------------
@@ -545,9 +573,18 @@ C Local print level (if any)
 * Start of if-block D over IPRLEV
       If (OutFmt1.NE.'NOTHING ') then
         If(IPT2.EQ.0) THEN
-           CALL PRIMO_RASSCF('Pseudonatural active'//
+          If(kIvo) Then
+            Call ivogen_rasscf(nSym,nBas,nFro,nIsh,nAsh,nTot2,nTot,
+     &                         CMO,FDIAG)
+            CALL PRIMO_RASSCF('Pseudonatural active'//
+     &       ' orbitals and approximate occupation numbers + IVO,'//
+     &       ' not suitable for CASPT2',
+     &                         FDIAG,OCCN,CMO)
+          Else
+            CALL PRIMO_RASSCF('Pseudonatural active'//
      &                  ' orbitals and approximate occupation numbers',
      &                         FDIAG,OCCN,CMO)
+          End If
         Else
            CALL PRIMO_RASSCF('All orbitals are'//
      &                  ' eigenfunctions of the PT2 Fock matrix',
@@ -580,7 +617,8 @@ C Local print level (if any)
 *
 *     But first save the 1st order density for gradients
 *
-      Call Get_D1AO(ipDSave,NTOT1)
+      Call mma_allocate(DSave,nTot1,Label='DSave')
+      Call Get_D1AO(DSave,NTOT1)
 *
 *     The dipole moments will also be stored over all kroot states.
 *
@@ -600,7 +638,7 @@ C Local print level (if any)
 * Put the density matrix of this state on the runfile for
 *  LoProp utility
         Call GetMem('DState','ALLO','REAL',ipD,nTot1)
-        call dcopy_(nTot1,0.0D0,0,Work(ipD),1)
+        call dcopy_(nTot1,[0.0D0],0,Work(ipD),1)
         Call DONE_RASSCF(CMO,OCCN,Work(ipD))
         Call Put_D1AO(Work(ipD),NTOT1)
         Call Free_Work(ipD)
@@ -616,7 +654,7 @@ C Local print level (if any)
         End Do
         vNentropy = -vNentropy/log(2.0d0)
 *
-        Write(LF,'(6X,A,I2,A,F8.5)')
+        Write(LF,'(6X,A,I3,A,F8.5)')
      *  'Von Neumann Entropy (Root ',KROOT,') = ',vNentropy
         Write(LF,*)
 *
@@ -652,20 +690,20 @@ C Local print level (if any)
         Call WrVec('TMPORB',LuTmp,'CO',nSym,nBas,nBas,
      &            CMO,OCCN,Dum,iDum,Note)
         CALL PRPT()
-*                                                                     *
-***********************************************************************
-*       Store away the dipole moment of this state                    *
+*                                                                      *
+************************************************************************
+*       Store away the dipole moment of this state                     *
 *
-        Call Qpg_dArray('Dipole Moment',Do_DM,iDum)
+        Call Qpg_dArray('Dipole Moment',Do_DM,iDum(1))
         If (Do_DM) Then
 *          Write (6,*) 'iRoot=',kRoot
            Call Get_dArray('Dipole Moment',Work(ipDM),3)
 *          Call RecPrt('Dipole Moment',' ',Work(ipDM),1,3)
            Call DCopy_(3,Work(ipDM),1,Work(ipDMs+(KROOT-1)*3),1)
         End If
-*                                                                     *
-***********************************************************************
-*                                                                     *
+*                                                                      *
+************************************************************************
+*                                                                      *
 *
 *       Compute spin orbitals and spin population
 *       (Note: this section overwrites the pseudo natural orbitals
@@ -713,7 +751,7 @@ C Local print level (if any)
         END IF
 
 *       Compute spin orbitals and spin population
-        CALL DCOPY_(NTOT,0.0D0,0,OCCN,1)
+        CALL DCOPY_(NTOT,[0.0D0],0,OCCN,1)
 *SVC-11-01-2007 store original cmon in cmoso, which gets changed
         CALL GETMEM('CMOSO','ALLO','REAL',ICMOSO,NTOT2)
         CALL DCOPY_(NTOT2,WORK(ICMON),1,WORK(ICMOSO),1)
@@ -784,8 +822,8 @@ cnf
 *
 *     Restore the correct 1st order density for gradient calculations.
 *
-      Call Put_D1AO(Work(ipDSave),NTOT1)
-      Call GetMem('DSave','Free','REAL',ipDSave,nTot1)
+      Call Put_D1AO(DSave,NTOT1)
+      Call mma_deallocate(DSave)
 *
 *     Save the list of dipole moments on the run file.
 *
@@ -800,6 +838,5 @@ cnf
       CALL GETMEM('CMON','FREE','REAL',icmon,NTOT2)
 *----------------------------------------------------------------------*
 
-      Call qExit('OutCtl')
       Return
       End

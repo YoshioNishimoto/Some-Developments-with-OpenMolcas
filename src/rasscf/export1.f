@@ -44,6 +44,7 @@
 *...  Define global variables .........................................*
 #include "rasdim.fh"
 #include "rasscf.fh"
+#include "gas.fh"
 #include "general.fh"
 #include "wadr.fh"
 #include "SysDef.fh"
@@ -55,13 +56,9 @@
       Integer nTemp(8)
       Character(Len=16) mstate
 *
-#ifndef _DMRG_
-      logical :: doDMRG = .false.
-#endif
 *----------------------------------------------------------------------*
 *     Prologue                                                         *
 *----------------------------------------------------------------------*
-      Call qEnter('Export1')
 *----------------------------------------------------------------------*
 *     Save information pertinent to the gradient calculation           *
 *----------------------------------------------------------------------*
@@ -125,6 +122,8 @@
 *
 *     Check if it is a RASSCF function and not a CASSCF
       If (nHole1.ne.0 .or. nElec3.ne.0) Method(1:1)='R'
+*     Check if it is a GASSCF function
+      If (iDoGAS) Method(1:1)='G'
 *     Check if it is a DMRGSCF function
       if(doDMRG)then
                         Method='DMRGSCF '
@@ -147,15 +146,15 @@
 *...  Add two body density matrix in MO basis, active orbitals only ...*
       If ( .not.SCF ) Call Put_P2MO(PA,NACPR2)
 *...  Next version of MOLCAS add the state to relax file ..............*
-      Call Qpg_iScalar('Relax Original ro',Found)
+      Call Qpg_iScalar('Relax Original root',Found)
       If (Found) Then
-         Call Get_iScalar('Relax Original ro',irlxroot1)
+         Call Get_iScalar('Relax Original root',irlxroot1)
          Call Get_iScalar('Relax CASSCF root',irlxroot2)
          If (irlxroot1.eq.irlxroot2) Then
-            Call Put_iScalar('Relax Original ro',irlxroot)
+            Call Put_iScalar('Relax Original root',irlxroot)
          End If
       Else
-         Call Put_iScalar('Relax Original ro',irlxroot)
+         Call Put_iScalar('Relax Original root',irlxroot)
       End If
       Call Put_iScalar('Relax CASSCF root',irlxroot)
 *...  Remove overlaps (computed by rassi) .............................*
@@ -171,7 +170,6 @@
 *----------------------------------------------------------------------*
 *     Epilogue                                                         *
 *----------------------------------------------------------------------*
-      Call qExit('Export1')
 *----------------------------------------------------------------------*
 *     Exit                                                             *
 *----------------------------------------------------------------------*

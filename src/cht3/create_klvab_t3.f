@@ -8,8 +8,8 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
-cmp      SUBROUTINE create_klvab_t3(G,vblock)
       SUBROUTINE create_klvab_t3(vblock)
+cmp      SUBROUTINE create_klvab_t3(G,vblock)
 C
 C  creates K(alpha-beta,alpha-beta),K(beta-alpha,alpha-beta)
 C  DA files KMATBA and KMATAB, LMATBA and LMATAB
@@ -44,15 +44,15 @@ cmpn
 cmp      real*8 G(*),ddot_
 c     real*8 ddot_
 cmp      integer it,ix,ig,iscr, KADT, IJS, RAD, AADT, IADR
-      integer ix,ig,iscr, KADT, IJS, RAD, AADT, IADR
+      integer ix,ig,iscr, IJS, RAD, AADT, IADR
       integer isp,is2,ias,vblock,n,i,j,k,lu,iasblock,ias_aa
-      INTEGER A,A1,A2,B1,IADT,BADT,NSTEP,ISTEP
-      CHARACTER FN*6,ich*1
-      INTEGER IOPT,NOAB,NNOAB,NUAB,NNUAB,NNU,IUHF,NNO,ISPA,NNRED
+      INTEGER A,A1,A2,B1,NSTEP,ISTEP
+      CHARACTER FN*6
+      INTEGER NNU,IUHF,NNO,ISPA
       integer adim, last,last_aa,nug
 c     integer bdim
-      COMMON/UHF/NOAB(2),NNOAB(3),NUAB(2),NNUAB(3),ICH(3)
-      COMMON/IOIND/IOPT(96)
+#include "uhf.fh"
+#include "ioind.fh"
 cmp
         integer itmp,il1_1,il2_1,il0,il1,it2_tmp,itmp2
         logical switch
@@ -71,11 +71,11 @@ c
 cmp      call w_rescope(G,'G create KL')
 cmp      call w_free(g,0,'G klvab ')
       N=noab(1)+nuab(1)
-      NNRED=NOAB(1)*(NOAB(1)+1)/2
+c      NNRED=NOAB(1)*(NOAB(1)+1)/2
       IUHF=0
       IF(IOPT(76).NE.0)THEN
          IUHF=1
-         NNRED=NNOAB(3)
+c         NNRED=NNOAB(3)
       ENDIF
       LU=98
 
@@ -159,7 +159,7 @@ cmp
 c
          DO K=1,noab(isp)
 !!            IF(IUHF.EQ.1)THEN
-               KADT=(K-1)*NNUAB(3)*(NOAB(2)*(2-ISP)+ISP-1)
+!!               KADT=(K-1)*NNUAB(3)*(NOAB(2)*(2-ISP)+ISP-1)
 !!            ELSE
 !!               KADT=0
 !!            ENDIF
@@ -330,13 +330,13 @@ cmpn
                      DO I=1,NOAB(IS2)
                         ISPA=ISP
                         !!IF(IUHF.EQ.1)THEN
-                           IADT=(I-1)*NNUAB(3)*(NOAB(2)*(2-IS2)+IS2-1)
+                        !!   IADT=(I-1)*NNUAB(3)*(NOAB(2)*(2-IS2)+IS2-1)
                         !!ELSE
                         !!   IADT=(MAX(K,I)-1)*(MAX(K,I))/2+MIN(K,I)
                         !!   IADT=(IADT-1)*NNUAB(3)
                         !!   IF(K.LT.I)ISPA=IS2
                         !!ENDIF
-                        BADT=(2-ISPA)*B1+(ISPA-1)*(B1-1)*NUAB(2)
+cmpn                        BADT=(2-ISPA)*B1+(ISPA-1)*(B1-1)*NUAB(2)
 cmpn!!!
 cmpn                        AADT_tmp=IADT+KADT+BADT+A*(ISPA-1)
 cmpn     $                       +(2-ISPA)*(A-1)*NUAB(2)+IT-1
@@ -588,7 +588,7 @@ c
 cmpn
             do k=1,noab(isp)
                !!IF(IUHF.EQ.1) THEN
-                  KADT=(K-1)*NNUAB(3)*(NOAB(2)*(2-ISP)+ISP-1)
+               !!   KADT=(K-1)*NNUAB(3)*(NOAB(2)*(2-ISP)+ISP-1)
                !!ELSE
                !!   KADT=0
                !!ENDIF
@@ -598,7 +598,7 @@ cmp               CALL EXPA1_UHF(G(IJS),nstep,NOAB(IS2),1,G(iscr))
                do I=1,noab(is2)
                   ISPA=ISP
                   !!IF(IUHF.EQ.1) THEN
-                     IADT=(I-1)*NNUAB(3)*(NOAB(2)*(2-IS2)+IS2-1)
+                   !!   IADT=(I-1)*NNUAB(3)*(NOAB(2)*(2-IS2)+IS2-1)
                   !!ELSE
                    !!  IADT=(MAX(K,I)-1)*(MAX(K,I))/2+MIN(K,I)
                    !!  IADT=(IADT-1)*NNUAB(3)
@@ -615,7 +615,7 @@ c
      &       (a_tmp-1)*NUAB(2)+it_exp
 cmpn
 C copies T
-                     BADT=2-ISPA+(ISPA-1)*NUAB(2)
+cmpn                     BADT=2-ISPA+(ISPA-1)*NUAB(2)
 C  T2 <A,B,J,K> for isp=1 T2 <B,A,K,J> for isp=2
                      ISTEP=(ISPA-1)*NUAB(2)+2-ISPA
                      RAD=(I-1)*nstep*n+(A-A1)*n+IX+noab(is2)

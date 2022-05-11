@@ -29,7 +29,6 @@ C Input from RASSCF
 #include "WrkSpc.fh"
 #include "rasscf_lucia.fh"
 #include "memman.fh"
-#include "loff.fh"
 C Other definitions
       PARAMETER(MXPKW = 125)
       dimension isetkw(MXPKW)
@@ -53,7 +52,6 @@ C =======================
       NERROR = 0
       NWARN = 0
       EXTSPC = 0
-      IECHO = 0
 * No cc as default
 *. Start out with normal integrals
 c      I_USE_SIMTRH = 0
@@ -81,7 +79,6 @@ C ==============================
          nsmob = nsym_molcas
          maxml = -1
          maxl = -1
-         invcnt = -1
 *
 C ============================
 C  Number of active electrons
@@ -167,13 +164,6 @@ C ==========================================================
           ngssh(irrep,igas)=ngssh_molcas(igas,irrep)
         end do
       end do
-cSJS      LOFFI=NIRREP**NGAS !Making CI iterations too slow
-      LOFFI=8**6 !SJS
-* Setting LOFFI to 8**6 is a bandaid - it will not be enough for some
-* situations with many GAS spaces at high symmetry.
-* The right thing to do would be some slimmer version of NIRREP**NGAS
-* in which LOFFI will be set based only on active symmetries.
-* Giovanni knows more about this issue. !SJS
 *
 C ==================================================
 C  Generalized active space occupation restrictions
@@ -291,7 +281,6 @@ C ==============
 * 8 : Core orbitals, only of interest if EXTSPC .ne. 0
 *
          CALL ISETVC(NRS0SH,0,NIRREP)
-         MNHR0 = 0
 *
 * 9 : RAS 1 orbitals
 *
@@ -303,13 +292,7 @@ C ==============
 *
 * 11 : RAS 3 orbitals
 *
-      IMLCR3 = 0
          CALL ISETVC(NRSSH(1,3),0,NIRREP)
-         IF(INTSPC.EQ.2) THEN
-*. Use information from one-electron integral file to obtain
-* default
-            IMLCR3 = 1
-         END IF
 *
 * 13 : Secondary space
 *
@@ -363,9 +346,7 @@ C ==============
 *
 *. If CAS + Active have been set or RAS + Ras3 have been set,
 *. obtain for MOLCAS Interface from number of basis functions
-         IF(INTSPC.EQ.1) THEN
-            IMLCR3 = 2
-         ELSE
+         IF(INTSPC.NE.1) THEN
             CALL ISETVC(NDELSH,0,NIRREP)
          END IF
 *

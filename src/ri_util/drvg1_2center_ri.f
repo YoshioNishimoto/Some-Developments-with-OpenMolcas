@@ -11,7 +11,7 @@
 * Copyright (C) 1990,1991,1992,2000,2007, Roland Lindh                 *
 *               1990, IBM                                              *
 ************************************************************************
-      SubRoutine Drvg1_2Center_RI(Grad,Temp,nGrad,ip_ij2,nij_Eff)
+      SubRoutine Drvg1_2Center_RI(Grad,Temp,nGrad,ij2,nij_Eff)
 ************************************************************************
 *                                                                      *
 *  Object: driver for 2-center two-electron integrals in the RI scheme.*
@@ -20,17 +20,6 @@
 *   -Sum(ML) X_ij^K   V_LM^(1) X_kl^L  where                           *
 *                                                                      *
 *  X_ij^K = Sum(L) R_ij_L  Q_L^K                                       *
-*                                                                      *
-*                                                                      *
-* Called from: Alaska                                                  *
-*                                                                      *
-* Calling    : QEnter                                                  *
-*              SetUp_Ints                                              *
-*              GetMem                                                  *
-*              DCopy   (ESSL)                                          *
-*              PGet0                                                   *
-*              TwoEl                                                   *
-*              QExit                                                   *
 *                                                                      *
 *     Author: Roland Lindh, IBM Almaden Research Center, San Jose, CA  *
 *             March '90                                                *
@@ -41,33 +30,41 @@
 *             Modified for gradient calculation. January '92           *
 *             Modified for SetUp_Ints. January '00                     *
 *             Modified for 2-center RI gradients, January '07          *
-*                                                                      *
 ************************************************************************
       use k2_setup
       use iSD_data
+      use pso_stuff
+      use k2_arrays, only: ipZeta, ipiZet, Mem_DBLE, Aux, Sew_Scr
+      use Basis_Info
+      use Sizes_of_Seward, only:S
+      use Gateway_Info, only: CutInt
+      use RICD_Info, only: Do_RI
+      use Symmetry_Info, only: nIrrep
+      use Para_Info, only: nProcs, King
+      use ExTerm, only: CijK, AMP2, iMP2prpt, A
       Implicit Real*8 (A-H,O-Z)
       External Rsv_Tsk
-#include "real.fh"
 #include "itmax.fh"
-#include "info.fh"
-#include "WrkSpc.fh"
+#include "Molcas.fh"
+#include "real.fh"
+#include "stdalloc.fh"
 #include "print.fh"
 #include "disp.fh"
 #include "nsd.fh"
 #include "setup.fh"
 #include "exterm.fh"
-#include "chomp2g_alaska.fh"
-#include "pso.fh"
-#include "para_info.fh"
 *#define _CD_TIMING_
 #ifdef _CD_TIMING_
 #include "temptime.fh"
 #endif
+      Integer nGrad, nij_Eff
+      Real*8  Grad(nGrad), Temp(nGrad)
+      Integer, Allocatable :: ij2(:,:)
+
 *     Local arrays
-      Real*8  Coor(3,4), Grad(nGrad), Temp(nGrad)
+      Real*8  Coor(3,4)
       Integer iAnga(4), iCmpa(4), iShela(4),iShlla(4),
      &        iAOV(4), istabs(4), iAOst(4), JndGrd(3,4), iFnc(4)
-      Integer nHrrTb(0:iTabMx,0:iTabMx,2)
       Logical EQ, Shijij, AeqB, CeqD,
      &        DoGrad, DoFock, Indexation, FreeK2, Verbose,
      &        JfGrad(3,4), ABCDeq, No_Batch, Rsv_Tsk
@@ -75,19 +72,14 @@
 *
       Integer iSD4(0:nSD,4)
       Save MemPrm
-*                                                                      *
-************************************************************************
-*                                                                      *
-*     Statement functions
-*
-      TMax1(i)=Work(ipTMax-1+i)
-      TMax2(i,j)=Work(ipTMax-1+(j-1)*nSkal+i)
+
+      Real*8, Allocatable:: TMax2(:,:), TMax1(:), Tmp(:,:)
+      Integer, Allocatable:: Shij(:,:)
 *                                                                      *
 ************************************************************************
 *                                                                      *
       iRout = 9
       iPrint = nPrint(iRout)
-      Call QEnter('Drvg1_2Center_RI')
 #ifdef _CD_TIMING_
       Twoel2_CPU = 0.0d0
       Twoel2_Wall = 0.0d0
@@ -100,9 +92,7 @@
       iFnc(3)=0
       iFnc(4)=0
       PMax=Zero
-      idum=0
-      idum1=0
-      call dcopy_(nGrad,Zero,0,Temp,1)
+      Temp(:)=Zero
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -133,8 +123,8 @@
 ************************************************************************
 *                                                                      *
       MxPrm = 0
-      Do iAng = 0, iAngMx
-         MxPrm = Max(MxPrm,MaxPrm(iAng))
+      Do iAng = 0, S%iAngMx
+         MxPrm = Max(MxPrm,S%MaxPrm(iAng))
       End Do
       nZeta = MxPrm * MxPrm
       nEta  = MxPrm * MxPrm
@@ -145,23 +135,23 @@
 *
       If (Do_RI) Then
          nTMax=nSkal
-         Call GetMem('TMax','Allo','Real',ipTMax,nTMax)
-         Call Allocate_Work(ip_Tmp,nSkal**2)
-         Call Shell_MxSchwz(nSkal,Work(ip_Tmp))
-        call dcopy_(nSkal,Work(ip_Tmp+(nSkal-1)*nSkal),1,Work(ipTMax),1)
-         Call Free_Work(ip_Tmp)
+         Call mma_allocate(TMax1,nTMax,Label='TMax1')
+         Call mma_allocate(Tmp,nSkal,nSkal,Label='Tmp')
+         Call Shell_MxSchwz(nSkal,Tmp)
+         TMax1(1:nSkal)=Tmp(1:nSkal,nSkal)
+         Call mma_deallocate(Tmp)
+
          TMax_all=Zero
          Do iS = 1, nSkal-1
             TMax_all=Max(TMax_all,TMax1(iS))
          End Do
       Else
-         nTMax=nSkal**2
-         Call GetMem('TMax','Allo','Real',ipTMax,nTMax)
-         Call Shell_MxSchwz(nSkal,Work(ipTMax))
+         Call mma_allocate(TMax2,nSkal,nSkal,Label='TMax2')
+         Call Shell_MxSchwz(nSkal,TMax2)
          TMax_all=Zero
          Do ij = 1, nij_Eff
-            iS = iWork(ip_ij2-1 +(ij-1)*2 + 1)
-            jS = iWork(ip_ij2-1 +(ij-1)*2 + 2)
+            iS = ij2(1,ij)
+            jS = ij2(2,ij)
             TMax_all=Max(TMax_all,TMax2(iS,jS))
          End Do
       End If
@@ -192,14 +182,10 @@
 *        Scratch for A_IJ
 *
          lA = MxChVInShl*MxChVInShl
-         Call GetMem('A','Allo','Real',ip_A,lA)
+         Call mma_allocate(A,lA,Label='A')
          If (iMP2Prpt.eq.2) Then
             lA_MP2=MxChVInShl
-            Call GetMem('A_MP2(1)','Allo','Real',ip_A_MP2(1),lA_MP2)
-            Call GetMem('A_MP2(2)','Allo','Real',ip_A_MP2(2),lA_MP2)
-         Else
-            ip_A_MP2(1) = ip_Dummy
-            ip_A_MP2(2) = ip_Dummy
+            Call mma_allocate(AMP2,lA_MP2,2,Label='AMP2')
          End If
 *
 *        Find the largest set of ij. The basis i and j is due to the
@@ -218,12 +204,8 @@
 *        Note that we need nDen arrays for C_kl^I and one for C_kl^J
 *        A_IJ = Sum(kl) C_kl^I x C_kl^J
 *
-         lCijK = nIJRMax*MxChVInShl
-         Call GetMem('CijK','Allo','Real',ip_CijK,(nKvec+1)*lCijK)
-*
-      Else
-*
-         lCijK = 0
+         Call mma_allocate(CijK,nIJRMax*MxChVInShl*(nKvec+1),
+     &                     Label='CijK')
 *
       End If
 *                                                                      *
@@ -232,27 +214,27 @@
 *     Create list of non-vanishing pairs
 *
       If (Do_RI) Then
-         mij=(nSkal-1)*2
-         Call GetMem('ip_ij','Allo','Inte',ip_ij,mij)
+         mij=(nSkal-1)
+         Call mma_allocate(Shij,2,mij,Label='Shij')
          nij=0
          Do iS = 1, nSkal-1
             If (TMax_All*TMax1(iS).ge.CutInt) Then
                nij = nij + 1
-               iWork(ip_ij + 2*(nij-1)  )=nSkal
-               iWork(ip_ij + 2*(nij-1)+1)=iS
+               Shij(1,nij)=nSkal
+               Shij(2,nij)=iS
             End If
          End Do
       Else
-         mij=2*nij_Eff
-         Call GetMem('ip_ij','Allo','Inte',ip_ij,mij)
+         mij=nij_Eff
+         Call mma_allocate(Shij,2,mij,Label='Shij')
          nij=0
          Do ij = 1, nij_Eff
-            iS = iWork(ip_ij2-1 +(ij-1)*2 + 1)
-            jS = iWork(ip_ij2-1 +(ij-1)*2 + 2)
+            iS = ij2(1,ij)
+            jS = ij2(2,ij)
             If (TMax_All*TMax2(iS,jS).ge.CutInt) Then
                nij = nij + 1
-               iWork((nij-1)*2+ip_ij  )=iS
-               iWork((nij-1)*2+ip_ij+1)=jS
+               Shij(1,nij)=iS
+               Shij(2,nij)=jS
             End If
          End Do
       End If
@@ -261,7 +243,7 @@
 *                                                                      *
 *-----Compute FLOP's for the transfer equation.
 *
-      Do iAng = 0, iAngMx
+      Do iAng = 0, S%iAngMx
          Do jAng = 0, iAng
             nHrrab = 0
             Do i = 0, iAng+1
@@ -272,8 +254,6 @@
                   End If
                End Do
             End Do
-            nHrrTb(iAng,jAng,1)=nHrrab
-            nHrrTb(jAng,iAng,1)=nHrrab
          End Do
       End Do
 *                                                                      *
@@ -293,8 +273,8 @@
          Call Drvh1(Grad,Temp,nGrad)
 *        If (nPrint(1).ge.15)
 *    &   Call PrGrad(' Gradient excluding two-electron contribution',
-*    &               Grad,lDisp(0),lIrrep,ChDisp,iPrint)
-         call dcopy_(nGrad,Zero,0,Temp,1)
+*    &               Grad,lDisp(0),ChDisp)
+         call dcopy_(nGrad,[Zero],0,Temp,1)
          If (Do_RI) Then
             Call Set_Basis_Mode('Auxiliary')
             Call Setup_iSD()
@@ -303,13 +283,13 @@
 *                                                                      *
 ************************************************************************
 *                                                                      *
-      Call GetMem('MemMax','Max','Real',iDum,MemMax)
-      Call GetMem('MemMax','Allo','Real',ipMem1,MemMax)
+      Call mma_MaxDBLE(MemMax)
+      Call mma_allocate(Sew_Scr,MemMax,Label='Sew_Scr')
+      ipMem1=1
 *                                                                      *
 ************************************************************************
 *                                                                      *
-C     Call Get_MyRank(MyRank_)
-C     If (MyRank_.ne.0) Go To 11
+C     If (MyRank.ne.0) Go To 11
 *     big loop over individual tasks, distributed over individual nodes
    10 Continue
 *     make reservation of a task on global task list and get task range
@@ -319,11 +299,11 @@ C     If (MyRank_.ne.0) Go To 11
 *     Now do a quadruple loop over shells
 *
       jS_= Int((One+sqrt(Eight*DBLE(jlS)-Three))/Two)
-      iS = iWork((jS_-1)*2  +ip_ij)
-      jS = iWork((jS_-1)*2+1+ip_ij)
+      iS = Shij(1,jS_)
+      jS = Shij(2,jS_)
       lS_= Int(DBLE(jlS)-DBLE(jS_)*(DBLE(jS_)-One)/Two)
-      kS = iWork((lS_-1)*2  +ip_ij)
-      lS = iWork((lS_-1)*2+1+ip_ij)
+      kS = Shij(1,lS_)
+      lS = Shij(2,lS_)
       Call CWTime(TCpu1,TWall1)
 *
          If (Do_RI) Then
@@ -344,7 +324,7 @@ C        End If
 ************************************************************************
 *                                                                      *
          Call Gen_iSD4(iS, jS, kS, lS,iSD,nSD,iSD4)
-         Call Size_SO_block_g(iSD4,nSD,Petite,nSO,No_batch)
+         Call Size_SO_block_g(iSD4,nSD,nSO,No_batch)
          If (No_batch) Go To 140
 *
          Call Int_Prep_g(iSD4,nSD,Coor,Shijij,iAOV,iStabs)
@@ -381,11 +361,10 @@ C        End If
 
          Call SOAO_g(iSD4,nSD,nSO,
      &               MemPrm, MemMax,
-     &               nExp,nBasis,MxShll,
      &               iBsInc,jBsInc,kBsInc,lBsInc,
      &               iPrInc,jPrInc,kPrInc,lPrInc,
      &               ipMem1,ipMem2, Mem1,  Mem2,
-     &               iPrint,iFnc, MemPSO)
+     &               iFnc, MemPSO)
          iBasi    = iSD4(3,1)
          jBasj    = iSD4(3,2)
          kBask    = iSD4(3,3)
@@ -396,9 +375,7 @@ C        End If
          Call Int_Parm_g(iSD4,nSD,iAnga,
      &                 iCmpa,iShlla,iShela,
      &                 iPrimi,jPrimj,kPrimk,lPriml,
-     &                 ipCffi,jpCffj,kpCffk,lpCffl,
-     &                 nExp,ipExp,ipCff,MxShll,
-     &                 indij,k2ij,nDCRR,k2kl,nDCRS,
+     &                 k2ij,nDCRR,k2kl,nDCRS,
      &                 mdci,mdcj,mdck,mdcl,AeqB,CeqD,
      &                 nZeta,nEta,ipZeta,ipZI,
      &                 ipP,ipEta,ipEI,ipQ,ipiZet,ipiEta,
@@ -443,12 +420,12 @@ C        End If
 #ifdef _CD_TIMING_
            CALL CWTIME(Pget0CPU1,Pget0WALL1)
 #endif
-           Call PGet0(iCmpa,iShela,
+           Call PGet0(iCmpa,
      &                iBasn,jBasn,kBasn,lBasn,Shijij,
-     &                iAOV,iAOst,nijkl,Work(ipMem1),nSO,
+     &                iAOV,iAOst,nijkl,Sew_Scr(ipMem1),nSO,
      &                iFnc(1)*iBasn,iFnc(2)*jBasn,
      &                iFnc(3)*kBasn,iFnc(4)*lBasn,MemPSO,
-     &                ipMem2,iS,jS,kS,lS,nQuad,PMax)
+     &                Sew_Scr(ipMem2),Mem2,iS,jS,kS,lS,nQuad,PMax)
 #ifdef _CD_TIMING_
            CALL CWTIME(Pget0CPU2,Pget0WALL2)
            Pget2_CPU = Pget2_CPU + Pget0CPU2-Pget0CPU1
@@ -468,15 +445,16 @@ C        End If
      &          Data_k2(k2kl),ncd,nHmcd,nDCRS,Pren,Prem,
      &          iPrimi,iPrInc,jPrimj,jPrInc,
      &          kPrimk,kPrInc,lPriml,lPrInc,
-     &          Work(ipCffi+(iBasAO-1)*iPrimi),iBasn,
-     &          Work(jpCffj+(jBasAO-1)*jPrimj),jBasn,
-     &          Work(kpCffk+(kBasAO-1)*kPrimk),kBasn,
-     &          Work(lpCffl+(lBasAO-1)*lPriml),lBasn,
-     &          Work(ipZeta),Work(ipZI),Work(ipP),nZeta,
-     &          Work(ipEta), Work(ipEI),Work(ipQ),nEta,
-     &          Work(ipxA),Work(ipxB),Work(ipxG),Work(ipxD),Temp,nGrad,
-     &          JfGrad,JndGrd,Work(ipMem1), nSO,Work(ipMem2),Mem2,
-     &          Work(ipAux),nAux,Shijij)
+     &          Shells(iSD4(0,1))%pCff(1,iBasAO),iBasn,
+     &          Shells(iSD4(0,2))%pCff(1,jBasAO),jBasn,
+     &          Shells(iSD4(0,3))%pCff(1,kBasAO),kBasn,
+     &          Shells(iSD4(0,4))%pCff(1,lBasAO),lBasn,
+     &          Mem_DBLE(ipZeta),Mem_DBLE(ipZI),Mem_DBLE(ipP),nZeta,
+     &          Mem_DBLE(ipEta), Mem_DBLE(ipEI),Mem_DBLE(ipQ),nEta,
+     &          Mem_DBLE(ipxA),Mem_DBLE(ipxB),
+     &          Mem_DBLE(ipxG),Mem_DBLE(ipxD),Temp,nGrad,
+     &          JfGrad,JndGrd,Sew_Scr(ipMem1), nSO,Sew_Scr(ipMem2),Mem2,
+     &          Aux,nAux,Shijij)
 #ifdef _CD_TIMING_
            Call CWTIME(TwoelCPU2,TwoelWall2)
            Twoel2_CPU = Twoel2_CPU + TwoelCPU2-TwoelCPU1
@@ -484,7 +462,7 @@ C        End If
 #endif
             If (iPrint.ge.15)
      &         Call PrGrad(' In Drvg1_2Center_RI: Grad',
-     &                  Temp,nGrad,lIrrep,ChDisp,iPrint)
+     &                  Temp,nGrad,ChDisp)
 *
  430     Continue
  420     Continue
@@ -504,10 +482,11 @@ C        End If
 *                                                                      *
 ************************************************************************
 *                                                                      *
-      Call GetMem('MemMax','Free','Real',ipMem1,MemMax)
+      Call mma_deallocate(Sew_Scr)
       Call Free_Tsk(id)
-      Call GetMem('ip_ij','Free','Inte',ip_ij,mij)
-      Call GetMem('TMax','Free','Real',ipTMax,nTMax)
+      Call mma_deallocate(Shij)
+      If (Allocated(TMax1)) Call mma_deallocate(TMax1)
+      If (Allocated(TMax2)) Call mma_deallocate(TMax2)
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -532,18 +511,14 @@ C        End If
 ************************************************************************
 *                                                                      *
       If(DoCholExch) Then
-         Call GetMem('CijK','Free','Real',ip_CijK,2*lCijK)
-         Call GetMem('A','Free','Real',ip_A,lA)
-         If (iMP2Prpt.eq.2) Then
-            Call GetMem('A_MP2(2)','Free','Real',ip_A_MP2(2),lA_MP2)
-            Call GetMem('A_MP2(1)','Free','Real',ip_A_MP2(1),lA_MP2)
-         End If
+         Call mma_deallocate(CijK)
+         Call mma_deallocate(A)
       End If
+      If (Allocated(AMP2)) Call mma_deallocate(AMP2)
 *
       Call Free_iSD()
 *                                                                      *
 ************************************************************************
 *                                                                      *
-      Call QExit('Drvg1_2Center_RI')
       Return
       End

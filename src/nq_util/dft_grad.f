@@ -10,10 +10,8 @@
 *                                                                      *
 * Copyright (C) 2002, Roland Lindh                                     *
 ************************************************************************
-      Subroutine DFT_Grad(Grad,nGrad,dF_dRho,ndF_dRho,iSpin,
-     &                    Grid,mGrid,dRho_dR,ndRho_dR,nGrad_Eff,
-     &                    Rho,nRho,IndGrd,Weights,iTab,Temp,F_xc,
-     &                    dW_dR,iChBas,nChBas,iNQ)
+      Subroutine DFT_Grad(Grad,nGrad,nD,Grid,mGrid,dRho_dR,ndRho_dR,
+     &                    nGrad_Eff,Weights,iNQ)
 ************************************************************************
 *                                                                      *
 *     Object: to trace the correct parts to get the contributions to   *
@@ -22,40 +20,30 @@
 *     Author: Roland Lindh, Dept. of Chemical Physics, University of   *
 *             Lund, Sweden.  May 2002 in Bologna, Italy.               *
 ************************************************************************
+      use nq_Grid, only: F_xc, GradRho, vRho, vSigma, vTau, vLapl
+      use nq_Grid, only: Pax
+      use nq_Grid, only: IndGrd, iTab, Temp, dW_dR
+      use nq_Structure, only: NQ_data
+      use nq_Info
       Implicit Real*8 (a-h,o-z)
 #include "real.fh"
-#include "nq_info.fh"
-#include "WrkSpc.fh"
 #include "debug.fh"
 #include "Molcas.fh"
 #include "itmax.fh"
-#include "ksdft.fh"
+#include "stdalloc.fh"
       Parameter (Mxdc=MxAtom)
 #include "disp.fh"
-#include "nq_index.fh"
-      Real*8 Grad(nGrad), Temp(nGrad_Eff), Grid(3,mGrid),
-     &       dF_dRho(ndF_dRho,mGrid),
+      Real*8 Grad(nGrad), Grid(3,mGrid),
      &       dRho_dR(ndRho_dR,mGrid,nGrad_Eff), OV(3,3), V(3,3),
-     &       Rho(nRho,mGrid), R_Grid(3),
-     &       Weights(mGrid), F_xc(mGrid), dW_dR(nGrad_Eff,mGrid)
-      Integer IndGrd(nGrad_Eff), iTab(4,nGrad_Eff), iChBas(0:nChBas-1)
+     &       R_Grid(3), Weights(mGrid), OVT(3)
+      Real*8, Allocatable:: Aux(:,:)
 *                                                                      *
 ************************************************************************
 *                                                                      *
-*                                                                      *
-************************************************************************
-*                                                                      *
-#include "nq_structure.fh"
-      declare_ip_coor
-      declare_ip_dodx
-*                                                                      *
-************************************************************************
-*                                                                      *
-      LuWr=6
-      R_Grid(1)=Work(ip_Coor(iNQ)  )
-      R_Grid(2)=Work(ip_Coor(iNQ)+1)
-      R_Grid(3)=Work(ip_Coor(iNQ)+2)
-#ifdef _DEBUG_
+      R_Grid(:)=NQ_Data(iNQ)%Coor(:)
+*define _DEBUGPRINT_
+#ifdef _DEBUGPRINT_
+      Debug=.True.
       If (Debug) Then
          Call RecPrt('R_Grid',' ',R_Grid,1,3)
          Call RecPrt('Grid',' ',Grid,3,mGrid)
@@ -70,11 +58,6 @@
          End Do
       End If
 #endif
-*                                                                      *
-************************************************************************
-*                                                                      *
-      Call FZero(Temp,nGrad_Eff)
-      Call FZero(OV,9)
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -119,336 +102,197 @@
 *                                                                      *
 ************************************************************************
 *                                                                      *
-      If (Functional_type.eq.LDA_type) Then
-*
-         If (iSpin.eq.1) Then
-            Do i_Eff=1, nGrad_Eff
-               tmp=Zero
-               ixyz=iTab(1,i_Eff)
-               Do j = 1, mGrid
-                  dF_dr = dF_dRho(ipR,j)    *dRho_dR(1,j,i_Eff)
-*
-                  tmp = tmp + Weights(j) * dF_dr
-*
-*                 For rotational invariance accumulate
-*
-*                 (nabla_r f_g)^T O s_g
-*
-                  OV(ixyz,1) = OV(ixyz,1) + Two* Weights(j) *
-     &                        dF_dr * (Grid(1,j)-R_Grid(1))
-                  OV(ixyz,2) = OV(ixyz,2) + Two* Weights(j) *
-     &                        dF_dr * (Grid(2,j)-R_Grid(2))
-                  OV(ixyz,3) = OV(ixyz,3) + Two* Weights(j) *
-     &                        dF_dr * (Grid(3,j)-R_Grid(3))
-               End Do
-               If (iTab(2,i_Eff).ne.Off)
-     &            Temp(i_Eff)=Temp(i_Eff)-Two*tmp
-            End Do
-         Else
-            Do i_Eff=1, nGrad_Eff
-               tmp=Zero
-               ixyz=iTab(1,i_Eff)
-               Do j = 1, mGrid
-                  dF_dr =dF_dRho(ipRa,j)    *dRho_dR(1,j,i_Eff)
-     &                  +dF_dRho(ipRb,j)    *dRho_dR(2,j,i_Eff)
-                  tmp = tmp + Weights(j) * dF_dr
-*
-*                 Accumulate stuff for rotational invariance
-*
-                  OV(ixyz,1) = OV(ixyz,1) + Two* Weights(j) *
-     &                        dF_dr * (Grid(1,j)-R_Grid(1))
-                  OV(ixyz,2) = OV(ixyz,2) + Two* Weights(j) *
-     &                        dF_dr * (Grid(2,j)-R_Grid(2))
-                  OV(ixyz,3) = OV(ixyz,3) + Two* Weights(j) *
-     &                        dF_dr * (Grid(3,j)-R_Grid(3))
-               End Do
-               If (iTab(2,i_Eff).ne.Off)
-     &            Temp(i_Eff)=Temp(i_Eff)-tmp
-            End Do
-         End If
+      Select Case (Functional_type)
 *                                                                      *
 ************************************************************************
 *                                                                      *
-      Else If (Functional_type.eq.GGA_type) Then
-*
-         If (iSpin.eq.1) Then
-            Do i_Eff=1, nGrad_Eff
-               tmp=Zero
-               ixyz=iTab(1,i_Eff)
-               Do j = 1, mGrid
-                  gx=rho(2,j)
-                  gy=rho(3,j)
-                  gz=rho(4,j)
-                  Temp0=dF_dRho(ipR,j)
-                  Temp1=(2.0d0*dF_dRho(ipGxx,j)+dF_dRho(ipGxy,j))*gx
-                  Temp2=(2.0d0*dF_dRho(ipGxx,j)+dF_dRho(ipGxy,j))*gy
-                  Temp3=(2.0d0*dF_dRho(ipGxx,j)+dF_dRho(ipGxy,j))*gz
-*
-                  dF_dr = Temp0*dRho_dR(1,j,i_Eff)
-     &                  + Temp1*dRho_dR(2,j,i_Eff)
-     &                  + Temp2*dRho_dR(3,j,i_Eff)
-     &                  + Temp3*dRho_dR(4,j,i_Eff)
-                  tmp = tmp  + Weights(j) * dF_dr
-*
-*                 Accumulate stuff for rotational invariance
-*
-                  OV(ixyz,1) = OV(ixyz,1) + Two* Weights(j) *
-     &                        dF_dr * (Grid(1,j)-R_Grid(1))
-                  OV(ixyz,2) = OV(ixyz,2) + Two* Weights(j) *
-     &                        dF_dr * (Grid(2,j)-R_Grid(2))
-                  OV(ixyz,3) = OV(ixyz,3) + Two* Weights(j) *
-     &                        dF_dr * (Grid(3,j)-R_Grid(3))
-               End Do
-               If (iTab(2,i_Eff).ne.Off)
-     &            Temp(i_Eff)=Temp(i_Eff)-Two*tmp
-            End Do
-         Else
-            Do i_Eff=1, nGrad_Eff
-               tmp=Zero
-               ixyz=iTab(1,i_Eff)
-               Do j = 1, mGrid
-                  gxa=rho(3,j)
-                  gya=rho(4,j)
-                  gza=rho(5,j)
-                  gxb=rho(6,j)
-                  gyb=rho(7,j)
-                  gzb=rho(8,j)
+      Case (LDA_type)
+*                                                                      *
+************************************************************************
+*                                                                      *
 
-                  Temp0a=dF_dRho(ipRa,j)
-                  Temp0b=dF_dRho(ipRb,j)
-                  Temp1a=( 2.0d0*dF_dRho(ipGaa,j)*gxa
-     &                          +dF_dRho(ipGab,j)*gxb )
-                  Temp1b=( 2.0d0*dF_dRho(ipGbb,j)*gxb
-     &                          +dF_dRho(ipGab,j)*gxa )
-                  Temp2a=( 2.0d0*dF_dRho(ipGaa,j)*gya
-     &                          +dF_dRho(ipGab,j)*gyb )
-                  Temp2b=( 2.0d0*dF_dRho(ipGbb,j)*gyb
-     &                          +dF_dRho(ipGab,j)*gya )
-                  Temp3a=( 2.0d0*dF_dRho(ipGaa,j)*gza
-     &                          +dF_dRho(ipGab,j)*gzb )
-                  Temp3b=( 2.0d0*dF_dRho(ipGbb,j)*gzb
-     &                          +dF_dRho(ipGab,j)*gza )
-*
-                  dF_dr = Temp0a*dRho_dR(1,j,i_Eff)
-     &                  + Temp0b*dRho_dR(2,j,i_Eff)
-     &                  + Temp1a*dRho_dR(3,j,i_Eff)
-     &                  + Temp2a*dRho_dR(4,j,i_Eff)
-     &                  + Temp3a*dRho_dR(5,j,i_Eff)
-     &                  + Temp1b*dRho_dR(6,j,i_Eff)
-     &                  + Temp2b*dRho_dR(7,j,i_Eff)
-     &                  + Temp3b*dRho_dR(8,j,i_Eff)
-                  tmp = tmp + Weights(j) * dF_dR
-*
-*                 Accumulate stuff for rotational invariance
-*
-                  OV(ixyz,1) = OV(ixyz,1) + Two* Weights(j) *
-     &                        dF_dr * (Grid(1,j)-R_Grid(1))
-                  OV(ixyz,2) = OV(ixyz,2) + Two* Weights(j) *
-     &                        dF_dr * (Grid(2,j)-R_Grid(2))
-                  OV(ixyz,3) = OV(ixyz,3) + Two* Weights(j) *
-     &                        dF_dr * (Grid(3,j)-R_Grid(3))
-               End Do
-               If (iTab(2,i_Eff).ne.Off)
-     &            Temp(i_Eff)=Temp(i_Eff)-tmp
-            End Do
-         End If
-*                                                                      *
-************************************************************************
-*                                                                      *
-      Else If (Functional_type.eq.meta_GGA_type1) Then
-         If (iSpin.eq.1) Then
-            Do i_Eff=1, nGrad_Eff
-               tmp=Zero
-               ixyz=iTab(1,i_Eff)
-               Do j = 1, mGrid
-                  gx=rho(2,j)
-                  gy=rho(3,j)
-                  gz=rho(4,j)
-                  Temp0=dF_dRho(ipR,j)
-                  Temp1=(2.0d0*dF_dRho(ipGxx,j)+dF_dRho(ipGxy,j))*gx
-                  Temp2=(2.0d0*dF_dRho(ipGxx,j)+dF_dRho(ipGxy,j))*gy
-                  Temp3=(2.0d0*dF_dRho(ipGxx,j)+dF_dRho(ipGxy,j))*gz
-                  Temp4=Half*dF_dRho(ipT,j)
-*
-                  dF_dr = Temp0*dRho_dR(1,j,i_Eff)
-     &                  + Temp1*dRho_dR(2,j,i_Eff)
-     &                  + Temp2*dRho_dR(3,j,i_Eff)
-     &                  + Temp3*dRho_dR(4,j,i_Eff)
-     &                  + Temp4*dRho_dR(5,j,i_Eff)
-                  tmp = tmp  + Weights(j) * dF_dr
-*
-*                 Accumulate stuff for rotational invariance
-*
-                  OV(ixyz,1) = OV(ixyz,1) + Two* Weights(j) *
-     &                        dF_dr * (Grid(1,j)-R_Grid(1))
-                  OV(ixyz,2) = OV(ixyz,2) + Two* Weights(j) *
-     &                        dF_dr * (Grid(2,j)-R_Grid(2))
-                  OV(ixyz,3) = OV(ixyz,3) + Two* Weights(j) *
-     &                        dF_dr * (Grid(3,j)-R_Grid(3))
-               End Do
-               If (iTab(2,i_Eff).ne.Off)
-     &            Temp(i_Eff)=Temp(i_Eff)-Two*tmp
+         Call mma_Allocate(Aux,1*nD,mGrid,Label='Aux')
+         If (nD.eq.1) Then
+            Do j = 1, mGrid
+               Aux(1,j)=vRho(1,j)
             End Do
          Else
-            Do i_Eff=1, nGrad_Eff
-               tmp=Zero
-               ixyz=iTab(1,i_Eff)
-               Do j = 1, mGrid
-                  gxa=rho(3,j)
-                  gya=rho(4,j)
-                  gza=rho(5,j)
-                  gxb=rho(6,j)
-                  gyb=rho(7,j)
-                  gzb=rho(8,j)
-
-                  Temp0a=dF_dRho(ipRa,j)
-                  Temp0b=dF_dRho(ipRb,j)
-                  Temp1a=( 2.0d0*dF_dRho(ipGaa,j)*gxa
-     &                          +dF_dRho(ipGab,j)*gxb )
-                  Temp1b=( 2.0d0*dF_dRho(ipGbb,j)*gxb
-     &                          +dF_dRho(ipGab,j)*gxa )
-                  Temp2a=( 2.0d0*dF_dRho(ipGaa,j)*gya
-     &                          +dF_dRho(ipGab,j)*gyb )
-                  Temp2b=( 2.0d0*dF_dRho(ipGbb,j)*gyb
-     &                          +dF_dRho(ipGab,j)*gya )
-                  Temp3a=( 2.0d0*dF_dRho(ipGaa,j)*gza
-     &                          +dF_dRho(ipGab,j)*gzb )
-                  Temp3b=( 2.0d0*dF_dRho(ipGbb,j)*gzb
-     &                          +dF_dRho(ipGab,j)*gza )
-                  Temp4a=dF_dRho(ipTa,j)
-                  Temp4b=dF_dRho(ipTb,j)
-*
-                  dF_dr = Temp0a*dRho_dR(1,j,i_Eff)
-     &                  + Temp0b*dRho_dR(2,j,i_Eff)
-     &                  + Temp1a*dRho_dR(3,j,i_Eff)
-     &                  + Temp2a*dRho_dR(4,j,i_Eff)
-     &                  + Temp3a*dRho_dR(5,j,i_Eff)
-     &                  + Temp1b*dRho_dR(6,j,i_Eff)
-     &                  + Temp2b*dRho_dR(7,j,i_Eff)
-     &                  + Temp3b*dRho_dR(8,j,i_Eff)
-     &                  + Temp4a*dRho_dR(9,j,i_Eff)
-     &                  + Temp4b*dRho_dR(10,j,i_Eff)
-                  tmp = tmp + Weights(j) * dF_dR
-*
-*                 Accumulate stuff for rotational invariance
-*
-                  OV(ixyz,1) = OV(ixyz,1) + Two* Weights(j) *
-     &                        dF_dr * (Grid(1,j)-R_Grid(1))
-                  OV(ixyz,2) = OV(ixyz,2) + Two* Weights(j) *
-     &                        dF_dr * (Grid(2,j)-R_Grid(2))
-                  OV(ixyz,3) = OV(ixyz,3) + Two* Weights(j) *
-     &                        dF_dr * (Grid(3,j)-R_Grid(3))
-               End Do
-               If (iTab(2,i_Eff).ne.Off)
-     &            Temp(i_Eff)=Temp(i_Eff)-tmp
+            Do j = 1, mGrid
+               Aux(1,j)=vRho(1,j)
+               Aux(2,j)=vRho(2,j)
             End Do
          End If
 *                                                                      *
 ************************************************************************
 *                                                                      *
-      Else If (Functional_type.eq.meta_GGA_type2) Then
-         If (iSpin.eq.1) Then
-            Do i_Eff=1, nGrad_Eff
-               tmp=Zero
-               ixyz=iTab(1,i_Eff)
-               Do j = 1, mGrid
-                  gx=rho(2,j)
-                  gy=rho(3,j)
-                  gz=rho(4,j)
-                  Temp0=dF_dRho(ipR,j)
-                  Temp1=(2.0d0*dF_dRho(ipGxx,j)+dF_dRho(ipGxy,j))*gx
-                  Temp2=(2.0d0*dF_dRho(ipGxx,j)+dF_dRho(ipGxy,j))*gy
-                  Temp3=(2.0d0*dF_dRho(ipGxx,j)+dF_dRho(ipGxy,j))*gz
-                  Temp4=dF_dRho(ipT,j)
-                  Temp5=dF_dRho(ipL,j)
+      Case (GGA_type)
+*                                                                      *
+************************************************************************
 *
-                  dF_dr = Temp0*dRho_dR(1,j,i_Eff)
-     &                  + Temp1*dRho_dR(2,j,i_Eff)
-     &                  + Temp2*dRho_dR(3,j,i_Eff)
-     &                  + Temp3*dRho_dR(4,j,i_Eff)
-     &                  + Temp4*dRho_dR(5,j,i_Eff)
-     &                  + Temp5*dRho_dR(6,j,i_Eff)
-                  tmp = tmp  + Weights(j) * dF_dr
-*
-*                 Accumulate stuff for rotational invariance
-*
-                  OV(ixyz,1) = OV(ixyz,1) + Two* Weights(j) *
-     &                        dF_dr * (Grid(1,j)-R_Grid(1))
-                  OV(ixyz,2) = OV(ixyz,2) + Two* Weights(j) *
-     &                        dF_dr * (Grid(2,j)-R_Grid(2))
-                  OV(ixyz,3) = OV(ixyz,3) + Two* Weights(j) *
-     &                        dF_dr * (Grid(3,j)-R_Grid(3))
-               End Do
-               If (iTab(2,i_Eff).ne.Off)
-     &            Temp(i_Eff)=Temp(i_Eff)-Two*tmp
+         Call mma_Allocate(Aux,4*nD,mGrid,Label='Aux')
+         If (nD.eq.1) Then
+            Do j = 1, mGrid
+               Aux(1,j)=vRho(1,j)
+               Aux(2,j)=2.0d0*vSigma(1,j)*Gradrho(1,j)
+               Aux(3,j)=2.0d0*vSigma(1,j)*Gradrho(2,j)
+               Aux(4,j)=2.0d0*vSigma(1,j)*Gradrho(3,j)
             End Do
          Else
-            Do i_Eff=1, nGrad_Eff
-               tmp=Zero
-               ixyz=iTab(1,i_Eff)
-               Do j = 1, mGrid
-                  gxa=rho(3,j)
-                  gya=rho(4,j)
-                  gza=rho(5,j)
-                  gxb=rho(6,j)
-                  gyb=rho(7,j)
-                  gzb=rho(8,j)
+            Do j = 1, mGrid
+               gxa=Gradrho(1,j)
+               gya=Gradrho(2,j)
+               gza=Gradrho(3,j)
+               gxb=Gradrho(4,j)
+               gyb=Gradrho(5,j)
+               gzb=Gradrho(6,j)
 
-                  Temp0a=dF_dRho(ipRa,j)
-                  Temp0b=dF_dRho(ipRa,j)
-                  Temp1a=( 2.0d0*dF_dRho(ipGaa,j)*gxa
-     &                          +dF_dRho(ipGab,j)*gxb )
-                  Temp1b=( 2.0d0*dF_dRho(ipGbb,j)*gxb
-     &                          +dF_dRho(ipGab,j)*gxa )
-                  Temp2a=( 2.0d0*dF_dRho(ipGaa,j)*gya
-     &                          +dF_dRho(ipGab,j)*gyb )
-                  Temp2b=( 2.0d0*dF_dRho(ipGbb,j)*gyb
-     &                          +dF_dRho(ipGab,j)*gya )
-                  Temp3a=( 2.0d0*dF_dRho(ipGaa,j)*gza
-     &                          +dF_dRho(ipGab,j)*gzb )
-                  Temp3b=( 2.0d0*dF_dRho(ipGbb,j)*gzb
-     &                          +dF_dRho(ipGab,j)*gza )
-                  Temp4a=dF_dRho(ipTa,j)
-                  Temp4b=dF_dRho(ipTb,j)
-                  Temp5a=dF_dRho(ipLa,j)
-                  Temp5b=dF_dRho(ipLb,j)
-*
-                  dF_dr = Temp0a*dRho_dR(1,j,i_Eff)
-     &                  + Temp0b*dRho_dR(2,j,i_Eff)
-     &                  + Temp1a*dRho_dR(3,j,i_Eff)
-     &                  + Temp2a*dRho_dR(4,j,i_Eff)
-     &                  + Temp3a*dRho_dR(5,j,i_Eff)
-     &                  + Temp1b*dRho_dR(6,j,i_Eff)
-     &                  + Temp2b*dRho_dR(7,j,i_Eff)
-     &                  + Temp3b*dRho_dR(8,j,i_Eff)
-     &                  + Temp4a*dRho_dR(9,j,i_Eff)
-     &                  + Temp4b*dRho_dR(10,j,i_Eff)
-     &                  + Temp5a*dRho_dR(11,j,i_Eff)
-     &                  + Temp5b*dRho_dR(12,j,i_Eff)
-                  tmp = tmp + Weights(j) * dF_dR
-*
-*                 Accumulate stuff for rotational invariance
-*
-                  OV(ixyz,1) = OV(ixyz,1) + Two* Weights(j) *
-     &                        dF_dr * (Grid(1,j)-R_Grid(1))
-                  OV(ixyz,2) = OV(ixyz,2) + Two* Weights(j) *
-     &                        dF_dr * (Grid(2,j)-R_Grid(2))
-                  OV(ixyz,3) = OV(ixyz,3) + Two* Weights(j) *
-     &                        dF_dr * (Grid(3,j)-R_Grid(3))
-               End Do
-               If (iTab(2,i_Eff).ne.Off)
-     &            Temp(i_Eff)=Temp(i_Eff)-tmp
+               Aux(1,j)=vRho(1,j)
+               Aux(2,j)=vRho(2,j)
+               Aux(3,j)=( 2.0d0*vSigma(1,j)*gxa
+     &                         +vSigma(2,j)*gxb )
+               Aux(4,j)=( 2.0d0*vSigma(1,j)*gya
+     &                         +vSigma(2,j)*gyb )
+               Aux(5,j)=( 2.0d0*vSigma(1,j)*gza
+     &                         +vSigma(2,j)*gzb )
+               Aux(6,j)=( 2.0d0*vSigma(3,j)*gxb
+     &                         +vSigma(2,j)*gxa )
+               Aux(7,j)=( 2.0d0*vSigma(3,j)*gyb
+     &                         +vSigma(2,j)*gya )
+               Aux(8,j)=( 2.0d0*vSigma(3,j)*gzb
+     &                         +vSigma(2,j)*gza )
             End Do
          End If
 *                                                                      *
 ************************************************************************
 *                                                                      *
-      Else
-*
+      Case (meta_GGA_type1)
+*                                                                      *
+************************************************************************
+*                                                                      *
+         Call mma_Allocate(Aux,5*nD,mGrid,Label='Aux')
+         If (nD.eq.1) Then
+            Do j = 1, mGrid
+               Aux(1,j)=vRho(1,j)
+               Aux(2,j)=2.0d0*vSigma(1,j)*Gradrho(1,j)
+               Aux(3,j)=2.0d0*vSigma(1,j)*Gradrho(2,j)
+               Aux(4,j)=2.0d0*vSigma(1,j)*Gradrho(3,j)
+               Aux(5,j)=0.25D0*vTau(1,j)
+            End Do
+         Else
+            Do j = 1, mGrid
+               gxa=Gradrho(1,j)
+               gya=Gradrho(2,j)
+               gza=Gradrho(3,j)
+               gxb=Gradrho(4,j)
+               gyb=Gradrho(5,j)
+               gzb=Gradrho(6,j)
+
+               Aux(1,j)=vRho(1,j)
+               Aux(2,j)=vRho(2,j)
+               Aux(3,j)=( 2.0d0*vSigma(1,j)*gxa
+     &                         +vSigma(2,j)*gxb )
+               Aux(4,j)=( 2.0d0*vSigma(1,j)*gya
+     &                         +vSigma(2,j)*gyb )
+               Aux(5,j)=( 2.0d0*vSigma(1,j)*gza
+     &                         +vSigma(2,j)*gzb )
+               Aux(6,j)=( 2.0d0*vSigma(3,j)*gxb
+     &                         +vSigma(2,j)*gxa )
+               Aux(7,j)=( 2.0d0*vSigma(3,j)*gyb
+     &                         +vSigma(2,j)*gya )
+               Aux(8,j)=( 2.0d0*vSigma(3,j)*gzb
+     &                         +vSigma(2,j)*gza )
+               Aux(9,j)=0.5D0*vTau(1,j)
+               Aux(10,j)=0.5D0*vTau(2,j)
+            End Do
+         End If
+*                                                                      *
+************************************************************************
+*                                                                      *
+      Case (meta_GGA_type2)
+*                                                                      *
+************************************************************************
+*                                                                      *
+         Call mma_Allocate(Aux,6*nD,mGrid,Label='Aux')
+         If (nD.eq.1) Then
+            Do j = 1, mGrid
+               Aux(1,j)=vRho(1,j)
+               Aux(2,j)=2.0d0*vSigma(1,j)*Gradrho(1,j)
+               Aux(3,j)=2.0d0*vSigma(1,j)*Gradrho(2,j)
+               Aux(4,j)=2.0d0*vSigma(1,j)*Gradrho(3,j)
+               Aux(5,j)=0.25D0*vTau(1,j)
+               Aux(6,j)=vLapl(1,j)
+            End Do
+         Else
+            Do j = 1, mGrid
+               gxa=Gradrho(1,j)
+               gya=Gradrho(2,j)
+               gza=Gradrho(3,j)
+               gxb=Gradrho(4,j)
+               gyb=Gradrho(5,j)
+               gzb=Gradrho(6,j)
+
+               Aux(1,j)=vRho(1,j)
+               Aux(2,j)=vRho(2,j)
+               Aux(3,j)=( 2.0d0*vSigma(1,j)*gxa
+     &                         +vSigma(2,j)*gxb )
+               Aux(4,j)=( 2.0d0*vSigma(1,j)*gya
+     &                         +vSigma(2,j)*gyb )
+               Aux(5,j)=( 2.0d0*vSigma(1,j)*gza
+     &                         +vSigma(2,j)*gzb )
+               Aux(6,j)=( 2.0d0*vSigma(3,j)*gxb
+     &                         +vSigma(2,j)*gxa )
+               Aux(7,j)=( 2.0d0*vSigma(3,j)*gyb
+     &                         +vSigma(2,j)*gya )
+               Aux(8,j)=( 2.0d0*vSigma(3,j)*gzb
+     &                         +vSigma(2,j)*gza )
+               Aux(9,j)=0.5D0*vTau(1,j)
+               Aux(10,j)=0.5D0*vTau(2,j)
+               Aux(11,j)=vLapl(1,j)
+               Aux(12,j)=vLapl(2,j)
+            End Do
+         End If
+*                                                                      *
+************************************************************************
+*                                                                      *
+      Case Default
+*                                                                      *
+************************************************************************
+*                                                                      *
          Call WarningMessage(2,'Do_Grad: wrong functional type!')
          Call Abend()
-      End If
-#ifdef _DEBUG_
+*                                                                      *
+************************************************************************
+*                                                                      *
+      End Select
+*                                                                      *
+************************************************************************
+*                                                                      *
+      OV(:,:)=Zero
+      Do i_Eff=1, nGrad_Eff
+         tmp=Zero
+         OVT(:)=Zero
+         Do j = 1, mGrid
+            dF_dr = Weights(j)*DOT_Product(Aux(:,j),dRho_dR(:,j,i_Eff))
+            tmp = tmp + dF_dr
+*
+*           Accumulate stuff for rotational invariance
+*
+            OVT(:) = OVT(:) + dF_dr * Grid(:,j)
+         End Do
+         ixyz=iTab(1,i_Eff)
+         OV(ixyz,:) = OV(ixyz,:) + OVT(:) - tmp * R_Grid(:)
+         Temp(i_Eff)=-tmp
+      End Do
+
+      Call mma_deAllocate(Aux)
+
+      Do i_Eff=1, nGrad_Eff
+         If (iTab(2,i_Eff)==Off) Temp(i_Eff)=Zero
+      End Do
+*                                                                      *
+************************************************************************
+*                                                                      *
+#ifdef _DEBUGPRINT_
       If (Debug) Then
          Call RecPrt('w * f^x before translational contributions',
      &               ' ',Temp,1,nGrad_Eff)
@@ -474,7 +318,7 @@
      &             iTab(2,jGrad).eq.Off  .and.
      &             IndGrd(jGrad).gt.0           ) iGrad=jGrad
             End Do
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
             If (Debug) Write (6,*) 'iGrad=',iGrad
 #endif
             If (iGrad.ne.0) Then
@@ -487,16 +331,16 @@
 *
                       Temp(iGrad)=Temp(iGrad)-Temp(jGrad)
 *
-#ifdef _DEBUG_
-            If (Debug) Write (6,*) 'jGrad,Fact,Temp(jGrad)=',
-     &                              jGrad,Fact,Temp(jGrad)
+#ifdef _DEBUGPRINT_
+            If (Debug) Write (6,*) 'jGrad,Temp(jGrad)=',
+     &                              jGrad,Temp(jGrad)
 #endif
                   End If
                End Do
 *
             End If
          End Do
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       If (Debug) Call RecPrt('w * f^x',' ',Temp,1,nGrad_Eff)
 #endif
 *                                                                      *
@@ -511,7 +355,7 @@
      &              One,dW_dR,nGrad_Eff,
      &                  F_xc,mGrid,
      &              One,Temp,nGrad_Eff)
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       If (Debug) Call RecPrt('w * f^x + w^x * f',' ',Temp,1,nGrad_Eff)
 #endif
 *                                                                      *
@@ -521,12 +365,13 @@
 *
 *        First transform back to the cartesian coordinates system.
 *
+         Fact=DBLE(2-(nD/2))
          Call DGEMM_('N','N',
      &               3,3,3,
-     &               1.0d0,OV,3,
-     &               Work(ip_O),3,
+     &               Fact,OV,3,
+     &               Pax,3,
      &               0.0d0,V,3)
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       If (Debug) Call RecPrt('V',' ',V,3,3)
 #endif
 *
@@ -536,23 +381,12 @@
 *
 *           Compute < nabla_r f * r^x > as Tr (O^x V)
 *
-      If(KSDFA(1:5).eq.'TLSDA'.or. !GLM
-     &        KSDFA(1:6).eq.'FTLSDA'.or.
-     &        KSDFA(1:6).eq.'FTBLYP'.or.
-     &        KSDFA(1:5).eq.'FTPBE'.or.
-     &        KSDFA(1:7).eq.'TREVPBE'.or.
-     &        KSDFA(1:8).eq.'FTREVPBE'.or.
-     &        KSDFA(1:5).eq.'TBLYP'.or.
-     &        KSDFA(1:4).eq.'TPBE') then
-            Tmp = DDot_(9,Work(ip_dOdx(jNQ,iCar)),1,V,1)*0.5
-      else
-            Tmp = DDot_(9,Work(ip_dOdx(jNQ,iCar)),1,V,1)
-      end if
-#ifdef _DEBUG_
+            Tmp = DDot_(9,NQ_Data(jNQ)%dOdx(:,:,iCar),1,V,1) * Half
+#ifdef _DEBUGPRINT_
             If (Debug) Then
                Write (6,*)
                Write (6,*) 'iCar,jNQ=',iCar,jNQ
-               Call RecPrt('dOdx',' ',Work(ip_dOdx(jNQ,iCar)),3,3)
+               Call RecPrt('dOdx',' ',NQ_Data(jNQ)%dOdx(:,:,iCar),3,3)
                Write (6,*) 'Tmp=',Tmp
             End If
 #endif
@@ -560,7 +394,7 @@
          End Do
 *
       End If !moving grid
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       If (Debug) Call RecPrt('Gradient contribution from this block',
      &                       ' ',Temp,1,nGrad_Eff)
 #endif
@@ -576,14 +410,13 @@
             Grad(i) = Grad(i) + Fact*Temp(i_Eff)
          End If
       End Do
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       If (Debug) Call RecPrt('Gradient accumulated so far',
      &                     ' ',Grad,1,nGrad)
+      Debug=.False.
 #endif
 *                                                                      *
 ************************************************************************
 *                                                                      *
       Return
-c Avoid unused argument warnings
-      If (.False.) Call Unused_integer_array(iChBas)
       End

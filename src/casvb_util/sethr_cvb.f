@@ -8,14 +8,15 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine sethr_cvb(iarr,n)
       implicit real*8(a-h,o-z)
 #include "idbl_cvb.fh"
       dimension iarr(n)
 
-      call seth_cvb(n,1)
+      call seth_cvb([n],1)
       call seth_cvb(iarr,idbl*n)
       return
       end
@@ -23,8 +24,9 @@
       subroutine gethr_cvb(iarr,n)
       implicit real*8(a-h,o-z)
 #include "idbl_cvb.fh"
-      dimension iarr(n)
-      call geth_cvb(n,1)
+      dimension iarr(n), iaux(1)
+      call geth_cvb(iaux,1)
+      n=iaux(1)
       call geth_cvb(iarr,idbl*n)
       return
       end

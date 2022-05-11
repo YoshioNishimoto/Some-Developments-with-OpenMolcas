@@ -9,6 +9,7 @@
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
 * Copyright (C) 1998,2006, Per Ake Malmqvist                           *
+*               2019, Stefano Battaglia                                *
 ************************************************************************
 *--------------------------------------------*
 * 1998, 2006, Per Ake Malmqvist              *
@@ -22,7 +23,6 @@
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
 #include "SysDef.fh"
@@ -31,7 +31,6 @@
 C Purpose: Compute three sets of quantities, needed by MCLR, used to
 C compute forces and derivatives.
 
-      CALL QENTER('GRDCTL')
 
 C--------------------------------------------------------------------
 C (A):
@@ -57,7 +56,7 @@ C This is an ordinary CASSCF or RASSCF calculation.
 
       IF(ORBIN.EQ.'TRANSFOR') THEN
 C Read, and transpose, the active orbital transformation matrices
-        CALL DCOPY_(NTAT,0.0D0,0,WORK(LTAT),1)
+        CALL DCOPY_(NTAT,[0.0D0],0,WORK(LTAT),1)
         IOFF1=0
         IOFF2=0
         DO ISYM=1,NSYM
@@ -65,7 +64,6 @@ C Read, and transpose, the active orbital transformation matrices
           NR1=NRAS1(ISYM)
           NR2=NRAS2(ISYM)
           NR3=NRAS3(ISYM)
-          NA=NASH(ISYM)
           NS=NSSH(ISYM)
 * Skip inactive transformation matrix:
           IOFF1=IOFF1+NI**2
@@ -107,7 +105,7 @@ C Read, and transpose, the active orbital transformation matrices
       NSG=NCONF
       CALL GETMEM('GRDSGM','ALLO','REAL',LSGM,NSG)
 C Compute (Proj_CAS)*(Ham)*(Wave op) acting on Psi_0:
-      CALL DCOPY_(NCONF,0.0D0,0,WORK(LSGM),1)
+      CALL DCOPY_(NCONF,[0.0D0],0,WORK(LSGM),1)
       IF(ISCF.EQ.0) THEN
        CALL W1TW2(IVECW,IVECC,WORK(LCI),WORK(LSGM))
       ELSE
@@ -122,10 +120,8 @@ C effective Hamiltonian matrix elements.
         DO ISTATE=1,NSTATE
           IF(ISTATE.NE.JSTATE) THEN
             CALL DDAFILE(LUCIEX,2,WORK(LBRACI),NCONF,ID)
-            VALUE=DDOT_(NCONF,WORK(LBRACI),1,WORK(LSGM),1)
           ELSE
             CALL DDAFILE(LUCIEX,0,WORK(LBRACI),NCONF,ID)
-            VALUE=E2TOT
           END IF
         END DO
         CALL GETMEM('BRACI','FREE','REAL',LBRACI,NCONF)
@@ -137,32 +133,29 @@ C Transform SGM to use original MO:
         ITOEND=0
         DO ISYM=1,NSYM
          NI=NISH(ISYM)
-         NA=NASH(ISYM)
          NR1=NRAS1(ISYM)
          NR2=NRAS2(ISYM)
          NR3=NRAS3(ISYM)
          NS=NSSH(ISYM)
-         NO=NORB(ISYM)
-         NB=NBAS(ISYM)
          ITOSTA=ITOEND+1
          ITOEND=ITOEND+NR1**2+NR2**2+NR3**2
 *         ITO=ITOSTA+NI**2
          ITO=ITOSTA
          IF(NR1.GT.0) THEN
            ISTART=NAES(ISYM)+1
-           CALL TRACI_RPT2(ISTART,NR1,WORK(LTAT-1+ITO),LSYM,
+           CALL TRACI_RPT2(ISTART,NR1,WORK(LTAT-1+ITO),STSYM,
      &                                           NSG,WORK(LSGM))
          END IF
          ITO=ITO+NR1**2
          IF(NR2.GT.0) THEN
            ISTART=NAES(ISYM)+NR1+1
-           CALL TRACI_RPT2(ISTART,NR2,WORK(LTAT-1+ITO),LSYM,
+           CALL TRACI_RPT2(ISTART,NR2,WORK(LTAT-1+ITO),STSYM,
      &                                          NSG,WORK(LSGM))
          END IF
          ITO=ITO+NR2**2
          IF(NR3.GT.0) THEN
            ISTART=NAES(ISYM)+NR1+NR2+1
-           CALL TRACI_RPT2(ISTART,NR1,WORK(LTAT-1+ITO),LSYM,
+           CALL TRACI_RPT2(ISTART,NR1,WORK(LTAT-1+ITO),STSYM,
      &                                          NSG,WORK(LSGM))
          END IF
         END DO
@@ -183,10 +176,11 @@ C computing the multi-state coupling elements.
         DO ISTATE=1,NSTATE
           IF(ISTATE.NE.JSTATE) THEN
             CALL DDAFILE(LUCIEX,2,WORK(LBRACI),NCONF,ID)
-            HEFF(ISTATE,JSTATE)=DDOT_(NCONF,WORK(LBRACI),1,WORK(LSGM),1)
+            HEFF(ISTATE,JSTATE)=HEFF(ISTATE,JSTATE) +
+     &      DDOT_(NCONF,WORK(LBRACI),1,WORK(LSGM),1)
           ELSE
             CALL DDAFILE(LUCIEX,0,WORK(LBRACI),NCONF,ID)
-            HEFF(JSTATE,JSTATE)=E2TOT
+            HEFF(JSTATE,JSTATE)=HEFF(JSTATE,JSTATE)+E2CORR
           END IF
         END DO
         CALL GETMEM('BRACI','FREE','REAL',LBRACI,NCONF)
@@ -194,7 +188,7 @@ C computing the multi-state coupling elements.
 C-End of Multi-State insert -----------------------------------------
 
 C Similar, but (Proj_CAS)*((Wave op)**(dagger))*(Ham) | Psi_0 >.
-      CALL DCOPY_(NCONF,0.0D0,0,WORK(LSGM),1)
+      CALL DCOPY_(NCONF,[0.0D0],0,WORK(LSGM),1)
       IF(ISCF.EQ.0) THEN
        CALL W1TW2(IVECC,IVECW,WORK(LCI),WORK(LSGM))
       ELSE
@@ -206,32 +200,29 @@ C Transform SGM to use original MO:
         ITOEND=0
         DO ISYM=1,NSYM
          NI=NISH(ISYM)
-         NA=NASH(ISYM)
          NR1=NRAS1(ISYM)
          NR2=NRAS2(ISYM)
          NR3=NRAS3(ISYM)
          NS=NSSH(ISYM)
-         NO=NORB(ISYM)
-         NB=NBAS(ISYM)
          ITOSTA=ITOEND+1
          ITOEND=ITOEND+NR1**2+NR2**2+NR3**2
 *         ITO=ITOSTA+NI**2
          ITO=ITOSTA
          IF(NR1.GT.0) THEN
            ISTART=NAES(ISYM)+1
-           CALL TRACI_RPT2(ISTART,NR1,WORK(LTAT-1+ITO),LSYM,
+           CALL TRACI_RPT2(ISTART,NR1,WORK(LTAT-1+ITO),STSYM,
      &                                          NSG,WORK(LSGM))
          END IF
          ITO=ITO+NR1**2
          IF(NR2.GT.0) THEN
            ISTART=NAES(ISYM)+NR1+1
-           CALL TRACI_RPT2(ISTART,NR2,WORK(LTAT-1+ITO),LSYM,
+           CALL TRACI_RPT2(ISTART,NR2,WORK(LTAT-1+ITO),STSYM,
      &                                          NSG,WORK(LSGM))
          END IF
          ITO=ITO+NR2**2
          IF(NR3.GT.0) THEN
            ISTART=NAES(ISYM)+NR1+NR2+1
-           CALL TRACI_RPT2(ISTART,NR1,WORK(LTAT-1+ITO),LSYM,
+           CALL TRACI_RPT2(ISTART,NR1,WORK(LTAT-1+ITO),STSYM,
      &                                          NSG,WORK(LSGM))
          END IF
         END DO
@@ -248,6 +239,5 @@ C--------------------------------------------------------------------
 
       CALL GETMEM('GRDSGM','FREE','REAL',LSGM,NSG)
       CALL GETMEM('GRDCI','FREE','REAL',LCI,NCONF)
-      CALL QEXIT('GRDCTL')
       RETURN
       END

@@ -11,7 +11,7 @@
 * Copyright (C) 2004, Teodoro Laino                                    *
 ************************************************************************
 C     ******************************************************************C
-      SUBROUTINE COMP_NAC(ISTATE, JSTATE, LSCR, ISY12, IOFF,LCI1)
+      SUBROUTINE COMP_NAC(ISTATE, JSTATE, SCR, nSCR,ISY12, IOFF,LCI1)
 C***********************************************************************C
 C COMP_NAC : This routine was created to compute NonAdiabatic Couplings C
 C                                                                       C
@@ -25,35 +25,31 @@ C Author:     Teodoro Laino.  Scuola Normale Superiore di Pisa (Italy)  C
 C Date:       27.02.2004  Lund (Sweden)                                 C
 C                                                                       C
 C The original idea to implement this NAC computation was due to        C
-C Per-Ake Malmqvist on January 2000                                     C
+C Per-AAke Malmqvist on January 2000                                    C
 C                                                                       C
 C On Input:                                                             C
-C             LSCR:  Pointer to Transition density matrice in AO basis. C
+C             SCR:  Transition density matrice in AO basis.             C
 C                                                                       C
 C***********************************************************************C
+      Use Basis_Info
+      use Center_Info
+      use Symmetry_Info, only: nIrrep
       IMPLICIT REAL*8 (A-H,O-Z)
 
 #include "prgm.fh"
       CHARACTER*16 ROUTINE
       PARAMETER (ROUTINE='COMP_NAC')
-#include "itmax.fh"
-#include "info.fh"
+#include "Molcas.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
 #include "disp.fh"
 #include "diff.fh"
 #include "symmul.fh"
 * Arguments
+      REAL*8 SCR(nSCR)
       DIMENSION IOFF(*)
       Integer IndGrd(0:7)
-      Logical TF, TstFnc
-* Statement Function
-      TF(mdc,iIrrep,iComp) = TstFnc(iOper,nIrrep,iCoSet(0,0,mdc),
-     &                       nIrrep/nStab(mdc),iChTbl,iIrrep,iComp,
-     &                       nStab(mdc))
-
-      CALL QENTER(ROUTINE)
-
+      Logical, External :: TF
 *
 * Main Loop on all  geometrical displacements to perform
 * calculation of NonAdiabatic Couplings
@@ -61,12 +57,12 @@ C***********************************************************************C
 *
       NTEMP = 3 * nAlCnt
       CALL GETMEM('NACS','ALLO','REAL',NNACS,NTEMP)
-      CALL DCOPY_(NTEMP, 0.D0, 0, WORK(NNACS), 1)
+      CALL DCOPY_(NTEMP, [0.D0], 0, WORK(NNACS), 1)
       idcnt = 0
       Nprop = 0
       Job   = Jstate
       Do ICnttp=1,nCnttp
-         Do ICnt=1,nCntr(iCnttp)
+         Do ICnt=1,dbsc(iCnttp)%nCntr
             IdCnt=IdCnt+1
             Do IdCar=1,3
                Nprop=Nprop+1
@@ -77,7 +73,7 @@ C***********************************************************************C
 * Derivative wrt component IDCAR=1,2,3 (d/dx,d/dy,d/dz)
 * INDDSP(IDCNT,IIRREP) is the number of displacements in
 * earlier center/irrep. Thus it is an offset.
-               Call iCopy(nIrrep,0,0,IndGrd,1)
+               Call iCopy(nIrrep,[0],0,IndGrd,1)
                lOper=0
                Do iIrrep=0,nIrrep-1
                   nDisp = IndDsp(iDcnt,iIrrep)
@@ -103,7 +99,6 @@ C***********************************************************************C
 * INDGRD(IIRREP) will be zero, except for those irreps, and
 * will then contain the ordering number of the displacement.
                   Do iIrrep = 0, nIrrep-1
-                     iSmLbl = 2**iIrrep
                      If ((iAnd(2**iIrrep,lOper).ne.0).and.
      &                    (MUL(iIrrep+1,isy12).eq.1))  Then
                         idisp = indgrd(iirrep)
@@ -111,7 +106,7 @@ C***********************************************************************C
      &                                      idisp,
      &                                      iIrrep+1,
      &                                      isy12,
-     &                                      Work(lscr-1),
+     &                                      SCR,
      &                                      Work(LCI1),
      &                                      Prop,
      &                                      Ioff)
@@ -155,7 +150,7 @@ C Author:     Teodoro Laino.  Scuola Normale Superiore di Pisa (Italy)  C
 C Date:       27.02.2004  Lund (Sweden)                                 C
 C                                                                       C
 C The original idea to implement this NAC computation was due to        C
-C Per-Ake Malmqvist on January 2000                                     C
+C Per-AAke Malmqvist on January 2000                                    C
 C                                                                       C
 C Files needed by this routine:                                         C
 C                                                                       C
@@ -169,8 +164,7 @@ C                                                                       C
 C***********************************************************************C
       IMPLICIT REAL*8 (A-H,O-Z)
 
-#include "itmax.fh"
-#include "info.fh"
+#include "Molcas.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
 #include "prgm.fh"
@@ -186,7 +180,6 @@ C***********************************************************************C
       CHARACTER*8 LABEL, STYPE
 * Subroutine Statements
 
-      CALL QENTER(ROUTINE)
 
 *
 * Reading information from MCKINT file...
@@ -279,6 +272,5 @@ C     END IF
 *
 * Now you can leave...
 *
-      CALL QEXIT(ROUTINE)
       RETURN
       END

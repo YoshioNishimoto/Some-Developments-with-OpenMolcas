@@ -11,7 +11,7 @@
 * Copyright (C) 1992,2007, Roland Lindh                                *
 *               2009, Francesco Aquilante                              *
 ************************************************************************
-      SubRoutine PGet1_CD2(PAO,ijkl,nPAO,iCmp,iShell,
+      SubRoutine PGet1_CD2(PAO,ijkl,nPAO,iCmp,
      &                 iAO,iAOst,Shijij,iBas,jBas,kBas,lBas,kOp,
      &                 ExFac,CoulFac,PMax,V_k,U_k,mV_k,Z_p_K,nnP1)
 ************************************************************************
@@ -22,12 +22,6 @@
 *          Hence we must take special care in order to regain the can- *
 *          onical order.                                               *
 *                                                                      *
-* Called from: PGet0                                                   *
-*                                                                      *
-* Calling    : QEnter                                                  *
-*              RecPrt                                                  *
-*              QExit                                                   *
-*                                                                      *
 *     Author: Roland Lindh, Dept. of Theoretical Chemistry, University *
 *             of Lund, SWEDEN.                                         *
 *             January '92.                                             *
@@ -36,30 +30,23 @@
 *             R. Lindh                                                 *
 *                                                                      *
 *             Modified for RI-HF/CAS, Dec 2009 (F. Aquilante)          *
-*                                                                      *
 ************************************************************************
+      use SOAO_Info, only: iAOtSO
+      use ExTerm, only: CijK, iMP2prpt, nAuxVe
       Implicit Real*8 (A-H,O-Z)
-#include "itmax.fh"
-#include "info.fh"
 #include "real.fh"
-#include "print.fh"
-#include "pso.fh"
-#include "WrkSpc.fh"
-#include "chomp2g_alaska.fh"
 #include "exterm.fh"
       Real*8 PAO(ijkl,nPAO), V_k(mV_k), U_K(mV_K), Z_p_K(nnP1,mV_K),
      &       Fac_ij,Fac_kl
-      Integer iShell(4), iAO(4), kOp(4), iAOst(4), iCmp(4)
+      Integer iAO(4), kOp(4), iAOst(4), iCmp(4)
       Logical Shijij
       External mn2K
+
+      Real*8, Pointer :: CiKj(:,:)=>Null(), V2(:)=>Null()
 *                                                                      *
 ************************************************************************
 *                                                                      *
-      iRout = 39
-      iPrint = nPrint(iRout)
-*define _DEBUG_
-#ifdef _DEBUG_
-      Call qEnter('PGet1_CD2')
+#ifdef _DEBUGPRINT_
       Call RecPrt('PGet1_CD2: V_k',' ',V_k,1,mV_k)
 #endif
 *                                                                      *
@@ -80,7 +67,6 @@ C     Fac = One / Four
 
       iSym = 1
       jSym = 1
-      kSym = 1
       lSym = 1
       iSO = 1
 
@@ -143,7 +129,10 @@ C     Fac = One / Four
       Else If(iMP2prpt .ne. 2) Then
          NumIK = nIJ1(iSym,lSym,iSO)
          If(NumIK.eq.0) Return
-         ip_CijK2 = ip_CijK + NumIK
+
+         iS = 1
+         iE = NumIK * 2
+         CiKj(1:NumIK,1:2) => CijK(iS:iE)
 
          Do i1 = 1, iCmp(1)
             Do i2 = 1, iCmp(2)
@@ -166,12 +155,12 @@ C     Fac = One / Four
                            Indl=kSOk+lSOl-Indk
                            Indkl=(Indk-1)*Indk/2+Indl
                            klVec=mn2K(Indkl,1)
+
                            If(klvec.ne.0) Then
                               iAdrL = NumIK*(klVec-1)
      &                              + iAdrCVec(jSym,iSym,iSO)
                               Call dDaFile(LuCVector(jSym,iSO),2,
-     &                                     Work(ip_CijK),
-     &                                     NumIK,iAdrL)
+     &                                     CiKj(:,1),NumIK,iAdrL)
                            End If
 
 
@@ -190,11 +179,10 @@ C     Fac = One / Four
                                     iAdrJ = NumIK*(ijVec-1) +
      &                                      iAdrCVec(jSym,iSym,iSO)
                                     Call dDaFile(LuCVector(jSym,iSO),2,
-     &                                           Work(ip_CijK2),NumIK,
-     &                                           iAdrJ)
-                                    ip_V2 = ip_CijK2
+     &                                           CiKj(:,2),NumIK,iAdrJ)
+                                    V2(1:) => CiKj(1:,2)
                                  Else
-                                    ip_V2 = ip_CijK
+                                    V2(1:) => CiKj(1:,1)
                                  End If
 
                                  temp=V_k(Indij)*V_k(Indkl)*CoulFac
@@ -214,8 +202,7 @@ C     Fac = One / Four
 *----- Exchange contribution
 
                                  temp = temp - ExFac*Fac_ij*Fac_kl*
-     &                                  dDot_(NumIK,Work(ip_CijK),1,
-     &                                             Work(ip_V2),1)
+     &                                  dDot_(NumIK,CiKJ(:,1),1,V2,1)
 *-----Active space contribution (any factor?)
                                  Do jp=1,nnP1
                                     temp = temp
@@ -237,7 +224,10 @@ C     Fac = One / Four
       Else
          NumIK = nIJ1(iSym,lSym,iSO)
          If(NumIK.eq.0) Return
-         ip_CijK2 = ip_CijK + NumIK
+
+         iS = 1
+         iE = NumIK * 2
+         CiKj(1:NumIK,1:2) => CijK(iS:iE)
 
          Do i1 = 1, iCmp(1)
             Do i2 = 1, iCmp(2)
@@ -263,8 +253,7 @@ C     Fac = One / Four
                               iAdrL = NumIK*(klVec-1)
      &                              + iAdrCVec(jSym,iSym,iSO)
                               Call dDaFile(LuCVector(jSym,iSO),2,
-     &                                     Work(ip_CijK),
-     &                                     NumIK,iAdrL)
+     &                                     CiKj(:,1),NumIK,iAdrL)
                            End If
 
 
@@ -283,11 +272,10 @@ C     Fac = One / Four
                                     iAdrJ = NumIK*(ijVec-1) +
      &                                      iAdrCVec(jSym,iSym,iSO)
                                     Call dDaFile(LuCVector(jSym,iSO),2,
-     &                                           Work(ip_CijK2),NumIK,
-     &                                           iAdrJ)
-                                    ip_V2 = ip_CijK2
+     &                                           CiKj(:,2),NumIK,iAdrJ)
+                                    V2(1:) => CiKj(:,2)
                                  Else
-                                    ip_V2 = ip_CijK
+                                    V2(1:) => CiKj(:,1)
                                  End If
 
                                  temp= V_k(Indij)*V_k(Indkl)*CoulFac
@@ -318,11 +306,10 @@ C     Fac = One / Four
 
 
                                  tempK = 2.0d0*Fac_ij*Fac_kl*
-     &                                   dDot_(NumIK,Work(ip_CijK),1,
-     &                                              Work(ip_V2),1)
+     &                                   dDot_(NumIK,CiKj(:,1),1,V2,1)
                                  Call compute_A_jk_Mp2(1,ijVec,klVec,
-     &                                tempK_mp2,
-     &                                fac_ij,fac_kl,nAuxVe,1)
+     &                                                 tempK_mp2,fac_ij,
+     &                                                 fac_kl,nAuxVe,1)
 
                                  tempK = tempK + tempK_mp2
 
@@ -347,16 +334,16 @@ C     Fac = One / Four
          End Do
       End If
 *
+      CiKj => Null()
+      V2   => Null()
 
       If (iPAO.ne.nPAO) Then
          Write (6,*) ' Error in PGet1_CD2!'
          Call Abend
       End If
 *
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       Call RecPrt(' In PGet1_CD2:PAO ',' ',PAO,ijkl,nPAO)
-      Call GetMem(' Exit PGet1_CD2','CHECK','REAL',iDum,iDum)
-      Call qExit('PGet1_CD2')
 #endif
 
       Call CWTime(Cpu2,Wall2)
@@ -368,7 +355,6 @@ C     Fac = One / Four
       Return
 c Avoid unused argument warnings
       If (.False.) Then
-         Call Unused_integer_array(iShell)
          Call Unused_logical(Shijij)
       End If
       End

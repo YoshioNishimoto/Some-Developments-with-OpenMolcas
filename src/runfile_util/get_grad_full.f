@@ -20,8 +20,8 @@
 *> Place Cartesian gradient (in a.u.) into array \p Grad_Full(3,*).
 *> Includes MM atoms otherwise invisible to gateway/slapaf.
 *>
-*> @param[out] Grad_Full  Array of gradient
-*> @param[in]  nAtoms_All Number of atoms
+*> @param[out] Grad_Full   Array of gradient
+*> @param[in]  nAtoms_Full Number of atoms
 ************************************************************************
       Subroutine Get_Grad_Full(Grad_Full,nAtoms_Full)
       Implicit None
@@ -34,7 +34,6 @@
         Write (6,*) 'Get_Grad_Full: nAtoms_Full.ne.nAtoms_Fullx'
         Write (6,*) 'nAtoms_Full=',nAtoms_Full
         Write (6,*) 'nAtoms_Fullx=',nAtoms_Fullx
-        Call QTrace
         Call Abend
       End If
       Call Get_nAtoms_All(nAtoms_All)
@@ -42,13 +41,11 @@
         Write (6,*) 'Get_Coord_Full: nAtoms_Full.lt.nAtoms_All'
         Write (6,*) 'nAtoms_Full=',nAtoms_Full
         Write (6,*) 'nAtoms_Fullx=',nAtoms_All
-        Call QTrace
         Call Abend
       End If
       Call Qpg_dArray('GRAD',Found,nGrad)
       If(.not.Found .or. nGrad.eq.0) Then
         Write (6,*) 'Get_Grad_Full: Did not find GRAD'
-        Call QTrace
         Call Abend
       End If
       Call Get_dArray('GRAD',Grad_Full,nGrad)

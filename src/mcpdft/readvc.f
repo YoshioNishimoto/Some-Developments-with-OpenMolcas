@@ -57,6 +57,9 @@
 *                                                                      *
 ************************************************************************
 
+#ifdef _HDF5_
+      use mh5, only: mh5_open_file_r, mh5_fetch_dset, mh5_close_file
+#endif
       Implicit Real*8 (A-H,O-Z)
 
 *     global data declarations
@@ -65,14 +68,14 @@
 #include "rasscf.fh"
 #include "general.fh"
 #include "output_ras.fh"
+      Character*16 ROUTINE
       Parameter (ROUTINE='READVC  ')
 #include "WrkSpc.fh"
 #include "SysDef.fh"
-#include "warnings.fh"
+#include "warnings.h"
 #include "wadr.fh"
 #include "casvb.fh"
-#include "raswfn.fh"
-      Common /IDSXCI/ IDXCI(mxAct),IDXSX(mxAct)
+#include "sxci_mcpdft.fh"
 *     calling arguments
 
       Dimension CMO(*),OCC(*),D(*),DS(*),P(*),PA(*)
@@ -87,11 +90,16 @@ c      Integer StrnLn
       Logical Found
       Logical Changed
       Integer nTmp(8)
+      Dimension Dummy(1),iDummy(1)
+      Character*(LENIN8*mxOrb) lJobH1
+      Character*(2*72) lJobH2
+#ifdef _HDF5_
+      integer mh5id
+#endif
 
 *----------------------------------------------------------------------*
 *                                                                      *
 *----------------------------------------------------------------------*
-      Call qEnter('ReadVc')
 C Local print level (if any)
       IPRLEV=IPRLOC(1)
       IF(IPRLEV.ge.DEBUG) THEN
@@ -240,23 +248,22 @@ C Local print level (if any)
         lll = MAX(lll,mxSym)
         lll = MAX(lll,mxOrb)
         lll = MAX(lll,RtoI)
-        lll = MAX(lll,LENIN8*mxOrb/ItoB)
-        lll = MAX(lll,2*72/ItoB)
         lll = MAX(lll,RtoI*mxRoot)
         CALL GETMEM('JOBOLD','ALLO','INTEGER',lJobH,lll)
+        ldJobH=ip_of_Work_i(iWork(lJobH))
         iAd19=iAdr19(1)
         CALL WR_RASSCF_Info(JobOld,2,iAd19,
      &                      iWork(lJobH),iWork(lJobH),iWork(lJobH),
      &                      iWork(lJobH),iWork(lJobH),iWork(lJobH),
      &                      iWork(lJobH),iWork(lJobH),iWork(lJobH),
      &                      mxSym,
-     &                      iWork(lJobH),LENIN8*mxOrb,iWork(lJobH),
-     &                      iWork(lJobH),2*72,JobTit,72*mxTit,
-     &                      iWork(lJobH),iWork(lJobH),
+     &                      lJobH1,LENIN8*mxOrb,iWork(lJobH),
+     &                      lJobH2,2*72,JobTit,72*mxTit,
+     &                      Work(ldJobH),iWork(lJobH),
      &                      iWork(lJobH),iWork(lJobH),mxRoot,
      &                      iWork(lJobH),iWork(lJobH),iWork(lJobH),
      &                      iWork(lJobH),iWork(lJobH),iWork(lJobH),
-     &                      iWork(lJobH))
+     &                      Work(ldJobH))
         IF(IPRLEV.ge.TERSE) THEN
          If (iJOB.eq.1) Then
             Write(LF,'(6X,A)')
@@ -265,7 +272,7 @@ C Local print level (if any)
          Else
             Write(LF,'(6X,A)')
      &      'The MO-coefficients are taken from the file:'
-            Write(LF,'(6X,A)') IPHNAME(:mylen(IPHNAME))
+            Write(LF,'(6X,A)') trim(IPHNAME)
          End If
          Write(VecTit(1:72),'(A72)') JobTit(1)
          Write(LF,'(6X,2A)') 'Title:',VecTit(1:72)
@@ -283,7 +290,7 @@ C Local print level (if any)
            Else
               Write(LF,'(6X,A)')
      &        'The active density matrices (D,DS,P,PA) are read from'//
-     &        ' file '//IPHNAME(:mylen(IPHNAME))//
+     &        ' file '//trim(IPHNAME)//
      &        ' and weighted together.'
            End If
          End If
@@ -331,7 +338,7 @@ CSVC: read the L2ACT and LEVEL arrays from the jobiph file
         END IF
 
         mh5id = mh5_open_file_r(StartOrbFile)
-        call mh5_fetch_dset(mh5id, 'MOCOEF', CMO)
+        call mh5_fetch_dset(mh5id, 'MO_VECTORS', CMO)
         call mh5_close_file(mh5id)
 #else
         write (6,*) 'Orbitals requested from HDF5, but this'
@@ -448,7 +455,7 @@ CSVC: read the L2ACT and LEVEL arrays from the jobiph file
 *     print start orbitals
       IF(IPRLEV.GE.DEBUG) THEN
         CALL GETMEM('DumE','Allo','Real',LENE,nTot)
-        CALL DCOPY_(nTot,0.0D0,0,WORK(LENE),1)
+        CALL DCOPY_(nTot,[0.0D0],0,WORK(LENE),1)
         CALL PRIMO_RASSCF_m('Input orbitals',WORK(LENE),OCC,CMO)
         CALL GETMEM('DumE','Free','Real',LENE,nTot)
       END IF
@@ -475,6 +482,5 @@ CSVC: read the L2ACT and LEVEL arrays from the jobiph file
 
 *     exit
 
-      CALL QEXIT('READVC')
       RETURN
       END

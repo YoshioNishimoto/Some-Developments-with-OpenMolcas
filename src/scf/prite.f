@@ -30,6 +30,7 @@
 *     history: none                                                    *
 *                                                                      *
 ************************************************************************
+      use InfSO
       Implicit Real*8 (a-h,o-z)
       Real*8 CMO(mBB,nD), Ovrlp(mBT), OccNo(mmB,nD)
       Logical QNR
@@ -39,13 +40,8 @@
 *
 #include "mxdm.fh"
 #include "infscf.fh"
-#include "infso.fh"
       character cEDiff, cDMOMax, cFMOMax,cDltNrm
-*
-#ifdef _DEBUG_
-      Call qEnter('PrIte')
-#endif
-*
+
       If(iterprlv.gt.0) Then
          Write(6,*)
          Write(6,'(a)') '*******************'
@@ -139,8 +135,5 @@
 
          End If
       End If
-#ifdef _DEBUG_
-      Call qExit('PrIte')
-#endif
-      Return
-      End
+
+      End subroutine prite

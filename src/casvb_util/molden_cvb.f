@@ -8,7 +8,8 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine molden_cvb()
       implicit real*8 (a-h,o-z)
@@ -16,6 +17,8 @@
 #include "rasscf.fh"
 #include "general.fh"
 #include "rctfld.fh"
+
+      dimension Dummy(1)
 
       call daname_cvb(JOBIPH,'JOBIPH')
       idisk=0

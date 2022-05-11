@@ -17,6 +17,9 @@
 * SWEDEN                                     *
 *--------------------------------------------*
       SUBROUTINE SPECIAL(G1,G2,G3,F1,F2,F3,idxG3)
+#if defined (_MOLCAS_MPP_) && !defined (_GA_)
+      USE Para_Info, ONLY: nProcs, Is_Real_Par, King
+#endif
       IMPLICIT REAL*8 (A-H,O-Z)
       DIMENSION G1(NASHT,NASHT),G2(NASHT,NASHT,NASHT,NASHT),G3(*)
       DIMENSION F1(NASHT,NASHT),F2(NASHT,NASHT,NASHT,NASHT),F3(*)
@@ -27,22 +30,19 @@ C SPECIAL-CASE ROUTINE. DELIVERS G AND F MATRICES FOR A HIGH-SPIN
 C OR CLOSED-SHELL SCF CASE.
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "pt2_guga.fh"
 
-#include "para_info.fh"
       LOGICAL RSV_TSK
 
-      CALL QENTER('SPECIAL')
 
-      CALL DCOPY_(NG1,0.0D0,0,G1,1)
-      CALL DCOPY_(NG2,0.0D0,0,G2,1)
-      CALL DCOPY_(NG3,0.0D0,0,G3,1)
-      CALL DCOPY_(NG1,0.0D0,0,F1,1)
-      CALL DCOPY_(NG2,0.0D0,0,F2,1)
-      CALL DCOPY_(NG3,0.0D0,0,F3,1)
+      CALL DCOPY_(NG1,[0.0D0],0,G1,1)
+      CALL DCOPY_(NG2,[0.0D0],0,G2,1)
+      CALL DCOPY_(NG3,[0.0D0],0,G3,1)
+      CALL DCOPY_(NG1,[0.0D0],0,F1,1)
+      CALL DCOPY_(NG2,[0.0D0],0,F2,1)
+      CALL DCOPY_(NG3,[0.0D0],0,F3,1)
 
-      ESUM=0.0D00
+      ESUM=0.0D0
       DO I=1,NLEV
         ESUM=ESUM+ETA(I)
       END DO
@@ -169,6 +169,5 @@ C SVC2010: no more tasks, wait here for the others.
 
  999  CONTINUE
 
-      CALL QEXIT('SPECIAL')
       RETURN
       END

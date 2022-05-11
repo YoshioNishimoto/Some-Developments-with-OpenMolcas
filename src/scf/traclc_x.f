@@ -11,11 +11,11 @@
 * Copyright (C) 2017, Roland Lindh                                     *
 ************************************************************************
       Subroutine TraClc_x(kOptim,opQNR,FrstDs,QNR1st,CInter,nCI,nD,
-     &                    nOV,Lux,iter,memRsv,LLx)
+     &                    nOV,iter,LLx)
       Implicit None
 #include "real.fh"
 #include "stdalloc.fh"
-      Integer kOptim,nCI,nD,nOV,Lux,iter,memRsv,LLx
+      Integer kOptim,nCI,nD,nOV,iter,LLx
       Logical opQNR, FrstDs, QNR1st
       Real*8 CInter(nCI,nD)
       Real*8, Dimension(:,:), Allocatable:: Xn
@@ -56,9 +56,9 @@
          Call mma_allocate(Xn,nOV,nD,Label='Xn')
          Call FZero(Xn,nOV*nD)
 *        and store it on appropriate LList
-         Call PutVec(Xn,nOV*nD,Lux,iter,MemRsv,'NOOP',LLx)
-*define _DEBUG_
-#ifdef _DEBUG_
+         Call PutVec(Xn,nOV*nD,iter,'NOOP',LLx)
+*define _DEBUGPRINT_
+#ifdef _DEBUGPRINT_
          Write (6,*) 'TraClc_x: Initiate X(n), iter=',iter
          Call RecPrt('TraClc_x: X(n)',' ',Xn,1,nOV*nD)
          Write (6,*) 'TraClc_x: compute all gradients, call GrdClc'

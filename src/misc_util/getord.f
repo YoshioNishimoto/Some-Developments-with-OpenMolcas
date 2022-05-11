@@ -45,12 +45,11 @@
       Implicit Integer (A-Z)
 *
 #include "TwoDat.fh"
-#include "TwoRc.fh"
 #include "PkCtl.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
 #include "Molcas.fh"
-#include "warnings.fh"
+#include "warnings.h"
 *
       Dimension nBas(0:7),nSkip(0:7)
 *
@@ -61,7 +60,6 @@
 *----------------------------------------------------------------------*
 *     Start the procedure                                              *
 *----------------------------------------------------------------------*
-*      If ( Query ) Call qEnter(TheName)
       rc=rc0000
 
 *----------------------------------------------------------------------*
@@ -83,7 +81,6 @@
 *----------------------------------------------------------------------*
 *     Pick up the file definitions                                     *
 *----------------------------------------------------------------------*
-      LuTwo=AuxTwo(isUnit)
       Open=AuxTwo(isStat)
 *----------------------------------------------------------------------*
 *     Check the file status                                            *
@@ -97,7 +94,7 @@
 *     Check the ordering parameter                                    *
 *---------------------------------------------------------------------*
       If ( TocTwo(isOrd).lt.0 .or. TocTwo(isOrd).gt.1 ) then
-        rc=rcTC03
+        rc=rcTC02
             Call SysWarnMsg(TheName,
      * 'The file carries an invalid ordering parameter',' ')
        Call SysValueMsg ('TocTwo(isOrd)', TocTwo(isOrd))
@@ -110,7 +107,7 @@
       nSym=TocTwo(isSym)
       If ( nSym.ne.1 .and. nSym.ne.2 .and.
      &     nSym.ne.4 .and. nSym.ne.8 ) then
-        rc=rcTC04
+        rc=rcTC03
             Call SysWarnMsg(TheName,
      * 'The file carries an invalid number '//
      * 'of irreducible representations',' ')
@@ -240,6 +237,5 @@
 *---------------------------------------------------------------------*
 *     exit                                                            *
 *---------------------------------------------------------------------*
-*      If ( Query ) Call qExit(TheName)
       Return
       End

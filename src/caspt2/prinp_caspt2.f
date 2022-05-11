@@ -30,28 +30,24 @@
 *     history: none                                                    *
 *                                                                      *
 ************************************************************************
+      use output_caspt2, only:iPrGlb,terse,usual,verbose
       Implicit Real*8 (A-H,O-Z)
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "pt2_guga.fh"
-      Character(8)   Fmt1,Fmt2
-      Character(120)  Line,BlLine,StLine
-      Character(3) lIrrep(8)
+      Character(Len=8)   Fmt1,Fmt2
+      Character(Len=120)  Line
+      Character(Len=3) lIrrep(8)
+      Character(Len=20) calctype,FockOpType
 *----------------------------------------------------------------------*
 *     Start and define the paper width                                 *
 *----------------------------------------------------------------------*
-      Call qEnter('PrInp_CASPT2')
 *----------------------------------------------------------------------*
 *     Initialize blank and header lines                                *
 *----------------------------------------------------------------------*
       Line=' '
       lLine=Len(Line)
-      Do i=1,lLine
-        BlLine(i:i)=' '
-        StLine(i:i)='*'
-      End Do
       lPaper=132
       left=(lPaper-lLine)/2
       WRITE(Fmt1,'(A,I3.3,A)') '(',left,'X,A)'
@@ -64,11 +60,9 @@
       WRITE(6,Fmt1) 'Header of the ONEINT file:'
       WRITE(6,Fmt1) '--------------------------'
       WRITE(Line,'(36A2)') (Header(i),i=1,36)
-      Call LeftAd(Line)
-      WRITE(6,Fmt1)  Line(:mylen(Line))
+      WRITE(6,Fmt1)  trim(adjustl(Line))
       WRITE(Line,'(36A2)') (Header(i),i=37,72)
-      Call LeftAd(Line)
-      WRITE(6,Fmt1)  Line(:mylen(Line))
+      WRITE(6,Fmt1)  trim(adjustl(Line))
       WRITE(6,*)
       END IF
 *----------------------------------------------------------------------*
@@ -104,7 +98,7 @@
       WRITE(6,Fmt2//'A,T45,F6.1)')'Spin quantum number',
      &                           0.5D0*DBLE(ISPIN-1)
       WRITE(6,Fmt2//'A,T45,I6)')'State symmetry',
-     &                           LSYM
+     &                           STSYM
       WRITE(6,Fmt2//'A,T40,I11)')'Number of CSFs',
      &                           NCONF
       WRITE(6,Fmt2//'A,T45,I6)')'Number of root(s) available',
@@ -112,18 +106,18 @@
       WRITE(6,Fmt2//'A,T45,I6)')'Root passed to geometry opt.',
      &                           iRlxRoot
       IF(IFMIX) THEN
-        WRITE(6,Fmt2//'A,T45,10I3)')'A file JOBMIX will be created.'
+        WRITE(6,Fmt2//'A,T45,10I3)')'A file JOBMIX will be created'
       END IF
       IF(NSTATE.GT.1) THEN
         WRITE(6,Fmt1) 'This is a MULTI-STATE CASSCF reference'
         WRITE(6,Fmt2//'A,T45,I6)')'Number of CI roots used',
      &                           NSTATE
-        WRITE(6,Fmt2//'A,(T45,10I4))')'These are:',
+        WRITE(6,Fmt2//'A,(T47,10I4))')'These are:',
      &                           (MSTATE(I),I=1,NSTATE)
         IF(IFMSCOUP) THEN
-           WRITE(6,Fmt1) 'Off-diagonal elements of Heff are computed.'
+           WRITE(6,Fmt1) 'Off-diagonal elements of Heff are computed'
         ELSE
-           WRITE(6,Fmt1) 'Heff is assumed diagonal.'
+           WRITE(6,Fmt1) 'Heff is assumed diagonal'
         ENDIF
       ELSE
         If ( ISCF.eq.0 ) then
@@ -151,7 +145,7 @@
 *
       Call Get_cArray('Irreps',lIrrep,24)
       Do iSym = 1, nSym
-         Call RightAd(lIrrep(iSym))
+         lIrrep(iSym) = adjustr(lIrrep(iSym))
       End Do
 *
       IF(IPRGLB.GE.USUAL  ) THEN
@@ -182,47 +176,98 @@
 *----------------------------------------------------------------------*
 *     Print routing information                                        *
 *----------------------------------------------------------------------*
-      IF(IPRGLB.GE.USUAL  ) THEN
-      If ( RFpert ) then
-         WRITE(6,*)
-         WRITE(6,Fmt1)'Reaction field specifications:'
-         WRITE(6,Fmt1)'------------------------------'
-         WRITE(6,*)
-         WRITE(6,'(6X,A)')'An external reaction field was determined'//
-     &     ' previously and added to the one-electron hamiltonian.'
-         WRITE(6,'(6X,A)')'It will not be reevaluated even though'//
-     &     ' dynamic correlation may change the density.'
-         WRITE(6,*)
-      End If
-      WRITE(6,*)
-      WRITE(6,Fmt2//'A,A)')'Type of Fock operator: ',TRIM(FOCKTYPE)
-      WRITE(6,Fmt2//'A,A)')'Type of 0-order Hamiltonian: ',TRIM(HZERO)
-      WRITE(6,Fmt2//'A,F9.2)')'  "IP-EA" denominator shift = ',BSHIFT
-      If ( SHIFT.ne.0.0d0 ) then
-         WRITE(6,Fmt2//'A,F9.2)')
-     &     'Extra denominator shift = ',SHIFT
-      End if
-      If ( SHIFTI.ne.0.0d0 ) then
-         WRITE(6,Fmt2//'A,F9.2)')
-     &     'Extra imaginary denominator shift = ',SHIFTI
-      End if
-      If ( ORBIN.eq.'TRANSFOR' ) then
-         WRITE(6,Fmt1)
-     &     'The input orbitals and the CI vector will be transformed.'
-      Else
-         WRITE(6,Fmt1)
-     &'The input orbitals and the CI vector will be used as they are.'
-      End If
-      WRITE(6,*)
+      IF (IPRGLB.GE.TERSE) THEN
+        If ( RFpert ) then
+          WRITE(6,*)
+          WRITE(6,Fmt1)'Reaction field specifications:'
+          WRITE(6,Fmt1)'------------------------------'
+          WRITE(6,*)
+          WRITE(6,'(6X,A)')'An external reaction field was determined'//
+     &        ' previously and added to the one-electron Hamiltonian'
+          WRITE(6,'(6X,A)')'It will not be reevaluated even though'//
+     &               ' dynamic correlation may change the density.'
+          WRITE(6,*)
+        End If
+
+        write(6,*)
+        Line=' '
+        write(Line(left-2:),'(A)') 'CASPT2 specifications:'
+        call CollapseOutput(1,Line)
+        write(6,Fmt1)'----------------------'
+        write(6,*)
+
+        if (IFMSCOUP) then
+          if (IFDW) then
+            FockOpType='dynamically weighted'
+            if (IFXMS) then
+              calctype='XDW-CASPT2'
+            else
+              calctype='DW-CASPT2'
+            end if
+          else if (IFRMS) then
+              FockOpType='state-specific'
+              calctype='RMS-CASPT2'
+          else
+            if (IFXMS) then
+              FockOpType='state-average'
+              calctype='XMS-CASPT2'
+            else
+              FockOpType='state-specific'
+              calctype='MS-CASPT2'
+            end if
+          end if
+        else
+          FockOpType='state-specific'
+          calctype='SS-CASPT2'
+        end if
+
+        write(6,Fmt2//'A,T50,A)')'Type of calculation',trim(calctype)
+
+        write(6,Fmt2//'A,T50,A)')'Fock operator',trim(FockOpType)
+        if (IFDW) then
+          write(6,Fmt2//'A,T45,I6)')'DW Type',DWType
+          if (zeta.ge.0) then
+            write(6,Fmt2//'A,T50,E10.4)')'DW exponent',zeta
+          else
+            write(6,Fmt2//'A,T50,A)')'DW exponent','infinity'
+          end if
+        end if
+
+        if (Hzero.ne.'STANDARD') then
+          write(6,Fmt2//'A,T50,A)')'0th-order Hamiltonian',trim(Hzero)
+        end if
+
+        write(6,Fmt2//'A,T45,F9.2)')'IPEA shift',BSHIFT
+        write(6,Fmt2//'A,T45,F9.2)')'Real shift',SHIFT
+        write(6,Fmt2//'A,T45,F9.2)')'Imaginary shift',SHIFTI
+
+        if (ORBIN.eq.'TRANSFOR') then
+          write(6,Fmt1)'The input orbitals will be transformed'//
+     &                 ' to quasi-canonical'
+        else
+          write(6,Fmt1)'The input orbitals will not be transformed'//
+     &                 ' to quasi-canonical'
+        end if
+
+        if (IFXMS .or. IFRMS) then
+          write(6,Fmt1)'The input states will be rotated to '//
+     &     'diagonalize the Fock operator'
+        end if
+
+        call CollapseOutput(0,'CASPT2 specifications:')
+        write(6,*)
+      end if
+
 C Compute necessary quantities for subsequent gradient calc:
-      IF(IFDENS) THEN
-        WRITE(6,*)' The wave functions (P_CAS) H W |Psi_0> and '//
-     &       '(P_CAS) W H |Psi_0>'
-        WRITE(6,*)' will be computed and written out for subsequent'
-        WRITE(6,*)' use in a gradient calculation.'
-      END IF
+      IF (IPRGLB.GE.USUAL) THEN
+        IF(IFDENS) THEN
+        WRITE(6,*)
+          WRITE(6,*)' The wave functions (P_CAS) H W |Psi_0> and '//
+     &         '(P_CAS) W H |Psi_0>'
+          WRITE(6,*)' will be computed and written out for subsequent'
+          WRITE(6,*)' use in a gradient calculation.'
+        END IF
       END IF
 
-      Call qExit('PrInp_CASPT2')
       Return
       End

@@ -17,13 +17,12 @@
 * Object: to setup the roots and weights of the Hermite polynomials    *
 *         for the evaluation of one electron integrals.                *
 *                                                                      *
-*    Authors: Per-Ake Malmqvist and Roland Lindh,                      *
+*    Authors: Per-AAke Malmqvist and Roland Lindh,                     *
 *             March 1992.                                              *
 ************************************************************************
       use Her_RW
+      use Sizes_of_Seward, only: S
       Implicit Real*8 (A-H,O-Z)
-#include "itmax.fh"
-#include "info.fh"
 #include "stdalloc.fh"
 #include "real.fh"
 #include "status.fh"
@@ -39,8 +38,8 @@
 *     1) Hermite-Gauss
 *     2) Rys-Gauss (asymtotic formula)
 *
-      n_1111 = (2*iAngMx+nPrp+2+nDiff)/2
-      n_2222 = 4*iAngMx+2+nDiff
+      n_1111 = (2*S%iAngMx+nPrp+2+nDiff)/2
+      n_2222 = 4*S%iAngMx+2+nDiff
 *
       If (Allocated(HerR) .and. Max(n_1111,n_2222).le.MaxHer) Then
          Return
@@ -56,16 +55,16 @@
       nMem = (MaxHer*MaxHer+MaxHer)/2
       Call mma_Allocate(HerR,nMem,label='HerR')
       iHerR(1)=1
-      Call dCopy_(nMem,0.0d0,0,HerR,1)
+      Call dCopy_(nMem,[0.0d0],0,HerR,1)
       Call mma_allocate(HerW,nMem,label='HerW')
       iHerW(1)=1
-      Call dCopy_(nMem,0.0d0,0,HerW,1)
+      Call dCopy_(nMem,[0.0d0],0,HerW,1)
       Call mma_allocate(Beta,MaxHer,label='Beta')
-      Call dCopy_(MaxHer,0.0d0,0,Beta,1)
+      Call dCopy_(MaxHer,[0.0d0],0,Beta,1)
       Call mma_allocate(BInv,MaxHer,label='BInv')
-      Call dCopy_(MaxHer,0.0d0,0,BInv,1)
+      Call dCopy_(MaxHer,[0.0d0],0,BInv,1)
       Call mma_allocate(Herm,MaxHer+1,label='Herm')
-      Call dCopy_(MaxHer+1,0.0d0,0,Herm,1)
+      Call dCopy_(MaxHer+1,[0.0d0],0,Herm,1)
       DO 10 K=1,MaxHer
         b_1111 = HALF*DBLE(K)
         B=SQRT(b_1111)
@@ -164,11 +163,11 @@ c               write(6,*) delta
       Call mma_deallocate(BInv)
       Call mma_deallocate(Herm)
 *
-*define _DEBUG_
-#ifdef _DEBUG_
+*define _DEBUGPRINT_
+#ifdef _DEBUGPRINT_
       Call TriPrt(' Hermite roots',' ',HerR(iHerR(1)),MaxHer)
       Call TriPrt(' Hermite weights',' ',HerW(iHerW(1)),MaxHer)
-      Write (6,*) ' MaxHer=',MaxHer,nPrp,iAngMx
+      Write (6,*) ' MaxHer=',MaxHer,nPrp,S%iAngMx
 #endif
       Return
       End

@@ -8,11 +8,11 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
-      SUBROUTINE MKDAW(NLEV,NVERT,IDRT,IDOWN,IDAW,LTV)
+      SUBROUTINE MKDAW_RASSI(NLEV,NVERT,IDRT,IDOWN,IDAW,LTV)
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "prgm.fh"
       CHARACTER*16 ROUTINE
-      PARAMETER (ROUTINE='MKDAW')
+      PARAMETER (ROUTINE='MKDAW_RASSI')
       DIMENSION IDOWN(NVERT,0:3),IDAW(NVERT,0:4),IDRT(NVERT,5)
       DIMENSION LTV(-1:NLEV)
       PARAMETER (LTAB=1)
@@ -21,7 +21,6 @@ C Purpose: Construct Direct Arc Weights.
 
 
 
-      CALL QENTER(ROUTINE)
 
 C SET UP A LEVEL-TO-VERTEX TABLE, LTV, AND IDENTIFY MIDVERTICES:
       DO LEV=-1,NLEV
@@ -54,5 +53,4 @@ C SET UP A LEVEL-TO-VERTEX TABLE, LTV, AND IDENTIFY MIDVERTICES:
         IDAW(IV,4)=ISUM
       END DO
 
-      CALL QEXIT(ROUTINE)
       END

@@ -24,7 +24,6 @@
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "sigma.fh"
@@ -47,7 +46,6 @@ C since it requires transformation to standard (Non-ON) basis.
       IF(NIN.EQ.0) RETURN
       NIS=NISUP(ISYM,ICASE)
       IF(NIS.EQ.0) RETURN
-      CALL QENTER('DIADNS')
       NAS=NASUP(ISYM,ICASE)
       NVEC=NIN*NIS
       SQR2=SQRT(2.0D00)
@@ -98,7 +96,6 @@ C Core contribution:
       NLST1 = 0 ! dummy initialize
 *
       GOTO (1,2,3,4,5,6,7,8,9,10,11,12,13) ICASE
-      CALL QEXIT('DIADNS')
       RETURN
 
 C -----------------------------------------------
@@ -131,8 +128,8 @@ C Unfold VEC1 and VEC2 into X1(MU,K,I), X2(MU,K,I):
        NI=NISH(ISYMI)
        NKI=NK*NI
        IF(NKI.EQ.0) GOTO 903
-       CALL DCOPY_(NIN*NKI,0.0D00,0,WORK(LX1),1)
-       CALL DCOPY_(NIN*NKI,0.0D00,0,WORK(LX2),1)
+       CALL DCOPY_(NIN*NKI,[0.0D0],0,WORK(LX1),1)
+       CALL DCOPY_(NIN*NKI,[0.0D0],0,WORK(LX2),1)
        IF(ICASE.EQ.2) THEN
          LLST1=LLIST(ISYMK,ISYM,14)
          NLST1=NLIST(ISYMK,ISYM,14)
@@ -240,8 +237,8 @@ C Unfold VEC1 and VEC2 into X1(MU,A;K,I), X2(MU,A;K,I):
         NI=NISH(ISYMI)
         NAKI=NA*NK*NI
         IF(NAKI.EQ.0) GOTO 907
-        CALL DCOPY_(NIN*NAKI,0.0D00,0,WORK(LX1),1)
-        CALL DCOPY_(NIN*NAKI,0.0D00,0,WORK(LX2),1)
+        CALL DCOPY_(NIN*NAKI,[0.0D0],0,WORK(LX1),1)
+        CALL DCOPY_(NIN*NAKI,[0.0D0],0,WORK(LX2),1)
         IF(ICASE.EQ.6) THEN
           LLST1=LLIST(ISYMK,ISYMKI,14)
           NLST1=NLIST(ISYMK,ISYMKI,14)
@@ -305,8 +302,8 @@ C Unfold VEC1 and VEC2 into X1(MU,C,A), X2(MU,C,B):
        NA=NSSH(ISYMA)
        NCA=NC*NA
        IF(NCA.EQ.0) GOTO 909
-       CALL DCOPY_(NIN*NCA,0.0D00,0,WORK(LX1),1)
-       CALL DCOPY_(NIN*NCA,0.0D00,0,WORK(LX2),1)
+       CALL DCOPY_(NIN*NCA,[0.0D0],0,WORK(LX1),1)
+       CALL DCOPY_(NIN*NCA,[0.0D0],0,WORK(LX2),1)
        IF(ICASE.EQ.8) THEN
          LLST1=LLIST(ISYMC,ISYM,16)
          NLST1=NLIST(ISYMC,ISYM,16)
@@ -362,8 +359,8 @@ C Unfold VEC1 and VEC2 into X1(MU,I;C,A), X2(MU,I;C,A):
         NA=NSSH(ISYMA)
         NICA=NI*NC*NA
         IF(NICA.EQ.0) GOTO 911
-        CALL DCOPY_(NIN*NICA,0.0D00,0,WORK(LX1),1)
-        CALL DCOPY_(NIN*NICA,0.0D00,0,WORK(LX2),1)
+        CALL DCOPY_(NIN*NICA,[0.0D0],0,WORK(LX1),1)
+        CALL DCOPY_(NIN*NICA,[0.0D0],0,WORK(LX2),1)
         IF(ICASE.EQ.10) THEN
           LLST1=LLIST(ISYMC,ISYMCA,16)
           NLST1=NLIST(ISYMC,ISYMCA,16)
@@ -427,8 +424,8 @@ C Unfold VEC1 and VEC2 into X1(MU,K,I), X2(MU,K,I):
        NI=NISH(ISYMI)
        NKI=NK*NI
        IF(NKI.EQ.0) GOTO 813
-       CALL DCOPY_(NAS*NKI,0.0D00,0,WORK(LX1),1)
-       CALL DCOPY_(NAS*NKI,0.0D00,0,WORK(LX2),1)
+       CALL DCOPY_(NAS*NKI,[0.0D0],0,WORK(LX1),1)
+       CALL DCOPY_(NAS*NKI,[0.0D0],0,WORK(LX2),1)
        IF(ICASE.EQ.12) THEN
          LLST1=LLIST(ISYMK,ISYM,14)
          NLST1=NLIST(ISYMK,ISYM,14)
@@ -469,8 +466,8 @@ C Unfold VEC1 and VEC2 into X1(A,C,IJ), X2(A,C,IJ):
        NA=NSSH(ISYMA)
        NCA=NC*NA
        IF(NCA.EQ.0) GOTO 913
-       CALL DCOPY_(NIS*NCA,0.0D00,0,WORK(LX1),1)
-       CALL DCOPY_(NIS*NCA,0.0D00,0,WORK(LX2),1)
+       CALL DCOPY_(NIS*NCA,[0.0D0],0,WORK(LX1),1)
+       CALL DCOPY_(NIS*NCA,[0.0D0],0,WORK(LX2),1)
        IF(ICASE.EQ.12) THEN
          LLST1=LLIST(ISYMA,ISYM,16)
          NLST1=NLIST(ISYMA,ISYM,16)
@@ -505,6 +502,5 @@ C D(A,B) := Add contraction  X1(A,C,IJ)*X2(B,C,IJ):
 C -----------------------------------------------
  100  CONTINUE
 
-      CALL QEXIT('DIADNS')
       RETURN
       END

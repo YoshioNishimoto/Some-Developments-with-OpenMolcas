@@ -9,11 +9,19 @@
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
       SUBROUTINE RDJOB(JOB,READ_STATES)
+      use rassi_global_arrays, only: JBNUM, LROOT
 #ifdef _DMRG_
       use qcmaquis_interface_cfg
-      use qcmaquis_info
+      use qcmaquis_info, only: qcmaquis_info_init, qcm_group_names,
+     &    qcm_prefixes
+      use rasscf_data, only: doDMRG
 #endif
       use mspt2_eigenvectors
+#ifdef _HDF5_
+      use mh5, only: mh5_is_hdf5, mh5_open_file_r, mh5_exists_attr,
+     &               mh5_exists_dset, mh5_fetch_attr, mh5_fetch_dset,
+     &               mh5_close_file
+#endif
       IMPLICIT NONE
 #include "prgm.fh"
       CHARACTER*16 ROUTINE
@@ -30,29 +38,29 @@
 #include "SysDef.fh"
 #include "stdalloc.fh"
 #ifdef _HDF5_
-#  include "mh5.fh"
       integer :: refwfn_id
 
-      integer :: ref_nSym, ref_lSym, ref_nBas(mxSym), ref_iSpin
+      integer :: ref_nSym, ref_stSym, ref_nBas(mxSym), ref_iSpin
       integer :: ref_nfro(mxSym), ref_nish(mxSym), ref_nrs1(mxSym),
      &           ref_nrs2(mxSym), ref_nrs3(mxSym), ref_nssh(mxSym),
      &           ref_ndel(mxSym), ref_nash(mxSym)
       integer :: ref_nactel, ref_nhole1, ref_nelec3, ref_nconf
       integer :: ref_nstates, ref_nroots
       integer, allocatable :: ref_rootid(:)
+      integer :: root2state(MxRoot)
 
-      character(1), allocatable :: typestring(:)
+      character(len=1), allocatable :: typestring(:)
 
       real*8, allocatable :: ref_Heff(:,:), ref_energies(:)
 #endif
 
       Real*8 Weight(MxRoot), ENUCDUMMY, AEMAX, E, HIJ
-      Integer IAD, IAD15, IDISK, IERR
+      Integer IAD, IAD15, IDISK, IERR, IDUM(1)
       Integer IPT2
       Integer ISY, IT
       Integer I, J, ISTATE, JSTATE, ISNUM, JSNUM, iAdr
       Integer LEJOB, LHEFF, NEJOB, NHEFF, NIS, NIS1, NTIT1, NMAYBE
-      INTEGER JOB
+      INTEGER JOB, NROOT0
       LOGICAL READ_STATES
 #ifdef _HDF5_
       character(len=16) :: molcas_module
@@ -60,8 +68,11 @@
       character(len=21) :: pt2_e_string
 #endif
 
+#ifdef _DMRG_
+      integer :: idx
+      character(len=300) :: currdir
+#endif
 
-      CALL QENTER(ROUTINE)
 
 #ifdef _HDF5_
 ************************************************************************
@@ -91,7 +102,7 @@
       call mh5_fetch_attr (refwfn_id,'MOLCAS_MODULE', molcas_module)
       call mh5_fetch_attr (refwfn_id,'SPINMULT', ref_iSpin)
       call mh5_fetch_attr (refwfn_id,'NSYM', ref_nSym)
-      call mh5_fetch_attr (refwfn_id,'LSYM', ref_lSym)
+      call mh5_fetch_attr (refwfn_id,'LSYM', ref_stSym)
       call mh5_fetch_attr (refwfn_id,'NBAS', ref_nBas)
 
       call mh5_fetch_attr (refwfn_id,'NACTEL', ref_nactel)
@@ -99,7 +110,7 @@
       call mh5_fetch_attr (refwfn_id,'NELEC3', ref_nelec3)
       call mh5_fetch_attr (refwfn_id,'NCONF',  ref_nconf)
       call mh5_fetch_attr (refwfn_id,'NSTATES', ref_nstates)
-      If (mh5_exists_dset(refwfn_id, 'NROOTS')) Then
+      If (mh5_exists_attr(refwfn_id, 'NROOTS')) Then
         call mh5_fetch_attr (refwfn_id,'NROOTS', ref_nroots)
       Else
         ref_nroots = ref_nstates
@@ -132,11 +143,19 @@
         Call AbEnd()
       End If
 
-      call mh5_fetch_attr (refwfn_id,'L2ACT', L2ACT)
+*     call mh5_fetch_attr (refwfn_id,'L2ACT', L2ACT)
       call mh5_fetch_attr (refwfn_id,'A2LEV', LEVEL)
 
       call mma_allocate(ref_rootid,ref_nstates)
       call mh5_fetch_attr (refwfn_id,'STATE_ROOTID', ref_rootid)
+      call iCopy(MxRoot,[0],0,root2state,1)
+      If (mh5_exists_attr(refwfn_id, 'ROOT2STATE')) Then
+         call mh5_fetch_attr (refwfn_id,'ROOT2STATE', root2state)
+      Else
+        Do i=1,ref_nroots
+          root2state(i)=i
+        End Do
+      End if
       if (read_states) then
 *  Do not update the state number here, because it's already read in
 *  rdjob_nstates()
@@ -144,11 +163,17 @@
 *        NSTATE=NSTATE+ref_nstates
 * store the root IDs of each state
         DO I=0,NSTAT(JOB)-1
-          iWork(lLROOT+ISTAT(JOB)-1+I)=ref_rootid(I+1)
-          iWork(lJBNUM+ISTAT(JOB)-1+I)=JOB
+          LROOT(ISTAT(JOB)+I)=ref_rootid(I+1)
+          JBNUM(ISTAT(JOB)+I)=JOB
         END DO
       end if
-
+      LROT1=ref_nroots
+      DO I=0,NSTAT(JOB)-1
+        NROOT0=root2state(LROOT(ISTAT(JOB)+I))
+        IF (NROOT0.LE.0.OR.NROOT0.GT.LROT1) THEN
+          GOTO 9002
+        END IF
+      END DO
 
       if(qdpt2sc.and.(trim(molcas_module(1:6)).eq.'NEVPT2'))then
         heff_string     = 'H_EFF_SC'
@@ -159,75 +184,103 @@
       end if
 
 * read the ms-caspt2/qd-nevpt2 effective hamiltonian if it is available
-      If (.not.ifejob.and.mh5_exists_dset(refwfn_id, heff_string)) Then
-        HAVE_HEFF=.TRUE.
+      If (mh5_exists_dset(refwfn_id, heff_string)) Then
         call mma_allocate(ref_Heff,ref_nstates,ref_nstates)
-        call mh5_fetch_dset_array_real(refwfn_id,heff_string,ref_Heff)
-        write(6,'(2x,a)')
-     & ' Effective Hamiltonian from MRPT2 in action'
-        write(6,'(2x,a)')
-     & ' ------------------------------------------'
-        DO I=1,NSTAT(JOB)
-          ISTATE=ISTAT(JOB)-1+I
-          DO J=1,NSTAT(JOB)
-            JSTATE=ISTAT(JOB)-1+J
-            iadr=(istate-1)*nstate+jstate-1
-            Work(l_heff+iadr)=ref_Heff(I,J)
-!           write(6,*) 'readin: Heff(',istate,',',jstate,') = ',
-!    &      Work(l_heff+iadr)
-!           call xflush(6)
+        call mh5_fetch_dset(refwfn_id,heff_string,ref_Heff)
+        HAVE_HEFF=.TRUE.
+* with ejob, only read diagonal
+        If (ifejob) Then
+          HAVE_DIAG=.TRUE.
+!         call WarningMessage(0,'Effective Hamiltonian found in '//
+!    &    ' reference file, but "EJOB" was requested: off-diagonal '//
+!    &    ' elements will be ignored!')
+          DO I=1,NSTAT(JOB)
+            ISTATE=ISTAT(JOB)-1+I
+            ISNUM=root2state(LROOT(ISTATE))
+            Work(LREFENE+istate-1)=ref_Heff(ISNUM,ISNUM)
           END DO
-        END DO
+        Else
+          write(6,'(2x,a)')
+     &   ' Effective Hamiltonian from MRPT2 in action'
+          write(6,'(2x,a)')
+     &   ' ------------------------------------------'
+          DO I=1,NSTAT(JOB)
+            ISTATE=ISTAT(JOB)-1+I
+            ISNUM=root2state(LROOT(ISTATE))
+            DO J=1,NSTAT(JOB)
+              JSTATE=ISTAT(JOB)-1+J
+              JSNUM=root2state(LROOT(JSTATE))
+              iadr=(istate-1)*nstate+jstate-1
+              Work(l_heff+iadr)=ref_Heff(ISNUM,JSNUM)
+!             write(6,*) 'readin: Heff(',istate,',',jstate,') = ',
+!    &        Work(l_heff+iadr)
+!             call xflush(6)
+            END DO
+          END DO
+        End If
         call mma_deallocate(ref_Heff)
 * read the caspt2/qdnevpt2 reference energies if available
       Else If (mh5_exists_dset(refwfn_id, pt2_e_string)) Then
         HAVE_DIAG=.TRUE.
         call mma_allocate(ref_energies,ref_nstates)
-        call mh5_fetch_dset_array_real(refwfn_id,
-     &         pt2_e_string,ref_energies)
+        call mh5_fetch_dset(refwfn_id,pt2_e_string,ref_energies)
         DO I=1,NSTAT(JOB)
           ISTATE=ISTAT(JOB)-1+I
-          Work(LREFENE+istate-1)=ref_energies(I)
+          ISNUM=root2state(LROOT(ISTATE))
+          Work(LREFENE+istate-1)=ref_energies(ISNUM)
         END DO
         call mma_deallocate(ref_energies)
 * read rasscf energies
       Else If (mh5_exists_dset(refwfn_id, 'ROOT_ENERGIES')) Then
         HAVE_DIAG=.TRUE.
         call mma_allocate(ref_energies,ref_nroots)
-        call mh5_fetch_dset_array_real(refwfn_id,
-     &         'ROOT_ENERGIES',ref_energies)
+        call mh5_fetch_dset(refwfn_id,'ROOT_ENERGIES',ref_energies)
         DO I=1,NSTAT(JOB)
           ISTATE=ISTAT(JOB)-1+I
-          Work(LREFENE+istate-1)=ref_energies(ref_rootid(I))
+          ISNUM=root2state(LROOT(ISTATE))
+          Work(LREFENE+istate-1)=ref_energies(ISNUM)
         END DO
         call mma_deallocate(ref_energies)
       End If
 
-!     write(6,*) 'job --> ',job, 'doDMRG and doMPSSICheckpoints ',
-!    & doDMRG,doMPSSICheckpoints
 #ifdef _DMRG_
+      call getenv("CurrDir", currdir)
       ! Leon 5/12/2016: Fetch QCMaquis checkpoint names if requested
-      if (doDMRG.and.doMPSSICheckpoints) then
+      if (doDMRG) then
         if(mh5_exists_dset(refwfn_id, 'QCMAQUIS_CHECKPOINT')) then
-!         Write(6,'(A)') 'Reading QCMaquis checkpoint names '//
-!    &    'from HDF5 files'
-!         Write(6,'(A)') 'State    Checkpoint name'
+          write(6,*) "  QCMaquis checkpoint files:"
+          write(6,*) "  --------------------------"
+          write(6,*) "  State   Checkpoint file  "
 
           !> allocate space for the file name strings of job JOB
           call qcmaquis_info_init(job,nstat(job),1)
 
           DO I=1,NSTAT(JOB)
             ISTATE=ISTAT(JOB)-1+I
-            call mh5_fetch_dset_array_str(refwfn_id,
-     &                                    'QCMAQUIS_CHECKPOINT',
-     &                                     qcm_group_names(job)
-     &                                     %states(i),
-     &                                     [1],
-     &                                     [iWork(lLROOT+ISTATE-1)-1]
-     &                                    )
-!           Write(6,'(I3,A,A)') ISTATE, '   ',
-!    &      trim(qcm_group_names(job)%states(i))
+            call mh5_fetch_dset(refwfn_id,'QCMAQUIS_CHECKPOINT',
+     &                          qcm_group_names(job)%states(i:i),
+     &                          [1],[LROOT(ISTATE)-1])
+            Write(6,'(5X,I3,3X,A)') ISTATE,
+     &      trim(qcm_group_names(job)%states(i))
           END DO
+          write(6,*) "  --------------------------"
+          !! save QCMaquis prefix
+          !! by cutting off the last '.checkpoint_state.X.h5'
+          !! and adding the full path
+          if (size(qcm_group_names(job)%states).gt.0) then
+            idx = index(qcm_group_names(job)%states(1),
+     &        '.checkpoint_state.')
+            if (idx.gt.0) then
+              qcm_prefixes(job)=
+     &        trim(currdir)//'/'//
+     &        trim(qcm_group_names(job)%states(1)
+     &        (1:idx-1))
+            else
+              CALL WarningMessage(2,"Faulty QCMaquis checkpoint name")
+              write(6,*) 'Must contain "checkpoint_state"'
+              Call Abend()
+            end if
+          end if
         else
           call WarningMessage(2,'QCMaquis checkpoint names not found'//
      &    ' on HDF5 files. Make sure you created them with the'//
@@ -251,7 +304,7 @@
       NHOLE1(JOB)=ref_nhole1
       NELE3(JOB)=ref_nelec3
       MLTPLT(JOB)=ref_iSpin
-      IRREP(JOB)=ref_lSym
+      IRREP(JOB)=ref_stSym
       NCONF(JOB)=ref_nConf
       NROOTS(JOB)=ref_nroots
 
@@ -296,9 +349,15 @@
         WRITE(6,*)'  STATE IRREP:        ',IRREP(JOB)
         WRITE(6,*)'  SPIN MULTIPLICITY:  ',MLTPLT(JOB)
         WRITE(6,*)'  ACTIVE ELECTRONS:   ',NACTE(JOB)
+#ifdef _DMRG_
+        if (.not.doDMRG) then
+#endif
         WRITE(6,*)'  MAX RAS1 HOLES:     ',NHOLE1(JOB)
         WRITE(6,*)'  MAX RAS3 ELECTRONS: ',NELE3(JOB)
         WRITE(6,*)'  NR OF CONFIG:       ',NCONF(JOB)
+#ifdef _DMRG_
+        end if
+#endif
       END IF
       IF(IPGLOB.GE.VERBOSE)
      &          WRITE(6,*)'  Wave function type WFTYPE=',WFTYPE
@@ -315,15 +374,10 @@
 ************************************************************************
 #ifdef _DMRG_
       if (doDMRG) then
-        if (doMPSSICheckpoints) then
-          call WarningMessage(3, "QCMaquis checkpoint names from "//
-     &   "JobIph requested. This works only with HDF5 JobIph files."//
+        call WarningMessage(3, "QCMaquis requires checkpoint names "//
+     & "from JOBxxx. This works only with HDF5 JobIph files."//
      &   " Please make sure you use a .h5 file as JOBxxx.")
           call abend()
-        else
-          call WarningMessage(2, "Using old-style JobIph with DMRG "//
-     &      "and hence default naming convention for checkpoint files")
-        end if
       end if
 #endif
       IF (IPGLOB.GE.USUAL) THEN
@@ -367,16 +421,23 @@ C is added in GETH1.
 * store the root IDs of each state
 
 *If unset yet, set now
-        If (iWork(lLROOT+ISTAT(JOB)-1).eq.0) Then
+        If (LROOT(ISTAT(JOB)).eq.0) Then
           DO I=0,NSTAT(JOB)-1
-            iWork(lLROOT+ISTAT(JOB)-1+I)=IROOT1(I+1)
-            iWork(lJBNUM+ISTAT(JOB)-1+I)=JOB
+            LROOT(ISTAT(JOB)+I)=IROOT1(I+1)
+            JBNUM(ISTAT(JOB)+I)=JOB
           End DO
         End If
       END IF
+      DO I=0,NSTAT(JOB)-1
+        NROOT0=LROOT(ISTAT(JOB)+I)
+        IF (NROOT0.GT.LROT1) THEN
+          GOTO 9002
+        END IF
+      END DO
 
 C Using energy data from JobIph?
       IF(IFEJOB) THEN
+        IF(ITOC15(15).EQ.-1) HAVE_HEFF=.TRUE.
         NEJOB=MXROOT*MXITER
         CALL GETMEM('EJOB','ALLO','REAL',LEJOB,NEJOB)
         IAD=ITOC15(6)
@@ -409,11 +470,10 @@ C Put these energies into diagonal of Hamiltonian:
           ISTATE=ISTAT(JOB)-1+I
 #ifdef _DMRG_
           if (doDMRG) then
-            E=WORK(LEJOB-1+iWork(lLROOT+ISTATE-1)
-     &        -ISTAT(JOB)+1+MXROOT*(NMAYBE-1))
+            E=WORK(LEJOB-1+LROOT(ISTATE)-ISTAT(JOB)+1+MXROOT*(NMAYBE-1))
           else
 #endif
-          E=WORK(LEJOB-1+iWork(lLROOT+ISTATE-1)+MXROOT*(NMAYBE-1))
+          E=WORK(LEJOB-1+LROOT(ISTATE)+MXROOT*(NMAYBE-1))
 #ifdef _DMRG_
           endif
 #endif
@@ -437,22 +497,36 @@ C Using effective Hamiltonian from JobIph file?
         CALL GETMEM('HEFF','ALLO','REAL',LHEFF,NHEFF)
         IAD15=ITOC15(17)
         CALL DDAFILE(LUIPH,2,WORK(LHEFF),NHEFF,IAD15)
-        DO I=1,NSTAT(JOB)
-          ISTATE=ISTAT(JOB)-1+I
-          ISNUM=iWork(lLROOT+ISTATE-1)
-          DO J=1,NSTAT(JOB)
-            JSTATE=ISTAT(JOB)-1+J
-            JSNUM=iWork(lLROOT+JSTATE-1)
-            HIJ=WORK(LHEFF-1+ISNUM+LROT1*(JSNUM-1))
-            iadr=(istate-1)*nstate+jstate-1
+C If both EJOB and HEFF are given, read only the diagonal
+        IF(IFEJOB) THEN
+          HAVE_DIAG=.TRUE.
+          DO I=1,NSTAT(JOB)
+            ISTATE=ISTAT(JOB)-1+I
+            ISNUM=LROOT(ISTATE)
+            HIJ=WORK(LHEFF-1+ISNUM+LROT1*(ISNUM-1))
+            Work(LREFENE+istate-1)=HIJ
+            iadr=(istate-1)*nstate+istate-1
             Work(l_heff+iadr)=HIJ
           END DO
-        END DO
+        ELSE
+          DO I=1,NSTAT(JOB)
+            ISTATE=ISTAT(JOB)-1+I
+            ISNUM=LROOT(ISTATE)
+            DO J=1,NSTAT(JOB)
+              JSTATE=ISTAT(JOB)-1+J
+              JSNUM=LROOT(JSTATE)
+              HIJ=WORK(LHEFF-1+ISNUM+LROT1*(JSNUM-1))
+              iadr=(istate-1)*nstate+jstate-1
+              Work(l_heff+iadr)=HIJ
+              Work(LREFENE+istate-1)=HIJ
+            END DO
+          END DO
+        END IF
         CALL GETMEM('HEFF','FREE','REAL',LHEFF,NHEFF)
       END IF
 C Read the level to orbital translations
       IDISK=ITOC15(18)
-      CALL IDAFILE(LUIPH,2,L2ACT,MXLEV,IDISK)
+      CALL IDAFILE(LUIPH,0,IDUM,MXLEV,IDISK) ! L2ACT
       CALL IDAFILE(LUIPH,2,LEVEL,MXLEV,IDISK)
 C Close JobIph file
       CALL DACLOS(LUIPH)
@@ -565,7 +639,6 @@ C Where is the CMO data set stored?
 #endif
 
       CALL XFLUSH(6)
-      CALL QEXIT(ROUTINE)
       RETURN
 ************************************************************************
 *
@@ -574,6 +647,10 @@ C Where is the CMO data set stored?
 ************************************************************************
 9001  WRITE(6,*) ' SYMMETRY GROUPS MUST BE EQUAL.'
       WRITE(6,*) ' NSYM1:',NSYM1,'NSYM :',NSYM
+      GOTO 9010
+9002  WRITE(6,*) ' ROOT NOT AVAILABLE.'
+      WRITE(6,*) '             REQUESTED ROOT:',NROOT0
+      WRITE(6,*) '  MAXIMUM ROOT IN THIS FILE:',LROT1
       GOTO 9010
 9003  WRITE(6,*) ' RAS SPECIFICATIONS DIFFER.'
       WRITE(6,*) '     THIS STATE: MAX NR OF RAS-1 HOLES:',NHOL11
@@ -599,7 +676,7 @@ C Where is the CMO data set stored?
       WRITE(6,'(A,8I4)')' THIS JOBIPH:',(NBAS1(I),I=1,NSYM1)
       WRITE(6,'(A,8I4)')'    PREVIOUS:',(NBASF(I),I=1,NSYM )
 9010  CONTINUE
-      WRITE(6,*)' DATA IN JOBIPH FILE NAMED ',JBNAME(JOB),' WERE'
+      WRITE(6,*)' DATA IN JOBIPH FILE NAMED ',TRIM(JBNAME(JOB)),' WERE'
       WRITE(6,*)' INCONSISTENT WITH EARLIER DATA. PROGRAM STOPS.'
       WRITE(6,*)
       WRITE(6,*)' Errors occured in RASSI/RDJOB.'
@@ -614,6 +691,10 @@ C Where is the CMO data set stored?
 *                                                                      *
 ************************************************************************
       Subroutine rdjob_nstates(JOB)
+#ifdef _HDF5_
+      use mh5, only: mh5_is_hdf5, mh5_open_file_r, mh5_fetch_attr,
+     &               mh5_close_file
+#endif
       IMPLICIT NONE
 #include "rasdim.fh"
 #include "cntrl.fh"
@@ -622,7 +703,6 @@ C Where is the CMO data set stored?
 #include "WrkSpc.fh"
 #include "stdalloc.fh"
 #ifdef _HDF5_
-#  include "mh5.fh"
       integer :: refwfn_id
       integer :: ref_nstates
 #endif

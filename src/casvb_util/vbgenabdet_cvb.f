@@ -8,14 +8,15 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine vbgenabdet_cvb(idetavb,idetbvb,
      >  iconfs,nconf,nconfion,
      >  ndetvb,nel,noe,
      >  nalf,nbet,norb)
       implicit real*8 (a-h,o-z)
-#include "malloc_cvb.fh"
+#include "WrkSpc.fh"
       dimension idetavb(ndetvb),idetbvb(ndetvb)
       dimension iconfs(noe,nconf),nconfion(0:nel)
 
@@ -29,8 +30,8 @@
      >  iconfs,nconf,nconfion,
      >  ndetvb,nel,noe,
      >  nalf,nbet,norb,
-     >  iw(i1),iw(i2),iw(i3),iw(i4),
-     >  iw(i5),iw(i6))
+     >  iwork(i1),iwork(i2),iwork(i3),iwork(i4),
+     >  iwork(i5),iwork(i6))
       call mfreei_cvb(i1)
       return
       end

@@ -27,8 +27,8 @@ C
 #include "rasscf.fh"
 #include "general.fh"
 #include "output_ras.fh"
+      Character*16 ROUTINE
       Parameter (ROUTINE='SIGVEC  ')
-      Call qEnter('SIGVEC')
 C Local print level (if any)
       IPRLEV=IPRLOC(4)
       IF(IPRLEV.ge.DEBUG) THEN
@@ -50,7 +50,7 @@ C Remove any unwanted rotations from C:
        END DO
 
 C Initialize sigma vector to zero.
-       CALL DCOPY_(NROOT+NSXS,0.0D0,0,HC(NST+1),1)
+       CALL DCOPY_(NROOT+NSXS,[0.0D0],0,HC(NST+1),1)
 
        ISTIA=1
        ISTAE=1
@@ -171,6 +171,5 @@ C
       END IF
 1000  FORMAT(/1X,'Sigma vector in SIGVEC'/(1X,10F11.6))
 C
-      CALL QEXIT('SIGVEC')
       RETURN
       END

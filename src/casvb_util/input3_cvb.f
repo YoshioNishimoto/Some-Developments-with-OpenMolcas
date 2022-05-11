@@ -8,14 +8,16 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine input3_cvb(
      >  iorbrel,mxdimrel,ifxorb,ifxstr,
      >  izrstr,iorts,irots,izeta,
      >  ip_iconfs,orbs,irdorbs,ip_cvb,ip_symelm,kbasiscvb_inp)
       implicit real*8 (a-h,o-z)
-#include "ext_cvb.fh"
+c ... Files/Hamiltonian available ...
+      logical, external :: valid_cvb
 #include "main_cvb.fh"
 #include "optze_cvb.fh"
 #include "files_cvb.fh"
@@ -23,7 +25,7 @@
 
 #include "inpmod_cvb.fh"
 #include "spinb_cvb.fh"
-#include "malloc_cvb.fh"
+#include "WrkSpc.fh"
       parameter (nglob=5,nstrin=51,nendvb=3,nspec=3,
      >  ncrit=2,nmeth=12,nwkw=5,ncmp=4)
       character*8 global,string,endvb,specl
@@ -38,6 +40,7 @@
       dimension iorbrel(mxdimrel),ifxorb(mxorb)
       dimension iorts(*),irots(*),izeta(*)
       dimension orbs(mxaobf,mxorb),irdorbs(mxorb)
+      dimension idum(1)
       save global,string,endvb,specl
       save crit,weightkw,methkw
       data global/'XXXXxxxx','START   ','GUESS   ','PRINT   ',
@@ -87,7 +90,8 @@ c 'MOSCOW'
       elseif(istr.eq.3)then
         service=.true.
         write(6,'(1x,a,/)') '**** PERFLOC mode **** '
-        call perfloc_plc(3)
+        !call perfloc_plc(3)
+        call perfloc_plc()
         return
       endif
 
@@ -152,12 +156,14 @@ c 'PRINT'
         call int_cvb(ip,10,nread,1)
       elseif(istr.eq.5)then
 c 'PREC'
-        call int_cvb(iprec,1,nread,1)
+        call int_cvb(idum,1,nread,1)
+        iprec=idum(1)
         if(iprec.lt.0)then
           write(6,*)' Illegal precision :',iprec
           call abend_cvb()
         endif
-        call int_cvb(iwidth,1,nread,1)
+        call int_cvb(idum,1,nread,1)
+        iwidth=idum(1)
         call formats_cvb()
       endif
 
@@ -203,7 +209,8 @@ c 'COUPLE'
         if(kbasis.eq.7)kbasis=6
       elseif(istr.eq.7)then
 c  'MAXITER'
-        call int_cvb(mxiter,1,nread,0)
+        call int_cvb(idum,1,nread,0)
+        mxiter=idum(1)
       elseif(istr.eq.8)then
 c 'CRIT'
         call fstring_cvb(crit,ncrit,icrit,ncmp,1)
@@ -225,8 +232,10 @@ c 'SYMELM'
 c 'ORBREL'
         iorb=0
         jorb=0
-        call int_cvb(iorb,1,nread,1)
-        call int_cvb(jorb,1,nread,1)
+        call int_cvb(idum,1,nread,1)
+        iorb=idum(1)
+        call int_cvb(idum,1,nread,1)
+        jorb=idum(1)
         if(iorb.lt.1.or.iorb.gt.mxorb.or.jorb.lt.1.or.jorb.gt.mxorb)then
           write(6,*)' Illegal orbital number(s) in ORBREL:',iorb,jorb
           call abend_cvb()
@@ -251,10 +260,12 @@ c 'ORBREL'
 c 'SYMPROJ'
         projsym=.true.
         call izero(isympr,mxirrep)
-        call int_cvb(isymput,1,nread,1)
+        call int_cvb(idum,1,nread,1)
+        isymput=idum(1)
         if(nread.eq.1)then
           isympr(isymput)=1
-15320     call int_cvb(isymput,1,nread,1)
+15320     call int_cvb(idum,1,nread,1)
+          isymput=idum(1)
           if(nread.eq.1)then
             isympr(isymput)=1
             goto 15320
@@ -268,10 +279,11 @@ c 'NOSYMPROJ'
       elseif(istr.eq.20)then
 c 'FIXORB'
         itmp = mstacki_cvb(mxorb)
-        call intchk_cvb(iw(itmp),mxorb,nfxorb,0,'FIXORB',-1)
+        call intchk_cvb(iwork(itmp),mxorb,nfxorb,0,'FIXORB',-1)
         call izero(ifxorb,mxorb)
         do 15340 i=1,nfxorb
-15340   ifxorb(iw(i+itmp-1))=1
+        ifxorb(iwork(i+itmp-1))=1
+15340   continue
         call mfreei_cvb(itmp)
       elseif(istr.eq.21)then
 c 'FIXSTRUC'
@@ -279,7 +291,7 @@ c 'FIXSTRUC'
         call mhpfreei_cvb(ifxstr)
         mxread=mavaili_cvb()/2
         ifxstr=mheapi_cvb(mxread)
-        call intchk_cvb(iw(ifxstr),mxread,nfxvb,0,'FIXSTRUC',lfxvb)
+        call intchk_cvb(iwork(ifxstr),mxread,nfxvb,0,'FIXSTRUC',lfxvb)
         call mrealloci_cvb(ifxstr,nfxvb)
       elseif(istr.eq.22)then
 c 'DELSTRUC'
@@ -287,21 +299,21 @@ c 'DELSTRUC'
         call mhpfreei_cvb(izrstr)
         mxread=mavaili_cvb()/2
         izrstr=mheapi_cvb(mxread)
-        call intchk_cvb(iw(izrstr),mxread,nzrvb,0,'DELSTRUC',lzrvb)
+        call intchk_cvb(iwork(izrstr),mxread,nzrvb,0,'DELSTRUC',lzrvb)
         call mrealloci_cvb(izrstr,nzrvb)
       elseif(istr.eq.23)then
 c 'FREORB' - not implemented
         itmp = mstacki_cvb(mxorb)
-        call intchk_cvb(iw(itmp),mxorb,nfrorb1,0,'FREORB',-1)
+        call intchk_cvb(iwork(itmp),mxorb,nfrorb1,0,'FREORB',-1)
         itmp2 = mstackiz_cvb(mxorb)
         do i=1,nfrorb1
-        iw(iw(i+itmp-1)+itmp2-1)=1
+        iwork(iwork(i+itmp-1)+itmp2-1)=1
         enddo
         nfxorb1=0
         do i=1,mxorb
-        if(iw(i+itmp2-1).eq.1)then
+        if(iwork(i+itmp2-1).eq.1)then
           nfxorb1=nfxorb1+1
-          iw(nfxorb1+itmp-1)=i
+          iwork(nfxorb1+itmp-1)=i
         endif
         enddo
         call mfreei_cvb(itmp)
@@ -312,7 +324,7 @@ c 'FRESTRUC' - not implemented (and code incomplete)
         call mhpfreei_cvb(ifxstr)
         mxread=mavaili_cvb()/2
         ifxstr=mheapi_cvb(mxread)
-        call intchk_cvb(iw(ifxstr),mxread,nfxvb,0,'FRESTRUC',lfxvb)
+        call intchk_cvb(iwork(ifxstr),mxread,nfxvb,0,'FRESTRUC',lfxvb)
         call mrealloci_cvb(ifxstr,nfxvb)
       elseif(istr.eq.25)then
 c 'ORTHCON'
@@ -323,12 +335,13 @@ c 'ORTHCON'
         itmpb = mstacki_cvb(mxorb*mxgroup)
         itmpc = mstacki_cvb(mxgroup)
         itmpd = mstacki_cvb(mxortl)
-        call orthcon_cvb(iorts,iw(itmpa),iw(itmpb),iw(itmpc),
-     >  iw(itmpd),mxortl,mxpair)
+        call orthcon_cvb(iorts,iwork(itmpa),iwork(itmpb),iwork(itmpc),
+     >  iwork(itmpd),mxortl,mxpair)
         call mfreei_cvb(itmpa)
       elseif(istr.eq.26)then
 c 'SADDLE'
-        call int_cvb(isaddle,1,nread,1)
+        call int_cvb(idum,1,nread,1)
+        isaddle=idum(1)
       elseif(istr.eq.27)then
 c 'SHSTRUC'
         ishstruc=1
@@ -365,7 +378,8 @@ c 'CIWEIGHT'
           iciweights=7
         endif
         if(istr2.gt.0)goto 15700
-        call int_cvb(npcf,1,nread,1)
+        call int_cvb(idum,1,nread,1)
+        npcf=idum(1)
       elseif(istr.eq.30)then
 c 'SCORR'
         sij=.true.
@@ -420,7 +434,8 @@ c 'NOPLOC'
       elseif(istr.eq.50)then
 c 'ALTERN'
         mxalter=50
-        call int_cvb(mxalter,1,nread,1)
+        call int_cvb(idum,1,nread,1)
+        mxalter=idum(1)
         call loopcntr2_cvb(5,mxalter)
       elseif(istr.eq.51)then
 c 'ENDALTER'

@@ -28,14 +28,11 @@
 *          May '90                                                     *
 *                                                                      *
 ************************************************************************
+      use Basis_Info, only: nBas
+      use SOAO_Info, only: iAOtSO
       Implicit Real*8 (A-H,O-Z)
-#include "itmax.fh"
-#include "info.fh"
 #include "real.fh"
 #include "print.fh"
-#include "srt0.fh"
-#include "srt1.fh"
-#include "WrkSpc.fh"
 *
       Real*8 AOint(ijkl,jCmp,kCmp,lCmp), TInt(nTInt)
       Integer iSOShl(nSO), iShlSO(nSO), nBasSh(0:nSym-1,nShell)
@@ -44,7 +41,7 @@
 *                                                                      *
 ************************************************************************
 *                                                                      *
-*define _DEBUG_
+*define _DEBUGPRINT_
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -56,7 +53,6 @@
 *                                                                      *
       Shkl = iShell(3).eq.iShell(4)
       iOff1 = nBas(0)
-      mm = iOff(1)
       n3C= iOff(3)
       If (iShell(4).gt.iShell(3)) Then
          Write (6,*) 'iShell(4).gt.iShell(3)'

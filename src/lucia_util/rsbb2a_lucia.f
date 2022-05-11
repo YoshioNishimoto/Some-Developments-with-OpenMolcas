@@ -73,8 +73,8 @@
 *
 * Jeppe Olsen, Winter of 1991
 *
+      USE Para_Info, ONLY: MyRank, nProcs
       IMPLICIT REAL*8(A-H,O-Z)
-#include "para_info.fh"
 #include "mxpdim.fh"
 #include "WrkSpc.fh"
 *. General input
@@ -106,7 +106,6 @@ C-jwk-cleanup      INTEGER I4_DIM(4),I4_SM(4)
 #include "oper.fh"
 *
 C-jwk-cleanup      DIMENSION IACAR(2),ITPAR(2)
-      CALL QENTER('RS2A')
       Call Allocate_Work(ipSCR,MXPTSOB**4)
         WRITE(6,*) ' RSBB2A speaking '
       NTESTL = 000
@@ -164,11 +163,6 @@ C?      IF(NPTOT.EQ.3) GOTO 2000
         IF(JTYP.EQ.1) NIJKL1 = NIJKL1+1
         IF(KTYP.EQ.1) NIJKL1 = NIJKL1+1
         IF(LTYP.EQ.1) NIJKL1 = NIJKL1+1
-        IF(NIJKL1.EQ.0) CALL QENTER('BB2A0')
-        IF(NIJKL1.EQ.1) CALL QENTER('BB2A1')
-        IF(NIJKL1.EQ.2) CALL QENTER('BB2A2')
-        IF(NIJKL1.EQ.3) CALL QENTER('BB2A3')
-        IF(NIJKL1.EQ.4) CALL QENTER('BB2A4')
 *. Optimal ordering of operators
         I4_AC(1) = 2
         I4_AC(2) = 2
@@ -185,7 +179,6 @@ c        ELSE
           DO IJKL = 1, 4
             I4_REO(IJKL) = IJKL
           END DO
-          SIGN4 = 1.0D0
 c        END IF
 *. Type of operators : TP and AC
         DO IJKL = 1, 4
@@ -396,7 +389,6 @@ C     NPROCS that satisfies a block size smaller than MAXI:
 *. obtain cb(KB,IA,jl) = sum(JB)<KB!a lb a jb !IB>C(IA,JB)
 *
 *. Obtain all double excitations from this group of K strings
-CT                    CALL QENTER('ADADS')
                       II12 = 1
                       K12 = 1
                       IONE = 1
@@ -421,13 +413,11 @@ C?       write(6,*) ' Before ADAADAST '
                       JFRST = 0
                       KFRST = 0
 *
-CT                    CALL QEXIT('ADADS')
                       IF(NKBTC.EQ.0) GOTO 1930
 *. Loop over jl in TS classes
                       J = 0
                       L = 1
 *
-CT                    CALL QENTER('MATCG')
                       DO  IJL = 1, NJL
                         CALL NXTIJ(     J,     L,    NJ,    NL,  JLSM,
      &                              NONEW)
@@ -443,7 +433,6 @@ CT                    CALL QENTER('MATCG')
      &                                NKBTC,I1(1,I1JL),XI1S(1,I1JL))
                         END IF
                       END DO
-CT                    CALL QEXIT ('MATCG')
 *
                       JLBOFF = JLBOFF + NJL
                     END DO
@@ -566,7 +555,6 @@ C?                  END IF
                         NIK = NI * NK
                         IKSM = 0
                       END IF
-CT                    CALL QENTER('ADADS')
                       IF(IFRST.EQ.1) KFRST = 1
                       ONE = 1.0D0
 *
@@ -586,9 +574,7 @@ CT                    CALL QENTER('ADADS')
 *
                       IFRST = 0
                       KFRST = 0
-CT                    CALL QEXIT ('ADADS')
 *
-CT                    CALL QENTER('MATCS')
                       I = 0
                       K = 1
                       DO IK = 1, NIK
@@ -603,7 +589,6 @@ CT                    CALL QENTER('MATCS')
      &                                NKBTC,I1(1,IKOFF),XI1S(1,IKOFF))
                         END IF
                       END DO
-CT                    CALL QEXIT ('MATCS')
                       IKBOFF = IKBOFF + NIK
 *
                     END DO
@@ -644,7 +629,6 @@ CT                    CALL QEXIT ('MATCS')
             IF(JLOBSM.EQ.0) GOTO 2950
 *. types + symmetries defined => K strings are defined
             KFRST = 1
-            K2FRST = 1
             DO ISM = 1, NSMOB
               KSM = ADSXA(ISM,IKOBSM)
               DO JSM = 1, NSMOB
@@ -709,7 +693,6 @@ C               JSM = ISCR(I4_REO(4))
 *. obtain cb(KB,IA,jl) = sum(JB)<KB!a lb a jb !IB>C(IA,JB)
 *
 *. Obtain all double excitations from this group of K strings
-CT                  CALL QENTER('ADADS')
                     II12 = 1
                     K12 = 1
                     IONE = 1
@@ -734,10 +717,8 @@ C                   KFRST = 1
                     JFRST = 0
                     KFRST = 0
 *
-CT                  CALL QEXIT('ADADS')
                     IF(NKBTC.EQ.0) GOTO 2801
 *. Loop over jl in TS classes and gather
-CT                  CALL QENTER('MATCG')
                     J = 0
                     L = 1
                     DO  IJL = 1, NJL
@@ -749,7 +730,6 @@ CT                  CALL QENTER('MATCG')
                       CALL MATCG(    CB,CSCR(JLOFF),NROW,NIBTC,IBOT,
      &                            NKBTC,I1(1,I1JL),XI1S(1,I1JL))
                     END DO
-CT                  CALL QEXIT ('MATCG')
 *
 *==============================================
 *. SSCR(I,K,ik) = CSR(I,K,jl)*((ij!kl)-(il!jk))
@@ -841,7 +821,6 @@ C?                  END IF
                     II12 = 2
 *
                     IONE = 1
-CT                  CALL QENTER('ADADS')
                     IF(IFRST.EQ.1) KFRST = 1
                     ONE = 1.0D0
 *
@@ -862,9 +841,7 @@ C                   KFRST = 1
 *
                     IFRST = 0
                     KFRST = 0
-CT                  CALL QEXIT ('ADADS')
 *
-CT                  CALL QENTER('MATCS')
                     I = 0
                     K = 1
                     DO IK = 1, NIK
@@ -876,7 +853,6 @@ CT                  CALL QENTER('MATCS')
      &                             NKBTC,I1(1,IKOFF),XI1S(1,IKOFF))
                     END DO
 C                   write(6,*) ' first element of updated SB', SB(1)
-CT                  CALL QEXIT ('MATCS')
 *
                   IF(KEND.EQ.0) GOTO 2800
 *. End of loop over partitionings of resolution strings
@@ -893,11 +869,6 @@ CT                  CALL QEXIT ('MATCS')
         END IF
 *       ^ End of a+ a+ a a/a a a+ a+ versus a+ a a+ a switch
 
-        IF(NIJKL1.EQ.0) CALL QEXIT ('BB2A0')
-        IF(NIJKL1.EQ.1) CALL QEXIT ('BB2A1')
-        IF(NIJKL1.EQ.2) CALL QEXIT ('BB2A2')
-        IF(NIJKL1.EQ.3) CALL QEXIT ('BB2A3')
-        IF(NIJKL1.EQ.4) CALL QEXIT ('BB2A4')
  2000 CONTINUE
 *
  2001 CONTINUE
@@ -907,7 +878,6 @@ C?      CALL MEMCHK
 C?      WRITE(6,*) ' Memcheck passed '
 *
       Call Free_Work(ipSCR)
-      CALL QEXIT('RS2A ')
       RETURN
 c Avoid unused argument warnings
       IF (.FALSE.) THEN

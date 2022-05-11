@@ -8,18 +8,18 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine asonc10_cvb(c,axc,dum1,nvec,nprm)
       implicit real*8 (a-h,o-z)
-#include "ext_cvb.fh"
 #include "main_cvb.fh"
 #include "optze_cvb.fh"
 #include "files_cvb.fh"
 #include "print_cvb.fh"
 
-#include "malloc_cvb.fh"
-      common /ipp/ipp,iter
+#include "WrkSpc.fh"
+#include "ipp.fh"
       dimension c(nprm,nvec),axc(nprm,nvec)
 c      save iter,ipp
 
@@ -32,7 +32,7 @@ c      save iter,ipp
       endif
 
       do 100 ivec=1,nvec
-      call fmove(c(1,ivec),axc(1,ivec),nprm)
+      call fmove_cvb(c(1,ivec),axc(1,ivec),nprm)
       call hess_cvb(axc(1,ivec))
       call ddproj_cvb(axc(1,ivec),nprm)
 100   continue
@@ -43,14 +43,13 @@ c Avoid unused argument warnings
 
       subroutine asonc10init_cvb(ippinp)
       implicit real*8 (a-h,o-z)
-#include "ext_cvb.fh"
 #include "main_cvb.fh"
 #include "optze_cvb.fh"
 #include "files_cvb.fh"
 #include "print_cvb.fh"
 
-#include "malloc_cvb.fh"
-      common /ipp/ ipp,iter
+#include "WrkSpc.fh"
+#include "ipp.fh"
 c      save iter
 
       iter=0

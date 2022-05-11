@@ -17,6 +17,7 @@
 * SWEDEN                                     *
 *--------------------------------------------*
       SUBROUTINE EQCTL2(ICONV)
+      use output_caspt2, only:iPrGlb,usual,verbose,insane
       IMPLICIT REAL*8 (A-H,O-Z)
 C On return, the following data sets will be defined and stored
 C on LUSOLV.
@@ -28,13 +29,10 @@ C At position IVEC=IVECC2, the solution array, in covariant repr.
 C At position IVEC=IVECW, the RHS array, in contravariant repr.
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
-#include "WrkSpc.fh"
 #include "SysDef.fh"
 #include "chocaspt2.fh"
 
-      CALL QENTER('EQCTL2')
 
       IF (IPRGLB.GE.VERBOSE) THEN
         WRITE(6,'(1X,A)')
@@ -207,6 +205,5 @@ C-SVC: collect and print information on coefficients/denominators
       TIOSER=TIO1-TIO0
 
   100 CONTINUE
-      CALL QEXIT('EQCTL2')
       RETURN
       END

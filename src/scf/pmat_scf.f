@@ -43,29 +43,25 @@
 *     history: UHF - V.Veryazov, 2003                                  *
 *                                                                      *
 ************************************************************************
+      use OFembed, only: Do_OFemb
       Implicit Real*8 (a-h,o-z)
       External EFP_On
 #include "real.fh"
 #include "mxdm.fh"
 #include "infscf.fh"
-#include "WrkSpc.fh"
 #include "stdalloc.fh"
 #include "rctfld.fh"
 #include "file.fh"
 *
-      Real*8 Dens(nDT,nD,NumDT),OneHam(nDT)
-      Real*8, Dimension(:,:,:), Target:: TwoHam(nDT,nD,NumDT)
+      Real*8, Target:: Dens(nDT,nD,NumDT), TwoHam(nDT,nD,NumDT)
+      Real*8 OneHam(nDT)
       Real*8 XCf(nXCf,nD), E_DFT(nE_DFT), Vxc(nDT,nD,NumDT)
       Real*8 Fock(nDT,nD)
       Logical FstItr, NoCoul
 *
-      Integer ALGO,NSCREEN
-      Logical REORD,DECO
-      Real*8  dmpk,dFKmat
-      Common /CHOSCF / REORD,DECO,dmpk,dFKmat,ALGO,NSCREEN
+#include "choscf.fh"
 *
-      Logical Do_OFemb, KEonly, OFE_first, Found, EFP_On
-      COMMON  / OFembed_L / Do_OFemb,KEonly,OFE_first
+      Logical Found, EFP_On
 *
 *---- Define local variables
       Logical First, NonEq, ltmp1, ltmp2, Do_DFT
@@ -74,21 +70,29 @@
       Data First /.true./
       Save First
       Real*8, Dimension(:), Allocatable:: RFfld, D
-      Real*8, Dimension(:,:), Allocatable:: DnsS, Temp
+      Real*8, Dimension(:,:), Allocatable:: DnsS
+      Real*8, Allocatable, Target:: Temp(:,:)
       Real*8, Dimension(:,:), Allocatable, Target:: Aux
       Real*8, Dimension(:,:), Pointer:: pTwoHam
+      Real*8, Allocatable :: tVxc(:)
+      Dimension Dummy(1),Dumm0(1),Dumm1(1)
 #include "SysDef.fh"
+*
+      Interface
+        SubRoutine Drv2El_dscf(Dens,TwoHam,nDens,nDisc,Thize,PreSch,
+     &                         FstItr,NoCoul,ExFac)
+        Integer nDens, nDisc
+        Real*8, Target:: Dens(nDens), TwoHam(nDens)
+        Real*8 Thize, ExFac
+        Logical NoCoul
+        Logical FstItr, PreSch
+        End Subroutine Drv2El_dscf
+      End Interface
 
-*
-*----------------------------------------------------------------------*
-*     Start                                                            *
-*----------------------------------------------------------------------*
-*
+
       If (PmTime) Call CWTime(xCPM1,xWPM1)
       Call Timing(Cpu1,Tim1,Tim2,Tim3)
-*define _DEBUG_
-#ifdef _DEBUG_
-      Call qEnter('PMat')
+#ifdef _DEBUGPRINT_
       Call NrmClc(TwoHam(1,1,nDens),nBT*nD,'PMat: Enter','T in nDens')
       Call NrmClc(Vxc   (1,1,nDens),nBT*nD,'PMat: Enter','T in nDens')
       Call NrmClc(TwoHam(1,1,nDens),nBT*nD,'PMat: Enter','T in iPsLst')
@@ -103,7 +107,7 @@
 *
 *---- Add contribution due to external potential
 *
-      Call DCopy_(nBT*nD,Zero,0,TwoHam(1,1,iPsLst),1)
+      Call DCopy_(nBT*nD,[Zero],0,TwoHam(1,1,iPsLst),1)
       iSpin=1
       If (iUHF.eq.1) iSpin=2
       Call Put_iScalar('Multiplicity',iSpin)
@@ -147,7 +151,7 @@
             call dcopy_(nBT,TwoHam(1,1,iPsLst),1,TwoHam(1,2,iPsLst),1)
             If (MxConstr.gt.0 .and. klockan.eq.1) Then
                Call SetUp_iSD()
-               Call Get_Enondyn_dft(nBT,Dumm1,iDumm,'SCF ')
+               Call Get_Enondyn_dft(nBT,Dummy,iDumm,'SCF ')
                Call Free_iSD()
                klockan=24
             EndIf
@@ -163,9 +167,11 @@
 *        potential is neither linear nor bi-linear.
 *
          If (KSDFT.ne.'SCF') Then
-            Call Get_dExcdRa(ipVxc,nVxc)
-            Call DCopy_(nVxc,Work(ipVxc),1,Vxc(1,1,iPsLst),1)
-            Call Free_Work(ipVxc)
+            nVxc=Size(Vxc,1)*Size(Vxc,2)
+            Call mma_allocate(tVxc,nVxc,Label='tVxc')
+            Call Get_dExcdRa_x(tVxc,nVxc)
+            Call DCopy_(nVxc,tVxc,1,Vxc(1,1,iPsLst),1)
+            Call mma_deallocate(tVxc)
          Else
             Call FZero(Vxc(1,1,iPsLst),nBT*nD)
          End If
@@ -173,12 +179,14 @@
          If (Do_OFemb) Then
             Call Get_NameRun(NamRfil) ! save the old RUNFILE name
             Call NameRun('AUXRFIL')   ! switch the RUNFILE name
-            Call Get_dExcdRa(ipVemb,nVemb)
-            Call DaXpY_(nDT*nD,One,Work(ipVemb),1,Vxc(1,1,iPsLst),1)
-            Call Free_Work(ipVemb)
+            nVxc=Size(Vxc,1)*Size(Vxc,2)
+            Call mma_allocate(tVxc,nVxc,Label='tVxc')
+            Call Get_dExcdRa_x(tVxc,nVxc)
+            Call DaXpY_(nDT*nD,One,tVxc,1,Vxc(1,1,iPsLst),1)
+            Call mma_deallocate(tVxc)
             Call NameRun(NamRfil)   ! switch back RUNFILE name
          End If
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
          Call NrmClc(Vxc   (1,1,iPsLst),nDT*nD,'PMat','Optimal V ')
 #endif
 *
@@ -273,20 +281,18 @@
          Do iD = 1, nD
             Call Unfold(Dens(1,iD,iPsLst),nBT,DnsS(1,iD),nBB,nSym,nBas)
          End Do
-         If (iUHF.eq.0) Then
+         If (nD==1) Then
             Call FockTwo_Drv_scf(nSym,nBas,nBas,nSkip,
-     &                     Dens(1,1,iPsLst),DnsS(1,1),Temp(1,1),
-     &                     nBT,ExFac,nBB,MaxBas,iUHF,
-     &                     Dummy,
-     &                     Dummy,Dummy,nOcc(1,1),idummy,
+     &                     Dens(:,:,iPsLst),DnsS(:,:),Temp(1,1),
+     &                     nBT,ExFac,nBB,MaxBas,nD,
+     &                     Dummy,nOcc(:,:),Size(nOcc,1),
      &                     iDummy_run)
          Else
             Call FockTwo_Drv_scf(nSym,nBas,nBas,nSkip,
-     &                     Dens(1,1,iPsLst),DnsS(1,1),Temp(1,1),
-     &                     nBT,ExFac,nBB,MaxBas,iUHF,
-     &                     Dens(1,2,iPsLst),
-     &                     DnsS(1,2),Temp(1,2),nOcc(1,1),
-     &                     nOcc(1,2),iDummy_run)
+     &                     Dens(:,:,iPsLst),DnsS(:,:),Temp(1,1),
+     &                     nBT,ExFac,nBB,MaxBas,nD,
+     &                     Temp(1,2),nOcc(:,:),Size(nOcc,1),
+     &                     iDummy_run)
          End If
 *
 *------- Deallocate memory for squared density matrix
@@ -307,7 +313,7 @@
 ************************************************************************
 *                                                                      *
       Call DaXpY_(nBT*nD,One,Temp,1,TwoHam(1,1,iPsLst),1)
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       Call NrmClc(Temp,nBT*nD,'PMat_SCF','Temp')
       Call NrmClc(TwoHam(1,1,iPsLst),nBT*nD,'PMat_SCF','T in iPsLst')
 #endif
@@ -317,7 +323,7 @@
 *                                                                      *
 *     Now compute the total two-electron contribution
 *
-*     Generate the two-electron contibution corresponding to the total
+*     Generate the two-electron contribution corresponding to the total
 *     density.
 *
       If(MiniDn.and. Max(0,nIter(nIterP)-1).gt.0) Then
@@ -347,7 +353,7 @@
 *
             Do iD = 1, nD
                If (Xcf(iMat,iD).eq.0.0D0) Cycle
-               Call DaXpY_(nBT,Xcf(iMat,iD),pTwoHam(1,iD),1,
+               Call DaXpY_(nBT,Xcf(iMat,iD),pTwoHam(:,iD),1,
      &                              TwoHam(1,iD,iPsLst),1)
             End Do
 *
@@ -384,8 +390,7 @@
      &      / DBLE(nD)
 *
 *
-*define _DEBUG_
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       Call NrmClc(Dens  (1,1,iPsLst),nBT*nD,'PMat  ','D iPsLst  ')
       Call NrmClc(Dens  (1,1,nDens), nBT*nD,'PMat  ','D nDens   ')
       Call NrmClc(TwoHam(1,1,iPsLst),nBT*nD,'PMat  ','T iPsLst  ')
@@ -393,7 +398,6 @@
       Call NrmClc(Vxc   (1,1,iPsLst),nBT*nD,'PMat  ','V iPsLst  ')
       Call NrmClc(Vxc   (1,1,nDens), nBT*nD,'PMat  ','V nDens   ')
 *
-      Call qExit('PMat')
 #endif
       Call Timing(Cpu2,Tim1,Tim2,Tim3)
       TimFld( 5) = TimFld( 5) + (Cpu2 - Cpu1)
@@ -408,10 +412,5 @@
      &   ' (2-el contributions: ',tWF2,' seconds) <<<'
          Call xFlush(6)
       End If
-*
-*----------------------------------------------------------------------*
-*     Exit                                                             *
-*----------------------------------------------------------------------*
-*
-      Return
-      End
+
+      End subroutine PMat_SCF

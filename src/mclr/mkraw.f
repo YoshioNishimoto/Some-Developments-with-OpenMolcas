@@ -8,7 +8,7 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
-      SUBROUTINE MKRAW(NVERT,IDOWN,IDAW,IUP,IRAW,IPRINT)
+      SUBROUTINE MKRAW_MCLR(NVERT,IDOWN,IDAW,IUP,IRAW,IPRINT)
 C
 C     PURPOSE: CONSTRUCT UPCHAIN INDEX TABLE AND REVERSE ARC WEIGHTS
 C
@@ -21,8 +21,10 @@ C
 C     BEGIN BY CONSTRUCTING THE UPCHAIN TABLE IUP:
 C
       DO 10 IV=1,NVERT
-        DO 10 IC=0,3
-10        IUP(IV,IC)=0
+        DO 11 IC=0,3
+          IUP(IV,IC)=0
+11      CONTINUE
+10    CONTINUE
       DO 30 IU=1,NVERT-1
         DO 20 IC=0,3
           IDWN=IDOWN(IU,IC)
@@ -33,7 +35,7 @@ C
 C
       IF( IPRINT.GE.5 ) THEN
         WRITE(6,*)
-        WRITE(6,*)' THE UPCHAIN TABLE IN MKRAW:'
+        WRITE(6,*)' THE UPCHAIN TABLE IN MKRAW_MCLR:'
         DO 40 IV=1,NVERT
           WRITE(6,'(1X,I4,5X,4(1X,I6))') IV,(IUP(IV,IC),IC=0,3)
 40      CONTINUE
@@ -43,7 +45,8 @@ C
 C     USE UPCHAIN TABLE TO CALCULATE THE REVERSE ARC WEIGHT TABLE:
 C
       DO 110 IC=0,3
-110     IRAW(1,IC)=0
+        IRAW(1,IC)=0
+110   CONTINUE
       IRAW(1,4)=1
       DO 130 IV=2,NVERT
         ISUM=0
@@ -59,7 +62,7 @@ C
 C
       IF( IPRINT.GE.5 ) THEN
         WRITE(6,*)
-        WRITE(6,*)' THE REVERSE ARC WEIGHT TABLE IN MKRAW:'
+        WRITE(6,*)' THE REVERSE ARC WEIGHT TABLE IN MKRAW_MCLR:'
         DO 140 IV=1,NVERT
           WRITE(6,'(1X,I4,5X,5(1X,I6))') IV,(IRAW(IV,IC),IC=0,4)
 140     CONTINUE

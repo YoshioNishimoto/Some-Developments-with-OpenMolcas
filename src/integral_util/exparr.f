@@ -15,12 +15,6 @@
 *                                                                      *
 * Object: to expand arrays according to an index array.                *
 *                                                                      *
-* Called from: TwoEl                                                   *
-*                                                                      *
-* Calling    : QEnter                                                  *
-*              DCopy   (ESSL)                                          *
-*              QExit                                                   *
-*                                                                      *
 *     Author: Roland Lindh, Dept. of Theoretical Chemistry,            *
 *             University of Lund, SWEDEN                               *
 *             Augusti '91                                              *
@@ -31,23 +25,15 @@
       Real*8 Array(lArray,nArray)
       Integer Ind(nArray)
 *
-      iRout = 235
-      iPrint = nPrint(iRout)
-      Call qEnter('ExpArr')
-*
-*     Write (*,'(I3)') nArray
-*     Write (*,'(60I3)') Ind
       Do 100 iArray = nArray, 1, -1
          jArray = Ind(iArray)
          If (jArray.le.0) Then
 *           Set column iArray to zero
-            call dcopy_(lArray,Zero,0,Array(1,iArray),1)
+            call dcopy_(lArray,[Zero],0,Array(1,iArray),1)
          Else If (jArray.lt.iArray) Then
 *           Copy row jArray to position iArray
             call dcopy_(lArray,Array(1,jArray),1,Array(1,iArray),1)
          End If
  100  Continue
-*     Call GetMem(' Exit ExpArr','Check','Real',iDum,iDum)
-      Call qExit('ExpArr')
       Return
       End

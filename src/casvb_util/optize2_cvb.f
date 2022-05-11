@@ -8,7 +8,8 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine optize2_cvb(fx,nparm,ioptc,
      >  dx,grad,iter_is_1,
@@ -16,7 +17,7 @@
       implicit real*8 (a-h,o-z)
       logical opth,skipupd,first_time
       logical iter_is_1,close2conv_begin
-      logical close2conv,converged,wrongstat
+      logical close2conv,converged,wrongstat,scalesmall1
 #include "opt_cvb.fh"
 #include "locopt1_cvb.fh"
 #include "locopt2_cvb.fh"
@@ -46,7 +47,7 @@ c  << Now trust region control >>
       opth=.false.
       iopth=0
 100   call trust_cvb(iopth,opth,maxize,fx,fxbest,exp,
-     >  hh,dxnrm,ioptc,scalesmall,close2conv,converged,skipupd)
+     >  hh,dxnrm,ioptc,scalesmall1,close2conv,converged,skipupd)
       if(ioptc.eq.-2)return
 
 c    << Make update >>

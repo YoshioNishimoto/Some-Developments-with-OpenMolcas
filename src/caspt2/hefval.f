@@ -20,7 +20,6 @@ C the same for all the root states.
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "SysDef.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
@@ -32,9 +31,8 @@ C the same for all the root states.
       INTEGER I
       INTEGER NTG1,NTG2,NTG3,LTG1,LTG2,LTG3
       INTEGER IDCI,LCI1,LCI2
-      REAL*8 OVL,DUMMY
+      REAL*8 OVL,DUMMY(1)
 
-      CALL QENTER('HEFVAL')
 C We evaluate the effective Hamiltonian matrix element in two steps.
 
       NTG1=NASHT**2
@@ -71,7 +69,7 @@ C Read root vectors nr. IST and JST from LUCI.
         END DO
       END IF
 
-      CALL MKTG3(LSYM,LSYM,WORK(LCI1),WORK(LCI2),OVL,
+      CALL MKTG3(STSYM,STSYM,WORK(LCI1),WORK(LCI2),OVL,
      &           WORK(LTG1),WORK(LTG2),NTG3,WORK(LTG3))
       CALL GETMEM('MCCI1','FREE','REAL',LCI1,MXCI)
       CALL GETMEM('MCCI2','FREE','REAL',LCI2,MXCI)
@@ -83,6 +81,5 @@ C Read root vectors nr. IST and JST from LUCI.
       CALL GETMEM('TG2','FREE','REAL',LTG2,NTG2)
       CALL GETMEM('TG3','FREE','REAL',LTG3,NTG3)
 
-      CALL QEXIT('HEFVAL')
       RETURN
       END

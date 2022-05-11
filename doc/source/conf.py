@@ -9,7 +9,7 @@
 # For more details see the full text of the license in the file        *
 # LICENSE or in <http://www.gnu.org/licenses/>.                        *
 #                                                                      *
-# Copyright (C) 2015-2018, Ignacio Fdez. Galván                        *
+# Copyright (C) 2015-2018,2022, Ignacio Fdez. Galván                   *
 #***********************************************************************
 #
 # This file is execfile()d with the current directory set to its
@@ -23,6 +23,7 @@
 
 import sys
 import os
+import sphinx
 
 sys.dont_write_bytecode = True
 
@@ -36,7 +37,7 @@ sys.path.append(os.path.abspath('../extensions'))
 # -- General configuration ------------------------------------------------
 
 # If your documentation needs a minimal Sphinx version, state it here.
-needs_sphinx = '1.4'
+needs_sphinx = '1.8'
 
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
@@ -46,13 +47,17 @@ extensions = [
     #'sphinx.ext.pngmath',
     'sphinxcontrib.bibtex',
     #'rst2pdf.pdfbuilder',
+    'patch',
     'transforms',
-    'numsec',
     'xmldoc',
     'extractfile',
     'float',
     'molcasbib',
 ]
+
+# Bibtex extension configuration
+bibtex_bibfiles = ['molcas.bib']
+bibtex_tooltips_style = 'short'
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -68,7 +73,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'Molcas'
-copyright = u'2017,2018, MOLCAS Team'
+copyright = u'2017–2022, MOLCAS Team'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -123,10 +128,11 @@ pygments_style = 'sphinx'
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 html_theme = 'molcas'
-#html_theme_options = {
+html_theme_options = {
+  'pdf_file': os.environ.get('PDF_FILE', '')
 #    'rightsidebar': 'false',
 #    'stickysidebar': 'true'
-#}
+}
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -202,7 +208,6 @@ html_show_sourcelink = True
 # Output file base name for HTML help builder.
 htmlhelp_basename = 'Molcasdoc'
 
-
 # -- Options for LaTeX output ---------------------------------------------
 
 latex_elements = {
@@ -214,13 +219,16 @@ latex_elements = {
 
 # Additional stuff for the LaTeX preamble.
 #'preamble': '',
+
+# Maketitle command
+  'maketitle': '\maketitle',
 }
 
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-  (master_doc, 'Manual.tex', u'Molcas Manual\\\\(version {})'.format(release), u'MOLCAS Team', 'memoir'),
+  (master_doc, 'Manual.tex', r'Molcas Manual\\(version {})'.format(release), u'MOLCAS Team', 'memoir'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -389,7 +397,8 @@ html_compact_lists = True
 
 numfig = True
 numfig_secnum_depth = 3
-numfig_format = {'figure': 'Figure %s',
+numfig_format = {'section': 'Section %s',
+                 'figure': 'Figure %s',
                  'table': 'Table %s',
                  'code-block': 'Block %s'}
 
@@ -401,6 +410,10 @@ latex_elements['utf8extra'] = r'\DeclareUnicodeCharacter{00A0}{\nobreakspace}'\
                               r'\DeclareUnicodeCharacter{2212}{\textminus}'\
                               r'\DeclareUnicodeCharacter{200B}{\relax}'
 latex_elements['fontpkg'] = r'\usepackage[notextcomp]{kpfonts}'
+latex_elements['fontenc'] = r'\usepackage[LGR,T1]{fontenc}'
+latex_elements['sphinxsetup'] = ''
+if sphinx.version_info >= (3, 5, 0, '', 0):
+  latex_elements['sphinxsetup'] += r'verbatimforcewraps=true,'
 latex_elements['preamble'] = r'''\usepackage{molcas}
 \pagestyle{plain}
 \setsecnumdepth{subparagraph}
@@ -412,6 +425,52 @@ latex_elements['preamble'] = r'''\usepackage{molcas}
 \nobibintoc
 \renewcommand{\bibsection}{\relax}
 \frenchspacing'''
+
+# Fix issues with sphinx.sty
+latex_elements['preamble'] += r'''
+% These should be done after loading hyperref
+\makeatletter%
+\@addtoreset{figure}{subsection}%
+\@addtoreset{table}{subsection}%
+\@addtoreset{literalblock}{subsection}%
+\ifspx@opt@mathnumfig%
+  \@addtoreset{equation}{subsection}%
+\fi%
+\makeatother%
+% Add part to numbers
+\AtBeginDocument{
+  \let\oldthefigure\thefigure%
+  \renewcommand{\thefigure}{\thepart.\oldthefigure}%
+  \let\oldthetable\thetable%
+  \renewcommand{\thetable}{\thepart.\oldthetable}%
+  \let\oldtheliteralblock\theliteralblock%
+  \renewcommand{\theliteralblock}{\thepart.\oldtheliteralblock}%
+  \let\oldtheequation\theequation%
+  \renewcommand{\theequation}{\thepart.\oldtheequation}%
+  \renewcommand{\pagename}{p.\@}%
+}
+% Missing unicode character(s)?
+\DeclareUnicodeCharacter{03A6}{$\Phi$}
+% Fix current page checking in footnotes
+\newcounter{cPage}%
+\makeatletter%
+\let\old@spx@thefnmark\spx@thefnmark
+\protected\def\spx@thefnmark#1#2{%
+  \refstepcounter{cPage}\label{current\thecPage}%
+  \edef\spx@tempa{\getpagerefnumber{current\thecPage}}%
+  \old@spx@thefnmark{#1}{#2}%
+}%
+\makeatother%
+% Fix sphinx bug #10188
+\let\sphinxstepexplicit\relax%
+% Fix sphinx bug #10342
+\makeatletter%
+\ifdefined\sphinxAtStartPar%
+  \g@addto@macro\sphinxAtStartPar{\@ifnextchar\par{\@gobble}{}}%
+\fi%
+\makeatother%
+'''
+
 latex_additional_files = [ '_latex/molcas.sty' ]
 
 pngmath_dvipng_args = ['-Q', '10']
@@ -436,8 +495,11 @@ extract_dir = 'samples'
 ref_file = 'references'
 
 def setup(app):
-    app.add_stylesheet('fonts.css')
-    app.add_stylesheet('style.css')
-    app.add_stylesheet('colors.css', title="Default", alternate=False)
-    app.add_stylesheet('nocolors.css', title="No colors")
-    app.add_stylesheet('specific.css')
+    app.add_css_file('fonts.css')
+    app.add_css_file('style.css')
+    app.add_css_file('colors.css', title='Default')
+    app.add_css_file('nocolors.css', title='No colors', rel='alternate stylesheet')
+    app.add_css_file('specific.css')
+    app.add_js_file('styleswitcher.js')
+    app.add_js_file('functions.js')
+    app.add_js_file('mathjax_config.js')

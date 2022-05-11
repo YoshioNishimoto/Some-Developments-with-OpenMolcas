@@ -19,25 +19,12 @@
      &                      Coeff1,iBasn,Coeff2,jBasn,
      &                      nMemab,Con,
      &                      Wk002,m002,Wk003,m003,Wk004,m004,
-     &                      iStb,jStb,
-     &                      ipTmp1,ipTmp2,ipTmp3,
-     &                      ipKnew,ipLnew,ipPnew,ipQnew)
+     &                      iStb,jStb)
 ************************************************************************
 *                                                                      *
 * Object: to compute zeta, kappa, and P.                               *
 *         This is done for all unique pairs of centers                 *
 *         generated from the symmetry unique centers A and B.          *
-*                                                                      *
-* Called from: Drvk2                                                   *
-*                                                                      *
-* Calling    : QEnter                                                  *
-*              DCopy   (ESSL)                                          *
-*              DoZeta                                                  *
-*              SchInt                                                  *
-*              PckInt                                                  *
-*              GetMem                                                  *
-*              RecPrt                                                  *
-*              QExit                                                   *
 *                                                                      *
 *     Author: Roland Lindh, IBM Almaden Research Center, San Jose, CA  *
 *             March '90                                                *
@@ -52,10 +39,9 @@
 *             By Anders Bernhardsson                                   *
 ************************************************************************
       Implicit Real*8 (A-H,O-Z)
+#include "Molcas.fh"
 #include "ndarray.fh"
 #include "real.fh"
-#include "itmax.fh"
-#include "info.fh"
 #include "disp.fh"
 #include "disp2.fh"
       Real*8 Coor(3,2), CoorM(3,4), Alpha(nAlpha), Beta(nBeta),
@@ -64,6 +50,19 @@
      &       Wk002(m002),Wk003(m003),Wk004(m004), Con(nAlpha*nBeta)
       Integer iDCRR(0:7), iAnga(4), iCmpa(4), mStb(2)
 *
+      Call k2Loop_mck_internal(Data)
+c Avoid unused argument warnings
+      If (.False.) Then
+         Call Unused_real_array(Con)
+         Call Unused_real_array(Wk004)
+      End If
+*
+*     This is to allow type punning without an explicit interface
+      Contains
+      SubRoutine k2Loop_mck_internal(Data)
+      Use Iso_C_Binding
+      Real*8, Target :: Data(nAlpha*nBeta*nDArray+nDScalar,nDCRR)
+      Integer, Pointer :: iData(:)
       nZeta = nAlpha*nBeta
       mStb(1) = iStb
       mStb(2) = jStb
@@ -74,13 +73,13 @@
 *
       Do 100 lDCRR = 0, nDCRR-1
 *
-         CoorM(1,2) = DBLE(iPhase(1,iDCRR(lDCRR)))*Coor(1,2)
-         CoorM(2,2) = DBLE(iPhase(2,iDCRR(lDCRR)))*Coor(2,2)
-         CoorM(3,2) = DBLE(iPhase(3,iDCRR(lDCRR)))*Coor(3,2)
+         Call OA(iDCRR(lDCRR),Coor(1:3,2),CoorM(1:3,2))
          call dcopy_(6,CoorM(1,1),1,CoorM(1,3),1)
 *
 *--------Compute Zeta, P and kappa.
 *
+         Call C_F_Pointer(C_Loc(Data(ip_IndZ(1,nZeta),lDCRR+1)),
+     &                    iData,[nAlpha*nBeta+1])
          Call DoZeta(Alpha,nAlpha,Beta,nBeta,
      &               CoorM(1,1),CoorM(1,2),
      &               Data(ip_PCoor(1,nZeta),lDCRR+1),
@@ -89,7 +88,8 @@
      &               Data(ip_ZInv (1,nZeta),lDCRR+1),
      &               Data(ip_Alpha(1,nZeta,1),lDCRR+1),
      &               Data(ip_Beta (1,nZeta,2),lDCRR+1),
-     &               Data(ip_IndZ (1,nZeta),lDCRR+1))
+     &               iData)
+         Nullify(iData)
 *
          Call SchInt_mck(CoorM,iAnga,iCmpa,nAlpha,nBeta,nMemab,
      &                   Data(ip_Z(1,nZeta),lDCRR+1),
@@ -106,6 +106,8 @@
 *                                                                      *
 *        Estimate the largest contracted integral.
 *
+         Call C_F_Pointer(C_Loc(Data(ip_IndZ(1,nZeta),lDCRR+1)),
+     &                    iData,[nAlpha*nBeta+1])
          Data(ip_EstI(nZeta),lDCRR+1) =
      &                      EstI(Data(ip_Z(1,nZeta),lDCRR+1),
      &                           Data(ip_Kappa(1,nZeta),lDCRR+1),
@@ -114,7 +116,7 @@
      &                           Data(ip_ab   (1,nZeta),lDCRR+1),
      &                           iCmpa(1)*iCmpa(2),
      &                           Wk002,m002,
-     &                           Data(ip_IndZ(1,nZeta),lDCRR+1))
+     &                           iData)
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -142,16 +144,6 @@
  100  Continue
 *
       Return
-c Avoid unused argument warnings
-      If (.False.) Then
-         Call Unused_real_array(Con)
-         Call Unused_real_array(Wk004)
-         Call Unused_integer(ipTmp1)
-         Call Unused_integer(ipTmp2)
-         Call Unused_integer(ipTmp3)
-         Call Unused_integer(ipKnew)
-         Call Unused_integer(ipLnew)
-         Call Unused_integer(ipPnew)
-         Call Unused_integer(ipQnew)
-      End If
+      End SubRoutine k2Loop_mck_internal
+*
       End

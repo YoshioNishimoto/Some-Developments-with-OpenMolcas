@@ -8,17 +8,17 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine symtrizorbs_cvb(orbs)
       implicit real*8 (a-h,o-z)
-#include "ext_cvb.fh"
 #include "main_cvb.fh"
 #include "optze_cvb.fh"
 #include "files_cvb.fh"
 #include "print_cvb.fh"
 
-#include "malloc_cvb.fh"
+#include "WrkSpc.fh"
       dimension orbs(norb,norb)
 
       i1 = mstacki_cvb(norb)
@@ -29,8 +29,10 @@
       i6 = mstackr_cvb(norb)
       i7 = mstackr_cvb(norb)
       call symtrizorbs2_cvb(orbs,
-     >  iw(ls(3)),w(ls(4)),iw(ls(5)),w(ls(6)),iw(ls(8)),iw(ls(11)),
-     >  iw(i1),iw(i2),iw(i3),iw(i4),iw(i5),w(i6),w(i7))
+     >  iwork(ls(3)),work(ls(4)),iwork(ls(5)),work(ls(6)),iwork(ls(8)),
+     >  iwork(ls(11)),
+     >  iwork(i1),iwork(i2),iwork(i3),iwork(i4),iwork(i5),work(i6),
+     >  work(i7))
       call mfreei_cvb(i1)
       return
       end

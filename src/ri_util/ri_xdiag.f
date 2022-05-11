@@ -16,15 +16,17 @@ C     Thomas Bondo Pedersen, Jan. 2007.
 C
 C     Purpose: compute exact integral diagonal.
 C
+      use ChoArr, only: iSP2F, nBstSh
+      use ChoSwp, only: nnBstRSh, iiBstRSh, IndRed
       Implicit None
       Integer nDiag
       Real*8  Diag(nDiag)
 #include "cholesky.fh"
-#include "choptr.fh"
-#include "WrkSpc.fh"
+#include "stdalloc.fh"
 
-      Integer ip0, ip_Scr, l_Scr
-      Integer ip_SewMem, l_SewMem
+      Real*8, Allocatable :: Scr(:)
+
+      Integer l_SewMem
       Integer ID
       Integer iSAB, iShlA, iShlB
       Integer NumAB
@@ -33,27 +35,15 @@ C
       Logical  Rsv_Tsk
       External Rsv_Tsk
 
-      Integer i, j, k
-      Integer iSP2F, nBstSh, IndRed, iiBstRSh, nnBstRSh
-      iSP2F(i)=iWork(ip_iSP2F-1+i)
-      nBstSh(i)=iWork(ip_nBstSh-1+i)
-      IndRed(i,j)=iWork(ip_IndRed-1+mmBstRT*(j-1)+i)
-      iiBstRSh(i,j,k)=iWork(ip_iiBstRSh-1+nSym*nnShl*(k-1)+nSym*(j-1)+i)
-      nnBstRSh(i,j,k)=iWork(ip_nnBstRSh-1+nSym*nnShl*(k-1)+nSym*(j-1)+i)
-
-#if defined (_DEBUG_)
-      Call qEnter('RI_XDiag')
-#endif
+      Integer i
 
 C     Allocate memory.
 C     ----------------
 
       Call Init_Tsk(ID,nnShl)
 
-      l_Scr = Mx2Sh
-      Call GetMem('xDiaScr','Allo','Real',ip_Scr,l_Scr)
-      Call GetMem('getMx','Max ','Real',ip_SewMem,l_SewMem)
-      Call xSetMem_Ints(l_SewMem)
+      Call mma_allocate(Scr,Mx2Sh,Label='Scr')
+      Call mma_maxDBLE(l_SewMem)
 
 C     Initialize diagonal array.
 C     --------------------------
@@ -63,7 +53,6 @@ C     --------------------------
 C     Parallel loop over shell pairs in first red. set.
 C     -------------------------------------------------
 
-      ip0 = ip_Scr - 1
       Do While (Rsv_Tsk(ID,iSAB))
 
 C        Get shells.
@@ -81,7 +70,7 @@ C        ----------------
          End If
          ShA = iShlA
          ShB = iShlB
-         Call Cho_MCA_DiagInt(iShlA,iShlB,Work(ip_Scr),NumAB)
+         Call Cho_MCA_DiagInt(iShlA,iShlB,Scr,NumAB)
 
 C        Extract diagonal elements.
 C        --------------------------
@@ -90,7 +79,7 @@ C        --------------------------
             i1 = iiBstR(iSym,1) + iiBstRSh(iSym,iSAB,1) + 1
             i2 = i1 + nnBstRSh(iSym,iSAB,1) - 1
             Do i = i1,i2
-               Diag(i) = Work(ip0+IndRed(i,1))
+               Diag(i) = Scr(IndRed(i,1))
             End Do
          End Do
 
@@ -105,11 +94,7 @@ C     --------------
 C     Deallocate memory.
 C     ------------------
 
-      Call xRlsMem_Ints
-      Call GetMem('xDiaScr','Free','Real',ip_Scr,l_Scr)
-
-#if defined (_DEBUG_)
-      Call qExit('RI_XDiag')
-#endif
+      Call xRlsMem_Ints()
+      Call mma_deallocate(Scr)
 
       End

@@ -8,22 +8,23 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine fraginp_cvb(ip_iconfs)
       implicit real*8 (a-h,o-z)
       parameter (nstrin=2,ncmp=4)
       character*8 string(nstrin)
+      dimension dum(1)
       save string
       data string/'WAVE    ','CON    '/
-#include "ext_cvb.fh"
 #include "main_cvb.fh"
 #include "optze_cvb.fh"
 #include "files_cvb.fh"
 #include "print_cvb.fh"
 
 #include "frag_cvb.fh"
-#include "malloc_cvb.fh"
+#include "WrkSpc.fh"
 
 1000  call fstring_cvb(string,nstrin,istr,ncmp,2)
       if(istr.eq.1)then
@@ -37,7 +38,8 @@ c 'WAVE'
         nbet_fr(1,nfrag)=0
         i2s_fr(1,nfrag)=-1
 100     Scurr=-one
-        call real_cvb(Scurr,1,nread,1)
+        call real_cvb(dum,1,nread,1)
+        Scurr=dum(1)
         if(Scurr.ne.-one)then
           nS_fr(nfrag)=nS_fr(nfrag)+1
           i2s_fr(nS_fr(nfrag),nfrag)=nint(2d0*Scurr)
@@ -65,8 +67,8 @@ c 'CON'
      >      mavaili_cvb(),mxconf,nconf
           call abend_cvb()
         endif
-        call izero(iw(noe*(nconf-1)+ip_iconfs),noe)
-        call int_cvb(iw(noe*(nconf-1)+ip_iconfs),noe,nread,1)
+        call izero(iwork(noe*(nconf-1)+ip_iconfs),noe)
+        call int_cvb(iwork(noe*(nconf-1)+ip_iconfs),noe,nread,1)
         call fstring_cvb('CON',1,istr2,3,2)
         if(istr2.ne.0)then
           nconf_fr(nfrag)=nconf_fr(nfrag)+1

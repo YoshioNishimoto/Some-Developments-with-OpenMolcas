@@ -25,49 +25,66 @@ incomplete.
 #define GCC_VERSION 0
 #endif
 
-/* Allocatable characters */
-#if (__GNUC__ && GCC_VERSION < 40800 )
-#undef ALLOC_CHAR
-#else
-#define ALLOC_CHAR
-#endif
-
 /* Allocate on assignment */
-#if ((!defined(ALLOC_CHAR)) || \
-     ( __SUNPRO_F90 ))
+#if ( __SUNPRO_F90 )
 #undef ALLOC_ASSIGN
 #else
 #define ALLOC_ASSIGN
 #endif
 
-/* Allocatable scalars */
-#if (__GNUC__ && GCC_VERSION < 40500 )
-#undef ALLOC_SCAL
-#else
-#define ALLOC_SCAL
-#endif
-
 /* Pointer bounds remapping */
-#if (__GNUC__ && GCC_VERSION < 40700 )
+#if ( __SUNPRO_F90 )
 #undef POINTER_REMAP
 #else
 #define POINTER_REMAP
 #endif
 
-/* Parity of the binary representation (poppar) */
-#if ((__GNUC__ && GCC_VERSION < 40600 ) || \
-     ( __INTEL_COMPILER && __INTEL_COMPILER < 1300 ))
-#undef BINARY_PARITY
-#else
-#define BINARY_PARITY
-#endif
-
 /* Trailing zeros in the binary representation (trailz) */
-#if ((__GNUC__ && GCC_VERSION < 40600 ) || \
-     ( __INTEL_COMPILER && __INTEL_COMPILER < 1300 ) || \
-     ( __PGI ))
+#if ( __PGI )
 #undef TRAILING_ZEROS
 #else
 #define TRAILING_ZEROS
 #endif
 
+/* Bit extraction (ibits) with zero length */
+#if ( __PGI )
+#undef IBITS_LEN_ZERO
+#else
+#define IBITS_LEN_ZERO
+#endif
+
+/* c_ptr binding */
+#if ( NAGFOR && __NAG_COMPILER_RELEASE < 61 )
+#undef C_PTR_BINDING
+#else
+#define C_PTR_BINDING
+#endif
+
+/* Internal procedures as arguments.
+With PGI 20 ( __PGIC__ >= 20 ) it compiles, but it appears to be buggy at runtime! */
+#if (( __SUNPRO_F90 ) || ( __PGI ))
+#undef INTERNAL_PROC_ARG
+#else
+#define INTERNAL_PROC_ARG
+#endif
+
+/* Allows files with no compilable instructions */
+#if (( NAGFOR ) || ( __PGI ))
+#undef EMPTY_FILES
+#else
+#define EMPTY_FILES
+#endif
+
+/* Storage_size in initialization */
+#if (( __GNUC__) && (GCC_VERSION < 70000))
+#undef SIZE_INITIALIZATION
+#else
+#define SIZE_INITIALIZATION
+#endif
+
+/* Safe character member initialization */
+#if (( __GNUC__) && (GCC_VERSION < 80000))
+#undef CHAR_MEMBER_INIT
+#else
+#define CHAR_MEMBER_INIT
+#endif

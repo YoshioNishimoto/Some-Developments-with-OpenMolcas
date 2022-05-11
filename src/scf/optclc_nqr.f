@@ -14,7 +14,6 @@
 #include "llists.fh"
 #include "file.fh"
 #include "stdalloc.fh"
-#include "WrkSpc.fh"
       Integer nCI,nD,nOV,MxOptm,kOptim
       Real*8 CInter(nCI,nD), Grd1(nOV,nD), Xnp1(nOV,nD)
       Integer Ind(MxOptm)
@@ -30,8 +29,8 @@
 *
 *     get last gradient grad(n) from LList
 *
-      Call GetVec(LuGrd,Ind(kOptim),LLGrad,inode,Grd1,nOV*nD)
-      Call GetVec(Lux,  Ind(kOptim),LLx,   inode,Xnp1,nOV*nD)
+      Call GetVec(Ind(kOptim),LLGrad,inode,Grd1,nOV*nD)
+      Call GetVec(Ind(kOptim),LLx,   inode,Xnp1,nOV*nD)
 *
       Do iD = 1, nD
          Call DSCAL_(nOV,CInter(kOptim,iD),Grd1(1,iD),1)
@@ -44,7 +43,7 @@
 *        get proper gradient from LList.
          Call GetNod(ivec,LLGrad,inode)
          If (inode.eq.0) GoTo 555
-         Call iVPtr(LuGrd,Aux,nOV*nD,inode)
+         Call iVPtr(Aux,nOV*nD,inode)
          Do iD = 1, nD
             Call Daxpy_(nOV,CInter(i,iD),Aux(1,iD),1,Grd1(1,iD),1)
          End Do
@@ -52,7 +51,7 @@
 *        get proper X-vector from LList.
          Call GetNod(ivec,LLx,inode)
          If (inode.eq.0) GoTo 555
-         Call iVPtr(Lux,Aux,nOV*nD,inode)
+         Call iVPtr(Aux,nOV*nD,inode)
          Do iD = 1, nD
             Call Daxpy_(nOV,CInter(i,iD),Aux(1,iD),1,Xnp1(1,iD),1)
          End Do
@@ -66,6 +65,5 @@
 *
 *     Hmmm, no entry found in LList, that's strange
  555  Write (6,*) 'DIIS: no entry found in LList!'
-      Call QTrace
       Call Abend()
       End

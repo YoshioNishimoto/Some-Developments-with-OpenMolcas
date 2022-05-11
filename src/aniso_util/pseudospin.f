@@ -14,27 +14,26 @@ c moment(l,dim,dim) (input)
 c z - pseuDospin eigenfunctions (output)
       Implicit None
 #include "stdalloc.fh"
-      Integer, parameter            :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter        :: wp=kind(0.d0)
       Integer, intent(in)           :: dim, iprint
       Integer, intent(in)           :: iDir, iOpt
-      Complex(kind=wp), intent(in)  :: M(3,dim,dim)
-      Complex(kind=wp), intent(out) :: z(dim,dim)
+      Complex(kind=8), intent(in)  :: M(3,dim,dim)
+      Complex(kind=8), intent(out) :: z(dim,dim)
       ! local variables:
       Integer                       :: info, i
-      Real(kind=wp), allocatable    :: w(:)
-      Complex(kind=wp), allocatable :: z1(:,:)
-      Real(kind=wp)                 :: dznrm2_
+      Real(kind=8), allocatable    :: w(:)
+      Complex(kind=8), allocatable :: z1(:,:)
+      Real(kind=8)                 :: dznrm2_
       External                      :: dznrm2_
       Logical                       :: dbg
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-      Call qEnter('pseudospin')
 
       Call mma_allocate(W,dim,'W')
       Call mma_allocate(Z1,dim,dim,'Z1')
       dbg=iprint.ge.3
-      Call dcopy_(dim,0.0_wp,0,W,1)
-      Call zcopy_(dim*dim,(0.0_wp,0.0_wp),0,Z,1)
-      Call zcopy_(dim*dim,(0.0_wp,0.0_wp),0,Z1,1)
+      Call dcopy_(dim,[0.0_wp],0,W,1)
+      Call zcopy_(dim*dim,[(0.0_wp,0.0_wp)],0,Z,1)
+      Call zcopy_(dim*dim,[(0.0_wp,0.0_wp)],0,Z1,1)
       info=0
       Call diag_c2(M(iDir,1:dim,1:dim),dim,info,w,z1)
       If(dbg) Then
@@ -66,7 +65,6 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
  199  Continue
       Call mma_deallocate(W)
       Call mma_deallocate(Z1)
-      Call qExit('pseudospin')
       Return
       End
 

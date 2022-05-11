@@ -8,7 +8,7 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
-      SUBROUTINE MKCOT
+      SUBROUTINE MKCOT_MCLR
      &           (NSYM,NLEV,NVERT,MIDLEV,NMIDV,MIDV1,MIDV2,NWALK,NIPWLK,
      &            ISM,IDOWN,NOW,IOW,NCSF,IOCSF,NOCSF,ISCR,IPRINT)
 C
@@ -32,19 +32,23 @@ C
 C     CLEAR ARRAYS IOW AND NOW
 C
       DO 10 IHALF=1,2
-        DO 10 MV=1,NMIDV
-          DO 10 IS=1,NSYM
+        DO 11 MV=1,NMIDV
+          DO 12 IS=1,NSYM
             NOW(IHALF,IS,MV)=0
             IOW(IHALF,IS,MV)=0
+12        CONTINUE
+11      CONTINUE
 10    CONTINUE
 C
 C     CLEAR ARRAYS IOCSF AND NOCSF
 C
       DO 20 IS=1,NSYM
-        DO 20 MV=1,NMIDV
-          DO 20 JS=1,NSYM
+        DO 21 MV=1,NMIDV
+          DO 22 JS=1,NSYM
             IOCSF(JS,MV,IS)=0
             NOCSF(JS,MV,IS)=0
+22        CONTINUE
+21      CONTINUE
 20    CONTINUE
 C
 C     START MAIN LOOP OVER UPPER AND LOWER WALKS, RESPECTIVELY.

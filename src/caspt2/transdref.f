@@ -16,7 +16,6 @@
       DIMENSION TORB(*),DREF(NDREF)
 * Purpose: given an orbital transformation array
 * transform the DREF array (blocked triangular, active)
-      CALL QENTER('TRANSDREF')
 
       NT=0
       NAMX=0
@@ -46,7 +45,7 @@
         NO=NI+NA+NS
         IF (NO.eq.0) GOTO 99
 * Copy the matrices to square storage: first fill with zeroes.
-        CALL DCOPY_(NA**2,0.0D0,0,WORK(LTSQ),1)
+        CALL DCOPY_(NA**2,[0.0D0],0,WORK(LTSQ),1)
         IOFF=0
         ITOFF=ITOFF+NI**2
         DO I=1,NR1
@@ -110,7 +109,6 @@
       CALL GETMEM('TSQ','FREE','REAL',LTSQ,NAMX**2)
       CALL GETMEM('TMP','FREE','REAL',LTMP,NAMX**2)
 
-      CALL QEXIT('TRANSDREF')
 
       RETURN
       END

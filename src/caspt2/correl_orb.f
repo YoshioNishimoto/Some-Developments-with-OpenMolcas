@@ -14,12 +14,12 @@
 * Alter the correlating orbital space by various freeze-delete schemes.
 *
 ************************************************************************
-      use inputdata
+      use InputData, only: Input
+      use output_caspt2, only: EMP2
       implicit none
 #include "stdalloc.fh"
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 
       Real*8, Allocatable :: CMO(:), DPQ(:)
       Integer IDISK

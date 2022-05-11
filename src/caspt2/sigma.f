@@ -18,25 +18,23 @@
 * 1999: GEMINAL R12 ENABLED                  *
 *--------------------------------------------*
       SUBROUTINE SIGMA_CASPT2(ALPHA,BETA,IVEC,JVEC)
+      use Fockof
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
 #include "eqsolv.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
+#include "stdalloc.fh"
 #include "sigma.fh"
 #include "SysDef.fh"
-      COMMON /CPLCAS/ IFCOUP(MXCASE,MXCASE)
-      COMMON /FOCKOF/ LFIT,LFIA,LFTA,LFTI,LFAI,LFAT,
-     &                IOFFIT(8),IOFFIA(8),IOFFTA(8)
+#include "cplcas.fh"
 
 C Compute |JVEC> := BETA* |JVEC> + ALPHA* (H0-E0)* |IVEC>
 C where the vectors are represented in transformed basis and
 C are  stored at positions IVEC and JVEC on the LUSOLV unit.
 
-      CALL QENTER('SIGMA')
 
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       WRITE(6,*)' Entering SIGMA.'
       WRITE(6,*)
      &' Compute |JVEC> := Beta*|JVEC> + Alpha*(H0-E0)|IVEC>'
@@ -92,7 +90,7 @@ C Flop counts:
 C First compute diagonal block contributions:
 CTEST      WRITE(6,*)' First, do it for (H0(diag)-E0).'
       CALL PSGMDIA(ALPHA,BETA,IVEC,JVEC)
-      IF(ALPHA.EQ.0.0D00) GOTO 99
+      IF(ALPHA.EQ.0.0D0) GOTO 99
 CTEST      WRITE(6,*)
 CTEST     & ' From now on, scaling with BETA is already done.'
 CTEST      WRITE(6,*)' Test print  after SGMDIA call in SIGMA:'
@@ -120,16 +118,18 @@ C SVC: add transposed fock matrix blocks
         NFIA=NFIA+NS*NI
         NFTA=NFTA+NS*NA
       END DO
-      NFIT=NFIT+1
-      NFIA=NFIA+1
-      NFTA=NFTA+1
+      NFIT=NFIT+1 !?
+      NFIA=NFIA+1 !?
+      NFTA=NFTA+1 !?
 
-      CALL GETMEM('FIT','ALLO','REAL',LFIT,NFIT)
-      CALL GETMEM('FIA','ALLO','REAL',LFIA,NFIA)
-      CALL GETMEM('FTA','ALLO','REAL',LFTA,NFTA)
-      CALL GETMEM('FTI','ALLO','REAL',LFTI,NFIT)
-      CALL GETMEM('FAI','ALLO','REAL',LFAI,NFIA)
-      CALL GETMEM('FAT','ALLO','REAL',LFAT,NFTA)
+      Call mma_allocate(FIT_Full,NFIT,Label='FIT_Full')
+      Call mma_allocate(FTI_Full,NFIT,Label='FTI_Full')
+
+      Call mma_allocate(FIA_Full,NFIA,Label='FIA_Full')
+      Call mma_allocate(FAI_Full,NFIA,Label='FAI_Full')
+
+      Call mma_allocate(FTA_Full,NFTA,Label='FTA_Full')
+      Call mma_allocate(FAT_Full,NFTA,Label='FAT_Full')
 
       IFIFA=0
       DO ISYM=1,NSYM
@@ -137,26 +137,44 @@ C SVC: add transposed fock matrix blocks
         NA=NASH(ISYM)
         NS=NSSH(ISYM)
         NO=NORB(ISYM)
+
+        FIT(ISYM)%A(1:NA*NI) =>
+     &     FIT_Full(IOFFIT(ISYM)+1:IOFFIT(ISYM)+NA*NI)
+        FTI(ISYM)%A(1:NA*NI) =>
+     &     FTI_Full(IOFFIT(ISYM)+1:IOFFIT(ISYM)+NA*NI)
+
+        FIA(ISYM)%A(1:NS*NI) =>
+     &     FIA_Full(IOFFIA(ISYM)+1:IOFFIA(ISYM)+NS*NI)
+        FAI(ISYM)%A(1:NS*NI) =>
+     &     FAI_Full(IOFFIA(ISYM)+1:IOFFIA(ISYM)+NS*NI)
+
+        FTA(ISYM)%A(1:NS*NA) =>
+     &     FTA_Full(IOFFTA(ISYM)+1:IOFFTA(ISYM)+NS*NA)
+        FAT(ISYM)%A(1:NS*NA) =>
+     &     FAT_Full(IOFFTA(ISYM)+1:IOFFTA(ISYM)+NS*NA)
+
         CALL FBLOCK(WORK(LFIFA+IFIFA),NO,NI,NA,NS,
-     &       WORK(LFIT+IOFFIT(ISYM)),WORK(LFTI+IOFFIT(ISYM)),
-     &       WORK(LFIA+IOFFIA(ISYM)),WORK(LFAI+IOFFIA(ISYM)),
-     &       WORK(LFTA+IOFFTA(ISYM)),WORK(LFAT+IOFFTA(ISYM)))
+     &              FIT(ISYM)%A(:),FTI(ISYM)%A(:),
+     &              FIA(ISYM)%A(:),FAI(ISYM)%A(:),
+     &              FTA(ISYM)%A(:),FAT(ISYM)%A(:))
+
         IFIFA=IFIFA+(NO*(NO+1))/2
+
       END DO
 
       CALL TIMING(CPU0,CPU,TIO0,TIO)
 C Loop over types and symmetry block of sigma vector:
       DO 300 ICASE1=1,11
 *     DO 300 ICASE1=1,NCASES
-        DO 300 ISYM1=1,NSYM
-          IF(NINDEP(ISYM1,ICASE1).EQ.0) GOTO 300
+        DO 301 ISYM1=1,NSYM
+          IF(NINDEP(ISYM1,ICASE1).EQ.0) GOTO 301
           NIS1=NISUP(ISYM1,ICASE1)
           NAS1=NASUP(ISYM1,ICASE1)
           NSGM2=NIS1*NAS1
-          IF(NSGM2.EQ.0) GOTO 300
+          IF(NSGM2.EQ.0) GOTO 301
 
           CALL GETMEM('SGM2','ALLO','REAL',LSGM2,NSGM2)
-          CALL DCOPY_(NSGM2,0.0D00,0,WORK(LSGM2),1)
+          CALL DCOPY_(NSGM2,[0.0D0],0,WORK(LSGM2),1)
 
           NSGM1=0
           LSGM1=1
@@ -169,7 +187,7 @@ C Loop over types and symmetry block of sigma vector:
           END IF
           IF(NSGM1.GT.0) THEN
             CALL GETMEM('SGM1','ALLO','REAL',LSGM1,NSGM1)
-            CALL DCOPY_(NSGM1,0.0D00,0,WORK(LSGM1),1)
+            CALL DCOPY_(NSGM1,[0.0D0],0,WORK(LSGM1),1)
           END IF
 
           IMLTOP=0
@@ -203,7 +221,7 @@ C the SGM subroutines
                 GOTO 999
               END IF
 
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
               WRITE(6,*)' ISYM1,ICASE1:',ISYM1,ICASE1
               WRITE(6,*)' ISYM2,ICASE2:',ISYM2,ICASE2
               WRITE(6,*)' SIGMA calling SGM with IMLTOP=',IMLTOP
@@ -254,7 +272,7 @@ C-SVC: sum the replicate arrays:
           END IF
 
 C       XTST2=DDOT_(NSGM2,WORK(LSGM2),1,WORK(LSGM2),1)
-C       XTST1=0.0D00
+C       XTST1=0.0D0
 C       IF(NSGM1.GT.0)XTST1=DDOT_(NSGM1,WORK(LSGM1),1,WORK(LSGM1),1)
 C       WRITE(6,'(1x,a,a,i2,2f16.6)')
 C    & 'Contr. SGM2, SGM1, ',cases(icase1),isym1,xtst2,xtst1
@@ -318,18 +336,19 @@ C Add to sigma array. Multiply by S to  lower index.
 C Write SGMX to disk.
           CALL RHS_SAVE (NAS1,NIS1,lg_SGMX,ICASE1,ISYM1,JVEC)
           CALL RHS_FREE (NAS1,NIS1,lg_SGMX)
+ 301    CONTINUE
  300  CONTINUE
 
       IMLTOP=1
 C Loop over types and symmetry block of CX vector:
       DO 600 ICASE1=1,11
 *     DO 600 ICASE1=1,NCASES
-        DO 600 ISYM1=1,NSYM
-          IF(NINDEP(ISYM1,ICASE1).EQ.0) GOTO 600
+        DO 601 ISYM1=1,NSYM
+          IF(NINDEP(ISYM1,ICASE1).EQ.0) GOTO 601
           NIS1=NISUP(ISYM1,ICASE1)
           NAS1=NASUP(ISYM1,ICASE1)
           ND2=NIS1*NAS1
-          IF(ND2.EQ.0) GOTO 600
+          IF(ND2.EQ.0) GOTO 601
 
           CALL RHS_ALLO (NAS1,NIS1,lg_D2)
           CALL RHS_SCAL (NAS1,NIS1,lg_D2,0.0D0)
@@ -372,7 +391,7 @@ CPAM Sanity check:
             ND1=NASH(ISYM1)*NISH(ISYM1)
             IF(ND1.GT.0) THEN
               CALL GETMEM('D1','ALLO','REAL',LD1,ND1)
-              CALL DCOPY_(ND1,0.0D00,0,WORK(LD1),1)
+              CALL DCOPY_(ND1,[0.0D0],0,WORK(LD1),1)
               CALL SPEC1A(IMLTOP,FACT,ISYM1,WORK(LD2),
      &                    WORK(LD1))
             END IF
@@ -380,7 +399,7 @@ CPAM Sanity check:
             ND1=NASH(ISYM1)*NSSH(ISYM1)
             IF(ND1.GT.0) THEN
               CALL GETMEM('D1','ALLO','REAL',LD1,ND1)
-              CALL DCOPY_(ND1,0.0D00,0,WORK(LD1),1)
+              CALL DCOPY_(ND1,[0.0D0],0,WORK(LD1),1)
               CALL SPEC1C(IMLTOP,FACT,ISYM1,WORK(LD2),
      &                    WORK(LD1))
             END IF
@@ -388,7 +407,7 @@ CPAM Sanity check:
             ND1=NIS1
             IF(ND1.GT.0) THEN
               CALL GETMEM('D1','ALLO','REAL',LD1,ND1)
-              CALL DCOPY_(ND1,0.0D00,0,WORK(LD1),1)
+              CALL DCOPY_(ND1,[0.0D0],0,WORK(LD1),1)
               CALL SPEC1D(IMLTOP,FACT,WORK(LD2),WORK(LD1))
             END IF
           END IF
@@ -419,7 +438,7 @@ CPAM Sanity check:
                 LSGMX=lg_SGMX
               ELSE
                 CALL GETMEM('SGMX','ALLO','REAL',LSGMX,NSGMX)
-                CALL DCOPY_(NSGMX,0.0D00,0,WORK(LSGMX),1)
+                CALL DCOPY_(NSGMX,[0.0D0],0,WORK(LSGMX),1)
               END IF
 
 * SVC: this array is just zero....
@@ -432,7 +451,7 @@ CPAM Sanity check:
 *               GOTO 999
 *             END IF
 
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
               WRITE(6,*)' ISYM1,ICASE1:',ISYM1,ICASE1
               WRITE(6,*)' ISYM2,ICASE2:',ISYM2,ICASE2
               WRITE(6,*)' SIGMA calling SGM with IMLTOP=',IMLTOP
@@ -474,13 +493,14 @@ C-SVC: no need for the replicate arrays any more, fall back to one array
  500      CONTINUE
           CALL GETMEM('D2','FREE','REAL',LD2,ND2)
           IF(ND1.GT.0) CALL GETMEM('D1','FREE','REAL',LD1,ND1)
+ 601    CONTINUE
  600  CONTINUE
 
       CALL TIMING(CPU1,CPU,TIO1,TIO)
       CPUSGM=CPUSGM+(CPU1-CPU0)
       TIOSGM=TIOSGM+(TIO1-TIO0)
 
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       WRITE(6,*)' End of SIGMA. Flop counts:'
       WRITE(6,'(a,i12)')' In MLTSCA:',NFSCA
       WRITE(6,'(a,i12)')' In MLTDXP:',NFDXP
@@ -489,12 +509,20 @@ C-SVC: no need for the replicate arrays any more, fall back to one array
       WRITE(6,*)
 #endif
 
-      CALL GETMEM('FIT','FREE','REAL',LFIT,NFIT)
-      CALL GETMEM('FIA','FREE','REAL',LFIA,NFIA)
-      CALL GETMEM('FTA','FREE','REAL',LFTA,NFTA)
-      CALL GETMEM('FTI','FREE','REAL',LFTI,NFIT)
-      CALL GETMEM('FAI','FREE','REAL',LFAI,NFIA)
-      CALL GETMEM('FAT','FREE','REAL',LFAT,NFTA)
+      Call mma_deallocate(FIT_Full)
+      Call mma_deallocate(FTI_Full)
+      Call mma_deallocate(FIA_Full)
+      Call mma_deallocate(FAI_Full)
+      Call mma_deallocate(FTA_Full)
+      Call mma_deallocate(FAT_Full)
+      Do iSym = 1, nSym
+         FIT(iSym)%A => Null()
+         FTI(iSym)%A => Null()
+         FIA(iSym)%A => Null()
+         FAI(iSym)%A => Null()
+         FTA(iSym)%A => Null()
+         FAT(iSym)%A => Null()
+      End Do
 
 C Transform contrav C  to eigenbasis of H0(diag):
       CALL PTRTOSR(1,IVEC,IVEC)
@@ -502,7 +530,6 @@ C Transform covar. sigma to eigenbasis of H0(diag):
       CALL PTRTOSR(0,JVEC,JVEC)
 
   99  CONTINUE
-      CALL QEXIT('SIGMA')
       RETURN
 
  999  CONTINUE

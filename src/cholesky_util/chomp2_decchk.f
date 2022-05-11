@@ -43,7 +43,6 @@ C
       Character*13 SecNam
       Parameter (SecNam = 'ChoMP2_DecChk', ThisNm = 'DecChk')
 
-      Call qEnter(ThisNm)
 
       If (iOption_MP2CD .eq. 1) Then ! (ai|bj) int
          Call ChoMP2_DecChk_1(irc,iSym,Col,nDim,nCol,Wrk,lWrk,ErrStat)
@@ -55,7 +54,6 @@ C
          irc = -123456
       End If
 
-      Call qExit(ThisNm)
 
       End
       SubRoutine ChoMP2_DecChk_1(irc,iSym,Col,nDim,nCol,Wrk,lWrk,
@@ -77,6 +75,7 @@ C              ErrStat(1) = min error
 C              ErrStat(2) = max error
 C              ErrStat(3) = rms error
 C
+      use ChoMP2, only: OldVec
 #include "implicit.fh"
       Real*8  Col(nDim,nCol), Wrk(lWrk), ErrStat(3)
 #include "cholesky.fh"
@@ -90,7 +89,6 @@ C
       Character*15 SecNam
       Parameter (SecNam = 'ChoMP2_DecChk_1', ThisNm = 'DecChk_1')
 
-      Call qEnter(ThisNm)
       irc = 0
 
 C     Check dimensions.
@@ -149,10 +147,8 @@ C        Compute "old" and subtract "new".
 C        ---------------------------------
 
          If (InCore(iSym)) Then
-            kOff1 = ip_OldVec
-            kOff2 = ip_OldVec + ibj1 - 1
             Call DGEMM_('N','T',Nai,Nbj,NumCho(iSym),
-     &                 1.0d0,Work(kOff1),Nai,Work(kOff2),Nai,
+     &                 1.0d0,OldVec,Nai,OldVec(ibj1),Nai,
      &                 -1.0d0,Col,Nai)
          Else
             lU     = lUnit_F(iSym,1)
@@ -188,7 +184,6 @@ C     ------------------
       ErrStat(3) = sqrt(ErrStat(3)/xdim)
 
     1 Continue
-      Call qExit(ThisNm)
       End
       SubRoutine ChoMP2_DecChk_2(irc,iSym,Col,nDim,nCol,Wrk,lWrk,
      &                           ErrStat)
@@ -209,6 +204,7 @@ C              ErrStat(1) = min error
 C              ErrStat(2) = max error
 C              ErrStat(3) = rms error
 C
+      use ChoMP2, only: OldVec
 #include "implicit.fh"
       Real*8  Col(nDim,nCol), Wrk(lWrk), ErrStat(3)
 #include "cholesky.fh"
@@ -228,7 +224,6 @@ C
       Evir(k)=Work(ip_EVir-1+k)
       EOcc(k)=Work(ip_EOc-1+k)
 
-      Call qEnter(ThisNm)
       irc = 0
 
 C     Check dimensions.
@@ -273,10 +268,8 @@ C        Compute amplitudes from "old" vectors.
 C        --------------------------------------
 
          If (InCore(iSym)) Then
-            kOff1 = ip_OldVec
-            kOff2 = ip_OldVec + ibj1 - 1
             Call DGEMM_('N','T',Nai,Nbj,NumCho(iSym),
-     &                 1.0d0,Work(kOff1),Nai,Work(kOff2),Nai,
+     &                 1.0d0,OldVec,Nai,OldVec(ibj1),Nai,
      &                 0.0d0,Col,Nai)
          Else
             lU     = lUnit_F(iSym,1)
@@ -345,5 +338,4 @@ C     ------------------
       ErrStat(3) = sqrt(ErrStat(3)/xdim)
 
     1 Continue
-      Call qExit(ThisNm)
       End

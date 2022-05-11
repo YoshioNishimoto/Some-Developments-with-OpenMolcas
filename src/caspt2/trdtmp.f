@@ -9,19 +9,17 @@
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
       SUBROUTINE TRDTMP(DPT2)
+      USE Para_Info, ONLY: King
       IMPLICIT REAL*8 (A-H,O-Z)
 
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
-      LOGICAL KING
 
       DIMENSION DPT2(*)
       if(nasht.eq.0) return
-      CALL QENTER('TRDTMP')
 
 C Test print:
 CTEST      WRITE(*,*)' At beginning of TRDTMP. The DPT2 array:'
@@ -37,7 +35,7 @@ CTEST      end do
 
       ndtemp=nasht**2
       call getmem('dtemp','allo','real',ldtemp,ndtemp)
-      call dcopy_(ndtemp,0.0d0,0,work(ldtemp),1)
+      call dcopy_(ndtemp,[0.0d0],0,work(ldtemp),1)
 CTEST      WRITE(*,*)' Memory list:'
 CTEST      call getmem('Point A','list','real',ldum,ndum)
 CTEST      WRITE(*,*)' Calling TRDACT.'
@@ -86,6 +84,5 @@ CTEST      WRITE(*,*)' At end of TRDTMP. Memory list:'
 CTEST      call getmem('Point B','list','real',ldum,ndum)
       call getmem('dtemp','free','real',ldtemp,ndtemp)
 CTEST      WRITE(*,*)' Leaving TRDTMP.'
-      CALL QEXIT('TRDTMP')
       return
       end

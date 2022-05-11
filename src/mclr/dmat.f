@@ -10,7 +10,7 @@
 *                                                                      *
 * Copyright (C) 1996, Markus P. Fuelscher                              *
 ************************************************************************
-      Subroutine Dmat(CMO,OCC,D)
+      Subroutine Dmat_MCLR(CMO,OCC,D)
 ************************************************************************
 *                                                                      *
 *     purpose:                                                         *
@@ -42,7 +42,6 @@
 
 
 #include "Input.fh"
-#include "WrkSpc.fh"
 
       iOff1 = 0
       iOff2 = 0

@@ -16,23 +16,18 @@
 *             in RASSI
 *
 ************************************************************************
+      Use Fock_util_global, only: Deco, Estimate, PseudoChoMOs, Update
       Implicit Real*8 (A-H,O-Z)
-#include "itmax.fh"
-#include "info.fh"
 #include "rassi.fh"
 #include "print.fh"
       Character*180 KWord, Key, Get_Ln
       External Get_Ln
-      Logical  DFonly,timings
-      Logical  Update,Estimate,Deco,PseudoChoMOs
+      Logical  DFonly
       character*15 SECNAM
       parameter (SECNAM = 'CHO_RASSI_RDINP')
-      Integer  ALGO,Nscreen
-      Real*8   dmpk
 *
-      Common /CHORASSI / ALGO,Nscreen,dmpk
-      COMMON /CHOTIME / timings
-      COMMON /LKSCREEN / Estimate, Update, Deco, PseudoChoMOs
+#include "chorassi.fh"
+#include "chotime.fh"
 *
       iRout=1
       iPrint=nPrint(iRout)
@@ -83,13 +78,6 @@
          dmpk_dfl=1.0d-1
 ************************************************************************
 *                                                                      *
-*                                                                      *
-************************************************************************
-*     Define Blank lines
-*
-      Do i = 1, 80
-         BLine(i:i) = ' '
-      End Do
       iPrint=5
 *                                                                      *
 ************************************************************************
@@ -111,7 +99,7 @@
 *-------------------------------------------------------------------*
 
       If (KWord(1:1).eq.'*')    Go To 1000
-      If (KWord.eq.BLine)       Go To 1000
+      If (KWord.eq.'')       Go To 1000
       If (KWord(1:4).eq.'ALGO') Go To 900
       If (KWord(1:4).eq.'LOCK') Go To 810
       If (KWord(1:4).eq.'NOLK') Go To 811
@@ -143,9 +131,9 @@
 *-----Read Cholesky algorithm parameters
 *
  900  Continue
-c      Call Get_F(1,Eps,1)
-c      Call Get_F(2,rds,1)
-c      Call Get_I(1,ALGO,1)
+c      Call Get_F1(1,Eps)
+c      Call Get_F1(2,rds)
+c      Call Get_I1(1,ALGO)
 C      If (nToken(KWord).gt.1) goto 988
 *
        READ(LuSpool,*) ALGO
@@ -280,11 +268,11 @@ C      If (nToken(KWord).gt.1) goto 988
 *
  700  Key=Get_Ln(LuSpool)
       KWord=Key
-      Call Get_I(1,n,1)
+      Call Get_I1(1,n)
       Do i = 1, n
          KWord=Get_Ln(LuSpool)
-         Call Get_I(1,jRout,1)
-         Call Get_I(2,iPrint,1)
+         Call Get_I1(1,jRout)
+         Call Get_I1(2,iPrint)
          nPrint(jRout)=iPrint
       End Do
       Go To 1000

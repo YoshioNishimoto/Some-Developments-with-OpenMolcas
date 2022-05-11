@@ -16,12 +16,12 @@
 *                                                                      *
 ************************************************************************
 *                                                                      *
-*define _DEBUG_
+*define _DEBUGPRINT_
 *                                                                      *
 ************************************************************************
 *                                                                      *
 *
-      Call ICopy((nMax+1)*nx*ny*nz,0,0,iTab,1)
+      Call ICopy((nMax+1)*nx*ny*nz,[0],0,iTab,1)
 *
       Do iAtom = 1, nAtoms
 *
@@ -42,7 +42,7 @@
             Call WarningMessage(2,'Sort_to_Box: Nr.gt.nMax')
             Call Abend()
          End If
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
          Write (6,*) 'Sort_to_Box: ix,iy,iz,Nr,iAtom=',
      &                             ix,iy,iz,Nr,iAtom
 #endif

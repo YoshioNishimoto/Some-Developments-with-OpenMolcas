@@ -8,7 +8,8 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine span_cvb(a,nvec,nlin,s,n,metr)
 c  Creates span of a vector set.
@@ -31,7 +32,7 @@ c               Vectors will be orthonormal on exit
       cnrm=dnrm2_(n,a(1,i),1)
       if(cnrm.gt.thresh)then
         nlin=nlin+1
-        call fmove(a(1,i),a(1,nlin),n)
+        call fmove_cvb(a(1,i),a(1,nlin),n)
       endif
 100   continue
       ierr=1

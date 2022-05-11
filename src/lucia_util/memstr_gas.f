@@ -42,8 +42,6 @@
 #include "gasstr.fh"
 #include "stinf.fh"
 #include "crun.fh"
-* Some dummy initializtions
-      NTEST = 0
 *
 *. Start of string information
 *
@@ -72,7 +70,7 @@
      &              KISTSO(ITP),NSPGPFTP(ITP)*NSMST)
       END DO
 *
-**. Lexical adressing of arrays : use array indeces for complete active space
+**. Lexical adressing of arrays : use array indices for complete active space
 *
 *. Not in use so
       DO  IGRP = 1, NGRP

@@ -9,17 +9,15 @@
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
       SubRoutine RdAB
+      use Arrays, only: CMO
       Implicit Real*8 (a-h,o-z)
 #include "Pointers.fh"
-#include "WrkSpc.fh"
-
+#include "stdalloc.fh"
 #include "Input.fh"
-
 #include "SysDef.fh"
       Character*8 Label
 #include "disp_mclr.fh"
 *
-*     Call qEnter('RDAB')
 *
       Perturbation='NONE'
 *
@@ -31,17 +29,15 @@
        If (iRC.ne.0) Then
           Write (6,*) 'RdAB: Error reading MCKINT'
           Write (6,'(A,A)') 'Label=',Label
-          Call QTrace
           Call Abend
        End If
        LABEL='PERT'
        iRc=-1
        iOpt=0
-       Call RdMck(iRC,iOpt,Label,idum,Perturbation,idum)
+       Call cRdMck(iRC,iOpt,Label,idum,Perturbation,idum)
        If (iRC.ne.0) Then
           Write (6,*) 'RdAB: Error reading MCKINT'
           Write (6,'(A,A)') 'Label=',Label
-          Call QTrace
           Call Abend
        End If
       End If
@@ -58,14 +54,17 @@
          ntItri=0
          ntIsqr=0
          ntBsqr=0
+         Length=0
          Do iSym=1,nSym
             ntIsh=ntIsh+nIsh(iSym)
             ntItri=ntItri+nIsh(iSym)*(nIsh(iSym)+1)/2
             ntIsqr=ntIsqr+nIsh(iSym)*nIsh(iSym)
             ntbSQR=ntbsqr+nbas(isym)**2
             norb(isym)=nbas(isym)-ndel(isym)
+            Length=Length+nBas(iSym)*nOrb(iSym)
          End Do
-         Call Get_CMO(ipCMO,Length)
+         Call mma_allocate(CMO,Length,Label='CMO')
+         Call Get_CMO(CMO,Length)
       End If
 
 *
@@ -77,7 +76,6 @@
          If (iRC.ne.0) Then
             Write (6,*) 'RdAB: Error reading MCKINT'
             Write (6,'(A,A)') 'Label=',Label
-            Call QTrace
             Call Abend
          End If
          nDisp=0
@@ -88,18 +86,17 @@
             Label='Chdisp  '
             iRc=-1
             iOpt=0
-            Call Rdmck(iRc,iOpt,label,idum,ChDisp,idum)
+            Call cRdmck(iRc,iOpt,label,idum,ChDisp(1),idum)
             If (iRC.ne.0) Then
                Write (6,*) 'RdAB: Error reading MCKINT'
                Write (6,'(A,A)') 'Label=',Label
-               Call QTrace
                Call Abend
             End If
          End if
       End If
 *
       If (PT2) Then
-         Call icopy(nsym,0,0,ldisp,1)
+         Call icopy(nsym,[0],0,ldisp,1)
          ldisp(1)=1
       End If
 *

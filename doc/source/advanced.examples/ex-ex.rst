@@ -1867,11 +1867,11 @@ matrix elements we have zero values for the interaction among :math:`^1A_1`
 states and non-zero values for the interaction among :math:`^1A_1` and :math:`^1B_2`
 states.
 
-The RASSI program in 6.0 and later versions of |molcas| will print the
-oscillator strengths and the Einstein A coefficients for all transitions. Also
+The :program:`RASSI` program in 6.0 and later versions of |molcas| will print the
+oscillator strengths and the Einstein :math:`A` coefficients for all transitions. Also
 the angles of the transition moment vectors to the coordinate axes will be
-printed. In the calculation RASSI will use the energies given as input, so be
-careful to use the keywords HDIAG or EJOB to use energies which include dynamic
+printed. In the calculation :program:`RASSI` will use the energies given as input, so be
+careful to use the keywords :kword:`HDIAG` or :kword:`EJOB` to use energies which include dynamic
 correlation.
 
 We illustrate how the oscillator strengths are computed. The 11 states are
@@ -2149,7 +2149,7 @@ deal with another set of problems. For instance, the known 3d double-shell
 effect: two sets of d orbitals (3d and 4d) must be included in the
 reference space in order to obtain accurate results :cite:`Roos:96b` in
 molecules containing metal atoms of the first transition row with many
-d-electrons (:math:`\ce{Fe}`\--:math:`\ce{Zn}`). This
+d-electrons (:math:`\ce{Fe}`\--\ :math:`\ce{Zn}`). This
 is a severe limitation when more ligands are included together with the
 metal atom. Illustrations of such problems are the calculation of the
 cyanide and carbonyl transition metal compounds :cite:`Roos:96b,Pierloot:93a`

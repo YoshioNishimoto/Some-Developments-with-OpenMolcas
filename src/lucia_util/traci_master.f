@@ -24,18 +24,16 @@
 #include "rasscf_lucia.fh"
 #include "io_util.fh"
 *
-      LOGICAL IPACK
       DIMENSION LREC(MXNTTS),CMOMO(*)
+      DIMENSION I_DUMMY(1)
 *
       NTEST = 0
       LBLK  = -1
       NDIM  = NTOOB*NTOOB
-      IDUM  = 0
       NCONF = NCSF_PER_SYM(ISSM)
 * JESPER: Should reduce I/O
       LBLOCK = MAX(INT(XISPSM(IREFSM,1)),MXSOOB)
       IF(PSSIGN.NE.0.0D0) LBLOCK = INT(2.0D0*XISPSM(IREFSM,1))
-      IDUM=0
 *
 *. The three scratch  blocks
 C          GET_3BLKS(KVEC1,KVEC2,KC2)
@@ -70,7 +68,7 @@ C_REPLACED BY CALLS BELOW      CALL GET_3BLKS(KVEC1,KVEC2,KVEC3)
             CALL XFLUSH(6)
          END IF
          CALL TODSCN(WORK(KVEC1),NREC,LREC,LBLK,LUC)
-         CALL ITODS(-1,1,LBLK,LUC)
+         CALL ITODS([-1],1,LBLK,LUC)
       END DO
 
 *. MO-MO transformation matrix :
@@ -93,7 +91,7 @@ C_REPLACED BY CALLS BELOW      CALL GET_3BLKS(KVEC1,KVEC2,KVEC3)
 * The input transformation matrix contains a lot of zeros which
 * is expected not to be there in Traci_Lucia, so remove them.
 *
-      CALL DCOPY_(NDIM,0.0D0,0,WORK(KLCMOMO),1)
+      CALL DCOPY_(NDIM,[0.0D0],0,WORK(KLCMOMO),1)
       IOFF = 0
       IADR = 1
       ICOL = 1
@@ -120,8 +118,6 @@ C_REPLACED BY CALLS BELOW      CALL GET_3BLKS(KVEC1,KVEC2,KVEC3)
         IDISK(LUSC1)=0
         CALL COPVCD(LUC,LUSC1,WORK(KVEC1),0,LBLK)
         CALL COPVCD(LUSC1,LUSC2,WORK(KVEC1),1,LBLK)
-        IPACK = .FALSE.
-        DUMMY = 0.0D0
 *
 *. Transform CI vector : Input on LUHC, output on LUDIA (!)
         CALL COPVCD(LUSC1,LUHC,WORK(KVEC1),1,LBLK)
@@ -147,7 +143,7 @@ C_REPLACED BY CALLS BELOW      CALL GET_3BLKS(KVEC1,KVEC2,KVEC3)
          CALL CSDTVC(WORK(KVEC2),WORK(KVEC1),2,WORK(KDTOC_POINTER),
      &               iWORK(KSDREO_POINTER),ISSM,0)
          CALL DDAFILE(JOBIPH,1,WORK(KVEC2),NCONF,JOBDISK)
-         CALL IFRMDS(IDUMMY,1,LBLK,LUDIA)
+         CALL IFRMDS(I_DUMMY,1,LBLK,LUDIA)
       END DO
       IDISK(LUDIA)=0
 *

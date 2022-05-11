@@ -8,19 +8,21 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine change3_cvb()
       implicit real*8 (a-h,o-z)
       logical changed
-#include "ext_cvb.fh"
+c ... Change of dimensioning variables ...
+      logical, external :: chpcmp_cvb
 #include "main_cvb.fh"
 #include "optze_cvb.fh"
 #include "files_cvb.fh"
 #include "print_cvb.fh"
 
 #include "rls_cvb.fh"
-#include "malloc_cvb.fh"
+#include "WrkSpc.fh"
 
       changed=.false.
 c Spin functions coefficients (BIKCOF) + inverse (AIKCOF)
@@ -70,8 +72,8 @@ c  --> figure out which one needs most :
         lb(2) = lb(1)
       endif
 c  Flag AIKCOF/BIKCOF as unset :
-      w(lb(1))=zero
-      w(lb(2))=zero
+      work(lb(1))=zero
+      work(lb(2))=zero
 
       lb(3) = mstacki_cvb((nel+1)*(nel+1)*(nel+1))
       lb(4) = mstacki_cvb((nel+1)*(nel+1))

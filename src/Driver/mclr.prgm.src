@@ -9,6 +9,7 @@
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ***********************************************************************/
  (prgm)  $MOLCAS/bin/mclr.exe             executable
+ (file)  MCLRINP       "$WorkDir/$Project."Mclr.Input           rwi
 #include "aoints.inc"
 #include "choints.inc"
  (file)  TEMPCIV       "$WorkDir/"purge.TempCiv                 rw
@@ -23,8 +24,12 @@
  (file)  CHTI          "$WorkDir/$Project".ChTI                 rw*
  (file)  CHIN          "$WorkDir/$Project".ChIN                 rw
  (file)  MCLRDENS      "$WorkDir/$Project".MclrDens             rwp
+ (file)  QDAT          "$WorkDir/$Project".Qdat                 rw*
+ (file)  MOTRA         "$WorkDir/$Project".tramo                rw*
 #include "orbitals.inc"
  (file)  LUHLF         "$WorkDir/"purge.tmp00                   rw*p
 #include "moldenfiles.inc"
 #include "espffiles.inc"
 #include "rysfiles.inc"
+ (file)  ROT_HAM  "$WorkDir/"H0_Rotate.txt                      ro
+ (file)  ROT_VEC  "$WorkDir/"Do_Rotate.txt                      ro

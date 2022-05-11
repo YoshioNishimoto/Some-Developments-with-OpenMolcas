@@ -12,19 +12,18 @@
 
       Implicit None
 #include "stdalloc.fh"
-      Integer, parameter           :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter        :: wp=kind(0.d0)
       Integer, intent(in)          :: N,iprint
-      Complex(kind=wp), intent(in) :: MM(3,N,N), MS(3,N,N)
+      Complex(kind=8), intent(in) :: MM(3,N,N), MS(3,N,N)
 
       Integer                       :: I,J,L,i1,i2,iDir
-      Real(kind=wp)                 :: g_e
-      Complex(kind=wp), allocatable :: Z(:,:) ! N,N
-      Complex(kind=wp), allocatable :: AMS(:,:,:)
-      Complex(kind=wp), allocatable :: AML(:,:,:)
-      Complex(kind=wp), allocatable :: AMM(:,:,:) !(3,N,N),
-      Complex(kind=wp), allocatable :: Mf(:,:), Sf(:,:), Lf(:,:) !(3,3)
+      Real(kind=8)                 :: g_e
+      Complex(kind=8), allocatable :: Z(:,:) ! N,N
+      Complex(kind=8), allocatable :: AMS(:,:,:)
+      Complex(kind=8), allocatable :: AML(:,:,:)
+      Complex(kind=8), allocatable :: AMM(:,:,:) !(3,N,N),
+      Complex(kind=8), allocatable :: Mf(:,:), Sf(:,:), Lf(:,:) !(3,3)
 !-----------------------------------------------------------------------
-      Call qEnter('moments')
 
       g_e=2.0023193043718_wp
 
@@ -37,14 +36,14 @@
       Call mma_allocate(Sf,3,3,'Sf')
       Call mma_allocate(Lf,3,3,'Lf')
 !-----------------------------------------------------------------------
-      Call zcopy_(3*3,(0.0_wp,0.0_wp),0,Lf,1)
-      Call zcopy_(3*3,(0.0_wp,0.0_wp),0,Mf,1)
-      Call zcopy_(3*3,(0.0_wp,0.0_wp),0,Sf,1)
+      Call zcopy_(3*3,[(0.0_wp,0.0_wp)],0,Lf,1)
+      Call zcopy_(3*3,[(0.0_wp,0.0_wp)],0,Mf,1)
+      Call zcopy_(3*3,[(0.0_wp,0.0_wp)],0,Sf,1)
       Do iDir=1,3
-        Call zcopy_(N*N,(0.0_wp,0.0_wp),0,Z,1)
-        Call zcopy_(3*N*N,(0.0_wp,0.0_wp),0,AMM,1)
-        Call zcopy_(3*N*N,(0.0_wp,0.0_wp),0,AML,1)
-        Call zcopy_(3*N*N,(0.0_wp,0.0_wp),0,AMS,1)
+        Call zcopy_(N*N,[(0.0_wp,0.0_wp)],0,Z,1)
+        Call zcopy_(3*N*N,[(0.0_wp,0.0_wp)],0,AMM,1)
+        Call zcopy_(3*N*N,[(0.0_wp,0.0_wp)],0,AML,1)
+        Call zcopy_(3*N*N,[(0.0_wp,0.0_wp)],0,AMS,1)
 
         Call pseudospin(MM,N,Z,iDir,1,1)
 
@@ -131,6 +130,5 @@
       Call mma_deallocate(Sf)
       Call mma_deallocate(Lf)
 
-      Call qExit('moments')
       Return
       End

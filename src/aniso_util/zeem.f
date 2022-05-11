@@ -12,36 +12,35 @@
      &                DBG, RWORK, HZEE, WORK, W_c )
 c
       Implicit None
-      Integer, parameter       :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter        :: wp=kind(0.d0)
 c input variables:
       Integer,         intent(in) :: N
-      Real(kind=wp),   intent(in) :: H,dX,dY,dZ,zJ
-      Real(kind=wp),   intent(in) :: W(N)
-      Real(kind=wp),   intent(in) :: S(3)
-      Complex(kind=wp),intent(in) :: sM(3,N,N)
-      Complex(kind=wp),intent(in) ::  M(3,N,N)
+      Real(kind=8),   intent(in) :: H,dX,dY,dZ,zJ
+      Real(kind=8),   intent(in) :: W(N)
+      Real(kind=8),   intent(in) :: S(3)
+      Complex(kind=8),intent(in) :: sM(3,N,N)
+      Complex(kind=8),intent(in) ::  M(3,N,N)
 c output variables:
-      Real(kind=wp),    intent(out) ::  WM(N)
-      Complex(kind=wp), intent(out) :: ZM(N,N)
+      Real(kind=8),    intent(out) ::  WM(N)
+      Complex(kind=8), intent(out) :: ZM(N,N)
 c local variables:
       Integer          :: i,j,info
-      Real(kind=wp)    :: mB
-      Real(kind=wp)    :: RWORK(3*N-2)
-      Complex(kind=wp) :: HZEE(N*(N+1)/2)
-      Complex(kind=wp) :: WORK(2*N-1), R, P, RP
-      Complex(kind=wp) :: H_c, dX_c, dY_c, dZ_c, zJ_c, W_c(N), S_c(3)
-      Complex(kind=wp) :: mB_c
+      Real(kind=8)    :: mB
+      Real(kind=8)    :: RWORK(3*N-2)
+      Complex(kind=8) :: HZEE(N*(N+1)/2)
+      Complex(kind=8) :: WORK(2*N-1), R, P, RP
+      Complex(kind=8) :: H_c, dX_c, dY_c, dZ_c, zJ_c, W_c(N), S_c(3)
+      Complex(kind=8) :: mB_c
       Logical          :: DBG
-      Call qEnter('ZEEM')
       mB = 0.4668643740_wp !   in cm-1*T-1
 
       ! initialization
 
-c      Call dcopy_(     N       ,  0.0_wp        , 0,    WM, 1)
-c      Call dcopy_(  (3*N-2)    ,  0.0_wp        , 0, RWORK, 1)
-c      Call zcopy_(   N**2      , (0.0_wp,0.0_wp), 0,    ZM, 1)
-c      Call zcopy_(  (N*(N+1)/2), (0.0_wp,0.0_wp), 0,  HZEE, 1)
-c      Call zcopy_(  (2*N-1)    , (0.0_wp,0.0_wp), 0,  WORK, 1)
+c      Call dcopy_(     N       ,  [0.0_wp]        , 0,    WM, 1)
+c      Call dcopy_(  (3*N-2)    ,  [0.0_wp]        , 0, RWORK, 1)
+c      Call zcopy_(   N**2      , [(0.0_wp,0.0_wp)], 0,    ZM, 1)
+c      Call zcopy_(  (N*(N+1)/2), [(0.0_wp,0.0_wp)], 0,  HZEE, 1)
+c      Call zcopy_(  (2*N-1)    , [(0.0_wp,0.0_wp)], 0,  WORK, 1)
          WM=0.0_wp
       RWORK=0.0_wp
         ZM=(0.0_wp,0.0_wp)
@@ -62,8 +61,8 @@ c      Call zcopy_(  (2*N-1)    , (0.0_wp,0.0_wp), 0,  WORK, 1)
       dZ_c=CMPLX(dZ,0.0_wp,wp)
       zJ_c=CMPLX(zJ,0.0_wp,wp)
       mB_c=CMPLX(mB,0.0_wp,wp)
-      Call zcopy_(N, (0.0_wp,0.0_wp), 0,  W_c, 1)
-      Call zcopy_(3, (0.0_wp,0.0_wp), 0,  S_c, 1)
+      Call zcopy_(N, [(0.0_wp,0.0_wp)], 0,  W_c, 1)
+      Call zcopy_(3, [(0.0_wp,0.0_wp)], 0,  S_c, 1)
       Do i=1,N
          W_c(i)=CMPLX(W(i),0.0_wp,wp)
       End Do
@@ -79,7 +78,8 @@ c      Call zcopy_(  (2*N-1)    , (0.0_wp,0.0_wp), 0,  WORK, 1)
       If(DBG) Write(6,*)'mB_c = ',mB_c
 
       ! build the Zeeman Hamiltonian
-      If ( zJ==0.0_wp ) Then
+      If ( abs(zJ) .lt.  tiny(0.0_wp) ) Then
+        ! zJ = 0
 
         Do i=1,N
           Do j=1,i
@@ -141,6 +141,5 @@ c      Call zcopy_(  (2*N-1)    , (0.0_wp,0.0_wp), 0,  WORK, 1)
      &       'WM(',i,')=',WM(i)!,' ZM(j,',i,'):',(ZM(j,i),j=1,N)
         End Do
       End If
-      Call qExit('ZEEM')
       Return
       End

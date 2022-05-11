@@ -9,14 +9,18 @@
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
       SUBROUTINE H0SPCT
+      use output_caspt2, only:iPrGlb,verbose
+      use output_caspt2, only:dnmThr,cntThr,cmpThr
+#ifdef _MOLCAS_MPP_
+      use allgather_wrapper, only : allgather
+      USE Para_Info, ONLY: Is_Real_Par
+#endif
       IMPLICIT REAL*8 (A-H,O-Z)
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
-#include "para_info.fh"
 
 #ifdef _MOLCAS_MPP_
 #include "global.fh"
@@ -24,16 +28,15 @@
 #endif
 
 #include "SysDef.fh"
-      CHARACTER(80) LINE
+      CHARACTER(LEN=80) LINE
 
 C Write pertinent warnings and statistics for the energy
 C denominators, i.e. the spectrum of (H0(diag)-E0).
 
-      CALL QENTER('H0SPCT')
 
       WRITE(6,*)
       Call CollapseOutput(1,'Denominators, etc.')
-      WRITE(6,'(25A4)')('----',i=1,25)
+      WRITE(6,'(10A11)')('-----------',i=1,10)
       WRITE(6,'(A)')' Report on small energy denominators, large'//
      &   ' coefficients, and large energy contributions.'
 
@@ -176,10 +179,10 @@ C positioning.
             CALL GAIGOP_SCAL(NBUF,'+')
             CALL GETMEM('IDX','ALLO','INTE',LIDX,2*NBUF)
             CALL GETMEM('VAL','ALLO','REAL',LVAL,4*NBUF)
-            CALL ALLGATHER(IWORK(LIDXBUF),2*IBUF,
-     &                     IWORK(LIDX),2*NBUF,'INTE')
-            CALL ALLGATHER(WORK(LVALBUF),4*IBUF,
-     &                     WORK(LVAL),4*NBUF,'REAL')
+            CALL allgather(IWORK(LIDXBUF:),2*IBUF,
+     &                         IWORK(LIDX:),2*NBUF)
+            CALL allgather(WORK(LVALBUF: ),4*IBUF,
+     &                         WORK(LVAL: ),4*NBUF)
           ELSE
             LIDX=LIDXBUF
             LVAL=LVALBUF
@@ -239,7 +242,6 @@ C End of very long loop over symmetry and case:
 
       Call CollapseOutput(0,'Denominators, etc.')
 
-      CALL QEXIT('H0SPCT')
 
       RETURN
       END

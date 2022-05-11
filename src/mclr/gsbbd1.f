@@ -89,9 +89,6 @@ C     INTEGER NTSOB(3,*),IBTSOB(3,*),ITSOB(*)
 *.Local arrays
       DIMENSION ITP(3*3),JTP(3*3)
 *
-      IFRST = 1
-      JFRST = 1
-*
 * Type of single excitations that connects the two column strings
       CALL SXTYP_GAS(NSXTP,ITP,JTP,3,ISEL,ICEL)
 *.Symmetry of single excitation that connects IBSM and JBSM
@@ -102,8 +99,6 @@ C     INTEGER NTSOB(3,*),IBTSOB(3,*),ITSOB(*)
         JTYP = JTP(IJTP)
         DO 800 ISM = 1, NSMOB
 *. new i and j so new intermediate strings
-          KFRST = 1
-*
           JSM = ADSXA(ISM,IJSM)
           IF(JSM.EQ.0) GOTO 800
           NIORB = NOBPTS(ITYP,ISM)
@@ -164,7 +159,7 @@ COLD. Loop over partitionings of the row strings
               CALL DGEMM_('T','N',NIORB,NJORB,NKI,1.0D0,SSCR,NKI,CSCR,
      &                    NKI,0.0D0,RHO1S,NIORB)
               Else
-               call dcopy_(NIORB*NJORB,0.0d0,0,RHO1S,1)
+               call dcopy_(NIORB*NJORB,[0.0d0],0,RHO1S,1)
               End IF
 *. Scatter out to complete matrix
               DO 610 JJORB = 1, NJORB

@@ -86,18 +86,20 @@ C BPTST       Storage for some testing
         WRITE(6,*) IWORK(LSODIAG-1+I)
       END DO
 
-      CALL DCOPY_(9*N**2,0.0d0,0,LMATR,1)
-      CALL DCOPY_(9*N**2,0.0d0,0,LMATI,1)
-      CALL DCOPY_(9*N**2,0.0d0,0,SMATR,1)
-      CALL DCOPY_(9*N**2,0.0d0,0,SMATI,1)
-      CALL DCOPY_(9*N**2,0.0d0,0,MUMAT2R,1)
-      CALL DCOPY_(9*N**2,0.0d0,0,MUMAT2I,1)
+      CALL DCOPY_(9*N**2,[0.0d0],0,LMATR,1)
+      CALL DCOPY_(9*N**2,[0.0d0],0,LMATI,1)
+      CALL DCOPY_(9*N**2,[0.0d0],0,SMATR,1)
+      CALL DCOPY_(9*N**2,[0.0d0],0,SMATI,1)
+      CALL DCOPY_(9*N**2,[0.0d0],0,MUMAT2R,1)
+      CALL DCOPY_(9*N**2,[0.0d0],0,MUMAT2I,1)
 
       CALL GETMEM('DMATTMPA','ALLO','REAL',LDMATTMP,3*(NBST*(NBST+1)))
 
       !> identity mat
-      CALL DCOPY_(3*3,0.0d0,0,IDENTMAT,1)
-      IDENTMAT(1,1)=1.0d0; IDENTMAT(2,2)=1.0d0; IDENTMAT(3,3)=1.0d0
+      IDENTMAT(:,:)=0.0D0
+      DO I = 1,3
+        IDENTMAT(I,I)=1.0D0
+      END DO
 
 C First, we calculate the expectation values of
 C  (L+ge*S)x (L+ge*S)y (L+ge*S)z
@@ -111,21 +113,27 @@ C Only work with one triangle - this is a hermitian matrix
         JSTATE=IWORK(LSODIAG-1+J)
         WRITE(6,*) "States: ",ISTATE,JSTATE
 
-        CALL SONATORB('ANTISING',UMATR,UMATI,
-     &       ISTATE,JSTATE,NSS,WORK(LDMATTMP))
+        iOpt=0
+        CALL SONATORBM('ANTISING',UMATR,UMATI,
+     &                 ISTATE,JSTATE,NSS,iOpt,IDENTMAT,
+     &                 WORK(LDMATTMP))
 
-        CALL SONATORBM_INT(WORK(LDMATTMP),'ANGMOM  ','ANTISING',
-     &                    ISTATE,JSTATE,NSS,
-     &                    IDENTMAT,AXR,AYR,AZR,AXI,AYI,AZI)
+        IC=-1
+        iOpt=1
+        CALL SONATORBM_INT(WORK(LDMATTMP),'ANGMOM  ',IC,'ANTISING',
+     &                     ISTATE,JSTATE,NSS,iOpt,IDENTMAT,
+     &                     AXR,AYR,AZR,AXI,AYI,AZI)
 
-
+        iOpt=1
         CALL SONATORBM('HERMTRIP',UMATR,UMATI,
-     &       ISTATE,JSTATE,NSS,IDENTMAT,
-     &       WORK(LDMATTMP))
+     &                 ISTATE,JSTATE,NSS,iOpt,IDENTMAT,
+     &                 WORK(LDMATTMP))
 
-        CALL SONATORB_INT(WORK(LDMATTMP),'MLTPL  0',1,'HERMTRIP',
-     &                   ISTATE,JSTATE,NSS,
-     &                   SXR,SYR,SZR,SXI,SYI,SZI)
+        IC=1
+        iOpt=0
+        CALL SONATORBM_INT(WORK(LDMATTMP),'MLTPL  0',IC,'HERMTRIP',
+     &                    ISTATE,JSTATE,NSS,iOpt,IDENTMAT,
+     &                    SXR,SYR,SZR,SXI,SYI,SZI)
 
 
 c The first index of PROP is the direction
@@ -147,7 +155,7 @@ C      CALL ADD_INFO("SODIAG_PROP",PROP,3*SODIAGNSTATE**2,4)
 
 
 c Calculate the atens as in single_aniso
-      CALL ATENS(PROP,N,GTENS,MAXES,IPGLOB)
+      CALL ATENS_RASSI(PROP,N,GTENS,MAXES,IPGLOB)
 
 
       do l=1,3
@@ -162,7 +170,7 @@ c Calculate the atens as in single_aniso
       enddo
 
 
-      call atens(PROP2, N, GTENS, MAXES2, 2)
+      call atens_RASSI(PROP2, N, GTENS, MAXES2, 2)
 
 c Diagonalize along each direction
 C LOOP OVER THE DIRECTIONS
@@ -274,7 +282,7 @@ c      SUBROUTINE SPIN_PHASE(IPGLOB,DIPSO2,GMAIN,DIM,ZIN,ZOUT)
         enddo
       enddo
 
-      call SPIN_PHASE(2,PROP2,GTENS,N,DEIGVEC,ZOUT)
+      call SPIN_PHASE_RASSI(2,PROP2,GTENS,N,DEIGVEC,ZOUT)
 
 
 c EXPAND EIGENVECTORS TO SEPARATE R,I MATRICES AND
@@ -282,8 +290,8 @@ c AS A PART OF AN IDENTITY MATRIX
       CALL GETMEM('SODEIGR','ALLO','REAL',LEIGVECR,NSS**2)
       CALL GETMEM('SODEIGI','ALLO','REAL',LEIGVECI,NSS**2)
 
-      CALL DCOPY_(NSS**2,0.0D0,0,WORK(LEIGVECR),1)
-      CALL DCOPY_(NSS**2,0.0D0,0,WORK(LEIGVECI),1)
+      CALL DCOPY_(NSS**2,[0.0D0],0,WORK(LEIGVECR),1)
+      CALL DCOPY_(NSS**2,[0.0D0],0,WORK(LEIGVECI),1)
 
       DO I=1,NSS
       DO J=1,NSS
@@ -358,17 +366,21 @@ c file name for the spin density orb file
 C For L, mix the AO integrals, leave the density alone
 C    -> Call SONATORB then SONATORBM_INT
 C For S, leave AO integrals alone, mix density matrices
-c    -> Call SONATORBM, SONATORB_INT
+c    -> Call SONATORBM, SONATORBM_INT
 
 
 c store antising density in LDMATTMP
-        CALL SONATORB('ANTISING',WORK(LUWR),WORK(LUWI),
-     &       ISTATE,JSTATE,NSS,WORK(LDMATTMP))
+        iOpt=0
+        CALL SONATORBM('ANTISING',WORK(LUWR),WORK(LUWI),
+     &                 ISTATE,JSTATE,NSS,iOpt,IDENTMAT,
+     &                 WORK(LDMATTMP))
 
 
 c Expectation values of L -> LMAT{R,I}
-        CALL SONATORBM_INT(WORK(LDMATTMP),'ANGMOM  ','ANTISING',
-     &                    ISTATE,JSTATE,NSS,MAXES,
+        IC=-1
+        iOpt=1
+        CALL SONATORBM_INT(WORK(LDMATTMP),'ANGMOM  ',IC,'ANTISING',
+     &                    ISTATE,JSTATE,NSS,iOpt,MAXES,
      &                    LMATR(I,J,IDIR,1),LMATR(I,J,IDIR,2),
      &                    LMATR(I,J,IDIR,3),
      &                    LMATI(I,J,IDIR,1),LMATI(I,J,IDIR,2),
@@ -382,16 +394,20 @@ c Plot for generation of current density
 
 
 c store hermtrip density in LDMATTMP
+        iOpt=1
         CALL SONATORBM('HERMTRIP',WORK(LUWR),WORK(LUWI),
-     &       ISTATE,JSTATE,NSS,MAXES,WORK(LDMATTMP))
+     &                 ISTATE,JSTATE,NSS,iOpt,MAXES,
+     &                 WORK(LDMATTMP))
 
 c Expectation values of S -> SMAT{R,I}
-        CALL SONATORB_INT(WORK(LDMATTMP),'MLTPL  0',1,'HERMTRIP',
-     &                    ISTATE,JSTATE,NSS,
-     &                    SMATR(I,J,IDIR,1),SMATR(I,J,IDIR,2),
-     &                    SMATR(I,J,IDIR,3),
-     &                    SMATI(I,J,IDIR,1),SMATI(I,J,IDIR,2),
-     &                    SMATI(I,J,IDIR,3))
+        IC=1
+        iOpt=0
+        CALL SONATORBM_INT(WORK(LDMATTMP),'MLTPL  0',IC,'HERMTRIP',
+     &                     ISTATE,JSTATE,NSS,iOpt,IDENTMAT,
+     &                     SMATR(I,J,IDIR,1),SMATR(I,J,IDIR,2),
+     &                     SMATR(I,J,IDIR,3),
+     &                     SMATI(I,J,IDIR,1),SMATI(I,J,IDIR,2),
+     &                     SMATI(I,J,IDIR,3))
 
 c plot the rotated density
         CALL SONATORB_PLOT(WORK(LDMATTMP),FILEBASE,'HERMTRIP',
@@ -489,7 +505,7 @@ C      CALL ADD_INFO("SODIAG_SMATI",SMATI,9*N*N,4)
 
 
 
-      SUBROUTINE SPIN_PHASE(IPGLOB,DIPSO2,GMAIN,DIM,ZIN,ZOUT)
+      SUBROUTINE SPIN_PHASE_RASSI(IPGLOB,DIPSO2,GMAIN,DIM,ZIN,ZOUT)
 C
 C     The RASSI program gives a random phase to the spin-orbit functions.
 C
@@ -625,7 +641,7 @@ CC Rewrite the Spin m.e. in a new basis:
 
 
 
-      SUBROUTINE ATENS(moment, dim, gtens, maxes, IPGLOB)
+      SUBROUTINE ATENS_RASSI(moment, dim, gtens, maxes, IPGLOB)
 
       IMPLICIT NONE
       INTEGER dim,ic1,ic2,i,j,k,l,IPGLOB,info
@@ -670,7 +686,7 @@ C
          enddo
       enddo
 
-      IF(IPGLOB.GE.3) THEN
+      IF(IPGLOB.GE.4) THEN
       write(6,'(/)')
       write(6,'(5X,A)') 'BPMOMENT(ic1,ic2):'
       write(6,*)
@@ -735,7 +751,7 @@ C
       enddo
       info=0
 
-      call DIAG_R2(A_TENS_TERM,3,info,w,z)
+      call DIAG_R2_RASSI(A_TENS_TERM,3,info,w,z)
       if(INFO.NE.0) goto 199
       if((w(1).LT.0.D0).AND.(w(2).LT.0.D0).AND.(w(3).LT.0.D0)) then
       write(6,'(2x,A)') 'ALL EIGENVALUES OF THE A-TENSOR ARE NEGATIVE'
@@ -748,7 +764,7 @@ C
       endif
 c
 
-      IF(IPGLOB.GE.3) THEN
+      IF(IPGLOB.GE.4) THEN
       write(6,*)
       write(6,'(4x,A)') 'A_TENS_TERM TENSOR:'
       write(6,'(65a)') ('-',i=1,56),'|'
@@ -776,7 +792,7 @@ c
       MAIN(i)=sqrt(W(i))
       enddo
 
-      if(IPGLOB.GT.2) write(6,'(5x,a,3F9.5)') 'EIGenValues after DSPEV:'
+      if(IPGLOB.GE.4) write(6,'(5x,a,3F9.5)') 'EIGenValues after DSPEV:'
      & , (W(I),I=1,3)
 
 C  Check the sign of the coordinate system. if CS is Left-handed,
@@ -802,7 +818,7 @@ C  then change it to RIGHT-handed
       diff23=0.d0
       diff12=MAIN(2)-MAIN(1)
       diff23=MAIN(3)-MAIN(2)
-      if(IPGLOB.GT.2) then
+      if(IPGLOB.GE.4) then
       write(6,'(5x,a,3F19.15)') 'diff12 = ', diff12
       write(6,'(5x,a,3F19.15)') 'diff23 = ', diff23
       endif
@@ -894,7 +910,7 @@ C      Call Add_Info('GTENS_MAIN',gtens,3,5)
 
 
 
-      Subroutine DIAG_R2(MATRIX,NBTOT,INFO,W1,Z1)
+      Subroutine DIAG_R2_RASSI(MATRIX,NBTOT,INFO,W1,Z1)
 C
 C   THIS ROUTINE PERFORMS THE DIAGONALIZATION OF A REAL SQUARE
 C   MATRIX WITH THE DIMENSION NBTOT. THE EIGENVALUES OF THE DIAGONALIZATION

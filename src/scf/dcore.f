@@ -111,12 +111,14 @@
      &                  1.0d0,OHSq,nBas(iSym),
      &                        TrMat(iCMO),nBas(iSym),
      &                  0.0d0,OHHl,nBas(iSym))
-            Call MxMt(TrMat(iCMO), nBas(iSym),1,OHHl,1,nBas(iSym),
-     &                OHTr,nOF,nBas(iSym))
+            Call DGEMM_Tri('T','N',nOF,nOF,nBas(iSym),
+     &                     1.0D0,TrMat(iCMO),nBas(iSym),
+     &                           OHHl,nBas(iSym),
+     &                     0.0D0,OHTr,nOF)
 *
 *---------- Put a unit matrix into the eigenvector matrix
-            call dcopy_(nOF*nOF,Zero,0,EiVe,      1)
-            call dcopy_(nOF,    One, 0,EiVe,nOF + 1)
+            call dcopy_(nOF*nOF,[Zero],0,EiVe,      1)
+            call dcopy_(nOF,    [One], 0,EiVe,nOF + 1)
 *
 *---------- Add small random number to the one-electron Hamiltonian
 *           Not done here anymore, done in routine scram called

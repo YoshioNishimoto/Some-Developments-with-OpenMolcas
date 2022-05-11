@@ -23,7 +23,6 @@
 
 
 
-      CALL QENTER(ROUTINE)
 
 C Dereference ISGS to get at ISM table:
       LISM=ISGS(3)
@@ -41,7 +40,7 @@ CTEST      write(*,*)' Check prints in SSOTRA.'
 CTEST      write(*,*)' ISYM:',ISYM
       DO 100 IK=1,NA
         IKLEV=IWORK(LILEV-1+IK)
-        CALL DCOPY_(NCO,0.0D0,0,TMP,1)
+        CALL DCOPY_(NCO,[0.0D0],0,TMP,1)
         DO 50 IP=1,NA
           IPLEV=IWORK(LILEV-1+IP)
           CPK=TRA(NI+IP,NI+IK)
@@ -74,6 +73,5 @@ CPAM98     *                 WORK(LVTAB),IWORK(LMVL),IWORK(LMVR))
 100   CONTINUE
       CALL GETMEM('ILEV','FREE','INTE',LILEV,NA)
 
-      CALL QEXIT(ROUTINE)
       RETURN
       END

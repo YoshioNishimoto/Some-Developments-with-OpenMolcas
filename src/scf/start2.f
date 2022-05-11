@@ -33,22 +33,29 @@
 *     history: none                                                    *
 *                                                                      *
 ************************************************************************
+#ifdef _MSYM_
+      Use, Intrinsic :: iso_c_binding, only: c_ptr
+#endif
+#ifdef _HDF5_
+      Use mh5, Only: mh5_exists_dset
+#endif
       Implicit Real*8 (a-h,o-z)
 #include "real.fh"
 #include "file.fh"
 #include "mxdm.fh"
 #include "infscf.fh"
 #include "stdalloc.fh"
-#ifdef _HDF5_
-#  include "mh5.fh"
-#endif
       Real*8 CMO(mBB,nD), Ovrlp(mBT), EOrb(mmB,nD), OccNo(mmB,nD)
       Character FName*(*)
       Integer nTmp(8)
       Character*6 OrbName
 * Pam 2012 Changed VECSORT arg list, need dummy array:
-      Integer NewOrd(2)
+      Integer iDummy(1)
       Integer, Dimension(:,:), Allocatable:: IndT
+#ifdef _MSYM_
+      Type(c_ptr) msym_ctx
+#endif
+      Dimension Dummy(1),iDum(7,8)
 *
 *----------------------------------------------------------------------*
 *     Start                                                            *
@@ -73,7 +80,7 @@
      &                  IndT(1,1),VTitle,1,iErr,iWFtype)
          End If
          Call VecSort(nSym,nBas,nBas,
-     &               CMO,OccNo,IndT(1,1),0,NewOrd,iErr)
+     &               CMO,OccNo,IndT(1,1),0,iDummy,iErr)
          indx=1
          Do iSym=1,nSym
             nTmp(iSym)=0
@@ -126,9 +133,9 @@
                Call iCopy(nnB,IndT(1,1),1,IndT(1,2),1)
             End If
             Call VecSort(nSym,nBas,nBas,CMO(1,1),OccNo(1,1),
-     &                   IndT(1,1),0,NewOrd,iErr)
+     &                   IndT(1,1),0,iDummy,iErr)
             Call VecSort(nSym,nBas,nBas,CMO(1,2),OccNo(1,2),
-     &                   IndT(1,2),0,NewOrd,iErr)
+     &                   IndT(1,2),0,iDummy,iErr)
             indx=1
             Do iSym=1,nSym
                nTmp(iSym)=0
@@ -158,7 +165,7 @@
      &                     IndT(1,1),VTitle,1,iErr,iWFtype)
             End If
             Call VecSort(nSym,nBas,nBas,CMO,OccNo,
-     &                   IndT(1,1),0,NewOrd,iErr)
+     &                   IndT(1,1),0,iDummy,iErr)
             indx=1
             Do iSym=1,nSym
                nTmp(iSym)=0

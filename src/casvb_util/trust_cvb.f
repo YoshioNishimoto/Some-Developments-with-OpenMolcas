@@ -8,7 +8,8 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine trust_cvb(iopth,opth,maxize,fx,fxbest,exp,
      >  hh,dxnrm,ioptc,scalesmall1,close2conv,converged,skipupd)
@@ -63,10 +64,11 @@ c  exactly the same) :
             hh=hhkeep*(one+(DBLE(icprbst)-half*DBLE(nopth1(ipu)+1))
      >        *delopth1(ipu))
           elseif(icprbst.le.nopth)then
+            ! IFG: nopth1 was used in these two calls, probably a bug
             if(maxize)then
-              call findmx_cvb(cpropt,nopth1,cprbst,icprbst2)
+              call findmx_cvb(cpropt,nopth,cprbst,icprbst2)
             else
-              call findmn_cvb(cpropt,nopth1,cprbst,icprbst2)
+              call findmn_cvb(cpropt,nopth,cprbst,icprbst2)
             endif
             hh=hhkeep*(one+(DBLE(icprbst2)-half*DBLE(nopth1(ipu)+1))
      >        *delopth1(ipu))
@@ -143,10 +145,11 @@ c  << Rejecting update >>
           hh=hhkeep*(one+(DBLE(ioptst)-half*DBLE(nopth1(ipu)+1))
      >      *delopth1(ipu))
         elseif(ioptst.le.nopth)then
+          ! IFG: nopth1 was used in these two calls, probably a bug
           if(maxize)then
-            call findmx_cvb(cpropt,nopth1,cprbst,icprbst)
+            call findmx_cvb(cpropt,nopth,cprbst,icprbst)
           else
-            call findmn_cvb(cpropt,nopth1,cprbst,icprbst)
+            call findmn_cvb(cpropt,nopth,cprbst,icprbst)
           endif
           hh=hhkeep*(one+(DBLE(icprbst)-half*DBLE(nopth1(ipu)+1))
      >      *delopth1(ipu))

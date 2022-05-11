@@ -52,15 +52,8 @@
 *
       Real*8, Dimension(:), Allocatable:: OvlT, OvlH, OvlS, EVec, EVal,
      &                                    NewB, Scratch
-*
-*----------------------------------------------------------------------*
-*     Start                                                            *
-*----------------------------------------------------------------------*
-*
-#ifdef _DEBUG_
-      Call qEnter('OvlDel')
-#endif
-*
+
+
 *---- Allocate memory for transformed overlap matrix
       Call mma_allocate(OvlT,MaxOrF*(MaxOrF+1)/2,Label='OvlT')
 *
@@ -111,10 +104,10 @@
      &                  1.0d0,OvlS,nBas(iSym),
      &                        TrMat(iOld),nBas(iSym),
      &                  0.0d0,OvlH,nBas(iSym))
-            Call MxMt(TrMat(iOld),nBas(iSym),1,
-     &                OvlH,1,nBas(iSym),
-     &                OvlT,
-     &                nOF,nBas(iSym))
+            Call DGEMM_Tri('T','N',nOF,nOF,nBas(iSym),
+     &                    One,TrMat(iOld),nBas(iSym),
+     &                        OvlH,nBas(iSym),
+     &                    Zero,OvlT,nOF)
 *
 *---------- Diagonalize overlap and form eigenvalues vector
             Call mma_allocate(Scratch,nOF**2,Label='Scrtach')
@@ -170,14 +163,5 @@ C??         End Do
       Call mma_deallocate(OvlS)
       Call mma_deallocate(OvlH)
       Call mma_deallocate(OvlT)
-*
-#ifdef _DEBUG_
-      Call qExit('OvlDel')
-#endif
-*
-*----------------------------------------------------------------------*
-*     Exit                                                             *
-*----------------------------------------------------------------------*
-*
-      Return
-      End
+
+      End subroutine OvlDel

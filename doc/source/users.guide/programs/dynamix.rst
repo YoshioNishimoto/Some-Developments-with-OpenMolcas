@@ -90,9 +90,9 @@ Input
 -----
 
 This section describes the input syntax of :program:`DYNAMIX` in the |molcas| program
-package. In general a MD simulation requires a :kword:`FOREACH` loop which contains
+package. In general a MD simulation requires a :kword:`DoWhile` or :kword:`ForEach` loop which contains
 several programs to compute the energy and :program:`ALASKA` for subsequent gradient
-computation. The input of the :program:`DYNAMIX` begins with the program name,
+computation. The :program:`DYNAMIX` input begins with the program name,
 and is followed by the only compulsory keyword :kword:`VELV` which specifies the
 velocity Verlet algorithm: ::
 
@@ -131,7 +131,7 @@ General keywords
 :kword:`VELOcities`
   Specifies how the initial velocities are generated.
   This keyword is followed by an integer on the next line. The internal
-  unit of the velocities is [Bohr\ :math:`\cdot`\(a.u. of time)\ :math:`^{-1}`].
+  unit of the velocities is [bohr\ :math:`\cdot`\(a.u. of time)\ :math:`^{-1}`].
 
   .. container:: list
 
@@ -139,10 +139,10 @@ General keywords
 
     **1** --- The velocities are read from the file :file:`$Project.velocity.xyz`
     in :file:`$WorkDir`. This file contains velocities in the xyz format given in the same
-    order as the atoms in coordinate file. The unit of the velocities is [Bohr\ :math:`\cdot`\(a.u. of time)\ :math:`^{-1}`].
+    order as the atoms in coordinate file. The unit of the velocities is [bohr\ :math:`\cdot`\(a.u. of time)\ :math:`^{-1}`].
 
     **2** --- This option allows to read in mass-weighted velocities from the
-    file :file:`$Project.velocity.xyz` in [Bohr\ :math:`\cdot\sqrt{\text{a.m.u.}}\cdot`\(a.u. of time)\ :math:`^{-1}`].
+    file :file:`$Project.velocity.xyz` in [bohr\ :math:`\cdot\sqrt{\text{a.m.u.}}\cdot`\(a.u. of time)\ :math:`^{-1}`].
 
     **3** --- This option takes random velocities from a Maxwell--Boltzmann distribution, at
     a given temperature, assuming that every component of the velocity can be considered as an independent gaussian random variable.
@@ -197,6 +197,36 @@ General keywords
               </HELP>
               </KEYWORD>
 
+:kword:`OUT`
+  Enables dynamics in reduced dimensionality.
+  This keyword is followed by an integer on the next line, which defines the number of nuclear coordinates to project out from the trajectory (default 0).
+  The coordinates to project out are then read from the files :file:`out.00X.xyz`, in the xyz format given in the same order as the atoms in coordinate file.
+  The projection is performed in mass-weighted coordinates and can be applied directly to normal modes for instance.
+  Note: In case of several coordinates to project out, these are first orthogonalised (in mass-weighted coordinates).
+
+  .. xmldoc:: <KEYWORD MODULE="DYNAMIX" NAME="OUT" APPEAR="Number of coordinates to project out" KIND="INT" LEVEL="ADVANCED">
+              %%Keyword: OUT <advanced>
+              <HELP>
+              Enables reduced dimensionality by projecting out the selected modes.
+              Specify an integer N, and provide N files out.00X.xyz.
+              </HELP>
+              </KEYWORD>
+
+:kword:`IN`
+  Enables dynamics in reduced dimensionality.
+  This keyword is followed by an integer on the next line, which defines the number of nuclear coordinates to keep in in the trajectory (default 3 * number of atoms).
+  The coordinates to keep in are then read from the files :file:`in.00X.xyz`, in the xyz format given in the same order as the atoms in coordinate file.
+  The projection is performed in mass-weighted coordinates and can be applied directly to normal modes for instance.
+  Note: In case of several coordinates to keep in, these are first orthogonalised (in mass-weighted coordinates).
+
+  .. xmldoc:: <KEYWORD MODULE="DYNAMIX" NAME="IN" APPEAR="Number of coordinates to keep in" KIND="INT" LEVEL="ADVANCED">
+              %%Keyword: IN <advanced>
+              <HELP>
+              Enables reduced dimensionality by keeping only the selected modes.
+              Specify an integer N, and provide N files in.00X.xyz.
+              </HELP>
+              </KEYWORD>
+
 :kword:`RESTART`
   This keyword allows to restart the trajectory at a given time.
   The time is given on the next line in atomic units.
@@ -212,7 +242,7 @@ General keywords
   This keyword allows to restart a trajectory calculation from an HDF5 file.
   The name of the restart file is given on the next line.
 
-  .. xmldoc:: <KEYWORD MODULE="DYNAMIX" NAME="H5RESTART" APPEAR="Restart the trajectory from a H5 file" KIND="REAL" LEVEL="ADVANCED">
+  .. xmldoc:: <KEYWORD MODULE="DYNAMIX" NAME="H5RESTART" APPEAR="Restart the trajectory from a H5 file" KIND="STRING" LEVEL="ADVANCED">
               %%Keyword: H5REstart <advanced>
               <HELP>
               Restarts a trajectory calculation from an HDF5 file, whose name is given on the next line.
@@ -223,13 +253,13 @@ Input examples
 ..............
 
 The following example shows the input for an excited state CASSCF molecular dynamics
-simulation of a methaniminium cation using the :program:`DYNAMIX` program. The FOREACH loop
+simulation of a methaniminium cation using the :program:`DYNAMIX` program. The :kword:`DoWhile` loop
 allows 1000 steps with 10 a.u. of time step size which leads to a total duration of
 242 fs. In the :program:`RASSCF` program the second root is selected for gradient
 calculation using the keyword :kword:`MDRLXR`. This input assumes that the a
 :file:`JOBIPH` file with orbitals is already given. In each iteration the :file:`JOBIPH`
 is updated to achieve a fast convergence of the CASSCF wavefunction.
-A Nosé--Hoover chain of thermostats, enabled with THERmo= 2, is used to
+A Nosé--Hoover chain of thermostats, enabled with :kword:`THERmo`\=2, is used to
 reproduce dynamics at constant temperature, where the initial velocities are
 taken from a Maxwell--Boltzmann distribution at 300 K.
 
@@ -248,11 +278,12 @@ taken from a Maxwell--Boltzmann distribution at 300 K.
    BASIS= 3-21G
    GROUP= nosym
 
-  >> FOREACH ITER in (1 .. 1000)
+  >> EXPORT MOLCAS_MAXITER=1000
+  >> DOWHILE
 
   &SEWARD
 
-  >> IF ( $ITER = 1 )
+  >> IF ( ITER = 1 )
 
   &RASSCF
    LUMORB
@@ -292,4 +323,40 @@ taken from a Maxwell--Boltzmann distribution at 300 K.
 
   >> END DO
 
+.. xmldoc:: <KEYWORD MODULE="DYNAMIX" NAME="VV_FIRST" KIND="SINGLE" LEVEL="UNDOCUMENTED" />
+
 .. xmldoc:: </MODULE>
+
+Dynamixtools
+------------
+
+This tool can be found into the :file:`Tools/` folder and it will provide some general tools to manage molecular dynamics calculations. At the moment it can be used to generate intial conditions (geometries and momenta) based on a frequency calculation using several sampling methods. It is working with a :file:`freq.molden` file (:file:`.h5` support coming soon...). 
+
+From the command prompt: ::
+
+  $ python3 dynamixtools.py -h
+  usage: dynamixtools.py [-h] [-s SEED] [-l LABEL] [-i I] [-c CONDITION] [-t TEMP] [-v] [-T] [-D] [-m METHOD]
+
+  optional arguments:
+  -h, --help            show this help message and exit
+  -s SEED, --seed SEED  indicate the SEED to use for the generation of randoms
+  -l LABEL, --label LABEL
+                        label for your project (default is "geom")
+  -i I, --input I       path of the frequency h5 or molden file
+  -c CONDITION, --condition CONDITION
+                        number of initial conditions (default 1)
+  -t TEMP, --temperature TEMP
+                        temperature in kelvin for the initial conditions
+  -v, --verbose         more verbose output
+  -T, --TEST            keyword use to test the routines
+  -D, --DIGIT           keyword to suppress the counter in the filename (needed for debug)
+  -m METHOD, --method METHOD
+                        Keyword to specify the sampling method:
+                        1 Initial conditions based on the molecular vibrational frequencies and energies sampled from a Boltzmann distribution (Default).
+                        2 Thermal normal mode sampling where the cumulitative distribution function for a classical boltzmann distribution at temperature T is used to approximate the energy of each mode.
+                        3 Wigner distribution for the ground vibrational state, n=0.
+
+Having a :file:`water.freq.molden` file, this is the command to generate 200 initial conditions using 3435432 as seed and a temperature of 300 kelvin: ::
+
+  $ python3 dynamixtools.py -i water.freq.molden -t 300 -c 200 -s 3435432
+

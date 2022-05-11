@@ -62,7 +62,6 @@
       If (iRc.ne.0) Then
          Write (6,*) 'R1Intb: Error readin ONEINT'
          Write (6,'(A,A)') 'Label=',Label
-         Call QTrace
          Call Abend()
       End If
 *
@@ -90,6 +89,8 @@
       If (.Not.lRel) Then
          Call mma_deallocate(MssVlc)
          Call mma_deallocate(Darwin)
+         Call mma_allocate(MssVlc,0,Label='MssVlc')
+         Call mma_allocate(Darwin,0,Label='Darwin')
       End If
 *
 *----------------------------------------------------------------------*

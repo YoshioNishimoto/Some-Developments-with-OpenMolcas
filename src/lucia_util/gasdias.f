@@ -124,7 +124,6 @@ C     REAL * 8  INPROD
 *                           0.5*SUM(I,J) ( J(I,J) - K(I,J))*N(I)*N(J)
 *
 *. Obtain alpha strings of sym IASM and type IATP
-        IDUM = 0
         IDUM_ARR=0
         CALL GETSTR_TOTSM_SPGP(      1,   IATP,   IASM,   NAEL, NASTR1,
      &                           IASTR,   NORB,     0,IDUM_ARR,IDUM_ARR)
@@ -148,7 +147,6 @@ C     REAL * 8  INPROD
         IBSTRT = 1
         IBSTOP =  NSSOB(IBSM,IBTP)
         DO IB = IBSTRT,IBSTOP
-          IBREL = IB - IBSTRT + 1
 *
 *. Terms depending only on IB
 *
@@ -204,7 +202,7 @@ C     REAL * 8  INPROD
             write(6,*) ' number of diagonal elements to disc ',IDET
             CALL WRTMAT(DIAG,1,IDET,1,IDET)
           END IF
-          CALL ITODS(IDET,1,-1,LUDIA)
+          CALL ITODS([IDET],1,-1,LUDIA)
           CALL TODSC(DIAG,IDET,-1,LUDIA)
           IDET = 0
         END IF
@@ -219,7 +217,7 @@ C     REAL * 8  INPROD
         CALL WRTMAT(DIAG(1),1,IDET,1,IDET)
       END IF
 *
-      IF ( ICISTR.GE.2 ) CALL ITODS(-1,1,-1,LUDIA)
+      IF ( ICISTR.GE.2 ) CALL ITODS([-1],1,-1,LUDIA)
 *
       RETURN
       END

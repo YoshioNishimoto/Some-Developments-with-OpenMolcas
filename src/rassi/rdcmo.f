@@ -8,11 +8,15 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
-      SUBROUTINE RDCMO(JOB,CMO)
+      SUBROUTINE RDCMO_RASSI(JOB,CMO)
+#ifdef _HDF5_
+      USE mh5, ONLY: mh5_is_hdf5, mh5_open_file_r, mh5_fetch_dset,
+     &               mh5_close_file
+#endif
       IMPLICIT NONE
 #include "prgm.fh"
       CHARACTER*16 ROUTINE
-      PARAMETER (ROUTINE='RDCMO')
+      PARAMETER (ROUTINE='RDCMO_RASSI')
 #include "rasdim.fh"
 #include "cntrl.fh"
 #include "Files.fh"
@@ -21,7 +25,6 @@
 #include "WrkSpc.fh"
 #include "SysDef.fh"
 #ifdef _HDF5_
-#  include "mh5.fh"
       integer :: refwfn_id
 #endif
 
@@ -30,15 +33,14 @@
 
       INTEGER I, IAD, IDISK, ISY, L1, L2, LBUF, LEN, NB, NBUF
 
-      CALL QENTER(ROUTINE)
-
+      CMO(:)=0.0D0
       IF(JOB.LT.1 .OR. JOB.GT.NJOB) THEN
-        WRITE(6,*)' RDCMO: Invalid JOB parameter.'
+        WRITE(6,*)' RDCMO_RASSI: Invalid JOB parameter.'
         WRITE(6,*)' JOB, NJOB:',JOB,NJOB
         CALL ABEND()
       END IF
       IF(IPGLOB.GE.DEBUG) THEN
-        WRITE(6,*)' RDCMO called for file '//TRIM(JBNAME(JOB))
+        WRITE(6,*)' RDCMO_RASSI called for file '//TRIM(JBNAME(JOB))
       END IF
 C READ ORBITAL COEFFICIENTS FROM INTERFACE. ORIGINALLY ALL
 C CMO COEFFS, INCLUDING VIRTUALS, WERE WRITTEN CONTIGUOUSLY.
@@ -56,7 +58,7 @@ C CMO COEFFS, INCLUDING VIRTUALS, WERE WRITTEN CONTIGUOUSLY.
 ************************************************************************
       If (mh5_is_hdf5(jbname(job))) Then
         refwfn_id = mh5_open_file_r(jbname(job))
-        call mh5_fetch_dset_array_real(refwfn_id,
+        call mh5_fetch_dset(refwfn_id,
      &         'MO_VECTORS', WORK(LBUF))
         call mh5_close_file(refwfn_id)
       Else
@@ -105,6 +107,5 @@ C CMO COEFFS, INCLUDING VIRTUALS, WERE WRITTEN CONTIGUOUSLY.
      *               1,NBASF,NOSH,NCMO,CMO)
       END IF
 
-      CALL QEXIT(ROUTINE)
       RETURN
       END

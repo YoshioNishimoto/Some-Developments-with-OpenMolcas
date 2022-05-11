@@ -23,7 +23,6 @@ C
 #include "general.fh"
 #include "input_ras.fh"
 #include "output_ras.fh"
-      Parameter (ROUTINE='SGPRWF  ')
 #include "gugx.fh"
 #include "WrkSpc.fh"
 C
@@ -34,7 +33,6 @@ C
       Integer   iSel(*)
       Character*400 Line
 C
-      Call QENTER(ROUTINE)
 
       Line(1:16)='      conf/sym  '
       iOff=16
@@ -69,12 +67,12 @@ C     WITH SPECIFIED MIDVERTEX MV, AND UPPERWALK SYMMETRY ISYUP.
 C
       DO MV=1,NMIDV
         DO ISYUP=1,NSYM
-          NCI=NOCSF(ISYUP,MV,LSYM)
+          NCI=NOCSF(ISYUP,MV,STSYM)
           IF(NCI.EQ.0) CYCLE
           NUP=NOW(1,ISYUP,MV)
-          ISYDWN=MUL(ISYUP,LSYM)
+          ISYDWN=MUL(ISYUP,STSYM)
           NDWN=NOW(2,ISYDWN,MV)
-          ICONF=IOCSF(ISYUP,MV,LSYM)
+          ICONF=IOCSF(ISYUP,MV,STSYM)
           IUW0=LICASE-NIPWLK+IOW(1,ISYUP,MV)
           IDW0=LICASE-NIPWLK+IOW(2,ISYDWN,MV)
           IDWNSV=0

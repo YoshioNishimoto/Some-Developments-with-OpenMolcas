@@ -8,7 +8,8 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine axexsol2_cvb(ap,eigval,eigvec,dum,itdav,maxdav,
      >  solp,solp_res,eig,eig_res)
@@ -18,7 +19,8 @@
       dimension solp(maxdav),solp_res(maxdav)
 
       do 100 it=1,itdav
-100   call fmove(ap(1,it),eigvec(1,it),itdav)
+      call fmove_cvb(ap(1,it),eigvec(1,it),itdav)
+100   continue
 
       if(ip.ge.3)then
         write(6,*)' AP matrix :'
@@ -62,9 +64,9 @@ c  Eigenvalue-based root following -- determine closest root :
         jroot=iroot
       endif
       eig=eigval(iroot)
-      call fmove(eigvec(1,iroot),solp,itdav)
+      call fmove_cvb(eigvec(1,iroot),solp,itdav)
       eig_res=eigval(jroot)
-      call fmove(eigvec(1,jroot),solp_res,itdav)
+      call fmove_cvb(eigvec(1,jroot),solp_res,itdav)
       if(ip.ge.2)then
         write(6,'(a)')' Eigenvalues :'
         do i=1,itdav

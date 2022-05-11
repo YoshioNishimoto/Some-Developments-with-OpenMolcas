@@ -29,14 +29,13 @@
 *             University of Lund, Sweden                               *
 *             August 1999                                              *
 ************************************************************************
+      use NQ_structure, only: NQ_Data, Info_Ang
+      use Grid_On_Disk
+      use nq_Info
       Implicit Real*8 (A-H,O-Z)
-#include "real.fh"
 #include "itmax.fh"
-#include "info.fh"
-#include "WrkSpc.fh"
+#include "real.fh"
 #include "setup.fh"
-#include "nq_info.fh"
-#include "grid_on_disk.fh"
 #include "nsd.fh"
 #include "debug.fh"
       Integer list_p(nlist_p)
@@ -48,20 +47,14 @@
 *                                                                      *
 *     Statement functions                                              *
 *                                                                      *
-#include "nq_structure.fh"
-      declare_ip_r_quad
-      iROff(i,ir)=2*(ir-1)+i-1
       Check(i,j)=iAnd(i,2**(j-1)).ne.0
-      x_a(i,iSet)=Work(Info_Ang(3,iSet)+(i-1)*4  )
-      y_a(i,iSet)=Work(Info_Ang(3,iSet)+(i-1)*4+1)
-      z_a(i,iSet)=Work(Info_Ang(3,iSet)+(i-1)*4+2)
-      w_a(i,iSet)=Work(Info_Ang(3,iSet)+(i-1)*4+3)
+      x_a(i,iSet)=Info_Ang(iSet)%R(1,i)
+      y_a(i,iSet)=Info_Ang(iSet)%R(2,i)
+      z_a(i,iSet)=Info_Ang(iSet)%R(3,i)
+      w_a(i,iSet)=Info_Ang(iSet)%R(4,i)
 *                                                                      *
 ************************************************************************
 *                                                                      *
-#ifdef _DEBUG_
-      Call QEnter('Subblock')
-#endif
       nGrid=(9*mGrid)/10
       iStrt=number_of_grid_points+1
 *                                                                      *
@@ -69,11 +62,8 @@
 *                                                                      *
 *---- Start loop over the atomic grid
 *
-      ip_iRx=ip_of_iWork(Work(ip_R_Quad(iNQ)))
-      ip_Rx=iWork(ip_iRx)
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       If (Debug) Then
-         Write (6,*) 'ip_Rx=',ip_Rx
          Write (6,*) ' x_NQ=',x_NQ
          Write (6,*) ' y_NQ=',y_NQ
          Write (6,*) ' z_NQ=',z_NQ
@@ -99,7 +89,7 @@ c        Write (*,*) 'Find R subrange!'
 *
          iR_End = iEnd_R
          Do iR = iEnd_R, iStart_R
-            R_Value = Work(ip_Rx+iROff(1,iR))
+            R_Value = NQ_Data(iNQ)%R_Quad(1,iR)
             If (R_Value.le.R_box_Min) Then
                iR_End = iR
             Else
@@ -110,7 +100,7 @@ c        Write (*,*) 'Find R subrange!'
 *
          iR_Start = iStart_R
          Do iR = iStart_R, iR_End, -1
-            R_Value = Work(ip_Rx+iROff(1,iR))
+            R_Value = NQ_Data(iNQ)%R_Quad(1,iR)
             If (R_Value.ge.R_Box_Max) Then
                iR_Start = iR
             Else
@@ -175,20 +165,20 @@ c     Write (*,*) 'Actual range:',iEnd_R, iStart_R
 *
 *------ Branch out if subrange is outside the box
 *
-         R_Value_Min = Work(ip_Rx+iROff(1,iR_End))
+         R_Value_Min = NQ_Data(iNQ)%R_Quad(1,iR_End)
          If (R_Value_Min.gt.R_box_Max) Go To 8887
-         R_Value_Max = Work(ip_Rx+iROff(1,iR_Start))
+         R_Value_Max = NQ_Data(iNQ)%R_Quad(1,iR_Start)
          If (R_Value_Max.lt.R_box_Min) Go To 8887
 *
 c        Write (*,*) 'Selected range:',iR_End, iR_Start
-c        Write (*,*) 'l_max=',Info_Ang(1,iSet)
+c        Write (*,*) 'l_max=',Info_Ang(iSet)%L_Eff
 *                                                                      *
 ************************************************************************
 *                                                                      *
 *---- Angular loop
 *
-      Do iPoint=1,Info_Ang(2,iSet)
-#ifdef _DEBUG_
+      Do iPoint=1,Info_Ang(iSet)%nPoints
+#ifdef _DEBUGPRINT_
          If (Debug) Then
             Write (6,*) 'X,Y,Z*',x_a(iPoint,iSet),
      &                           y_a(iPoint,iSet),
@@ -211,7 +201,7 @@ c           Write (*,*) 'Select angular points!'
 *------- Radial loop over the reduced range
 *
          Do iR = iR_End,iR_Start
-            Radius=Work(ip_Rx+iROff(1,iR))
+            Radius=NQ_Data(iNQ)%R_Quad(1,iR)
 *           In the atomic referential
             xpt=Radius*x_a(iPoint,iSet)
             ypt=Radius*y_a(iPoint,iSet)
@@ -220,7 +210,7 @@ c           Write (*,*) 'Select angular points!'
             x=xpt+x_NQ
             y=ypt+y_NQ
             z=zpt+z_NQ
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
             If (Debug) Then
                Write (6,*) 'Radius=',Radius
                Write (6,*) ' x,y,z:',x,y,z
@@ -246,7 +236,7 @@ c           Write (*,*) 'Select angular points!'
                If (x.eq.x_max_) Fact=Fact*Half
                If (y.eq.y_max_) Fact=Fact*Half
                If (z.eq.z_max_) Fact=Fact*Half
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
                If (Debug) Then
                   Write (6,*) x_a(iPoint,iSet),
      &                        y_a(iPoint,iSet),
@@ -258,16 +248,18 @@ c           Write (*,*) 'Select angular points!'
                End If
 #endif
 *
-               number_of_grid_points=number_of_grid_points+1
 *              Radial weight
-               weight=Work(ip_Rx+iROff(2,iR))
+               weight=NQ_Data(iNQ)%R_Quad(2,iR)
 *              Combine the radial and angular weight
                w_g=weight*w_a(iPoint,iSet)
-               Grid(1,number_of_grid_points)= x
-               Grid(2,number_of_grid_points)= y
-               Grid(3,number_of_grid_points)= z
-*              Compute the partitioning weight
-               Weights(number_of_grid_points)=w_g*Fact
+               If (w_g*Fact>=1.0D-15) Then
+                  number_of_grid_points=number_of_grid_points+1
+                  Grid(1,number_of_grid_points)= x
+                  Grid(2,number_of_grid_points)= y
+                  Grid(3,number_of_grid_points)= z
+*                 Compute the partitioning weight
+                  Weights(number_of_grid_points)=w_g*Fact
+               End If
             End If
 *                                                                      *
 ************************************************************************
@@ -290,17 +282,20 @@ c           Write (*,*) 'Select angular points!'
                Call WarningMessage(2,'Subblock: nBatch.gt.nBatch_Max')
                Call Abend()
             End If
-            iBatchInfo(1,nBatch)=iDisk_Grid
-            iBatchInfo(2,nBatch)=number_of_grid_points
-            iBatchInfo(3,nBatch)=iNQ
-*
-            Call dDaFile(Lu_Grid,1,Grid,3*number_of_grid_points,
-     &                   iDisk_Grid)
 *
 *---------- Generate weights
 *
+            mGrid_= number_of_grid_points-iStrt+1
             Call W(Grid(1,iStrt),ilist_p,Weights(iStrt),list_p,
-     &             nList_p,number_of_grid_points-iStrt+1)
+     &             nList_p,mGrid_,nRemoved)
+            number_of_grid_points=number_of_grid_points-nRemoved
+
+            iBatchInfo(1,nBatch)=iDisk_Grid
+            iBatchInfo(3,nBatch)=iNQ
+            iBatchInfo(2,nBatch)=number_of_grid_points
+
+            Call dDaFile(Lu_Grid,1,Grid,3*number_of_grid_points,
+     &                   iDisk_Grid)
             Call dDaFile(Lu_Grid,1,Weights,number_of_grid_points,
      &                   iDisk_Grid)
 *
@@ -326,9 +321,12 @@ C           Write (*,*) 'ntotgp=',ntotgp
 *
 *     Write (6,*) 'number_of_grid_points=',number_of_grid_points
 *     Write (6,*) 'iStrt=',iStrt
-      If (number_of_grid_points-iStrt+1.gt.0)
-     &   Call W(Grid(1,iStrt),ilist_p,Weights(iStrt),list_p,
-     &          nList_p,number_of_grid_points-iStrt+1)
+      If (number_of_grid_points-iStrt+1.gt.0) Then
+         mGrid_=number_of_grid_points-iStrt+1
+         Call W(Grid(1,iStrt),ilist_p,Weights(iStrt),list_p,
+     &          nList_p,mGrid_,nRemoved)
+         number_of_grid_points=number_of_grid_points-nRemoved
+      End If
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -357,8 +355,4 @@ C        Write (*,*) 'ntotgp=',ntotgp
 *                                                                      *
 ************************************************************************
 *                                                                      *
-#ifdef _DEBUG_
-      Call QExit('Subblock')
-#endif
-      Return
       End

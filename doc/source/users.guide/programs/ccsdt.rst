@@ -25,9 +25,9 @@
 :program:`CCSDT` performs the iterative single determinant CCSD procedure for
 open shell systems and the noniterative triple contribution calculation to
 the CCSD energy.
-For further details the reader is referred to the
-sections :ref:`TUT:sec:ccsdt` and
-:ref:`TUT:sec:rp_wf` of the tutorials and examples manual.
+For further details the reader is referred to
+:numref:`Sections %s <TUT:sec:ccsdt>` and
+:numref:`%s <TUT:sec:rp_wf>` of the tutorials and examples manual.
 
 .. index::
    pair: Dependencies; CCSDT
@@ -74,7 +74,7 @@ adaptation of CCSD amplitudes (the recommended citations are Refs.
 
 Besides these two possibilities there are also available some
 additional partial ones (see keyword
-:kword:`ADAPTATION` in Section :ref:`sec:ccsdt_input`). These adaptations are
+:kword:`ADAPTATION` in :numref:`sec:ccsdt_input`). These adaptations are
 suitable only for some specific purposes. More details on spin adaptation in
 the CCSD step can be found in Refs. :cite:`ccsd_neo1,ccsd_neo2,ccsd_kno`.
 The current implementation of the spin adaptation saves no computer time. A more
@@ -134,7 +134,7 @@ Input files
 
 :program:`CCSDT` will use the following input
 files: :file:`TRAONE`, :file:`TRAINT`, :file:`RUNFILE`, :file:`JOBIPH`,
-(for more information see :ref:`UG:sec:files_list`).
+(for more information see :numref:`UG:sec:files_list`).
 
 Output files
 ............
@@ -238,11 +238,12 @@ The input for each module is preceded by its name like: ::
               </KEYWORD>
               %%Keyword: ADAPtation <basic>
               Sets the type of CCSD amplitudes spin adaptation.
-              ||0 - None
-              ||1 - T2 DDVV
-              ||2 - T2 DDVV + T1 DV
-              ||3 - Full T2 and T1 spin adaptation (doublets only)
-              ||4 - Full T2 adaptation without SDVS coupling (doublets only)
+
+              0 -- None
+              1 -- T2 DDVV
+              2 -- T2 DDVV + T1 DV
+              3 -- Full T2 and T1 spin adaptation (doublets only)
+              4 -- Full T2 adaptation without SDVS coupling (doublets only)
 
 :kword:`DENOminators`
   The parameter on the following line specifies the type of denominators that
@@ -274,9 +275,10 @@ The input for each module is preceded by its name like: ::
               </KEYWORD>
               %%Keyword: DENOminators <basic>
               Sets the type of denominators in the CCSD procedure.
-              ||0 - Diagonal Fock matrix elements
-              ||1 - Spin averaged diagonal Fock matrix elements
-              ||2 - Orbital energies
+
+              0 -- Diagonal Fock matrix elements
+              1 -- Spin averaged diagonal Fock matrix elements
+              2 -- Orbital energies
 
 :kword:`SHIFts`
   Following line contains *socc* and *svirt* levelshift values for occupied and
@@ -304,7 +306,7 @@ The input for each module is preceded by its name like: ::
   The parameter on the following line specifies the
   type of noniterative triples
   procedure. There are three different types of perturbative triples available
-  (see Section :ref:`sec:ccsdt`).
+  (see :numref:`sec:ccsdt`).
 
   .. container:: list
 
@@ -325,10 +327,11 @@ The input for each module is preceded by its name like: ::
               </KEYWORD>
               %%Keyword: TRIPles <basic>
               Sets the type of triples contribution calculation.
-              ||0 - CCSD
-              ||1 - CCSD + T(CCSD)   (Urban et al.)
-              ||2 - CCSD(T)          (Raghavachari et al.)
-              ||3 - CCSD(T)          (Watts et al.)
+
+              0 -- CCSD
+              1 -- CCSD + T(CCSD)   (Urban et al.)
+              2 -- CCSD(T)          (Raghavachari et al.)
+              3 -- CCSD(T)          (Watts et al.)
 
 :kword:`T3DEnominators`
   The parameter on the following line specifies the type of denominators that
@@ -354,9 +357,10 @@ The input for each module is preceded by its name like: ::
               </KEYWORD>
               %%Keyword: T3DEnominators <advanced>
               Sets the type of denominators used in the (T) calculation procedure.
-              ||0 - Diagonal Fock matrix elements
-              ||1 - Spin averaged Fock matrix elements
-              ||2 - Orbital energies
+
+              0 -- Diagonal Fock matrix elements
+              1 -- Spin averaged Fock matrix elements
+              2 -- Orbital energies
 
 :kword:`T3SHifts`
   The following line contains *socc* and *svirt* levelshift values for
@@ -465,7 +469,7 @@ The input for each module is preceded by its name like: ::
               </HELP>
               </KEYWORD>
               %%Keyword: PRINtlevel <advanced>
-              Sets the amount of the program verbosity as 0..2. Default:0.
+              Sets the amount of the program verbosity as 0..2. Default: 0.
 
 :kword:`LOAD`
   This keyword is followed by the line which specifies the
@@ -539,8 +543,9 @@ The input for each module is preceded by its name like: ::
               </KEYWORD>
               %%Keyword: IOKEy <advanced>
               Specifies the file type handling, with Fortran I/O being the default.
-              ||1 - Fortran I/O
-              ||2 - MOLCAS DA I/O
+
+              1 -- Fortran I/O
+              2 -- MOLCAS DA I/O
 
 :kword:`MACHinetyp`
   This keyword specifies which type of matrix multiplication is preferred on a given
@@ -579,9 +584,10 @@ The input for each module is preceded by its name like: ::
               %%Keyword: MACHinetyp <advanced>
               This keyword sets the preferred type of matrix multiplication.
               On the following line n, limit must be specified:
-              ||n=1 - standard matrix multiplication is performed
-              ||n=2 - A(T)*B matrix multiplication is performed, if
-              ||      size(A)/size(B) is less than limit. See manual!
+
+              n=1 -- standard matrix multiplication is performed
+              n=2 -- A(T)*B matrix multiplication is performed, if
+                     size(A)/size(B) is less than limit. See manual!
 
 Note, that :kword:`CCSD` and :kword:`CCT` keywords are mutually exclusive.
 

@@ -39,14 +39,11 @@
 #include "rasdim.fh"
 #include "general.fh"
 
-      Integer case, state_symmetry
+      Integer case
       Integer   off_PUVX, off_Dmat, off_Fmat
       Dimension off_PUVX(mxSym), off_Dmat(mxSym), off_Fmat(mxSym)
 
       iTri(i)=(i*i-i)/2
-
-*     nasty, but necessary
-      state_symmetry=lSym
 
 *     generate offsets
 
@@ -346,26 +343,12 @@
         End Do
       End Do
 
-*     nasty, but necessary
-      lSym=state_symmetry
-
       Return
       End
 
 
 
-* $Revision: 8.1.151006-0932 Patch(8.1.151006-0932): $
-* upd_fa $ this file belongs to the Molcas repository $
       Subroutine Upd_FI_m(PUVX,F,D,ExFac)
-************************************************************************
-*                                                                      *
-*     (c) Copyright. All rights reserved                               *
-*                                                                      *
-*     This code or parts thereof may not be copied or redistributed,   *
-*     without the written permission of the author. The use is re-     *
-*     stricted to research purposes only, and the material may not be  *
-*     included in any commercial product.                              *
-*                                                                      *
 ************************************************************************
 *                                                                      *
 *     compute FIA, FAA, and FAS from the integral set (pu!vx)          *
@@ -395,19 +378,15 @@
 #include "general.fh"
 #include "WrkSpc.fh"
 
-      Integer  state_symmetry
       Integer   off_Fmat
       Dimension  off_Fmat(mxSym)
       Integer off_Bas(mxSym),off_ish(mxSym)
-      Integer off_BasAsh(mxSym),off_BasIsh(mxSym)
+      Integer off_BasAsh(mxSym)
       Integer p,q,ipq
       Integer iStack1,iStack2,iStack
       Integer count_tmp
 
       iTri(i)=(i*i-i)/2
-
-*     nasty, but necessary
-      state_symmetry=lSym
 
 *     generate offsets
 
@@ -423,7 +402,6 @@
         off_Bas(iSym)    = iStack1
         off_ish(isym)    = iStack2
         off_BasAsh(isym) = iStack1 + nIsh(iSym) + nFro(iSym)
-        off_BasIsh(isym) = iStack1 + nFro(iSym)
         off_Fmat(iSym) = iStack
         iOrb = nOrb(iSym)
         iStack = iStack+ (iOrb*iOrb+iOrb)/2
@@ -503,7 +481,7 @@
 !it.
       Call wrtmat(F,1,ntot1,1,ntot1)
 
-      call dcopy_(ntot1,0.0d0,0,F,1)
+      call dcopy_(ntot1,[0.0d0],0,F,1)
 
       CALL GETMEM('OEPOTS','ALLO','REAL',iTMPP,ntot1)
       Call Get_dArray('ONTOPO',work(iTMPP),NTOT1)
@@ -517,23 +495,11 @@
 
 ************************************************************************
 
-*     nasty, but necessary
-      lSym=state_symmetry
-
       Return
       End
 
       Subroutine Upd_FA_CI(PUVX,F,ExFac)
 
-************************************************************************
-*                                                                      *
-*     (c) Copyright. All rights reserved                               *
-*                                                                      *
-*     This code or parts thereof may not be copied or redistributed,   *
-*     without the written permission of the author. The use is re-     *
-*     stricted to research purposes only, and the material may not be  *
-*     included in any commercial product.                              *
-*                                                                      *
 ************************************************************************
 *                                                                      *
 *     compute FIA, FAA, and FAS from the integral set (pu!vx)          *
@@ -562,21 +528,18 @@
 #include "rasdim.fh"
 #include "general.fh"
 
-      Integer case, state_symmetry
-      Integer   off_PUVX, off_Dmat, off_Fmat
-      Dimension off_PUVX(mxSym), off_Dmat(mxSym), off_Fmat(mxSym)
+      Integer case
+      Integer   off_PUVX, off_Fmat
+      Dimension off_PUVX(mxSym), off_Fmat(mxSym)
 
       iTri(i)=(i*i-i)/2
 
       Call unused_real(ExFac)
-*     nasty, but necessary
-      state_symmetry=lSym
 
 *     generate offsets
 
       iStack = 0
       Do iSym = 1,nSym
-         off_Dmat(iSym) = iStack
          iAsh = nAsh(iSym)
          iStack = iStack+ (iAsh*iAsh+iAsh)/2
       End Do
@@ -662,15 +625,9 @@
 *               symmetry case (II!II)
 100             Continue
                 iFoff = off_Fmat(iSym)
-                iDoff = off_Dmat(iSym)
                 Do iV = 1,kAsh
                   Do iX = 1,iV
-                    iVX = iTri(iV) + iX
                     Do iU = 1,jAsh
-                      iUV = iTri(iU) + iV
-                      If ( iV.gt.iU ) iUV  = iTri(iV) + iU
-                      iUX = iTri(iU) + iX
-                      If ( iX.gt.iU ) iUX  = iTri(iX) + iU
                       If ( iX.eq.iV ) then
                       End If
                       iPUVX = off_PUVX(iSym)
@@ -742,10 +699,8 @@
 *               symmetry case (II!KK)
 200             Continue
                 iFoff = off_Fmat(iSym)
-                kDoff = off_Dmat(kSym)
                 Do iV = 1,kAsh
                   Do iX = 1,iV
-                    iVX = iTri(iV) + iX
                     Do iU = 1,jAsh
                       iPUVX = off_PUVX(iSym)
 *                     inactive/active block
@@ -780,13 +735,9 @@
 300             Continue
                 iFoff = off_Fmat(iSym)
                 jFoff = off_Fmat(jSym)
-                iDoff = off_Dmat(iSym)
-                jDoff = off_Dmat(jSym)
                 Do iV = 1,kAsh
                   Do iX = 1,lAsh
                     Do iU= 1,jAsh
-                      iUX = iTri(iU) + iX
-                      If ( iX.gt.iU ) iUX  = iTri(iX) + iU
                       iPUVX = off_PUVX(iSym)
 *                     inactive/active block
                       Do iP = 1,iIsh
@@ -813,8 +764,6 @@
                       off_PUVX(iSym) = off_PUVX(iSym) + iOrb
                     End Do
                     Do iU= 1,iAsh
-                      iUV = iTri(iU) + iV
-                      If ( iV.gt.iU ) iUV  = iTri(iV) + iU
                       iPUVX = off_PUVX(jSym)
 *                     inactive/active block
                       Do iP = 1,jIsh
@@ -860,9 +809,6 @@
           End Do
         End Do
       End Do
-
-*     nasty, but necessary
-      lSym=state_symmetry
 
       Return
       End

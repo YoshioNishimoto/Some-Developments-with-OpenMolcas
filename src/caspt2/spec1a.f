@@ -21,8 +21,6 @@
       IMPLICIT NONE
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
-#include "WrkSpc.fh"
       INTEGER IFC,ISYM
       REAL*8 FACT,X(*),Y(*)
       INTEGER NAS,NT,NI,IT,ITQ,IUQ,ITUU
@@ -34,13 +32,14 @@ C the conjugate expression (summing into Y, values from X).
       NI=NISH(ISYM)
       DO 10 IT=1,NT
         ITQ=IT+NAES(ISYM)
-        DO 10 IUQ=1,NASHT
+        DO 11 IUQ=1,NASHT
           ITUU=KTUV(ITQ,IUQ,IUQ)-NTUVES(ISYM)
           IF(IFC.EQ.0) THEN
             CALL DAXPY_(NI,FACT,Y(IT),NT,X(ITUU),NAS)
           ELSE
             CALL DAXPY_(NI,FACT,X(ITUU),NAS,Y(IT),NT)
           END IF
+  11    CONTINUE
   10  CONTINUE
       RETURN
       END

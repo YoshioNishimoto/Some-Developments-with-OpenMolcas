@@ -24,21 +24,21 @@ C  THIS ROUTINE READS THE FILE "SINGLE_ANISO.INPUT".
 C
 C
       Implicit None
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-#include "warnings.fh"
+      Integer, Parameter            :: wp=kind(0.d0)
+#include "warnings.h"
 #include "mgrid.fh"
 
 c----------------------------------------------------------------
 c   magnetization vectors:
       Integer            :: nDir,nDirZee
-      Real(kind=wp)      :: dirX(nDir), dirY(nDir), dirZ(nDir)
-      Real(kind=wp)      :: dir_weight(nDirZee,3)
+      Real(kind=8)      :: dirX(nDir), dirY(nDir), dirZ(nDir)
+      Real(kind=8)      :: dir_weight(nDirZee,3)
       Logical            :: compute_Mdir_vector, zeeman_energy
 c      common/MVL/ compute_Mdir_vector
 c      common/MZEL/ zeeman_energy
 c----------------------------------------------------------------
       Integer :: nss, nstate
-      Integer :: iprint,nt,nh,nk,mg,igsm,l,jEnd
+      Integer :: iprint,nt,nh,nk,mg,l,jEnd
       Integer :: nlanth,ndimcf,ldimcf,axisoption, i_OxStat
       Integer :: input_to_read,encut_definition,ncut,ntempmagn
       Integer :: ndirtot
@@ -47,19 +47,19 @@ c----------------------------------------------------------------
       Integer :: AngPoints
       Integer :: LUZee(nDirZee)
 
-      Real(kind=wp) :: tmin,tmax,hmin,hmax,t1,t2,zj,
+      Real(kind=8) :: tmin,tmax,hmin,hmax,t1,t2,zj,
      &                 tempmagn(nTempMagn), encut_rate
-      Real(kind=wp) :: texp(nT),chit_exp(nT)
-      Real(kind=wp) :: hexp(nH),magn_exp(nH,ntempmagn)
-      Real(kind=wp) :: zmagn(3,3),sum,tmp
-      Real(kind=wp) :: cryst(6),coord(3)
-      Real(kind=wp) :: column_check(3,3), row_check(3,3)
-      Real(kind=wp) :: check_dir_weight(nDirZee)
-      Real(kind=wp) :: zr(3,3),det_zmagn
-      Real(kind=wp) :: FindDetR
-      Real(kind=wp) :: Xfield
-      Real(kind=wp), intent(out) :: thrs
-      Real(kind=wp), intent(out) :: H_torq, T_torq
+      Real(kind=8) :: texp(nT),chit_exp(nT)
+      Real(kind=8) :: hexp(nH),magn_exp(nH,ntempmagn)
+      Real(kind=8) :: zmagn(3,3),sum,tmp
+      Real(kind=8) :: cryst(6),coord(3)
+      Real(kind=8) :: column_check(3,3), row_check(3,3)
+      Real(kind=8) :: check_dir_weight(nDirZee)
+      Real(kind=8) :: zr(3,3),det_zmagn
+      Real(kind=8) :: FindDetR
+      Real(kind=8) :: Xfield
+      Real(kind=8), intent(out) :: thrs
+      Real(kind=8), intent(out) :: H_torq, T_torq
 
       Logical :: hcheck,tcheck,poly_file
       Logical :: Ifrestart,Do_structure_abc
@@ -73,9 +73,9 @@ c----------------------------------------------------------------
       Logical, intent(out) :: m_paranoid
       Logical              :: doplot
 
-      Character(2)  :: cME,clanth(37)
-      Character(21) :: namefile_energy
-      Character(180):: input_file_name,tmpline,err_msg
+      Character(Len=2)  :: cME,clanth(37)
+      Character(Len=21) :: namefile_energy
+      Character(Len=180):: input_file_name,tmpline,err_msg
 
       External      :: FindDetR
 
@@ -89,12 +89,11 @@ c      COMMON/MAGNSUBR/ HMIN,HMAX
 c      COMMON/MAGNSUBL/ HINPUT
 
       Integer        :: I,LINENR,j
-      Character(280) :: LINE
+      Character(Len=280) :: LINE
 
 
       Logical :: DBG
 
-      Call qEnter('SA_readin')
       DBG=.false.
 C============ Some default settings=====================================
 c  variables in "mgrid.fh"
@@ -201,7 +200,6 @@ c  variables in "mgrid.fh"
       get_nP(3,30)=631
       get_nP(3,31)=694
       get_nP(3,32)=760
-c variables in "mvect.fh"
       compute_Mdir_vector=.false.
       zeeman_energy=.false.
       Do i=1,nDir
@@ -239,7 +237,6 @@ c      nTempMagn             = 1
       T1                    = 5.0_wp
       T2                    = 6.0_wp
       ZJ                    = 0.0_wp
-      IGSM                  = 1
       m_paranoid            =  .true.
       checkTMAG             =  .FALSE.
       compute_g_tensors     =  .FALSE.
@@ -374,7 +371,6 @@ C ------------------------------------------
         compute_g_tensors     =  .true.
         READ(5,*,Err=997) (NDIM(i),i=1,NMULT)
         IF(DBG) Write(6,*) 'MLTP: NDIM()=',(NDIM(i),i=1,NMULT)
-        IGSM=NDIM(1)
         LINENR=LINENR+2
         Go To 100
       End If
@@ -412,6 +408,20 @@ C ------------------------------------------
         End If
        Go To 100
       End If
+
+C-------------------------------------------
+
+      If (line(1:4).eq.'DATA') Then
+         Ifrestart=.true.
+         READ(5,*) tmpline
+         input_file_name=trim(tmpline)
+         input_to_read=6
+         If(DBG) WRITE(6,*) 'restart_check: DATA, input_file_name='
+         If(DBG) WRITE(6,*) input_file_name
+         LINENR=LINENR+1
+         Go To 100
+      End If
+
 C-------------------------------------------
       If (LINE(1:4).eq.'TINT') Then
         If(TINPUT.EQV..FALSE.) Then
@@ -495,7 +505,7 @@ C-------------------------------------------
            Go To 595
         Else
            ENCUT_check=.true.
-           compute_magnetization=.true.  !request for computation of M(H)
+           compute_magnetization=.true. !request for computation of M(H)
            encut_definition=1
 
            READ(5,*,ERR=997) NCUT  !E_cut=ESO(Ncut)
@@ -544,7 +554,7 @@ C-------------------------------------------
         Else
           ENCUT_check=.true.
           compute_magnetization=.true.
-          encut_definition=3     !Ncut = INT(nss*encut_rate); E_cut=E(Ncut)
+          encut_definition=3  !Ncut = INT(nss*encut_rate); E_cut=E(Ncut)
 
           READ(5,*,ERR=997) encut_rate
 
@@ -1034,6 +1044,36 @@ C-------------------------------------------
      &         (cME.eq.'Cr') .OR. (cME.eq.'CR') ) Then
 
          nlanth=32
+         ! Cr3+ -- d^4
+         READ(5,*,ERR=997) i_OxStat
+
+           If(i_OxStat<0) then
+             Write(6,'(3A,i5)') 'Oxidation state of',cME,'is negative:',
+     &                           i_OxStat
+             Write(6,'(A)')  'It was re-set to positive.'
+             i_OxStat=abs(i_OxStat)
+           End If
+           If (i_OxStat==2) then
+             lDIMCF=5 ! (L=2) d^4
+             Write(6,'(3A,i5)') 'Oxidation state of ', cME,' is:',
+     &                           i_OxStat
+           Else If (i_OxStat == 3) Then
+             lDIMCF=7 ! (L=3) d^3
+             Write(6,'(3A,i5)') 'Oxidation state of ', cME,' is:',
+     &                           i_OxStat
+           Else If (i_OxStat == 4) Then
+             lDIMCF=7 ! (L=3) d^2
+             Write(6,'(3A,i5)') 'Oxidation state of ', cME,' is:',
+     &                           i_OxStat
+           Else If (i_OxStat == 5) Then
+             lDIMCF=5 ! (L=2) d^1
+             Write(6,'(3A,i5)') 'Oxidation state of ', cME,' is:',
+     &                           i_OxStat
+           Else
+             lDIMCF=1 ! (L=0)
+             Write(6,'(A)') 'Oxidation state of ', cME,' is:', i_OxStat
+             Write(6,'(A)') 'Crystal field will not be computed'
+           End If
          Write(6,'(A)') 'Crystal field will not be computed'
       !- - - - - - - - - - - - - - - - - - - -
       Else If( (cME.eq.'mn') .OR. (cME.eq.'mN') .OR.
@@ -1084,9 +1124,22 @@ C-------------------------------------------
              Write(6,'(A)') 'Crystal field will not be computed'
            Else If (i_OxStat == 2) Then
              lDIMCF=5 ! (L=2)  d^6  or  d^4
+             Write(6,'(3A,i5)') 'Oxidation state of ', cME,' is:',
+     &                           i_OxStat
+           Else If (i_OxStat == 3) Then
+             lDIMCF=1 ! (L=2)  d^5
+             Write(6,'(3A,i5)') 'Oxidation state of ', cME,' is:',
+     &                           i_OxStat
+             Write(6,'(A)') 'Crystal field will not be computed'
+           Else If (i_OxStat == 4) Then
+             lDIMCF=1 ! (L=2)
+             Write(6,'(3A,i5)') 'Oxidation state of ', cME,' is:',
+     &                           i_OxStat
+             Write(6,'(A)') 'Crystal field will not be computed'
            Else
              lDIMCF=1 ! (L=0)
-             Write(6,'(A)') 'Oxidation state of ', cME,' is:', i_OxStat
+             Write(6,'(3A,i5)') 'Oxidation state of ', cME,' is:',
+     &                           i_OxStat
              Write(6,'(A)') 'Crystal field will not be computed'
            End If
       !- - - - - - - - - - - - - - - - - - - -
@@ -1140,7 +1193,8 @@ C-------------------------------------------
              lDIMCF=7 ! (L=2) d^8
            Else
              lDIMCF=1 ! (L=0)
-             Write(6,'(A)') 'Oxidation state of ', cME,' is:', i_OxStat
+             Write(6,'(3A,i5)') 'Oxidation state of ', cME,' is:',
+     &                           i_OxStat
              Write(6,'(A)') 'Crystal field will not be computed'
            End If
       !- - - - - - - - - - - - - - - - - - - -
@@ -1265,8 +1319,8 @@ C-------------------------------------------
         IF(DBG) Write(6,*) 'ZEEM: nDirZee=',nDirZee
 
         Do i=1,nDirZee
-          ! open the zeeman_energy_xxx.txt file where Zeeman eigenstates will
-          ! be further written in mangetization() subroutine
+!         open the zeeman_energy_xxx.txt file where Zeeman eigenstates will
+!         be further written in mangetization() subroutine
           Write(namefile_energy,'(5A)') 'zeeman_energy_',
      &                     CHAR(48+mod( int((i)/100),10)),
      &                     CHAR(48+mod( int((i)/10 ),10)),
@@ -1308,7 +1362,7 @@ C-------------------------------------------
 
 200   continue
       If(IPRINT.gt.2) Then
-      Write(6,'(5X,A)') 'NO ERORR WAS LOCATED WHILE READING INPUT'
+      Write(6,'(5X,A)') 'NO ERROR WAS LOCATED WHILE READING INPUT'
       End If
 
 
@@ -1575,7 +1629,7 @@ C------ errors ------------------------------
       Write(6,*)' READIN: Unexpected End of input file.'
 
 999   continue
-      Call XFLUSH()
+      Call XFLUSH(6)
       Call ABEnd()
 
 590   continue
@@ -1592,6 +1646,5 @@ C------ errors ------------------------------
 
 
  190  continue
-      Call qExit('SA_readin')
       Return
       End

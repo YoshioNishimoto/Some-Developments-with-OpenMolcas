@@ -20,11 +20,9 @@ C
 
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "output_ras.fh"
-      Parameter (ROUTINE='XXXXXXXX')
-
       CHARACTER*2 QNSTEP
       CHARACTER*3 QNUPDT
-      Character*16 KSDFT
+      Character*80 KSDFT
       DIMENSION BK(NDIM),XSX(NDIM),VL(NDIM),VM(NDIM)
       DIMENSION XQN(NDIM),XOLD(NDIM),V1(NDIM),V2(NDIM)
       SAVE ALPHA,BETA,ELAST,FPLAST,NVEC,NLS
@@ -39,8 +37,8 @@ CBOR 000906     DIMENSION ALPHA(MXVEC),BETA(MXVEC)
        NVEC = 0
 * NLS: Nr of consecutive line searches.
        NLS=0
-       CALL DCOPY_(mxiter+2,0.0d0,0,ALPHA,1)
-       CALL DCOPY_(mxiter+2,0.0d0,0,BETA,1)
+       CALL DCOPY_(mxiter+2,[0.0d0],0,ALPHA,1)
+       CALL DCOPY_(mxiter+2,[0.0d0],0,BETA,1)
        IAD=0
        CALL DDAFILE(LUQUNE,1,BK,NDIM,IAD)
        CALL DDAFILE(LUQUNE,1,XSX,NDIM,IAD)

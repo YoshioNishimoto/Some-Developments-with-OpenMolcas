@@ -44,13 +44,12 @@
       Character*128 FileName
       logical exist
 *
-      Call QEnter('SpoolInp')
 *
 *     Get the name of the module
 *
       ProgName=Get_ProgName()
       Call Upcase(ProgName)
-      Call LeftAd(ProgName)
+      ProgName = adjustl(ProgName)
 *
       iEnd = 1
  99   If (ProgName(iEnd:iEnd).ne.' ') Then
@@ -82,7 +81,6 @@
          endif
       End If
 *
-       Call QExit('SpoolInp')
       Return
 *                                                                      *
 ************************************************************************

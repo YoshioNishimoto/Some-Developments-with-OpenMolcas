@@ -18,12 +18,13 @@
 * 1999: GEMINAL-R12 ENABLED                  *
 *--------------------------------------------*
       SUBROUTINE PCG(ICONV)
-      USE INPUTDATA
+      USE INPUTDATA, ONLY: INPUT
+      use output_caspt2, only: EMP2
+      use output_caspt2, only:iPrGlb,terse,usual
       IMPLICIT NONE
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 
@@ -32,7 +33,8 @@
       INTEGER I,IC,IS,ITER
       INTEGER IVECP,IVECT,IVECU
       INTEGER LAXITY
-
+      INTEGER Cho_X_GetTol
+      EXTERNAL Cho_X_GetTol
       REAL*8 ALPHA,BETA,PR,PT,UR
       REAL*8 ECORR(0:8,0:MXCASE)
       REAL*8 EAIVX,EATVX,EBJAI,EBJAT,EBVAT,EVJAI,EVJTI,EVJTU
@@ -40,7 +42,6 @@
       REAL*8 OVLAPS(0:8,0:MXCASE)
       REAL*8 SAV,SAVI,DSCALE
 
-      CALL QENTER('PCG')
 C Flag to tell wether convergence was obtained
       ICONV = 0
 
@@ -101,7 +102,7 @@ C---------------------
       CALL PSCAVEC(DSCALE,IVECP,IVECP)
       CALL POVLVEC(IVECP,IVECR,OVLAPS)
       PR=OVLAPS(0,0)
-      CALL SIGMA_CASPT2(1.0D00,0.0D00,IVECP,IVECT)
+      CALL SIGMA_CASPT2(1.0D00,0.0D0,IVECP,IVECT)
       CALL POVLVEC(IVECP,IVECT,OVLAPS)
       PT=OVLAPS(0,0)
       ALPHA=PR/PT
@@ -142,7 +143,7 @@ C---------------------
       ICONV = 16
  900  CONTINUE
       IF(IPRGLB.GE.TERSE) THEN
-       WRITE(6,'(23A5)')('-----',I=1,23)
+       WRITE(6,'(25A5)')('-----',I=1,25)
        WRITE(6,*)
        WRITE(6,*)' FINAL CASPT2 RESULT:'
       END IF
@@ -234,8 +235,8 @@ CPAM End of insert.
 * In automatic verification calculations, the precision is lower
 * in case of Cholesky calculation.
       LAXITY=8
-      IF(IfChol) LAXITY=7
-      Call Add_Info('E_CASPT2',E2TOT,1,LAXITY)
+      IF(IfChol) LAXITY=Cho_X_GetTol(LAXITY)
+      Call Add_Info('E_CASPT2',[E2TOT],1,LAXITY)
 
       IF(IPRGLB.GE.USUAL) THEN
        WRITE(6,*)
@@ -250,6 +251,5 @@ CPAM End of insert.
        WRITE(6,*)
       END IF
       CALL GETMEM('LISTS','FREE','INTE',LLISTS,NLSTOT)
-      CALL QEXIT('PCG')
       RETURN
       END

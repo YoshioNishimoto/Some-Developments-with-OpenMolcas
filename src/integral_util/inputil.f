@@ -30,11 +30,7 @@
 ************************************************************************
       implicit real*8 (a-h,o-z)
       Character*(*) In_line
-      Character*180 line
-* mxn should be len(line)/2+1
-      parameter (mxn=91)
-      common/cgetlc/ line
-      common/cgetln/ ncol,istrt(mxn),iend(mxn)
+#include "cgetl.fh"
       Line=In_Line
       l=len(line)
       Do i = 1, l
@@ -63,8 +59,7 @@
       goto 10
       End
       character*180 function get_ln(lunit)
-      logical Quit_On_Error
-      common /getlnQOE/ Quit_On_Error
+#include "getlnqoe.fh"
       character*180 get_ln_quit
       get_ln=get_ln_quit(lunit,1)
       if(Quit_On_Error) Then
@@ -75,8 +70,7 @@
       End
 
       character*180 function get_ln_EOF(lunit)
-      logical Quit_On_Error
-      common /getlnQOE/ Quit_On_Error
+#include "getlnqoe.fh"
       character*180 get_ln_quit
       get_ln_EOF=get_ln_quit(lunit,0)
       if(Quit_On_Error) get_ln_EOF='EOF'
@@ -103,15 +97,10 @@
 *                                                                      *
 ************************************************************************
       implicit real*8 (a-h,o-z)
-      Character*180 line
       Character*256 filename
-* mxn should be len(line)/2+1
-      parameter (mxn=91)
-      common/cgetlc/ line
-      common/cgetln/ ncol,istrt(mxn),iend(mxn)
-      common /igetline/ igetline, myunit
-      logical Quit_On_Error
-      common /getlnQOE/ Quit_On_Error
+#include "cgetl.fh"
+#include "igetline.fh"
+#include "getlnqoe.fh"
       Quit_On_Error=.false.
       myunit=lunit
 1     read(lunit,'(A)',err=100,end=200) line
@@ -171,13 +160,9 @@ c
 *
       subroutine Get_F(icol,val,n)
       implicit real*8 (a-h,o-z)
-      Character*180 line
       Character*80 string
-* mxn should be len(line)/2+1
-      parameter (mxn=91)
-      common/cgetlc/ line
-      common/cgetln/ ncol,istrt(mxn),iend(mxn)
-      common /igetline/ igetline, myunit
+#include "cgetl.fh"
+#include "igetline.fh"
       dimension val(n)
       ic=icol
       do i=1,n
@@ -206,16 +191,19 @@ c
           Call WarningMessage(2,'Error in Get_F')
           Call Quit_OnUserError()
       end
+*
+      subroutine Get_F1(icol,val)
+      implicit real*8 (a-h,o-z)
+      dimension dum(1)
+      call Get_F(icol,dum,1)
+      val=dum(1)
+      end
 
       subroutine Get_I(icol,ival,n)
       implicit real*8 (a-h,o-z)
-      Character*180 line
       Character*80 string
-* mxn should be len(line)/2+1
-      parameter (mxn=91)
-      common/cgetlc/ line
-      common/cgetln/ ncol,istrt(mxn),iend(mxn)
-      common /igetline/ igetline, myunit
+#include "cgetl.fh"
+#include "igetline.fh"
       dimension ival(n)
       ic=icol
       do i=1,n
@@ -244,13 +232,17 @@ c
           Call Quit_OnUserError()
       end
 *
+      subroutine Get_I1(icol,ival)
+      implicit real*8 (a-h,o-z)
+      dimension idum(1)
+      call Get_I(icol,idum,1)
+      ival=idum(1)
+      end
+*
       Subroutine Get_S(icol,str,n)
       character*(*) str(n)
-      Character*180 line
-      parameter (mxn=91)
-      common/cgetlc/ line
-      common/cgetln/ ncol,istrt(mxn),iend(mxn)
-      common /igetline/ igetline, myunit
+#include "cgetl.fh"
+#include "igetline.fh"
       ic=icol
       do i=1,n
         if(ic.le.ncol) then
@@ -291,13 +283,13 @@ c
       end
        subroutine FindErrorLine
        character *180 line
-       common /igetline/igetline,myunit
+#include "igetline.fh"
        lunit=myunit
        isave=igetline
        rewind (lunit)
  2     read(lunit,'(a)', end=300) Line
-       Call LeftAd(Line)
        Call UpCase(Line)
+       Line = adjustl(Line)
        if(Line(1:1).eq.'&') then
          line=line(2:)
           goto 3
@@ -333,7 +325,7 @@ c        goto 1
        end
 
        subroutine ResetErrorLine
-       common /igetline/igetline,myunit
+#include "igetline.fh"
        igetline=0
        return
        end

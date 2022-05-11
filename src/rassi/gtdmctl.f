@@ -8,18 +8,24 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
-      SUBROUTINE GTDMCTL(PROP,JOB1,JOB2,OVLP,HAM,IDDET1)
+      SUBROUTINE GTDMCTL(PROP,JOB1,JOB2,OVLP,DYSAMPS,NZ,IDDET1,IDISK)
 
+#ifdef _DMRG_
+      use rassi_global_arrays, only: HAM, SFDYS, LROOT
+#else
+      use rassi_global_arrays, only: HAM, SFDYS
+#endif
       !> module dependencies
 #ifdef _DMRG_
       use qcmaquis_interface_cfg
-      use qcmaquis_interface_wrapper
       use qcmaquis_interface_utility_routines, only:
      &    pretty_print_util
       use qcmaquis_info
+      use qcmaquis_interface_mpssi
 #endif
       use mspt2_eigenvectors
-
+      use rasscf_data, only: DoDMRG
+      use rassi_aux, only : AO_Mode, jDisk_TDM, iDisk_TDM
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "prgm.fh"
       CHARACTER*16 ROUTINE
@@ -32,7 +38,6 @@
 #include "WrkSpc.fh"
 #include "Files.fh"
 #include "Struct.fh"
-#include "rassiwfn.fh"
 #include "stdalloc.fh"
       DIMENSION ISGSTR1(NSGSIZE), ISGSTR2(NSGSIZE)
       DIMENSION ICISTR1(NCISIZE), ICISTR2(NCISIZE)
@@ -40,20 +45,21 @@
       DIMENSION PROP(NSTATE,NSTATE,NPROP)
       DIMENSION NGASORB(100),NGASLIM(2,10)
       DIMENSION NASHES(8)
-      DIMENSION OVLP(NSTATE,NSTATE),HAM(NSTATE,NSTATE)
+      DIMENSION OVLP(NSTATE,NSTATE)
+      DIMENSION DYSAMPS(NSTATE,NSTATE)
       DIMENSION IDDET1(NSTATE)
       LOGICAL IF00, IF10,IF01,IF20,IF11,IF02,IF21,IF12,IF22
       LOGICAL IFTWO,TRORB
       CHARACTER*8 WFTP1,WFTP2
       CHARACTER*6 STLNE1
-      CHARACTER*3 NUM1,NUM2
-      CHARACTER*12 FNM
       CHARACTER*48 STLNE2
-* PAM 2011 Nov 3, added write buffer WBUF:
-      DIMENSION WBUF(5)
       Real*8 Energies(1:20)
-      Integer IAD,LUIPHn,lThetaM
+      Integer IAD,LUIPHn,lThetaM,LUCITH
       Real*8 Norm_fac
+CC    NTO section
+      Logical DoNTO
+CC    NTO section
+      External IsFreeUnit
 
       type mixed_1pdensities
         real*8              :: overlap
@@ -66,23 +72,26 @@
 
       logical               :: mstate_dens
       real*8                :: fac1, fac2
+      real*8, Allocatable:: CMO1(:), CMO2(:)
+      real*8, Allocatable:: TRAD(:), TRASD(:), WERD(:)
+      real*8, Allocatable:: TDMAB(:), TSDMAB(:), WDMAB(:)
+      real*8, Allocatable:: TDMZZ(:), TSDMZZ(:), WDMZZ(:)
+      real*8, Allocatable:: TDM2(:), TRA1(:), TRA2(:), FMO(:), TUVX(:)
+      real*8, Allocatable:: DYSCOF(:), DYSAB(:), DYSZZ(:)
 
-#ifdef _DMRG_
-      ! strings for conversion of the qcmaquis h5 checkpoint names from 2u1 to su2u1
-      character(len=3) :: mplet1s, msproj1s
-      ! new checkpoint names
-      character(len=2300) :: checkpoint1_2u1,checkpoint2_2u1
-#else
-      logical             :: doDMRG = .false.
-#endif
 #include "SysDef.fh"
 
-      CALL QENTER(ROUTINE)
+#define _TIME_GTDM
+#ifdef _TIME_GTDM_
+      Call CWTime(TCpu1,TWall1)
+#endif
+#ifdef _WARNING_WORKAROUND_
 * Avoid compiler warnings about possibly unitialised mstate_1pdens
 * The below can be removed if the file is compiled with
 * -Wno-error=maybe-uninitialized
       allocate(mstate_1pdens(0,0))
       deallocate(mstate_1pdens)
+#endif
 C WF parameters for ISTATE and JSTATE
       NACTE1=NACTE(JOB1)
       MPLET1=MLTPLT(JOB1)
@@ -162,59 +171,59 @@ C WF parameters for ISTATE and JSTATE
       END IF
 
 C Pick up orbitals of ket and bra states.
-      CALL GETMEM('GTDMCMO1','ALLO','REAL',LCMO1,NCMO)
-      CALL RDCMO(JOB1,WORK(LCMO1))
-      CALL GETMEM('GTDMCMO2','ALLO','REAL',LCMO2,NCMO)
-      CALL RDCMO(JOB2,WORK(LCMO2))
+      Call mma_allocate(CMO1,nCMO,Label='CMO1')
+      Call mma_allocate(CMO2,nCMO,Label='CMO2')
+      CALL RDCMO_RASSI(JOB1,CMO1)
+      CALL RDCMO_RASSI(JOB2,CMO2)
+
 C Nr of active spin-orbitals
       NASORB=2*NASHT
       NTDM1=NASHT**2
-      NTSDM1=NASHT**2
       NTDM2=(NTDM1*(NTDM1+1))/2
+
+
+! +++ J. Norell 13/7 - 2018
+C 1D arrays for Dyson orbital coefficients
+C COF = active biorthonormal orbital base
+C AB  = inactive+active biorthonormal orbital base
+C ZZ  = atomic (basis function) base
+      IF ((IF10.or.IF01).and.DYSO) THEN
+        Call mma_allocate(DYSCOF,NASORB,Label='DYSCOF')
+        ! Number of inactive+active orbitals
+        NDYSAB = NASHT+NISHT
+        Call mma_allocate(DYSAB,nDYSAB,Label='DYSAB')
+        ! Number of atomic / basis functions
+        NDYSZZ = NZ
+        Call mma_allocate(DYSZZ,nDYSZZ,Label='DYSZZ')
+        DYSZZ(:)=0.0D0
+      END IF
+! +++
 
 C Transition density matrices, TDMAB is for active biorthonormal
 C orbitals only, while TDMZZ is in the fixed AO basis.
 C WDMAB, WDMZZ similar, but WE-reduced 'triplet' densities.
-      LTDMAB=LNILPT
-      LTDMZZ=LNILPT
-      LTSDMAB=LNILPT
-      LTSDMZZ=LNILPT
-      LWDMAB=LNILPT
-      LWDMZZ=LNILPT
       IF(IF11.AND.(NATO.OR.NPROP.GT.0)) THEN
-        CALL GETMEM('TDMAB','Allo','Real',LTDMAB,NTDMAB)
-        CALL GETMEM('TDMZZ','Allo','Real',LTDMZZ,NTDMZZ)
-        CALL GETMEM('TSDMAB','Allo','Real',LTSDMAB,NTDMAB)
-        CALL GETMEM('TSDMZZ','Allo','Real',LTSDMZZ,NTDMZZ)
-        CALL GETMEM('WDMAB','Allo','Real',LWDMAB,NTDMAB)
-        CALL GETMEM('WDMZZ','Allo','Real',LWDMZZ,NTDMZZ)
+        Call mma_allocate(TDMAB,nTDMAB,Label='TDMAB')
+        Call mma_allocate(TSDMAB,nTDMAB,Label='TSDMAB')
+        Call mma_allocate(WDMAB,nTDMAB,Label='WDMAB')
+        Call mma_allocate(TDMZZ,nTDMZZ,Label='TDMZZ')
+        Call mma_allocate(TSDMZZ,nTDMZZ,Label='TSDMZZ')
+        Call mma_allocate(WDMZZ,nTDMZZ,Label='WDMZZ')
       END IF
 
-      LSPD1=LNILPT
-      LTRAD=LNILPT
-      LTRASD=LNILPT
-      LWERD=LNILPT
       IF (IF11) THEN
-        NSPD1=NASORB**2
-        CALL GETMEM('SPD1','Allo','Real',LSPD1,NSPD1)
-        NTRAD=NASHT**2
-        CALL GETMEM('TRAD','Allo','Real',LTRAD,NTRAD)
-        NTRASD=NASHT**2
-        CALL GETMEM('TRASD','Allo','Real',LTRASD,NTRASD)
-        NWERD=NASHT**2
-        CALL GETMEM('WERD','Allo','Real',LWERD,NWERD)
+        NTRAD=NASHT**2 ! NTRAD == NWERD == NTRASD
+        Call mma_allocate(TRAD,nTRAD+1,Label='TRAD')
+        Call mma_allocate(TRASD,nTRAD+1,Label='TRASD')
+        Call mma_allocate(WERD,nTRAD+1,Label='WERD')
       END IF
-      LSPD2=LNILPT
-      LTDM2=LNILPT
       IF (IF22) THEN
-        NASGEM=(NASORB*(NASORB-1))/2
-        NSPD2=NASGEM**2
-        CALL GETMEM('SPD2','Allo','Real',LSPD2,NSPD2)
-        CALL GETMEM('TDM2','Allo','Real',LTDM2,NTDM2)
+        Call mma_allocate(TDM2,nTDM2,Label='TDM2')
+      ELSE
+        ! To avoid passing an unallocated argument
+        Call mma_allocate(TDM2,0,Label='TDM2')
       END IF
 
-      LTRA1=LNILPT
-      LTRA2=LNILPT
       IF(JOB1.NE.JOB2) THEN
 C Transform to biorthonormal orbital system
         IF (DoGSOR) Then
@@ -223,22 +232,22 @@ C Transform to biorthonormal orbital system
           IAD = 0
           Call IDAFile(LUIPH,2,ITOC15,30,IAD)
           IAD=ITOC15(2)
-          Call DDAFile(LUIPH,1,Work(LCMO2),nCMO,IAD)
+          Call DDAFile(LUIPH,1,CMO2,nCMO,IAD)
           Call DACLOS(LUIPH)
         End if !DoGSOR
 
 
-        CALL GETMEM('GTDMTRA1','ALLO','REAL',LTRA1,NTRA)
-        CALL GETMEM('GTDMTRA2','ALLO','REAL',LTRA2,NTRA)
-        CALL FINDT(WORK(LCMO1),WORK(LCMO2),WORK(LTRA1),WORK(LTRA2))
+        Call mma_allocate(TRA1,nTRA,Label='TRA1')
+        Call mma_allocate(TRA2,nTRA,Label='TRA2')
+        CALL FINDT(CMO1,CMO2,TRA1,TRA2)
         TRORB = .true.
       else
         TRORB = .false.
       end if
 
-      !> check whether we do RASSI with an effective multi-state PT2 Hamiltonian
-      !> whose eigenvectors are stored in Heff_evc
-      !> i.e., we do not use mixed CI coefficients / MPS wave functions but rather mix the TDMs
+!     > check whether we do RASSI with an effective multi-state PT2 Hamiltonian
+!     > whose eigenvectors are stored in Heff_evc
+!     > i.e., we do not use mixed CI coefficients / MPS wave functions but rather mix the TDMs
 
       mstate_dens = job1.eq.job2.and.
      &              (allocated(Heff_evc(job1)%pc).or.
@@ -266,15 +275,12 @@ C Transform to biorthonormal orbital system
 C OBTAIN CORE ENERGY, FOCK MATRIX, AND TWO-ELECTRON INTEGRALS
 C IN THE MIXED ACTIVE MO BASIS:
       ECORE=0.0D0
-      LFMO =LNILPT
-      LTUVX=LNILPT
       IF (IFTWO.AND.(MPLET1.EQ.MPLET2)) THEN
-       CALL GETMEM('FMO','ALLO','REAL',LFMO,NTDM1)
-       CALL GETMEM('TUVX  ','ALLO','REAL',LTUVX,NTDM2)
-       CALL FZERO(WORK(LTUVX),NTDM2)
+       Call mma_allocate(FMO,nTDM1,Label='FMO')
+       Call mma_allocate(TUVX,nTDM2,Label='TUVX')
+       TUVX(:)=0.0D0
 CTEST       write(*,*)'GTDMCTL calling TRINT.'
-       CALL TRINT(WORK(LCMO1),WORK(LCMO2),ECORE,
-     &              NTDM1,WORK(LFMO),NTDM2,WORK(LTUVX))
+       CALL TRINT(CMO1,CMO2,ECORE,nTDM1,FMO,nTDM2,TUVX)
        ECORE=ENUC+ERFNUC+ECORE
 CTEST       write(*,*)'GTDMCTL back from TRINT.'
 CTEST       write(*,*)'ENUC  =',ENUC
@@ -630,9 +636,12 @@ C Read ISTATE wave function
           ELSE
             WORK(LCI1)=1.0D0
           END IF
-          CALL DCOPY_(NDET1,0.0D0,0,WORK(LDET1),1)
-          CALL PREPSD(WFTP1,TRORB,ISGSTR1,ICISTR1,IXSTR1,LSYM1,
-     &                WORK(LTRA1),IWORK(LCNFTAB1),IWORK(LSPNTAB1),
+          CALL DCOPY_(NDET1,[0.0D0],0,WORK(LDET1),1)
+C         Transform to bion basis, Split-Guga format
+          If (TrOrb) CALL CITRA (WFTP1,ISGSTR1,ICISTR1,IXSTR1,LSYM1,
+     &                           TRA1,NCONF1,Work(LCI1))
+          CALL PREPSD(WFTP1,ISGSTR1,ICISTR1,LSYM1,
+     &                IWORK(LCNFTAB1),IWORK(LSPNTAB1),
      &                IWORK(LSSTAB),IWORK(LFSBTAB1),NCONF1,WORK(LCI1),
      &                WORK(LDET1))
 
@@ -643,12 +652,12 @@ C Write out the determinant expansion to disk.
 #ifdef _DMRG_
           call prepMPS(
      &                 TRORB,
-     &                 iWork(lLROOT+ISTATE-1),
+     &                 LROOT(ISTATE),
      &                 LSYM1,
      &                 MPLET1,
      &                 MSPROJ1,
      &                 NACTE1,
-     &                 WORK(LTRA1),
+     &                 TRA1,
      &                 NTRA,
      &                 NISH,
      &                 NASH,
@@ -665,7 +674,7 @@ C Write out the determinant expansion to disk.
 
       If (DoGSOR) Then
         CALL GETMEM('Theta1','ALLO','REAL',LTheta1,NCONF2)
-        CALL DCOPY_(NCONF2,0.0D0,0,WORK(LTheta1),1)
+        CALL DCOPY_(NCONF2,[0.0D0],0,WORK(LTheta1),1)
       End If
 
 C-------------------------------------------------------------
@@ -685,9 +694,12 @@ C Read JSTATE wave function
           If(DoGSOR) Then
             CALL DCOPY_(NCONF2,Work(LCI2),1,WORK(LCI2_o),1)
           End If
-          CALL DCOPY_(NDET2,0.0D0,0,WORK(LDET2),1)
-          CALL PREPSD(WFTP2,TRORB,ISGSTR2,ICISTR2,IXSTR2,LSYM2,
-     &                WORK(LTRA2),IWORK(LCNFTAB2),IWORK(LSPNTAB2),
+          CALL DCOPY_(NDET2,[0.0D0],0,WORK(LDET2),1)
+C         Transform to bion basis, Split-Guga format
+          If (TrOrb) CALL CITRA (WFTP2,ISGSTR2,ICISTR2,IXSTR2,LSYM2,
+     &                           TRA2,NCONF2,Work(LCI2))
+          CALL PREPSD(WFTP2,ISGSTR2,ICISTR2,LSYM2,
+     &                IWORK(LCNFTAB2),IWORK(LSPNTAB2),
      &                IWORK(LSSTAB),IWORK(LFSBTAB2),NCONF2,WORK(LCI2),
      &                WORK(LDET2))
 
@@ -695,12 +707,12 @@ C Read JSTATE wave function
 #ifdef _DMRG_
           call prepMPS(
      &                 TRORB,
-     &                 iWork(llroot+JSTATE-1),
+     &                 lroot(JSTATE),
      &                 LSYM2,
      &                 MPLET2,
      &                 MSPROJ2,
      &                 NACTE2,
-     &                 WORK(LTRA2),
+     &                 TRA2,
      &                 NTRA,
      &                 NISH,
      &                 NASH,
@@ -736,7 +748,6 @@ C Read ISTATE wave function from disk
 
        if(doGSOR) then
          if(JOB1.ne.JOB2) then
-           ST_TOT = NSTAT(JOB2)
            Dot_prod = 0
            Dot_prod = DDOT_(NCONF2,Work(LCI1),1,Work(LCI2),1)
            Call DAXPY_(NCONF2,Dot_prod,Work(LCI2_o),1,Work(LTHETA1),1)
@@ -750,56 +761,125 @@ C it is known to be zero.
       HTWO =0.0D0
 
       SIJ=0.0D0
+      DYSAMP=0.0D0
+
+! +++ J. Norell 12/7 - 2018
+C Dyson amplitudes:
+C DYSAMP = D_ij for states i and j
+C DYSCOF = Active orbital coefficents of the DO
+      IF ((IF10.or.IF01).and.DYSO) THEN
+        CALL DYSON(IWORK(LFSBTAB1),
+     &            IWORK(LFSBTAB2),IWORK(LSSTAB),
+     &            WORK(LDET1),WORK(LDET2),
+     &            IF10,IF01,
+     &            DYSAMP,DYSCOF)
+
+C Write Dyson orbital coefficients in AO basis to disk.
+        IF (DYSAMP.GT.1.0D-6) THEN
+C In full biorthonormal basis:
+         CALL MKDYSAB(DYSCOF,DYSAB)
+C In AO basis:
+         CALL MKDYSZZ(CMO1,DYSAB,DYSZZ)
+        IF (DYSO) THEN
+          SFDYS(:,JSTATE,ISTATE)=DYSZZ(:)
+          SFDYS(:,ISTATE,JSTATE)=DYSZZ(:)
+        END IF
+        DYSZZ(:)=0.0D0
+       END IF ! AMP THRS
+      END IF ! IF01 IF10
+      DYSAMPS(ISTATE,JSTATE)=DYSAMP
+      DYSAMPS(JSTATE,ISTATE)=DYSAMP
+! +++
+
 C General 1-particle transition density matrix:
       IF (IF11) THEN
         CALL MKTDM1(LSYM1,MPLET1,MSPROJ1,IWORK(LFSBTAB1),
      &            LSYM2,MPLET2,MSPROJ2,IWORK(LFSBTAB2),IWORK(LSSTAB),
      &            IWORK(LOMAP),WORK(LDET1),WORK(LDET2),SIJ,NASHT,
-     &            WORK(LTRAD),WORK(LTRASD),WORK(LWERD),ISTATE,
-     &            JSTATE,lLROOT,job1,job2,ist,jst)
+     &            TRAD,TRASD,WERD,ISTATE,
+     &            JSTATE,job1,job2,ist,jst)
+C Calculate Natural Transition Orbital (NTO):
+        IF (IFNTO) THEN
+         IF (job1.ne.job2) THEN
+           DoNTO=.true.
+         Else
+           DoNTO=.false.
+         End If
+         IF (DoNTO) Then
+          Call NTOCalc(job1,job2,ISTATE,JSTATE,TRAD,TRASD,MPLET1)
+          write(6,*) 'ntocalculation finished'
+         End If
+        End If
+C End of Calculating NTO
 
         IF(IFTWO.AND.(MPLET1.EQ.MPLET2)) THEN
 C Compute 1-electron contribution to Hamiltonian matrix element:
-        HONE=DDOT_(NTRAD,WORK(LTRAD),1,WORK(LFMO),1)
+        HONE=DDOT_(NTRAD,TRAD,1,FMO,1)
         END IF
+
 
 C             Write density 1-matrices in AO basis to disk.
             IF(NATO.OR.(NPROP.GT.0))THEN
 
+              iEmpty=0
               !> regular-TDM
-              CALL MKTDAB(SIJ,WORK(LTRAD),WORK(LTDMAB))
+              CALL MKTDAB(SIJ,TRAD,TDMAB,iRC)
               !> transform to AO basis
-              CALL MKTDZZ(WORK(LCMO1),WORK(LCMO2),WORK(LTDMAB),
-     &                    WORK(LTDMZZ))
+              CALL MKTDZZ(CMO1,CMO2,TDMAB,TDMZZ,iRC)
+              If (iRC.eq.1) iEmpty=1
 
               !> spin-TDM
-              CALL MKTDAB(SIJ,WORK(LTRASD),WORK(LTSDMAB))
+              CALL MKTDAB(0.0D0,TRASD,TSDMAB,iRC)
               !> transform to AO basis
-              CALL MKTDZZ(WORK(LCMO1),WORK(LCMO2),WORK(LTSDMAB),
-     &                    WORK(LTSDMZZ) )
+              CALL MKTDZZ(CMO1,CMO2,TSDMAB,TSDMZZ,iRC)
+              If (iRC.eq.1) iEmpty=iEmpty+2
 
               !> WE-reduced TDM''s of triplet type:
-              CALL MKTDAB(0.0D0,WORK(LWERD),WORK(LWDMAB))
+              CALL MKTDAB(0.0D0,WERD,WDMAB,iRC)
               !> transform to AO basis
-              CALL MKTDZZ(WORK(LCMO1),WORK(LCMO2),WORK(LWDMAB),
-     &                    WORK(LWDMZZ))
+              CALL MKTDZZ(CMO1,CMO2,WDMAB,WDMZZ,iRC)
+              If (iRC.eq.1) iEmpty=iEmpty+4
 
               if(.not.mstate_dens)then
 
-                IF((SONATNSTATE.GT.0).OR.NATO) THEN
-*C Transition density matrices, TDMZZ, in AO basis.
+                IF(SaveDens) THEN
+*C Transition density matrices, TDMZZ, in AO or MO basis.
 *C WDMZZ similar, but WE-reduced 'triplet' densities.
-                  IDISK=iWork(lIDTDM+(ISTATE-1)*NSTATE+JSTATE-1)
-                  CALL dens2file(WORK(LTDMZZ),WORK(LTSDMZZ),
-     &                           WORK(LWDMZZ),NTDMZZ,LUTDM,IDISK)
+                  ij=ISTATE*(iSTATE-1)/2 + JSTATE
+                  jDisk_TDM(1,ij)=IDISK
+                  jDisk_TDM(2,ij)=iEmpty
+                  iOpt=1
+                  iGo=7
+                  If (AO_Mode) Then
+                     CALL dens2file(TDMZZ,TSDMZZ,WDMZZ,nTDMZZ,LUTDM,
+     &                              IDISK,iEmpty,iOpt,iGo,IState,jState)
+                  Else
+                     iEmpty=0
+                     TRAD(nTrad+1)=SIJ
+                     iRC=0
+                     If(DDot_(nTRAD+1,TRAD,1,TRAD,1).gt.0.0D0) iRC=1
+                     If (iRC.eq.1) iEmpty=1
+*
+                     TRASD(nTrad+1)=0.0D0
+                     iRC=0
+                     If(DDot_(nTRAD+1,TRASD,1,TRASD,1).gt.0.0D0) iRC=1
+                     If (iRC.eq.1) iEmpty=iEmpty+2
+*
+                     WERD(nTrad+1)=0.0D0
+                     iRC=0
+                     If(DDot_(nTRAD+1,WERD,1,WERD,1).gt.0.0D0) iRC=1
+                     If (iRC.eq.1) iEmpty=iEmpty+4
+*
+                     CALL dens2file(TRAD,TRASD,WERD,nTRAD+1,LUTDM,
+     &                              IDISK,iEmpty,iOpt,iGo,ISTATE,JSTATE)
+                  End If
                 END IF
                 !> calculate property matrix elements
-                CALL PROPER(PROP,ISTATE,JSTATE,
-     &                      WORK(LTDMZZ),WORK(LWDMZZ))
+                CALL PROPER(PROP,ISTATE,JSTATE,TDMZZ,WDMZZ)
               else
 
-                !> scale rdm elements with eigenvector coefficients of Heff of a multi-state (PT2) Hamiltonian
-                !> accumulate data first and run PROPER and other utility routines later
+!               > scale rdm elements with eigenvector coefficients of Heff of a multi-state (PT2) Hamiltonian
+!               > accumulate data first and run PROPER and other utility routines later
                 do i = 1, nstat(job1)
                   do j = 1, nstat(job2)
 
@@ -816,27 +896,24 @@ C             Write density 1-matrices in AO basis to disk.
                     !> regular-TDM
                     call daxpy_(ntdmzz,
      &                          fac1*fac2,
-     &                          work(ltdmzz),1,
+     &                          tdmzz,1,
      &                          mstate_1pdens(i,j)%rtdm,1
      &                         )
                     !> spin-TDM
                     call daxpy_(ntdmzz,
      &                          fac1*fac2,
-     &                          work(ltsdmzz),1,
+     &                          tsdmzz,1,
      &                          mstate_1pdens(i,j)%stdm,1
      &                         )
                     !> WE-reduced TDM''s of triplet type:
                     call daxpy_(ntdmzz,
      &                          fac1*fac2,
-     &                          work(lwdmzz),1,
+     &                          wdmzz,1,
      &                          mstate_1pdens(i,j)%wtdm,1
      &                         )
                     !> overlap
-                    call daxpy_(1,
-     &                          fac1*fac2,
-     &                          sij,0,
-     &                          mstate_1pdens(i,j)%overlap,0
-     &                         )
+                    mstate_1pdens(i,j)%overlap=
+     &                mstate_1pdens(i,j)%overlap+fac1*fac2*sij
                   end do
                 end do
               end if
@@ -853,44 +930,12 @@ C             Write density 1-matrices in AO basis to disk.
      &                            WORK(LDET1),WORK(LDET2))
 #ifdef _DMRG_
               else
-                if (doMPSSICheckpoints) then
-
-                  if (dmrg_external%MPSrotated) then
-                    write(mplet1s,'(I3)')  MPLET1-1
-                    write(msproj1s,'(I3)')  MSPROJ1
-
-                    checkpoint1_2u1 = qcm_group_names(job1)%states(ist)
-     &(1:len_trim(qcm_group_names(job1)%states(ist))-3)
-     &//"."//trim(adjustl(mplet1s))//"."//trim(adjustl(msproj1s))//".h5"
-                    checkpoint2_2u1 = qcm_group_names(job2)%states(jst)
-     &(1:len_trim(qcm_group_names(job2)%states(jst))-3)
-     &//"."//trim(adjustl(mplet1s))//"."//trim(adjustl(msproj1s))//".h5"
-
-                    call dmrg_interface_ctl(
-     &                                      task       = 'overlapU',
-     &                                      energy     = sij,
-     &                                      checkpoint1=checkpoint1_2u1,
-     &                                      checkpoint2=checkpoint2_2u1
-     &                                     )
-                  else
-                    call dmrg_interface_ctl(
-     &                                      task        = 'overlap ',
-     &                                      energy      = sij,
-     &                                      checkpoint1 =
-     &                               qcm_group_names(job1)%states(ist),
-     &                                      checkpoint2 =
-     &                               qcm_group_names(job2)%states(jst)
-     &                                     )
-                  end if
-                else
-                  !> Leon: TODO: Add possibility to calculate overlap of rotated MPS without using checkpoint names
-                  call dmrg_interface_ctl(
-     &                               task   = 'overlap ',
-     &                               energy = sij,
-     &                               state  = iWork(lLROOT+istate-1),
-     &                               stateL = iWork(lLROOT+jstate-1)
-     &                              )
-                end if
+                sij = qcmaquis_mpssi_overlap(
+     &            qcm_prefixes(job1),
+     &            ist,
+     &            qcm_prefixes(job2),
+     &            jst,
+     &            .true.)
               end if !doDMRG
 #endif
             END IF ! IF00
@@ -906,171 +951,45 @@ C             Write density 1-matrices in AO basis to disk.
             CALL MKTDM2(LSYM1,MPLET1,MSPROJ1,IWORK(LFSBTAB1),
      &                  LSYM2,MPLET2,MSPROJ2,IWORK(LFSBTAB2),
      &                  IWORK(LSSTAB),IWORK(LOMAP),
-     &                  WORK(LDET1),WORK(LDET2),NTDM2,WORK(LTDM2),
-     &                  ISTATE,JSTATE,lLROOT,job1,job2,ist,jst)
+     &                  WORK(LDET1),WORK(LDET2),NTDM2,TDM2,
+     &                  ISTATE,JSTATE)
 
-            !> Compute 2-electron contribution to Hamiltonian matrix element:
+!           > Compute 2-electron contribution to Hamiltonian matrix element:
             IF(IFTWO.AND.(MPLET1.EQ.MPLET2))
-     &      HTWO=DDOT_(NTDM2,WORK(LTDM2),1,WORK(LTUVX),1)
+     &      HTWO=DDOT_(NTDM2,TDM2,1,TUVX,1)
 
           END IF ! IF22
 
           !> PAM 2011 Nov 3, writing transition matrices if requested
-          !> The following *long* section should later be moved to its own
-          !> subroutine...
           IF ((IFTRD1.or.IFTRD2).and..not.mstate_dens) THEN
-            LU=50
-            LU=IsFreeUnit(LU)
-            WRITE(NUM1,'(I3.3)') ISTATE
-            WRITE(NUM2,'(I3.3)') JSTATE
-            FNM='TRD2_'//NUM1//'_'//NUM2
-            CALL Molcas_Open(LU,FNM)
-            WRITE(LU,*)'#Transition density file from RASSI.'
-            WRITE(LU,*)'#  States:'
-            WRITE(LU,*) ISTATE, JSTATE
-            WRITE(LU,*)'#  Nr of irreps:'
-            WRITE(LU,*) NSYM
-            WRITE(LU,*)'#  Basis functions:'
-            WRITE(LU,'(8I5)') (NBASF(ISYM),ISYM=1,NSYM)
-            WRITE(LU,*)'#  Frozen orbitals:'
-            WRITE(LU,'(8I5)') (NFRO(ISYM),ISYM=1,NSYM)
-            WRITE(LU,*)'#  Inactive orbitals:'
-            WRITE(LU,'(8I5)') (NISH(ISYM),ISYM=1,NSYM)
-            WRITE(LU,*)'#  Active orbitals:'
-            WRITE(LU,'(8I5)') (NASH(ISYM),ISYM=1,NSYM)
-            WRITE(LU,*)'#  State ',ISTATE,'    CMO coefficients:'
-            LPOS=LCMO1
-            DO ISYM=1,NSYM
-              NO=NFRO(ISYM)+NISH(ISYM)+NASH(ISYM)
-              NB=NBASF(ISYM)
-              DO IO=1,NO
-                WRITE(LU,*)'#  Symm ',ISYM,'   Orbital ',IO
-                WRITE(LU,'(5D19.12)')(WORK(LPOS+NB*(IO-1)+i),i=0,NB-1)
-              END DO
-              LPOS=LPOS+NB**2
-            END DO
-            WRITE(LU,*)'#  State ',JSTATE,'    CMO coefficients:'
-            LPOS=LCMO2
-            DO ISYM=1,NSYM
-              NO=NFRO(ISYM)+NISH(ISYM)+NASH(ISYM)
-              NB=NBASF(ISYM)
-              DO IO=1,NO
-                WRITE(LU,*)'#  Symm ',ISYM,'   Orbital ',IO
-                WRITE(LU,'(5D19.12)')(WORK(LPOS+NB*(IO-1)+i),i=0,NB-1)
-              END DO
-              LPOS=LPOS+NB**2
-            END DO
-            WRITE(LU,*)'#  States ',ISTATE,JSTATE,' Overlap:'
-            WRITE(LU,'(5D19.12)') SIJ
-            WRITE(LU,*)'#  States ',ISTATE,JSTATE,' Active TRD1:'
-            LSYM12=MUL(LSYM1,LSYM2)
-            LPOS=LTDMAB
-            DO ISYM1=1,NSYM
-              NO1=NOSH(ISYM1)
-              ISYM2=MUL(ISYM1,LSYM12)
-              NO2=NOSH(ISYM2)
-              IF (NO1*NO2 .gt. 0) THEN
-                NA1=NASH(ISYM1)
-                NA2=NASH(ISYM2)
-                IF (NA1*NA2 .gt. 0) THEN
-                  NI1=NISH(ISYM1)
-                  NI2=NISH(ISYM2)
-                  WRITE(LU,*)'#  Symmetries ',ISYM1,ISYM2
-                  WRITE(LU,'(5D19.12)')((WORK(LPOS-1+II+NO1*(JJ-1)),
-     &                                  JJ=NI2+1,NO2),II=NI1+1,NO1)
-                END IF
-                LPOS=LPOS+NO1*NO2
-              END IF
-            END DO
+            call trd_print(ISTATE, JSTATE, IFTRD2.AND.IF22,
+     &                    TDMAB,TDM2,CMO1,CMO2,SIJ)
+          END IF
 
-            IF (IFTRD2.AND.IF22) THEN
-              WRITE(LU,*)'#  States ',ISTATE,JSTATE,' Active TRD2:'
-              DO ISYT=1,NSYM
-                DO ISYU=1,NSYM
-                  ISYTU=ISYT+NSYM*(ISYU-1)
-                  DO ISYV=1,ISYT
-                    LIMX=ISYV
-                    IF(ISYV.EQ.ISYT) LIMX=ISYU
-                    DO ISYX=1,LIMX
-                      ISYVX=ISYV+NSYM*(ISYX-1)
-                      !> Write out one symmetry block (4 indices!) of two-electron
-                      !> transition density matrix elements.
-                      !> Write a full 'rectangular' array, even if it could be made
-                      !> smaller by permutation symmetry.
-                      WRITE(LU,*)'#  Orbital symm:',ISYT,ISYU,ISYV,ISYX
-                      IWBUF=0
-                      DO IT=1,NASH(ISYT)
-                        ITABS=NAES(ISYT)+IT
-                        DO IU=1,NASH(ISYU)
-                          IUABS=NAES(ISYU)+IU
-                          ITU=ITABS+NASHT*(IUABS-1)
-                          DO IV=1,NASH(ISYV)
-                            IVABS=NAES(ISYV)+IV
-                            DO IX=1,NASH(ISYX)
-                              IXABS=NAES(ISYX)+IX
-                              IVX=IVABS+NASHT*(IXABS-1)
-                              IF(ITU.GE.IVX) THEN
-                                ITUVX=(ITU*(ITU-1))/2+IVX
-                              ELSE
-                                ITUVX=(IVX*(IVX-1))/2+ITU
-                              END IF
-                              IWBUF=IWBUF+1
-                              WBUF(IWBUF)=WORK(LTDM2-1+ITUVX)
-                              IF(IWBUF.EQ.5) THEN
-                                WRITE(LU,'(5D19.12)')(WBUF(I),I=1,IWBUF)
-                                IWBUF=0
-                              END IF
-                            END DO
-                          END DO
-                        END DO
-                      END DO
-                      IF(IWBUF.GT.0) THEN
-                        WRITE(LU,'(5D19.12)')(WBUF(I),I=1,IWBUF)
-                        IWBUF=0
-                      END IF
-* End of writing a symmetry block.
-                    END DO
-                  END DO
-                END DO
-              END DO
-            END IF
-            CLOSE (LU)
-          END IF ! TRD1/2
-
-#ifdef _HDF5_
-          if(.not.mstate_dens)then
-            IF(IF11.AND.(LSYM1.EQ.LSYM2).and.
-     &        ((SONATNSTATE.GT.0).OR.NATO))THEN
-              call mh5_put_dset_array_real(wfn_sfs_tdm,
-     $        WORK(LTDMZZ),[NTDMZZ,1,1], [0,ISTATE-1,JSTATE-1])
-              call mh5_put_dset_array_real(wfn_sfs_tsdm,
-     $        WORK(LTSDMZZ),[NTDMZZ,1,1], [0,ISTATE-1,JSTATE-1])
-            END IF
-            IF(SONATNSTATE.GT.0.OR.NATO)THEN
-              call mh5_put_dset_array_real(wfn_sfs_wetdm,
-     $        WORK(LWDMZZ),[NTDMZZ,1,1], [0,ISTATE-1,JSTATE-1])
-            END IF
-          end if
-#endif
+          !Store SIJ temporarily
+          IF (IFEJOB.and.(ISTATE.ne.JSTATE)) THEN
+            HAM(ISTATE,JSTATE) = SIJ
+            HAM(JSTATE,ISTATE) = SIJ
+          END IF
           IF(IFHAM.AND..NOT.(IFHEXT.or.IFHEFF.or.IFEJOB))THEN
             HZERO              = ECORE*SIJ
             HIJ                = HZERO+HONE+HTWO
             HAM(ISTATE,JSTATE) = HIJ
             HAM(JSTATE,ISTATE) = HIJ
 
-         !SI-PDFT related code for "second_time" case
-          if(second_time) then
-            Energies(:) =0.0d0
-            CALL DANAME(LUIPH,'JOBGS')
-            IAD = 0
-            Call IDAFILE(LUIPH,2,ITOC15,30,IAD)
-            IAD=ITOC15(6)
-            Call DDAFILE(LUIPH,2,Energies,NSTAT(JOB1),IAD)
-            do i=1,NSTAT(JOB1)
-              HAM(i,i) = Energies(i)
-             end do
-          end if
-
+            !SI-PDFT related code for "second_time" case
+            if(second_time) then
+              Energies(:) =0.0d0
+              CALL DANAME(LUIPH,'JOBGS')
+              IAD = 0
+              Call IDAFILE(LUIPH,2,ITOC15,30,IAD)
+              IAD=ITOC15(6)
+              Call DDAFILE(LUIPH,2,Energies,NSTAT(JOB1),IAD)
+              do i=1,NSTAT(JOB1)
+                HAM(i,i) = Energies(i)
+              end do
+              Call DACLOS(LUIPH)
+            end if
 
             IF(IPGLOB.GE.DEBUG) THEN
               WRITE(6,'(1x,a,2I5)')' ISTATE, JSTATE:',ISTATE,JSTATE
@@ -1084,6 +1003,23 @@ C             Write density 1-matrices in AO basis to disk.
         END DO job1_loop
 
       END DO job2_loop
+*
+** For ejob, create an approximate off-diagonal based on the overlap (temporarily stored in HIJ)
+*
+      IF (IFEJOB) THEN
+        DO JST=1,NSTAT(JOB2)
+          JSTATE=ISTAT(JOB2)-1+JST
+          DO IST=1,NSTAT(JOB1)
+            ISTATE=ISTAT(JOB1)-1+IST
+            IF(ISTATE.LE.JSTATE) CYCLE
+            SIJ=HAM(ISTATE,JSTATE)
+            HII=HAM(ISTATE,ISTATE)
+            HJJ=HAM(JSTATE,JSTATE)
+            HAM(ISTATE,JSTATE) = SIJ*(HII+HJJ)*0.5D0
+            HAM(JSTATE,ISTATE) = SIJ*(HII+HJJ)*0.5D0
+          END DO
+        END DO
+      END IF
 
       IF(DoGSOR) then
         if(job1.ne.job2) then
@@ -1093,47 +1029,54 @@ C             Write density 1-matrices in AO basis to disk.
         Call DSCAL_(NCONF2,Norm_Fac,Work(LTheta1),1)
 
       !Write theta1 to file.
-        Open(unit=87,file='CI_THETA', action='write',iostat=ios)
+        LUCITH=87
+        LUCITH=IsFreeUnit(LUCITH)
+        !Open(unit=87,file='CI_THETA', action='write',iostat=ios)
+        Call Molcas_Open(LUCITH,'CI_THETA')
         do i=1,NCONF2
-          write(87,*) Work(LTheta1-1+i)
+          write(LUCITH,*) Work(LTheta1-1+i)
         end do
-        Close(87)
+        Close(LUCITH)
 
        !Now we need to build the other states.
         DO JST=2,NSTAT(JOB2)
           JSTATE=ISTAT(JOB2)-1+JST
           CALL READCI(JSTATE,ISGSTR2,ICISTR2,NCONF2,WORK(LCI2))
           Call DCOPY_(NCONF2,Work(LCI2),1,Work(LCI2_o),1)
-          CALL DCOPY_(NDET2,0.0D0,0,WORK(LDET2),1)
-          CALL PREPSD(WFTP2,TRORB,ISGSTR2,ICISTR2,IXSTR2,LSYM2,
-     &              WORK(LTRA2),IWORK(LCNFTAB2),IWORK(LSPNTAB2),
-     &          IWORK(LSSTAB),IWORK(LFSBTAB2),NCONF2,WORK(LCI2),
-     &          WORK(LDET2))
+          CALL DCOPY_(NDET2,[0.0D0],0,WORK(LDET2),1)
+          If (TrOrb) CALL CITRA (WFTP2,ISGSTR2,ICISTR2,IXSTR2,LSYM2,
+     &                           TRA2,NCONF2,Work(LCI2))
+          CALL PREPSD(WFTP2,ISGSTR2,ICISTR2,LSYM2,
+     &                IWORK(LCNFTAB2),IWORK(LSPNTAB2),
+     &                IWORK(LSSTAB),IWORK(LFSBTAB2),NCONF2,WORK(LCI2),
+     &                WORK(LDET2))
 
           CALL GETMEM('ThetaN','ALLO','REAL',LThetaN,NCONF2)
           CALL DCOPY_(NCONF2,Work(LCI2_o),1,WORK(LThetaN),1)
           Norm_Fac = DDOT_(NCONF2,Work(LTheta1),1,Work(LCI2_o),1)
           Call DAXPY_(NCONF2,-Norm_Fac,Work(LTHETA1),1,Work(LThetaN),1)
 
-          Open(unit=87,file='CI_THETA', action='read',iostat=ios)
+          LUCITH=IsFreeUnit(LUCITH)
+          Call Molcas_Open(LUCITH,'CI_THETA')
+          !Open(unit=87,file='CI_THETA', action='read',iostat=ios)
           if(JST-1.ge.2) then
             do i=1,NCONF2
-              Read(87,*) dummy
+              Read(LUCITH,*) dot_prod ! dummy
             end do
           end if
           CALL GETMEM('ThetaM','ALLO','REAL',LThetaM,NCONF2)
           DO IST=2,JST-1
-            CALL DCOPY_(NCONF2,0.0D0,0,WORK(LThetaM),1)
+            CALL DCOPY_(NCONF2,[0.0D0],0,WORK(LThetaM),1)
             !Read in previous theta vectors
             do i=1,NCONF2
-              Read(87,*) Work(LThetaM-1+i)
+              Read(LUCITH,*) Work(LThetaM-1+i)
             end do
             Dot_prod = DDOT_(NCONF2,Work(LThetaM),1,Work(LCI2_o),1)
            Call DAXPY_(NCONF2,-Dot_prod,Work(LThetaM),1,Work(LThetaN),1)
 
 
           END DO
-          Close(87)
+          Close(LUCITH)
           !Normalize
           dot_prod = DDOT_(NCONF2,Work(LThetaN),1,Work(LThetaN),1)
           Norm_Fac = 1d0/sqrt(dot_prod)
@@ -1144,35 +1087,41 @@ C             Write density 1-matrices in AO basis to disk.
         !dot_prod = DDOT_(NCONF2,Work(LThetaN),1,Work(LThetaN),1)
 
           !Write to file
-          Open(unit=87,file='CI_THETA', position='append',iostat=ios,
-     &    action='write')
+          LUCITH=IsFreeUnit(LUCITH)
+          Call Molcas_Open(LUCITH,'CI_THETA')
+          Call Append_file(LUCITH)
+          !Open(unit=87,file='CI_THETA', position='append',iostat=ios,
+!    &    action='write')
           do i=1,nConf2
-            write(87,*) Work(LThetaN-1+i)
+            write(LUCITH,*) Work(LThetaN-1+i)
           end do
-          close(87)
+          close(LUCITH)
           !Deallocate
+          CALL GETMEM('ThetaN','FREE','REAL',LThetaN,NCONF2)
         END DO
 !Copy to new IPH file
-        Open(unit=87,file='CI_THETA',iostat=ios,
-     &    action='read')
+        LUCITH=IsFreeUnit(LUCITH)
+        Call Molcas_Open(LUCITH,'CI_THETA')
+!       Open(unit=87,file='CI_THETA',iostat=ios,
+!    &    action='read')
         CALL DANAME(LUIPHn,'JOBGS')
         IAD = 0
         Call IDAFILE(LUIPHn,2,ITOC15,30,IAD)
         IAD=ITOC15(4)
         do i=1,ISTAT(JOB1)-1
-         CALL DCOPY_(NCONF2,0.0D0,0,WORK(LThetaM),1)
+         CALL DCOPY_(NCONF2,[0.0D0],0,WORK(LThetaM),1)
          do j=1,nCONF2
-           read(87,*) Work(LThetaM-1+i)
+           read(LUCITH,*) Work(LThetaM-1+i)
          end do
          Call DDafile(LUIPHn,1,Work(LThetaM),nCONF2,IAD)
-       end do
+        end do
 
        IAD = ITOC15(4)
-       CALL DCOPY_(NCONF2,0.0D0,0,WORK(LThetaM),1)
+       CALL DCOPY_(NCONF2,[0.0D0],0,WORK(LThetaM),1)
        Call DDAFILE(LUIPHn,2,Work(LThetaM),nCONF2,IAD)
        Call DDAFILE(LUIPHn,2,Work(LThetaM),nCONF2,IAD)
 
-       Close(87)
+       Close(LUCITH)
        Call DACLOS(LUIPHn)
        CALL GETMEM('ThetaM','FREE','REAL',LThetaM,NCONF2)
        end if
@@ -1190,7 +1139,7 @@ C             Write density 1-matrices in AO basis to disk.
       END IF
 #endif
 
-      !> create actual property data and put everything to file (if requested) in case of using eigenvectors of a multi-state (PT2) Hamiltonian
+!     > create actual property data and put everything to file (if requested) in case of using eigenvectors of a multi-state (PT2) Hamiltonian
       if(mstate_dens)then
         DO JST=1,NSTAT(JOB2)
           JSTATE=ISTAT(JOB2)-1+JST
@@ -1211,7 +1160,8 @@ C             Write density 1-matrices in AO basis to disk.
      &                                      istate,
      &                                      jstate,
      &                                      ntdmzz,
-     &                           iWork(lIDTDM+(ISTATE-1)*NSTATE+JSTATE),
+     &                                      iDisk_TDM(JSTATE,ISTATE,1),
+     &                                      iDisk_TDM(JSTATE,ISTATE,2),
      &                                      lutdm,
      &                                      (sonatnstate.gt.0),
      &                                      if11.and.(lsym1.eq.lsym2)
@@ -1234,43 +1184,45 @@ C             Write density 1-matrices in AO basis to disk.
       END IF
 
       IF(JOB1.NE.JOB2) THEN
-        CALL GETMEM('GTDMTRA1','FREE','REAL',LTRA1,NTRA)
-        CALL GETMEM('GTDMTRA2','FREE','REAL',LTRA2,NTRA)
+        Call mma_deallocate(TRA1)
+        Call mma_deallocate(TRA2)
       END IF
       CALL GETMEM('GTDMDET1','FREE','REAL',LDET1,NDET1)
       CALL GETMEM('GTDMDET2','FREE','REAL',LDET2,NDET2)
       CALL GETMEM('GTDMCI2','FREE','REAL',LCI2,NCONF2)
+      If (DoGSOR) CALL GETMEM('GTDMCI2_o','FREE','REAL',LCI2_o,NCONF2)
       IF (.NOT.NONA) CALL GETMEM('GTDMCI1','FREE','REAL',LCI1,NCONF1)
       if(.not.doDMRG)then
         CALL KILLSCTAB(LSPNTAB1)
         CALL KILLSCTAB(LSPNTAB2)
       end if
+      IF ((IF10.or.IF01).and.DYSO) THEN
+        Call mma_deallocate(DYSCOF)
+        Call mma_deallocate(DYSAB)
+        Call mma_deallocate(DYSZZ)
+      END IF
       IF (IF11) THEN
-        CALL GETMEM('SPD1','Free','Real',LSPD1,NSPD1)
-        CALL GETMEM('TRAD','Free','Real',LTRAD,NTRAD)
-        CALL GETMEM('TRASD','Free','Real',LTRASD,NTRASD)
-        CALL GETMEM('WERD','Free','Real',LWERD,NWERD)
+        Call mma_deallocate(TRAD)
+        Call mma_deallocate(TRASD)
+        Call mma_deallocate(WERD)
         IF(NATO.OR.NPROP.GT.0) THEN
-          CALL GETMEM('TDMAB','Free','Real',LTDMAB,NTDMAB)
-          CALL GETMEM('TDMZZ','Free','Real',LTDMZZ,NTDMZZ)
-          CALL GETMEM('TSDMAB','Free','Real',LTSDMAB,NTDMAB)
-          CALL GETMEM('TSDMZZ','Free','Real',LTSDMZZ,NTDMZZ)
-          CALL GETMEM('WDMAB','Free','Real',LWDMAB,NTDMAB)
-          CALL GETMEM('WDMZZ','Free','Real',LWDMZZ,NTDMZZ)
+          Call mma_deallocate(TDMAB)
+          Call mma_deallocate(TSDMAB)
+          Call mma_deallocate(WDMAB)
+          Call mma_deallocate(TDMZZ)
+          Call mma_deallocate(TSDMZZ)
+          Call mma_deallocate(WDMZZ)
         END IF
       END IF
-      IF (IF22) THEN
-        CALL GETMEM('SPD2','Free','Real',LSPD2,NSPD2)
-        CALL GETMEM('TDM2','Free','Real',LTDM2,NTDM2)
-      END IF
+      Call mma_deallocate(TDM2)
 
       IF(IFTWO.AND.(MPLET1.EQ.MPLET2)) THEN
-        CALL GETMEM('FMO','Free','REAL',LFMO,NTDM1)
-        CALL GETMEM('TUVX  ','Free','REAL',LTUVX,NTDM2)
+        Call mma_deallocate(FMO)
+        Call mma_deallocate(TUVX)
       END IF
 
-      CALL GETMEM('GTDMCMO1','FREE','REAL',LCMO1,NCMO)
-      CALL GETMEM('GTDMCMO2','FREE','REAL',LCMO2,NCMO)
+      Call mma_deallocate(CMO2)
+      Call mma_deallocate(CMO1)
       CALL KILLOBJ(LPART)
       CALL KILLOBJ(LORBTAB)
       CALL KILLOBJ(LSSTAB)
@@ -1298,7 +1250,10 @@ C             Write density 1-matrices in AO basis to disk.
         end do
         if(allocated(mstate_1pdens)) deallocate(mstate_1pdens)
       end if
+#ifdef _TIME_GTDM_
+      Call CWTime(TCpu2,TWall2)
+      write(6,*) 'Time for GTDM : ',TCpu2-TCpu1,TWall2-TWall1
+#endif
 
-      CALL QEXIT(ROUTINE)
       RETURN
       END

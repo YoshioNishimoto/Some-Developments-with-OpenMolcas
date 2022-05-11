@@ -8,16 +8,8 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
-
-      subroutine barf(a)
-      character*(*) a
-      write(6,*) a
-      call abend
-      end
-
-
-cmp      SUBROUTINE T3AMPL_BTI(W,OEH,OEP)
       SUBROUTINE T3AMPL_BTI(OEH,OEP)
+cmp      SUBROUTINE T3AMPL_BTI(W,OEH,OEP)
 
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
 C    *** PROGRAM TRIPLY-UHF/RHF - REDUCED DIMENSION and timing - DRIVER
@@ -39,32 +31,27 @@ c     First version w/ trick: JN, June 12, 2003
 c     Parallel version: PV, 15 oct 2003.
 c     Implemented integer offsets, PV, 14 may 2004.
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
+      use Para_Info, Only: MyRank, nProcs
       implicit none
       integer IUHF,LU(6)
       integer i,nuga,nugc,nga,ngb,ngc,vblock, it1
-      integer NOAB,NNOAB,NUAB,NNUAB,iopt,iout,isp,krem
+      integer isp,krem
       real*8 OEH(*),OEP(*),ddot_,ccsdt,ccsdt4,energ(4),tccsd,
-     $     ENSCF, RESULT,times(10),
+     $     times(10),
      $     times_parr(10), totcpu, totwal, timerel
 c     real*8 cpu0,cpu1,wall0,wall1
-      character ICH*1, FN*6
+      character FN*6
       logical ifvo
-      integer IHW
-      common /hermit_addr/ IHW
       integer la,t1a,t1b
         logical lastcall,scored
-      integer IT,ITLAST,NBF,NOMX,NU,MX2,NNO,NNU,NUO,NSO
 cmp
 c       integer maxspace
         integer nla,nlb
         real*8 enx1
 cmp
-      COMMON/PARAM/IT,ITLAST,NBF,NOMX,NU,MX2,NNO,NNU,NUO,NSO
-      COMMON/IOIND/IOPT(96)
-      COMMON/ENERGY/ENSCF, RESULT(102,5)
-      COMMON/UHF/NOAB(2),NNOAB(3),NUAB(2),NNUAB(3),ICH(3)
-      LOGICAL    RRT1,CSDAT,ORTHO,DETAIL
-      COMMON/WHAT1/RRT1,CSDAT,ORTHO,DETAIL
+#include "param_cht3.fh"
+#include "ioind.fh"
+#include "uhf.fh"
 cmp
 #include "cht3_casy.fh"
 #include "WrkSpc.fh"
@@ -74,7 +61,6 @@ cmp
 cmp!      include 'task_info_inc'
 cmp!      include 'ws_conn_inc'
 cmp
-#include "para_info.fh"
 #include "cht3_ccsd1.fh"
 #ifdef _MOLCAS_MPP_
 #include "mafdecls.fh"
@@ -85,9 +71,6 @@ cmp
 cmp!!      integer me, err, len_trim
 !?      integer nprocs0
 !?cmp      common /my_mpi_world_com/ me, nprocs
-      integer LENPAR
-      common/LENPAR_com/LENPAR
-c
         integer itmp
         integer imy_tsk
         integer id,j
@@ -100,8 +83,6 @@ c
 !?      nprocs0=nprocs
 c Uncomment the following to force sequential mode
 !      nprocs=1
-
-      IOUT=IOPT(14)
 
       if (nprocs.gt.1) then
          write(6,'(A,i4,A)') ' Parallel run on ',nprocs,' nodes'
@@ -136,7 +117,6 @@ cmp!!      call gettim(cpu0,wall0)
 
       call zeroma(times,1,10)
       call zeroma(energ,1,4)
-      IHW=0
 
 c
 C calculate the T2-T3 contraction?  ifvo is the answer ! open-shell stuff !
@@ -151,15 +131,14 @@ C allocates for two arrays of the size T1
 
         it1=NUAB(1)*NOAB(1)+NUAB(2)*NOAB(2)
 
-        call GetMem('t3_ampl_t1a','Allo','Real',t1a,it1)
-        call GetMem('t3_ampl_t1b','Allo','Real',t1b,it1)
+        call GetMem('t3_t1a','Allo','Real',t1a,it1)
+        call GetMem('t3_t1b','Allo','Real',t1b,it1)
 
         call zeroma(Work(t1a),1,it1)
         call zeroma(Work(t1b),1,it1)
 
-         call GetMem('t3_ampl_t1','Allo','Real',itmp,
-     & noab(1)*nuab(1))
-         call GetMem('t3_ampl_la','Allo','Real',la,it1)
+         call GetMem('t3_t1','Allo','Real',itmp,noab(1)*nuab(1))
+         call GetMem('t3_la','Allo','Real',la,it1)
 
 cmp!    read t1 amplitudes
         if (printkey.ge.10) then
@@ -177,7 +156,7 @@ c
 
 C Remaining space can be used for the blocking in-core algorithms
 
-        Call GetMem('t3_ampl_la','Max','Real',krem,krem)
+        Call GetMem('t3_la','Max','Real',krem,krem)
 
         if (printkey.ge.10) then
            write(6,*)
@@ -687,7 +666,12 @@ cmp
 #ifdef _MOLCAS_MPP_
 
         it1=NUAB(1)*NOAB(1)+NUAB(2)*NOAB(2)
-        call gadgop (ccsdt,1,'+')
+        block
+            real*8 :: real_buffer(1)
+            real_buffer(1) = ccsdt
+            call gadgop (real_buffer, size(real_buffer), '+')
+            ccsdt = real_buffer(1)
+        end block
         call gadgop (energ,4,'+')
         call gadgop (times_parr,10,'+')
 c
@@ -730,10 +714,6 @@ c    for NUMERICAL_GRADIENTS
         Call Store_Energies(1,tccsd+ccsdt+e_ccsd+e_scf,1)
 cmp!
 
-c Slaves have finished here...
-      if (MyRank.ne.0) then
-         return
-      endif
         if (printkey.gt.1) then
         write (6,*)
         write (6,*) '--------------------------------------------------'
@@ -771,6 +751,7 @@ c Master has only to sum up the results
          enddo
       endif
 
+      ccsdt4=0.d0
       if(ifvo)then
         write (6,*) 'ifvo correspond to open-shell system. Exiting'
         call abend()
@@ -787,13 +768,11 @@ cmp!         ccsdt4=2.0*ddot_(noab(1)*nuab(1),w(t1a),1,w(t1b),1)
 cmp!      else
 cmp!         ccsdt4=ddot_(noab(1)*nuab(1)+noab(2)*nuab(2),w(t1a),1,w(t1b),1)
 cmp!      endif
-      else
-         ccsdt4=0.d0
       endif
 
-      RESULT(IT+3,5)=ccsdt4+ccsdt
+      !RESULT(IT+3,5)=ccsdt4+ccsdt
       IF(IT.EQ.0)THEN
-         RESULT(IT+1,5)=tccsd+ccsdt4+ccsdt
+         !RESULT(IT+1,5)=tccsd+ccsdt4+ccsdt
          if(ifvo)then
             WRITE(6,9993)TCCSD
             WRITE(6,9991)ccsdt4
@@ -801,7 +780,7 @@ cmp!      endif
          endif
          WRITE(6,9994)TCCSD+ccsdt+ccsdt4
       ELSE
-         RESULT(IT+2,5)=TCCSD
+         !RESULT(IT+2,5)=TCCSD
          WRITE(6,9993)TCCSD
          if(ifvo)then
             WRITE(6,9991)ccsdt4
@@ -900,12 +879,11 @@ c Return
 cmp        call w_debug(.false.,.false.,'Triply done')
 !?      nprocs=nprocs0
 
-        call GetMem('t3_ampl_la','Free','Real',la,
+        call GetMem('t3_la','Free','Real',la,
      & NUAB(1)*NOAB(1)+NUAB(2)*NOAB(2))
-        call GetMem('t3_ampl_t1','Free','Real',itmp,
-     & noab(1)*nuab(1))
-        call GetMem('t3_ampl_t1a','Free','Real',t1a,it1)
-        call GetMem('t3_ampl_t1b','Free','Real',t1b,it1)
+        call GetMem('t3_t1','Free','Real',itmp,noab(1)*nuab(1))
+        call GetMem('t3_t1a','Free','Real',t1a,it1)
+        call GetMem('t3_t1b','Free','Real',t1b,it1)
       return
 
  9993 FORMAT(/1X,'T2-W-T3 contribution from current amplitudes ',D18.10)
@@ -918,4 +896,3 @@ cmp        call w_debug(.false.,.false.,'Triply done')
 c9997 FORMAT(/1X,'Total ST correction with ROHF reference '
 c    $     ,D18.10/)
       end
-c

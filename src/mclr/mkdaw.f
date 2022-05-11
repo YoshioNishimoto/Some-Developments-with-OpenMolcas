@@ -8,7 +8,7 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
-      SUBROUTINE MKDAW(NVERT,IDOWN,IDAW,IPRINT)
+      SUBROUTINE MKDAW_MCLR(NVERT,IDOWN,IDAW,IPRINT)
 C
 C     PURPOSE: CONSTRUCT DIRECT ARC WEIGHTS TABLE
 C
@@ -20,7 +20,8 @@ C
 C     BEGIN TO CONSTRUCT DOWN CHAIN TABLE
 C
       DO 10 IC=0,3
-10      IDAW(NVERT,IC)=0
+        IDAW(NVERT,IC)=0
+10    CONTINUE
       IDAW(NVERT,4)=1
       DO 30 IV=NVERT-1,1,-1
         ISUM=0

@@ -32,6 +32,15 @@
 *     history: none                                                    *
 *                                                                      *
 ************************************************************************
+#ifdef _HDF5_
+      Use mh5, Only: mh5_put_dset
+#endif
+      Use KSDFT_Info, Only: CoefR, CoefX
+      use OFembed, only: Do_OFemb
+#ifdef _FDE_
+      use Embedding_Global, only: Eemb, embPot
+#endif
+      use SpinAV, only: Do_SpinAV
       Implicit Real*8 (a-h,o-z)
 *
       Real*8 Dens(nDT),Dens_ab(nDT), EOrb(nEO),CMO(nCMO), KntE(nDT)
@@ -44,27 +53,10 @@
 #include "file.fh"
 #include "rctfld.fh"
 #include "oneswi.fh"
-#ifdef _FDE_
-#include "embpotdata.fh"
-#endif
 #include "scfwfn.fh"
-#include "ksdft.fh"
 
-      Logical Do_OFemb,KEonly,OFE_first
-      COMMON  / OFembed_L / Do_OFemb,KEonly,OFE_first
-      Logical Do_Tw
-      COMMON  / Tw_corr_L   / Do_Tw
-      Character*16  ADDC_KSDFT
-      COMMON  / ADDcorr_C   / ADDC_KSDFT
-      Logical Do_Addc
-      COMMON  / ADDcorr_L   / Do_Addc
-      COMMON  / ADDcorr_R   / DE_KSDFT_c
-      Real*8 Erest_xc
-      COMMON /dCSCF_xc/ Erest_xc
-      Real*8 s2CNO
-      COMMON /dCSCF_s2/ s2CNO
-      Logical Do_SpinAV
-      COMMON  / SPAVE_L  / Do_SpinAV
+#include "addcorr.fh"
+#include "dcscf.fh"
 
       Integer  Cho_X_GetTol
       External Cho_X_GetTol
@@ -73,6 +65,7 @@
       Character*80 Lines(6), Fmt*60
       Logical Reduce_Prt
       External Reduce_Prt
+      Dimension Dumm1(1)
 
 
 #include "SysDef.fh"
@@ -133,7 +126,8 @@ c      if(.false.) Lines(3) = Molcas_revision
       End If
       If(WarnSlow) Then
          call WarningMessage(1,
-     &     'Warning:; The program had convergence problems, stopping')
+     &     'Warning:; The program had convergence problems;'//
+     &     'and terminated with looser convergence')
       End If
       Fmt = '(6X,A,T50,F19.10)'
       suhf=-0.5d0+sqrt(0.25d0+s2uhf)
@@ -160,32 +154,33 @@ c      if(.false.) Lines(3) = Molcas_revision
             End If
             ECNO=EneV+E_nondyn+DE_KSDFT_c
             If (KSDFT.ne.'SCF') ECNO=ECNO+Erest_xc
-            call PrintResult(6,FMT, 'Total energy',0,' ',ECNO,1)
+            call PrintResult(6,FMT, 'Total energy',0,' ',[ECNO],1)
             call PrintResult(6,FMT, 'Nondynamical correlation energy',
-     &                       0,' ',E_nondyn,1)
+     &                       0,' ',[E_nondyn],1)
             If (KSDFT.ne.'SCF') Then
                call PrintResult(6,FMT, 'Energy-restoring term',
-     &                          0,' ',Erest_xc,1)
+     &                          0,' ',[Erest_xc],1)
             EndIf
             If (Do_Addc) Then
               Call PrintResult(6,FMT,
      &        'Added correlation energy ('//ADDC_KSDFT(1:4)//') ',
-     &         0,' ',DE_KSDFT_c,1)
+     &         0,' ',[DE_KSDFT_c],1)
             EndIf
-            Call Add_Info('E_CNO',ECNO,1,iTol)
+            Call Add_Info('E_CNO',[ECNO],1,iTol)
          EndIf
          If (Do_Tw) Then
             E_Tw=EneV+Ecorr
-            call PrintResult(6,FMT, 'Total energy',0,' ',E_Tw,1)
+            call PrintResult(6,FMT, 'Total energy',0,' ',[E_Tw],1)
             call PrintResult(6,FMT, 'Delta_Tw correlation energy',
-     &                       0,' ',Ecorr,1)
-            Call Add_Info('E_Tw',E_Tw,1,iTol)
+     &                       0,' ',[Ecorr],1)
+            Call Add_Info('E_Tw',[E_Tw],1,iTol)
          EndIf
          If (KSDFT.eq.'SCF') Then
-            call PrintResult(6,FMT, 'Total SCF energy',0,' ',EneV,1)
+            call PrintResult(6,FMT, 'Total SCF energy',0,' ',[EneV],1)
 c            Write(6,Fmt)'Total SCF energy',EneV
          Else
-            call PrintResult(6,FMT, 'Total KS-DFT energy',0,' ',EneV,1)
+            call PrintResult(6,FMT, 'Total KS-DFT energy',0,' ',
+     &          [EneV],1)
 c            Write(6,Fmt)'Total KS-DFT energy',EneV
          End If
          Write(6,Fmt)'One-electron energy',E1V
@@ -208,7 +203,7 @@ c            Write(6,Fmt)'Total KS-DFT energy',EneV
       iSpn = INT(suhf+0.5d0)
       iMult = 2*iSpn+1
       Call Put_iScalar('Multiplicity',iMult)
-      Call Add_Info('E_SCF',EneV,1,iTol)
+      Call Add_Info('E_SCF',[EneV],1,iTol)
 #ifdef _HDF5_
       call mh5_put_dset(wfn_energy,EneV)
 #endif
@@ -228,19 +223,22 @@ c      If (jPrint.ge.2 .and. Do_OFemb) Call OFE_print(EneV)
 * xml tagging
 *
       If(KSDFT.eq.'SCF') Then
-         Call xml_dDump('energy','Total SCF energy','a.u.',1,EneV,1,1)
+         Call xml_dDump('energy','Total SCF energy','a.u.',1,[EneV],1,1)
       Else
          Call xml_dDump('energy','Total KS-DFT energy','a.u.',1,
-     &          EneV,1,1)
+     &          [EneV],1,1)
       End If
-      Call xml_dDump('kinetic','Kinetic energy','a.u.',2,Ekin,1,1)
-      Call xml_dDump('virial','Virial coefficient','a.u.',2,Virial,1,1)
-      Call xml_dDump('spin','UHF spin','',1,suhf,1,1)
+      Call xml_dDump('kinetic','Kinetic energy','a.u.',2,[Ekin],1,1)
+      Call xml_dDump('virial','Virial coefficient','a.u.',2,
+     &         [Virial],1,1)
+      Call xml_dDump('spin','UHF spin','',1,[suhf],1,1)
       Call xml_dDump('potnuc','Nuclear repulsion energy','a.u.',
-     &         1,potnuc,1,1)
-      Call xml_dDump('energy1el','One electron energy','a.u.',1,E1V,1,1)
-      Call xml_dDump('energy2el','Two electron energy','a.u.',1,E2V,1,1)
-      Call xml_iDump('nsym','Number of irreps','',1,nSym,1,1)
+     &         1,[potnuc],1,1)
+      Call xml_dDump('energy1el','One electron energy','a.u.',1,
+     &         [E1V],1,1)
+      Call xml_dDump('energy2el','Two electron energy','a.u.',1,
+     &         [E2V],1,1)
+      Call xml_iDump('nsym','Number of irreps','',1,[nSym],1,1)
       Call xml_iDump('nbas','Number of basis functions','',
      &         1,nBas,nSym,1)
       Call xml_iDump('norb','Number of orbitals','',1,nOrb,nSym,1)

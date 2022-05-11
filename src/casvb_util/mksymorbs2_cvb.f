@@ -8,11 +8,11 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine mksymorbs2_cvb(orbs,sorbs)
       implicit real*8 (a-h,o-z)
-#include "ext_cvb.fh"
 #include "main_cvb.fh"
 #include "optze_cvb.fh"
 #include "files_cvb.fh"
@@ -20,11 +20,12 @@
 
       dimension orbs(norb,norb)
       dimension sorbs(norb,norb)
+      dimension dum(1)
       save thresh
       data thresh/1.d-7/
 
       if(sym)then
-        call fmove(orbs,sorbs,norb*norb)
+        call fmove_cvb(orbs,sorbs,norb*norb)
         nconstr_kp=nconstr
         nconstr=0
         call symtrizorbs_cvb(orbs)

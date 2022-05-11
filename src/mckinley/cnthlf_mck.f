@@ -21,11 +21,6 @@
 *         intermediate matrix will not push the start of the same out  *
 *         from the cache.                                              *
 *                                                                      *
-* Called from: Cntrct                                                  *
-*                                                                      *
-* Calling    : QEnter                                                  *
-*              QExit                                                   *
-*                                                                      *
 * Author:     Roland Lindh, Dept. of Theoretical Chemistry, University *
 *             of Lund, SWEDEN.                                         *
 ************************************************************************
@@ -64,20 +59,18 @@ c#include "print.fh"
 *
 *-----Set output matrix to zero
 *
-      If (First) call dcopy_(nVec*nCntr1*nCntr2,Zero,0,A3,1)
+      If (First) call dcopy_(nVec*nCntr1*nCntr2,[Zero],0,A3,1)
 *
 *-----Loop sectioning
 *
       Do iiVec = 1, nVec, IncVec
          mVec = Min(IncVec,nVec-iiVec+1)
 *--------Set intermediate matrix to zero
-         call dcopy_(nPrm2*nCntr1*mVec,Zero,0,A2,1)
+         call dcopy_(nPrm2*nCntr1*mVec,[Zero],0,A2,1)
 *
          If (Seg1) Then
 *
 *-----First quarter transformation
-*
-      i = 0
 *
       Do iPrm1 = 1, nPrm1
          Do iCntr1 = 1, nCntr1
@@ -103,7 +96,6 @@ c#include "print.fh"
 *
 *-----First quarter transformation
 *
-      i = 0
       Do iPrm1 = 1, nPrm1
          Do iCntr1 = 1, nCntr1
             Do iPrm2 = 1, nPrm2

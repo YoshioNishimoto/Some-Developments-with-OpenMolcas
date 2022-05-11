@@ -8,13 +8,14 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine nize_cvb(c,nnrm,s,n,metr,ierr)
 c  Normalizes NNRM vectors in C.
       implicit real*8 (a-h,o-z)
       logical safe
-#include "malloc_cvb.fh"
+#include "WrkSpc.fh"
       dimension c(n,nnrm),s(*)
       save one,thresh
       data one/1.d0/,thresh/1.d-8/
@@ -25,8 +26,8 @@ c  Normalizes NNRM vectors in C.
       if(metr.eq.0)then
         cnrm=dnrm2_(n,c(1,i),1)
       else
-        call saoon_cvb(c(1,i),w(i1),1,s,n,metr)
-        cnrm=sqrt(ddot_(n,c(1,i),1,w(i1),1))
+        call saoon_cvb(c(1,i),work(i1),1,s,n,metr)
+        cnrm=sqrt(ddot_(n,c(1,i),1,work(i1),1))
       endif
       if(safe.and.cnrm.lt.thresh)then
         ierr=ierr+1

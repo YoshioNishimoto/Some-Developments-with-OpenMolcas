@@ -34,8 +34,8 @@
 *                                                                      *
 ************************************************************************
 *                                                                      *
-*define _DEBUG_
-#ifdef _DEBUG_
+*define _DEBUGPRINT_
+#ifdef _DEBUGPRINT_
       Call RecPrt('RotGrd: RA',' ',RA,3,nAtoms)
       Call RecPrt('RotGrd: ZA',' ',ZA,1,nAtoms)
 #endif
@@ -44,7 +44,7 @@
 *                                                                      *
 *---- Compute the total charge
 *
-      Z_Tot=DDot_(nAtoms,One,0,ZA,1)
+      Z_Tot=DDot_(nAtoms,[One],0,ZA,1)
 *
 *---- Form the center of nuclear charge
 *

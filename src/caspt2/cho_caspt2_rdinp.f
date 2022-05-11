@@ -16,24 +16,17 @@
 *             in CASPt2
 *
 ************************************************************************
+      Use Fock_util_global, only: ALGO, Deco, DensityCheck, REORD
       Implicit Real*8 (A-H,O-Z)
-#include "itmax.fh"
-#include "info.fh"
 #include "real.fh"
 #include "print.fh"
-#include "output.fh"
-#include "WrkSpc.fh"
-      Character(180) KWord, Key, Get_Ln
+      Character(Len=180) KWord, Key, Get_Ln
       External Get_Ln
-      Logical  DFonly,REORD,DECO,timings,DensityCheck
-      character(16) SECNAM
+      Logical  DFonly
+      character(len=16) SECNAM
       parameter (SECNAM = 'CHO_CASPT2_RDINP')
-      Integer  ALGO
 *
-      Common /CHORAS / REORD,DECO,ALGO
-      Common /CHOTIME/ timings
-      COMMON /CHODENSITY/ DensityCheck
-
+#include "chotime.fh"
 #include "chocaspt2.fh"
 
 *
@@ -95,14 +88,6 @@
          DECO  =.true.
          DensityCheck=.false.
          timings=.false.
-
-*                                                                      *
-************************************************************************
-*     Define Blank lines                                               *
-*
-      Do i = 1, 80
-         BLine(i:i) = ' '
-      End Do
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -123,7 +108,7 @@
 *-------------------------------------------------------------------*
 
       If (KWord(1:1).eq.'*')    Go To 1000
-      If (KWord.eq.BLine)       Go To 1000
+      If (KWord.eq.'')       Go To 1000
       If (KWord(1:4).eq.'ALGO') Go To 900
       If (KWord(1:4).eq.'IALG') Go To 950
       If (KWord(1:4).eq.'REOR') Go To 800
@@ -204,11 +189,11 @@
 *
  700  Key=Get_Ln(LuSpool)
       KWord=Key
-      Call Get_I(1,n,1)
+      Call Get_I1(1,n)
       Do i = 1, n
          KWord=Get_Ln(LuSpool)
-         Call Get_I(1,jRout,1)
-         Call Get_I(2,iPrint,1)
+         Call Get_I1(1,jRout)
+         Call Get_I1(2,iPrint)
          nPrint(jRout)=iPrint
       End Do
       Go To 1000
@@ -222,10 +207,13 @@
 ************************************************************************
 *                                                                      *
 999   Continue
-      If (IPRGLB.ge.TERSE) Then
-         WRITE(6,'(1X,A,I4)') 'Cholesky algorithm in CASPT2 = ',iALGO
-         WRITE(6,*)
-      End If
+* SB: this printout is misleading if one does not use the Cholesky
+* approximation and superfluous otherwise, since the algorithms
+* are not documented. The user ignores it anyway.
+      ! If (IPRGLB.ge.TERSE) Then
+      !    WRITE(6,'(1X,A,I4)') 'Cholesky algorithm in CASPT2 = ',iALGO
+      !    WRITE(6,*)
+      ! End If
 
       Return
 *                                                                      *

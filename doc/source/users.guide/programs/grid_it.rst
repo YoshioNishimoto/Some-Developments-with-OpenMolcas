@@ -7,10 +7,6 @@
 :program:`GRID_IT`
 ==================
 
-.. warning::
-
-   This program requires a submodule
-
 .. only:: html
 
   .. contents::
@@ -166,7 +162,7 @@ Optional general keywords
 
   .. xmldoc:: <SELECT MODULE="GRID_IT" NAME="QUALITY" APPEAR="Grid Quality" LEVEL="BASIC" CONTAINS="DEFAULT,SPARSE,DENSE">
 
-  .. xmldoc:: <KEYWORD MODULE="GRID_IT" NAME="SPARSE" APPEAR="Sparse" KIND="SINGLE" LEVEL="BASIC" EXCLUSIVE="DENSE" MEMBER="QUALITY">
+  .. xmldoc:: <KEYWORD MODULE="GRID_IT" NAME="SPARSE" APPEAR="Sparse" KIND="SINGLE" LEVEL="BASIC" EXCLUSIVE="DENSE">
               %%Keyword: Sparse <basic>
               %%Tested: ##013
               <HELP>
@@ -180,7 +176,7 @@ Optional general keywords
   Set up net with 10 grid points per a.u. Note that using this option
   without choice of orbitals to draw you can produce very large output file.
 
-  .. xmldoc:: <KEYWORD MODULE="GRID_IT" NAME="DENSE" APPEAR="Dense" KIND="SINGLE" LEVEL="BASIC" EXCLUSIVE="SPARSE" MEMBER="QUALITY">
+  .. xmldoc:: <KEYWORD MODULE="GRID_IT" NAME="DENSE" APPEAR="Dense" KIND="SINGLE" LEVEL="BASIC" EXCLUSIVE="SPARSE">
               %%Keyword: Dense <basic>
               %%Tested: ##219
               <HELP>
@@ -234,12 +230,12 @@ Optional general keywords
   number of calculated grids. And at next line(s) pairs of integers --- symmetry
   and orbital within this symmetry is given.
 
-  .. xmldoc:: <KEYWORD MODULE="GRID_IT" NAME="ORBITAL" KIND="INTS_COMPUTED" SIZE="2" MIN_VALUE="1" LEVEL="ADVANCED" EXCLUDED="SELECT">
+  .. xmldoc:: <KEYWORD MODULE="GRID_IT" NAME="ORBITAL" KIND="INTS_COMPUTED" SIZE="2" MIN_VALUE="1" LEVEL="ADVANCED" EXCLUSIVE="SELECT">
               %%Keyword: Orbital <advanced>
               %%Tested: NONE
               <HELP>
               Direct specification of orbitals to show. Follows by
-              number of calculated grids, and pairs of integers - symmetry
+              number of calculated grids, and pairs of integers -- symmetry
               and orbital within this symmetry.
               </HELP>
               </KEYWORD>
@@ -249,7 +245,7 @@ Optional general keywords
   in the format: symmetry:first_orbital-last_orbital
   (Ex: 1:2-7 2:5-8)
 
-  .. xmldoc:: <KEYWORD MODULE="GRID_IT" NAME="SELECT" KIND="STRING" LEVEL="ADVANCED" EXCLUDED="ORBITAL">
+  .. xmldoc:: <KEYWORD MODULE="GRID_IT" NAME="SELECT" KIND="STRING" LEVEL="ADVANCED" EXCLUSIVE="ORBITAL">
               %%Keyword: Select <advanced>
               %%Tested: NONE
               <HELP>
@@ -291,7 +287,7 @@ Optional general keywords
 
   .. xmldoc:: <SELECT MODULE="GRID_IT" NAME="SELECTION" APPEAR="Orbital Selection" LEVEL="ADVANCED" CONTAINS="DEFAULT,ERANGE,ORANGE,ALL">
 
-  .. xmldoc:: <KEYWORD MODULE="GRID_IT" NAME="ORANGE" APPEAR="oRange" KIND="REALS" SIZE="2" MIN_VALUE="0" MAX_VALUE="2" LEVEL="ADVANCED" EXCLUSIVE="ERANGE,ALL" MEMBER="SELECTION">
+  .. xmldoc:: <KEYWORD MODULE="GRID_IT" NAME="ORANGE" APPEAR="oRange" KIND="REALS" SIZE="2" MIN_VALUE="0" MAX_VALUE="2" LEVEL="ADVANCED" EXCLUSIVE="ERANGE,ALL">
               %%Keyword: ORANge <advanced>
               %%Tested: ##205
               <HELP>
@@ -304,7 +300,7 @@ Optional general keywords
   Followed by 2 numbers, to limit the interval of
   orbitals by one-electron energies
 
-  .. xmldoc:: <KEYWORD MODULE="GRID_IT" NAME="ERANGE" APPEAR="eRange" KIND="REALS" SIZE="2" MIN_VALUE="0" MAX_VALUE="2" LEVEL="ADVANCED" EXCLUSIVE="ORANGE,ALL" MEMBER="SELECTION">
+  .. xmldoc:: <KEYWORD MODULE="GRID_IT" NAME="ERANGE" APPEAR="eRange" KIND="REALS" SIZE="2" LEVEL="ADVANCED" EXCLUSIVE="ORANGE,ALL">
               %%Keyword: ERANge <advanced>
               %%Tested: NONE
               <HELP>
@@ -317,7 +313,7 @@ Optional general keywords
   Calculate grids for all molecular orbitals. Using this keyword you can produce a
   huge output file!
 
-  .. xmldoc:: <KEYWORD MODULE="GRID_IT" NAME="ALL" APPEAR="ALL Orbitals" KIND="SINGLE" LEVEL="ADVANCED" EXCLUSIVE="ORANGE,ERANGE" MEMBER="SELECTION">
+  .. xmldoc:: <KEYWORD MODULE="GRID_IT" NAME="ALL" APPEAR="ALL Orbitals" KIND="SINGLE" LEVEL="ADVANCED" EXCLUSIVE="ORANGE,ERANGE">
               %%Keyword: All <advanced>
               %%Tested: ##219
               <HELP>
@@ -330,11 +326,11 @@ Optional general keywords
   .. :kword:`NODEnsity`
        Keyword to suppress calculation of grid for density
 
-       .. .. xmldoc:: %<KEYWORD MODULE="GRID_IT" NAME="NODENSITY" APPEAR="No Density" KIND="SINGLE" LEVEL="ADVANCED" EXCLUSIVE="TOTAL">
-                      %Keyword: NoDensity <advanced>
-                      %<HELP>
-                      %+ Keyword to suppress calculation of grid for density
-                      %</HELP>
+       .. .. xmldoc:: <KEYWORD MODULE="GRID_IT" NAME="NODENSITY" APPEAR="No Density" KIND="SINGLE" LEVEL="ADVANCED" EXCLUSIVE="TOTAL">
+                      %%Keyword: NoDensity <advanced>
+                      <HELP>
+                      Keyword to suppress calculation of grid for density
+                      </HELP>
                       </KEYWORD>
 
 :kword:`TOTAl`
@@ -357,7 +353,7 @@ Optional general keywords
   This keyword enables plotting of the orbitals from the latest :program:`CASVB` orbitals.
   Note that the appropriate :file:`RASORB` orbitals must be available in the :file:`INPORB` file.
 
-  .. xmldoc:: <KEYWORD MODULE="GRID_IT" NAME="VB" KIND="SINGLE" LEVEL="NOTIMPLEMENTED">
+  .. xmldoc:: <KEYWORD MODULE="GRID_IT" NAME="VB" KIND="SINGLE" LEVEL="ADVANCED">
               %%Keyword: VB <advanced>
               %%Tested: NONE
               <HELP>
@@ -419,7 +415,7 @@ Optional general keywords
               %%Tested: NONE
               <HELP>
               Keyword to set manually coordinates of a grid. Followed by number of
-              Cartesian coordinates, and on next lines - x y z coordinates of
+              Cartesian coordinates, and on next lines -- x y z coordinates of
               a grid (in a.u.)
               </HELP>
               </KEYWORD>
@@ -489,5 +485,7 @@ An example for selection orbitals with partial occupation: ::
 
   &GRID_IT
   ORange = 0.01 1.99
+
+.. xmldoc:: <KEYWORD MODULE="GRID_IT" NAME="ONE" KIND="REALS" SIZE="7" LEVEL="UNDOCUMENTED" />
 
 .. xmldoc:: </MODULE>

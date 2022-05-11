@@ -13,7 +13,6 @@
       DIMENSION CNAT(*),OCC(*)
       DIMENSION GDAO(*)
       DIMENSION ISTART(NSYM),NUSE(NSYM),NBAS(NSYM)
-#include "WrkSpc.fh"
 
 * General density matrix, in the sense of using a specified
 * but arbitrary range of orbitals in each symmetry, and an
@@ -47,7 +46,7 @@
       DO ISYM=1,NSYM
        NB=NBAS(ISYM)
        IF (NB.GT.0) THEN
-         CALL DCOPY_( (NB*(NB+1))/2,0.0D0,0,GDAO(IDAB+1),1)
+         CALL DCOPY_( (NB*(NB+1))/2,[0.0D0],0,GDAO(IDAB+1),1)
          NW=NUSE(ISYM)
          IF(NW.GT.0) THEN
           IW1=ISTART(ISYM)

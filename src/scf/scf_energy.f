@@ -9,7 +9,8 @@
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
       Subroutine SCF_Energy(FstItr,E1_,E2_,EV)
-      use SCF_Arrays
+      Use SCF_Arrays
+      Use Interfaces_SCF, Only: PMat_SCF
       Implicit Real*8 (a-h,o-z)
 #include "mxdm.fh"
 #include "infscf.fh"
@@ -56,7 +57,7 @@
 *     (3) the energy.
 *
       Call EneClc(E1_,E2_,EV,Dens,OneHam,TwoHam,nBT,nDens,nD,EDFT,
-     &            MxIter,Emb)
+     &            MxIter)
 *
       Return
       End

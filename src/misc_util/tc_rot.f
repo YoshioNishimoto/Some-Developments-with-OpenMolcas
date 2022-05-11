@@ -23,7 +23,6 @@
       Real*8  Inrt(3,3), RotE(3), Vec(3,3)  ! Inertia components
       Real*8  Mass(mxAtom)                  ! Masses
       Character*(LENIN) FAtLbl(mxAtom)      ! Atomic labes
-      Integer nAtomicN(mxAtom)              ! Atomic numbers
       Logical lSlapaf
 
 *
@@ -87,8 +86,8 @@
           Work(ij)=Inrt(i,j)
         End Do
       End Do
-      call dcopy_(3*3,Zero,0,Work(ipEVec),1)
-      call dcopy_(3,One,0,Work(ipEVec),3+1)
+      call dcopy_(3*3,[Zero],0,Work(ipEVec),1)
+      call dcopy_(3,[One],0,Work(ipEVec),3+1)
       Call Jacob (Work(ipEVal),Work(ipEVec),3,3)
       Call Jacord(Work(ipEVal),Work(ipEVec),3,3)
       Do i = 1, 3
@@ -153,18 +152,18 @@
 * --- Print results
 *
       Write(6,'(A)') ' Mass-centered Coordinates (Angstrom):'
-      Write(6,'(1X,60A)')
-     &    '***********************************************************'
-      Write(6,'(1X,60A)')
-     &    'Label   N         X           Y           Z          Mass  '
-      Write(6,'(1X,60A)')
-     &    '-----------------------------------------------------------'
+      Write(6,'(1X,A)')
+     &    '********************************************************'
+      Write(6,'(1X,A)')
+     &    'Label        X           Y           Z          Mass  '
+      Write(6,'(1X,A)')
+     &    '--------------------------------------------------------'
       Do i=1,nFAtoms
-         Write(6,'(1X,A,1X,I4,1X,3F12.6,1x,F12.5)')
-     & FAtLbl(i),nAtomicN(i),(Angstrom*SOCoor(j,i),j=1,3),Mass(i)
+         Write(6,'(1X,A,1X,3F12.6,1x,F12.5)')
+     & FAtLbl(i),(Angstrom*SOCoor(j,i),j=1,3),Mass(i)
       EndDo
-      Write(6,'(1X,60A)')
-     &    '-----------------------------------------------------------'
+      Write(6,'(1X,A)')
+     &    '--------------------------------------------------------'
       Write(6,'(A,F12.6)') ' Molecular mass:',TotalM
       Write(6,'(A,3F10.4)') ' Rotational Constants (cm-1):',
      &              (auTocm*Half/(uToau*RotE(i)),i=1,nrot)

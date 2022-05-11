@@ -10,6 +10,8 @@
 ************************************************************************
       Subroutine espf (ireturn,StandAlone)
       use Real_Spherical
+      use Basis_Info, only: nBas
+      use Symmetry_Info, only: VarR, VarT, Symmetry_Info_Dmp
       Implicit Real*8 (A-H,O-Z)
 *
 * ESPF Module
@@ -20,24 +22,24 @@
 #include "disp.fh"
 #include "setup.fh"
 #include "status.fh"
-#include "lundio.fh"
 #include "print.fh"
 #include "nac.fh"
       Character Label*8
       Logical Forces,Show_espf,StandAlone,DoTinker,DoGromacs,DynExtPot
       Logical lMorok,DoDirect,isNAC_tmp
+      Dimension idum(1)
+      Logical :: Close_Seward
 *
-      Call QEnter('espf')
       iReturn=99
 *
 *-----Print
 *
       iPL = iPL_espf()
+      Close_Seward=.False.
 *
 * Some warnings
 *
       Call Get_iScalar('nSym',nSym)
-      nIrrep=nSym
       If (nSym.gt.1) Then
          Write(6,'(A)')' Symmetry cannot be used together with ESPF.'
          Call Quit_OnUserError()
@@ -139,16 +141,15 @@
          iSyLbl = 1
          Label = 'OneHam  '
          iRc = -1
-         Call iRdOne(iRc,1,Label,iComp,nInts,iSyLbl)
+         Call iRdOne(iRc,1,Label,iComp,idum,iSyLbl)
+         nInts=idum(1)
          If (iRc.ne.0) Then
             Write (6,'(A)')' ESPF: Error reading ONEINT'
             Write (6,'(A,A8)')' Label = ',Label
-            Call QTrace()
             Call Abend()
          End If
          If (nInts+4.ne.nSize) Then
             Write (6,'(A,2I5)')' ESPF: nInts+4.ne.nSize',nInts+4,nSize
-            Call QTrace
             Call Abend()
          End If
          iRc = -1
@@ -162,7 +163,6 @@
          If (iRC.ne.0) then
             Write (6,*)'ESPF: Error writing to ONEINT'
             Write (6,'(A,A8)')'Label=',Label
-            Call QTrace
             Call Abend()
          End If
          Call Free_Work(ipH)
@@ -171,14 +171,14 @@
      &                 ' Nuclear energy, including Ext Pot = ',RepNuc
       Else
          Call StatusLine(' espf:',' Computing gradient components')
-         Call espf_grad(natom,nAtQM,nGrdPt,ipExt,ipGrid,ipB,ipDB,ipIsMM,
+         Call espf_grad(natom,nGrdPt,ipExt,ipGrid,ipB,ipDB,ipIsMM,
      &                  ipGradCl,DoTinker,DoGromacs)
          If (ipMltp.eq.ip_Dummy)
      &      Call GetMem('ESPFMltp','Allo','Real',ipMltp,nMult)
          Call espf_mltp(natom,MltOrd,nMult,nGrdPt,ipTTT,ipMltp,ipGrid,
      &                  ipIsMM,ipExt,iPL)
       End If
-      Call ClsSew()
+      Close_Seward=.True.
 *
 98    Continue
 *
@@ -213,13 +213,12 @@
 *     and rotational invariant.
 *
       If (.not.Forces .and. natMM.gt.0) Then
-         Call Get_iScalar('System BitSwitch',iOption)
-         iOption=iOr(iOption,2**7)
-         iOption=iOr(iOption,2**8)
-         Call Put_iScalar('System BitSwitch',iOption)
+         VarR = .true.
+         VarT = .true.
+         Call Symmetry_Info_Dmp()
       End If
+      If (Close_Seward) Call ClsSew()
 *
-      Call QExit('espf')
       iReturn=0
       Return
       End

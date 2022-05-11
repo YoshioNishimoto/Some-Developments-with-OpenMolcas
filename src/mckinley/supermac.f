@@ -10,22 +10,26 @@
 ************************************************************************
       Subroutine SuperMac()
       Implicit Real*8 (a-h,o-z)
-#include "WrkSpc.fh"
-      Character*8 Method
-      Character*16 StdIn
+#include "stdalloc.fh"
+      Integer, Allocatable:: Scr1(:)
+      Character(LEN=8) Method
+      Character(LEN=16) StdIn
       Logical Do_Cholesky, Do_ESPF, Numerical, Found
-#include "warnings.fh"
+#include "warnings.h"
 #include "temperatures.fh"
 *
       Call Get_cArray('Relax Method',Method,8)
 *
-      Numerical = Method .eq. 'RASSCFSA'    .or.
+      Numerical = Method(1:6) .eq. 'RASSCF' .or.
+     &            Method(1:6) .eq. 'GASSCF' .or.
+     &            Method .eq. 'CASSCFSA'    .or.
+     &            Method .eq. 'DMRGSCFS'    .or.
      &            Method .eq. 'CASPT2'      .or.
      &            Method .eq. 'UHF-SCF'     .or.
      &            Method .eq. 'MBPT2'       .or.
      &            Method .eq. 'CCSDT'       .or.
-     &            Method .eq. 'CASSCFSA'    .or.
-     &            Method .eq. 'KS-DFT'
+     &            Method .eq. 'KS-DFT'      .or.
+     &            Method .eq. 'UKS-DFT'
 *
       If (Method.eq.'CASSCF') Then
          Call Get_iScalar('NumGradRoot',irlxroot)
@@ -35,8 +39,11 @@
       Call DecideOnCholesky(Do_Cholesky)
       If (Do_Cholesky) Numerical=.true.
 *
-      Call Qpg_dArray('GeoPC',Found,nData)
-      Numerical = Numerical .or. (Found.and.nData.gt.0)
+      Call Qpg_iScalar('nXF',Found)
+      If (Found) Then
+         Call Get_iScalar('nXF',nXF)
+         Numerical = Numerical .or. (nXF.gt.0)
+      End If
       Call DecideOnESPF(Do_ESPF)
       Numerical = Numerical .or. Do_ESPF
 *
@@ -60,13 +67,13 @@
       Call fCopy('RUNFILE','RUNBACK',iErr)
       If (iErr.ne.0) Call Abend()
 *
-      Call GetMem('Scr1','Allo','Inte',ipScr1,7)
-      iWork(ipScr1)=0
-      iWork(ipScr1+1)=0
-      iWork(ipScr1+2)=-99
-      iWork(ipScr1+3)=0
-      Call Put_iArray('Slapaf Info 1',iWork(ipScr1),7)
-      Call GetMem('Scr1','Free','Inte',ipScr1,7)
+      Call mma_allocate(Scr1,7,Label='Scr1')
+      Scr1(1)=0
+      Scr1(2)=0
+      Scr1(3)=-99
+      Scr1(4)=0
+      Call Put_iArray('Slapaf Info 1',Scr1,7)
+      Call mma_deallocate(Scr1)
       LuInput=11
       LuInput=IsFreeUnit(LuInput)
       Call StdIn_Name(StdIn)
@@ -74,8 +81,6 @@
 *                                                                      *
 ************************************************************************
 *                                                                      *
-      iPL = iPrintLevel(-1)
-*
       Write (LuInput,'(A)') '>ECHO OFF'
       Write (LuInput,'(A)') '>export MCK_OLD_TRAP=$MOLCAS_TRAP'
       Write (LuInput,'(A)') '>export MCK_OLD_MAXITER=$MOLCAS_MAXITER'
@@ -94,6 +99,10 @@
       Call Lu2Lu('SEWARINP',LuInput)
       Write (LuInput,*)
 *
+      If (Do_ESPF) THen
+         Call Lu2Lu('ESPFINP',LuInput)
+      End If
+*
       If (Method .eq. 'RASSCFSA'.or.Method .eq. 'CASSCFSA' .or.
      &    Method .eq. 'CASSCF') Then
          Call Lu2Lu('RASSCINP',LuInput)
@@ -107,7 +116,8 @@
          Call Lu2Lu('SCFINP',LuInput)
          Write (LuInput,'(A)')
          Call Lu2Lu('CCSDTINP',LuInput)
-      Else If (Method .eq. 'KS-DFT' .or. Method.eq.'RHF-SCF') Then
+      Else If (Method .eq. 'KS-DFT' .or. Method.eq.'RHF-SCF' .or.
+     &         Method .eq. 'UKS-DFT'.or. Method.eq.'UHF-SCF') Then
          Call Lu2Lu('SCFINP',LuInput)
       End If
 *
@@ -153,7 +163,7 @@
       Subroutine Lu2Lu(Filename,LuInput)
       Character FileName*(*), Line*180
       Logical Exist
-#include "warnings.fh"
+#include "warnings.h"
 *
       Call f_inquire(Filename,Exist)
       If (.Not.Exist) Then

@@ -16,11 +16,6 @@
 *                                                                      *
 * Object: to assemble the gradients of the ERI's.                      *
 *                                                                      *
-* Called from: Rysg1                                                   *
-*                                                                      *
-* Calling    : QEnter                                                  *
-*              QExit                                                   *
-*                                                                      *
 *     Author: Roland Lindh, Dept. of Theoretical Chemistry,            *
 *             University of Lund, SWEDEN                               *
 *             October '91                                              *
@@ -46,8 +41,8 @@ c#include "print.fh"
       kc=(lc+1)*(lc+2)/2
       kd=(ld+1)*(ld+2)/2
       nG1=nT*9*ka*kb*kc*kd
-      call dcopy_(nG1,Zero,0,G1,1)
-      Call ICOPY(12,0,0,Index2,1)
+      call dcopy_(nG1,[Zero],0,G1,1)
+      Call ICOPY(12,[0],0,Index2,1)
 *
       ii = la*(la+1)*(la+2)/6
       jj = lb*(lb+1)*(lb+2)/6
@@ -68,7 +63,6 @@ c#include "print.fh"
 *
          ixab = ixa + ixb
          iyab = iya + iyb
-         izab = iza + izb
 *
       Do 300 ipc = 1, nElem(lc)
          ipckk=ipc+kk
@@ -78,7 +72,6 @@ c#include "print.fh"
 *
          ixabc = ixab + ixc
          iyabc = iyab + iyc
-         izabc = izab + izc
 *
       Do 400 ipd = 1, nElem(ld)
          ipdll=ipd+ll
@@ -88,7 +81,6 @@ c#include "print.fh"
 *
          ixabcd = ixabc + ixd
          iyabcd = iyabc + iyd
-         izabcd = izabc + izd
 *
 *        Compute all desired gradients with respect to an x-component.
 *

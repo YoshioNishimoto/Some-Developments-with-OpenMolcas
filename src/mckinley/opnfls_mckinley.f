@@ -9,9 +9,10 @@
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
       SubRoutine OpnFls_McKinley()
+      use Basis_Info, only: nBas
+      use Symmetry_Info, only: nIrrep, lIrrep
       Implicit Real*8(a-h,o-z)
-#include "itmax.fh"
-#include "info.fh"
+#include "Molcas.fh"
 #include "disp.fh"
 #include "disp2.fh"
 #include "etwas.fh"
@@ -24,17 +25,15 @@
       If (iRC.ne.0) Then
          Write (6,*) 'OpnFls: Error writing to MCKINT'
          Write (6,'(A,A)') 'MckLbl=',MckLbl
-         Call QTrace
          Call Abend()
       End If
       iOpt = 1
       iRC = -1
       MckLbl='nSym'
-      Call iWrMck(iRC,iOpt,MckLbl,1,nIrrep,iDummer)
+      Call iWrMck(iRC,iOpt,MckLbl,1,[nIrrep],iDummer)
       If (iRC.ne.0) Then
          Write (6,*) 'OpnFls: Error writing to MCKINT'
          Write (6,'(A,A)') 'MckLbl=',MckLbl
-         Call QTrace
          Call Abend()
       End If
       iOpt = 0
@@ -44,17 +43,15 @@
       If (iRC.ne.0) Then
          Write (6,*) 'OpnFls: Error writing to MCKINT'
          Write (6,'(A,A)') 'MckLbl=',MckLbl
-         Call QTrace
          Call Abend()
       End If
       iOpt = 0
       iRC = -1
       MckLbl='SymOp'
-      Call iWrMck(iRC,iOpt,MckLbl,1,lirrep,iDummer)
+      Call cWrMck(iRC,iOpt,MckLbl,1,lirrep(0),iDummer)
       If (iRC.ne.0) Then
          Write (6,*) 'OpnFls: Error writing to MCKINT'
          Write (6,'(A,A)') 'MckLbl=',MckLbl
-         Call QTrace
          Call Abend()
       End If
       iOpt = 0
@@ -64,7 +61,6 @@
       If (iRC.ne.0) Then
          Write (6,*) 'OpnFls: Error writing to MCKINT'
          Write (6,'(A,A)') 'MckLbl=',MckLbl
-         Call QTrace
          Call Abend()
       End If
       ngrad=0
@@ -74,11 +70,10 @@
       iOpt = 0
       iRC = -1
       MckLbl='chdisp'
-      Call cWrMck(iRC,iOpt,MckLbl,1,chdisp,iDummer)
+      Call cWrMck(iRC,iOpt,MckLbl,1,chdisp(1),iDummer)
       If (iRC.ne.0) Then
          Write (6,*) 'OpnFls: Error writing to MCKINT'
          Write (6,'(A,A)') 'MckLbl=',MckLbl
-         Call QTrace
          Call Abend()
       End If
 *                                                                      *

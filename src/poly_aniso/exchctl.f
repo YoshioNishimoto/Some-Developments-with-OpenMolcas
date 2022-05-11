@@ -20,11 +20,11 @@
      &                    W,  Z,  S,   M, iPrint, mem  )
 
 
-      ! this Subroutine is a control Subroutine for the exchange interaction,
-      ! diagonalization of total hamiltonian and computation of matrix elements
-      ! of magnetic and spin moment
+!     this Subroutine is a control Subroutine for the exchange interaction,
+!     diagonalization of total hamiltonian and computation of matrix elements
+!     of magnetic and spin moment
       Implicit None
-      Integer, parameter            :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter        :: wp=kind(0.d0)
 #include "stdalloc.fh"
       ! global variables:
       Integer, intent(in)           :: nneq
@@ -36,33 +36,34 @@
       Integer, intent(in)           :: npair
       Integer, intent(in)           :: i_pair(npair,2)
       Integer, intent(in)           :: exch
-      Integer, intent(in)           :: lant !( takes values from 1-7 for Gd-Yb respectively
+!     ( takes values from 1-7 for Gd-Yb respectively
+      Integer, intent(in)           :: lant
       Integer, intent(in)           :: iPrint
       Integer, intent(in)           :: mem ! memory allocated so far
       Integer, intent(in)           :: MxRank1, MxRank2
       Integer, intent(in)           :: imaxrank(npair,2)
-      Character(1), intent(in)      :: itype(nneq)
+      Character(Len=1), intent(in)  :: itype(nneq)
 
-      Real(kind=wp), intent(in)     :: eso(nneq,nmax)
-      Real(kind=wp), intent(in)     :: Jex(npair)
-      Real(kind=wp), intent(in)     :: JAex(npair,3)
-      Real(kind=wp), intent(in)     :: JDMex(npair,3)
-      Real(kind=wp), intent(in)     :: JAex9(npair,3,3)
-      Real(kind=wp), intent(in)     ::
+      Real(kind=8), intent(in)     :: eso(nneq,nmax)
+      Real(kind=8), intent(in)     :: Jex(npair)
+      Real(kind=8), intent(in)     :: JAex(npair,3)
+      Real(kind=8), intent(in)     :: JDMex(npair,3)
+      Real(kind=8), intent(in)     :: JAex9(npair,3,3)
+      Real(kind=8), intent(in)     ::
      &                          JITOexR(nPair,MxRank1,-MxRank1:MxRank1,
      &                                        MxRank2,-MxRank2:MxRank2)
-      Real(kind=wp), intent(in)     ::
+      Real(kind=8), intent(in)     ::
      &                          JITOexI(nPair,MxRank1,-MxRank1:MxRank1,
      &                                        MxRank2,-MxRank2:MxRank2)
-      Real(kind=wp), intent(in)     :: coord(nneq,3)
-      Real(kind=wp), intent(in)     :: rot(nneq,neqv,3,3)
-      Real(kind=wp), intent(in)     :: rlg(nneq,neqv,3,3)
-      Real(kind=wp), intent(in)     :: riso(nneq,3,3)
-      Real(kind=wp), intent(in)     :: tpar
-      Real(kind=wp), intent(in)     :: upar
+      Real(kind=8), intent(in)     :: coord(nneq,3)
+      Real(kind=8), intent(in)     :: rot(nneq,neqv,3,3)
+      Real(kind=8), intent(in)     :: rlg(nneq,neqv,3,3)
+      Real(kind=8), intent(in)     :: riso(nneq,3,3)
+      Real(kind=8), intent(in)     :: tpar
+      Real(kind=8), intent(in)     :: upar
 
-      Complex(kind=wp), intent(inout)  :: SM(nneq,3,nmax,nmax)
-      Complex(kind=wp), intent(inout)  :: MM(nneq,3,nmax,nmax)
+      Complex(kind=8), intent(inout)  :: SM(nneq,3,nmax,nmax)
+      Complex(kind=8), intent(inout)  :: MM(nneq,3,nmax,nmax)
 
       Logical, intent(in)           :: AnisoLines1
       Logical, intent(in)           :: AnisoLines3
@@ -75,11 +76,11 @@
 
 
 
-      Real(kind=wp), intent(out)    :: W(exch)
+      Real(kind=8), intent(out)    :: W(exch)
 
-      Complex(kind=wp), intent(out) :: Z(exch,exch)
-      Complex(kind=wp), intent(out) :: S(3,exch,exch)
-      Complex(kind=wp), intent(out) :: M(3,exch,exch)
+      Complex(kind=8), intent(out) :: Z(exch,exch)
+      Complex(kind=8), intent(out) :: S(3,exch,exch)
+      Complex(kind=8), intent(out) :: M(3,exch,exch)
 !------------------------------------------------------------------
       ! local variables
       Integer                       :: i,j,l,lp,lb1,lb2,nb,nb1,nb2,
@@ -92,34 +93,41 @@
       Integer, allocatable          :: icoord(:) !  icoord(lmax)
       Integer, allocatable          :: nind(:,:) !  nind(lmax,2)
 
-      Real(kind=wp)                 :: vect(3)
-      Real(kind=wp)                 :: dist
-      Real(kind=wp), allocatable    :: wlin(:) ! wlin(exch)
-      Real(kind=wp), allocatable    :: wlin1(:)! wlin1(exch)
-      Real(kind=wp), allocatable    :: wlin3(:)! wlin3(exch)
-      Real(kind=wp), allocatable    :: wlin9(:)! wlin9(exch)
-      Real(kind=wp), allocatable    :: wdip(:) ! wdip(exch)
-      Real(kind=wp), allocatable    :: wkex(:) ! wkex(exch)
-      Real(kind=wp), allocatable    :: wdmo(:) ! wdmo(exch)
-      Real(kind=wp), allocatable    :: wito(:) ! wito(exch)
+      Real(kind=8)                 :: vect(3)
+      Real(kind=8)                 :: dist
+      Real(kind=8), allocatable    :: wlin(:) ! wlin(exch)
+      Real(kind=8), allocatable    :: wlin1(:)! wlin1(exch)
+      Real(kind=8), allocatable    :: wlin3(:)! wlin3(exch)
+      Real(kind=8), allocatable    :: wlin9(:)! wlin9(exch)
+      Real(kind=8), allocatable    :: wdip(:) ! wdip(exch)
+      Real(kind=8), allocatable    :: wkex(:) ! wkex(exch)
+      Real(kind=8), allocatable    :: wdmo(:) ! wdmo(exch)
+      Real(kind=8), allocatable    :: wito(:) ! wito(exch)
 
-      Complex(kind=wp), allocatable :: S1(:,:,:) ! S1(3,nmax,nmax)
-      Complex(kind=wp), allocatable :: M1(:,:,:) ! M1(3,nmax,nmax)
-      Complex(kind=wp), allocatable :: S2(:,:,:) ! S2(3,nmax,nmax)
-      Complex(kind=wp), allocatable :: M2(:,:,:) ! M2(3,nmax,nmax)
-      Complex(kind=wp), allocatable :: ZA1(:,:), ZA2(:,:)
-      Complex(kind=wp), allocatable :: SM1(:,:,:) ! SM1(3,nmax,nmax)
-      Complex(kind=wp), allocatable :: MM1(:,:,:) ! MM1(3,nmax,nmax)
-      Complex(kind=wp), allocatable :: SM2(:,:,:) ! SM2(3,nmax,nmax)
-      Complex(kind=wp), allocatable :: MM2(:,:,:) ! MM2(3,nmax,nmax)
-      Complex(kind=wp), allocatable :: HLIN1(:,:,:,:,:) ! HLIN1(npair,nmax,nmax,nmax,nmax)
-      Complex(kind=wp), allocatable :: HLIN3(:,:,:,:,:) ! HLIN3(npair,nmax,nmax,nmax,nmax)
-      Complex(kind=wp), allocatable :: HLIN9(:,:,:,:,:) ! HLIN9(npair,nmax,nmax,nmax,nmax)
-      Complex(kind=wp), allocatable :: HDIP(:,:,:,:,:) ! HDIP(npair,nmax,nmax,nmax,nmax)
-      Complex(kind=wp), allocatable :: HKEX(:,:,:,:,:) ! HKEX(npair,nmax,nmax,nmax,nmax)
-      Complex(kind=wp), allocatable :: HDMO(:,:,:,:,:) ! HDMO(npair,nmax,nmax,nmax,nmax)
-      Complex(kind=wp), allocatable :: HITO(:,:,:,:,:) ! HITO(npair,nmax,nmax,nmax,nmax)
-      Complex(kind=wp), allocatable :: tmp(:,:) ! tmp(exch,exch)
+      Complex(kind=8), allocatable :: S1(:,:,:) ! S1(3,nmax,nmax)
+      Complex(kind=8), allocatable :: M1(:,:,:) ! M1(3,nmax,nmax)
+      Complex(kind=8), allocatable :: S2(:,:,:) ! S2(3,nmax,nmax)
+      Complex(kind=8), allocatable :: M2(:,:,:) ! M2(3,nmax,nmax)
+      Complex(kind=8), allocatable :: ZA1(:,:), ZA2(:,:)
+      Complex(kind=8), allocatable :: SM1(:,:,:) ! SM1(3,nmax,nmax)
+      Complex(kind=8), allocatable :: MM1(:,:,:) ! MM1(3,nmax,nmax)
+      Complex(kind=8), allocatable :: SM2(:,:,:) ! SM2(3,nmax,nmax)
+      Complex(kind=8), allocatable :: MM2(:,:,:) ! MM2(3,nmax,nmax)
+      Complex(kind=8), allocatable :: HLIN1(:,:,:,:,:)
+!                                      HLIN1(npair,nmax,nmax,nmax,nmax)
+      Complex(kind=8), allocatable :: HLIN3(:,:,:,:,:)
+!                                      HLIN3(npair,nmax,nmax,nmax,nmax)
+      Complex(kind=8), allocatable :: HLIN9(:,:,:,:,:)
+!                                      HLIN9(npair,nmax,nmax,nmax,nmax)
+      Complex(kind=8), allocatable :: HDIP(:,:,:,:,:)
+!                                      HDIP(npair,nmax,nmax,nmax,nmax)
+      Complex(kind=8), allocatable :: HKEX(:,:,:,:,:)
+!                                      HKEX(npair,nmax,nmax,nmax,nmax)
+      Complex(kind=8), allocatable :: HDMO(:,:,:,:,:)
+!                                      HDMO(npair,nmax,nmax,nmax,nmax)
+      Complex(kind=8), allocatable :: HITO(:,:,:,:,:)
+!                                      HITO(npair,nmax,nmax,nmax,nmax)
+      Complex(kind=8), allocatable :: tmp(:,:) ! tmp(exch,exch)
 c two options for KE:
       Integer                       :: KEOPT
       Integer, parameter            :: exchR=8
@@ -128,25 +136,26 @@ c two options for KE:
       Integer, allocatable          :: nexchR(:)  ! nexchR(nneq)
       Integer, allocatable          :: ibasR(:,:) ! ibasR(exchR,lmax)
       Integer, allocatable          :: intcR(:)   ! intcR(lmax)
-      Real(kind=wp), allocatable    :: WR(:)  ! WR(exchR)
-      Real(kind=wp), allocatable    :: rotR(:,:,:,:) ! rotR(nneq,neqv,3,3)
-      Complex(kind=wp), allocatable :: ZR(:,:) ! ZR(exchR,exchR)
-      Complex(kind=wp), allocatable :: HKEXR(:,:,:,:,:) ! HKEXR(npair,2,2,2,2)
-      Complex(kind=wp), allocatable :: MR(:,:,:) ! MR(3,exchR,exchR)
-      Complex(kind=wp), allocatable :: SR(:,:,:) ! SR(3,exchR,exchR)
-      Complex(kind=wp), allocatable :: SMR(:,:,:,:) ! SMR(nneq,3,2,2)
-      Complex(kind=wp), allocatable :: MMR(:,:,:,:) ! MMR(nneq,3,2,2)
-c      Complex(kind=wp) ::  JAllDip(npair,nmax,-nmax:nmax,nmax,-nmax:nmax)
-c      Complex(kind=wp) ::  JAllEx( npair,nmax,-nmax:nmax,nmax,-nmax:nmax)
-c      Real(kind=wp) ::  J1Dip(npair,3,3)
-c      Real(kind=wp) ::  J1Ex(npair,3,3)
-      Real(kind=wp)    :: mg1(3,3), mg2(3,3)
+      Real(kind=8), allocatable    :: WR(:)  ! WR(exchR)
+      Real(kind=8), allocatable    :: rotR(:,:,:,:)
+!                                      rotR(nneq,neqv,3,3)
+      Complex(kind=8), allocatable :: ZR(:,:) ! ZR(exchR,exchR)
+      Complex(kind=8), allocatable :: HKEXR(:,:,:,:,:)
+!                                      HKEXR(npair,2,2,2,2)
+      Complex(kind=8), allocatable :: MR(:,:,:) ! MR(3,exchR,exchR)
+      Complex(kind=8), allocatable :: SR(:,:,:) ! SR(3,exchR,exchR)
+      Complex(kind=8), allocatable :: SMR(:,:,:,:) ! SMR(nneq,3,2,2)
+      Complex(kind=8), allocatable :: MMR(:,:,:,:) ! MMR(nneq,3,2,2)
+c      Complex(kind=8) ::  JAllDip(npair,nmax,-nmax:nmax,nmax,-nmax:nmax)
+c      Complex(kind=8) ::  JAllEx( npair,nmax,-nmax:nmax,nmax,-nmax:nmax)
+c      Real(kind=8) ::  J1Dip(npair,3,3)
+c      Real(kind=8) ::  J1Ex(npair,3,3)
+      Real(kind=8)    :: mg1(3,3), mg2(3,3)
       Integer          :: CtoB, RtoB, ItoB, mem_local
       Logical          :: DBG !, testlines
-      Real(kind=wp)    :: dnrm2_
+      Real(kind=8)    :: dnrm2_
       External         :: norder, dnrm2_  !,ilaenv
 
-      Call qEnter('PA_exchctl')
       DBG=.false.
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       If(DBG) Then
@@ -240,22 +249,22 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       RtoB=8
       CtoB=16
       mem_local=0
-      If(lmax>0) Then
+      If(lmax>=0) Then
         ! exchange energy spectrum
         Call mma_allocate(intc,lmax,'intc')
         Call mma_allocate(icoord,lmax,'icoord')
         Call mma_allocate(nind,lmax,2,'nind')
-        Call icopy(lmax,0,0,intc,1)
-        Call icopy(lmax,0,0,icoord,1)
-        Call icopy(2*lmax,0,0,nind,1)
+        Call icopy(lmax,[0],0,intc,1)
+        Call icopy(lmax,[0],0,icoord,1)
+        Call icopy(2*lmax,[0],0,nind,1)
         mem_local=mem_local+4*lmax*ItoB
-        If(exch>0) Then
+        If(exch>=0) Then
           Call mma_allocate(ibas,exch,lmax,'ibas')
-          Call icopy(exch*lmax,0,0,ibas,1)
+          Call icopy(exch*lmax,[0],0,ibas,1)
           mem_local=mem_local+exch*lmax*ItoB
         End If
       End If
-      If(exch>0) Then
+      If(exch>=0) Then
         Call mma_allocate(wlin ,exch,'wlin ')
         Call mma_allocate(wlin1,exch,'wlin1')
         Call mma_allocate(wlin3,exch,'wlin3')
@@ -264,17 +273,17 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         Call mma_allocate(wkex ,exch,'wkex ')
         Call mma_allocate(wdmo ,exch,'wdmo ')
         Call mma_allocate(wito ,exch,'wito ')
-        Call dcopy_(exch,0.0_wp,0,wlin ,1)
-        Call dcopy_(exch,0.0_wp,0,wlin1,1)
-        Call dcopy_(exch,0.0_wp,0,wlin3,1)
-        Call dcopy_(exch,0.0_wp,0,wlin9,1)
-        Call dcopy_(exch,0.0_wp,0,wdip ,1)
-        Call dcopy_(exch,0.0_wp,0,wkex ,1)
-        Call dcopy_(exch,0.0_wp,0,wdmo ,1)
-        Call dcopy_(exch,0.0_wp,0,wito ,1)
+        Call dcopy_(exch,[0.0_wp],0,wlin ,1)
+        Call dcopy_(exch,[0.0_wp],0,wlin1,1)
+        Call dcopy_(exch,[0.0_wp],0,wlin3,1)
+        Call dcopy_(exch,[0.0_wp],0,wlin9,1)
+        Call dcopy_(exch,[0.0_wp],0,wdip ,1)
+        Call dcopy_(exch,[0.0_wp],0,wkex ,1)
+        Call dcopy_(exch,[0.0_wp],0,wdmo ,1)
+        Call dcopy_(exch,[0.0_wp],0,wito ,1)
         mem_local=mem_local+8*exch*RtoB
       End If
-      If(nmax>0) Then
+      If(nmax>=0) Then
         Call mma_allocate( S1,3,nmax,nmax,' S1')
         Call mma_allocate( M1,3,nmax,nmax,' M1')
         Call mma_allocate( S2,3,nmax,nmax,' S2')
@@ -285,19 +294,19 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         Call mma_allocate(SM2,3,nmax,nmax,'SM2')
         Call mma_allocate(MM1,3,nmax,nmax,'MM1')
         Call mma_allocate(MM2,3,nmax,nmax,'MM2')
-        Call zcopy_(3*nmax*nmax,(0.0_wp,0.0_wp),0, S1,1)
-        Call zcopy_(3*nmax*nmax,(0.0_wp,0.0_wp),0, M1,1)
-        Call zcopy_(3*nmax*nmax,(0.0_wp,0.0_wp),0, S2,1)
-        Call zcopy_(3*nmax*nmax,(0.0_wp,0.0_wp),0, M2,1)
-        Call zcopy_(  nmax*nmax,(0.0_wp,0.0_wp),0, ZA1,1)
-        Call zcopy_(  nmax*nmax,(0.0_wp,0.0_wp),0, ZA2,1)
-        Call zcopy_(3*nmax*nmax,(0.0_wp,0.0_wp),0,SM1,1)
-        Call zcopy_(3*nmax*nmax,(0.0_wp,0.0_wp),0,SM2,1)
-        Call zcopy_(3*nmax*nmax,(0.0_wp,0.0_wp),0,MM1,1)
-        Call zcopy_(3*nmax*nmax,(0.0_wp,0.0_wp),0,MM2,1)
+        Call zcopy_(3*nmax*nmax,[(0.0_wp,0.0_wp)],0, S1,1)
+        Call zcopy_(3*nmax*nmax,[(0.0_wp,0.0_wp)],0, M1,1)
+        Call zcopy_(3*nmax*nmax,[(0.0_wp,0.0_wp)],0, S2,1)
+        Call zcopy_(3*nmax*nmax,[(0.0_wp,0.0_wp)],0, M2,1)
+        Call zcopy_(  nmax*nmax,[(0.0_wp,0.0_wp)],0, ZA1,1)
+        Call zcopy_(  nmax*nmax,[(0.0_wp,0.0_wp)],0, ZA2,1)
+        Call zcopy_(3*nmax*nmax,[(0.0_wp,0.0_wp)],0,SM1,1)
+        Call zcopy_(3*nmax*nmax,[(0.0_wp,0.0_wp)],0,SM2,1)
+        Call zcopy_(3*nmax*nmax,[(0.0_wp,0.0_wp)],0,MM1,1)
+        Call zcopy_(3*nmax*nmax,[(0.0_wp,0.0_wp)],0,MM2,1)
         mem_local=mem_local+8*3*nmax*nmax*CtoB
 
-        If(npair>0) Then
+        If(npair>=0) Then
           ibuf=npair*nmax*nmax*nmax*nmax
           Call mma_allocate(HLIN1,npair,nmax,nmax,nmax,nmax,'HLIN1')
           Call mma_allocate(HLIN3,npair,nmax,nmax,nmax,nmax,'HLIN3')
@@ -306,70 +315,70 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
           Call mma_allocate(HKEX,npair,nmax,nmax,nmax,nmax,'HKEX')
           Call mma_allocate(HDMO,npair,nmax,nmax,nmax,nmax,'HDMO')
           Call mma_allocate(HITO,npair,nmax,nmax,nmax,nmax,'HITO')
-          Call zcopy_(ibuf,(0.0_wp,0.0_wp),0,HLIN1,1)
-          Call zcopy_(ibuf,(0.0_wp,0.0_wp),0,HLIN3,1)
-          Call zcopy_(ibuf,(0.0_wp,0.0_wp),0,HLIN9,1)
-          Call zcopy_(ibuf,(0.0_wp,0.0_wp),0,HDIP,1)
-          Call zcopy_(ibuf,(0.0_wp,0.0_wp),0,HKEX,1)
-          Call zcopy_(ibuf,(0.0_wp,0.0_wp),0,HDMO,1)
-          Call zcopy_(ibuf,(0.0_wp,0.0_wp),0,HITO,1)
+          Call zcopy_(ibuf,[(0.0_wp,0.0_wp)],0,HLIN1,1)
+          Call zcopy_(ibuf,[(0.0_wp,0.0_wp)],0,HLIN3,1)
+          Call zcopy_(ibuf,[(0.0_wp,0.0_wp)],0,HLIN9,1)
+          Call zcopy_(ibuf,[(0.0_wp,0.0_wp)],0,HDIP,1)
+          Call zcopy_(ibuf,[(0.0_wp,0.0_wp)],0,HKEX,1)
+          Call zcopy_(ibuf,[(0.0_wp,0.0_wp)],0,HDMO,1)
+          Call zcopy_(ibuf,[(0.0_wp,0.0_wp)],0,HITO,1)
           mem_local=mem_local+7*ibuf*CtoB
         End If
       End If
 
-      If(exch>0) Then
+      If(exch>=0) Then
         Call mma_allocate(tmp,exch,exch,'tmp')
-        Call zcopy_(exch*exch,(0.0_wp,0.0_wp),0,tmp,1)
+        Call zcopy_(exch*exch,[(0.0_wp,0.0_wp)],0,tmp,1)
         mem_local=mem_local+exch*exch*CtoB
       End If
 
 
-      If(nneq>0) Then
+      If(nneq>=0) Then
         Call mma_allocate(nexchR,nneq,'nexchR')
-        Call icopy( nneq,0,0,nexchR,1)
+        Call icopy( nneq,[0],0,nexchR,1)
         mem_local=mem_local+nneq*ItoB
 
         Call mma_allocate(SMR,nneq,3,2,2,'SMR')
         Call mma_allocate(MMR,nneq,3,2,2,'MMR')
-        Call zcopy_(nneq*3*2*2,(0.0_wp,0.0_wp),0,SMR,1)
-        Call zcopy_(nneq*3*2*2,(0.0_wp,0.0_wp),0,MMR,1)
+        Call zcopy_(nneq*3*2*2,[(0.0_wp,0.0_wp)],0,SMR,1)
+        Call zcopy_(nneq*3*2*2,[(0.0_wp,0.0_wp)],0,MMR,1)
         mem_local=mem_local+2*nneq*3*2*2*CtoB
 
-        If(neqv>0) Then
+        If(neqv>=0) Then
           Call mma_allocate(rotR,nneq,neqv,3,3,'rotR')
-          Call dcopy_(nneq*neqv*3*3,0.0_wp,0,rotR,1)
+          Call dcopy_(nneq*neqv*3*3,[0.0_wp],0,rotR,1)
           mem_local=mem_local+nneq*neqv*3*3*RtoB
         End If
       End If
 
-      If(exchR>0) Then
-        If(lmax>0) Then
+      If(exchR>=0) Then
+        If(lmax>=0) Then
           Call mma_allocate(ibasR,nneq,lmax,'ibasR')
-          Call icopy( nneq*lmax,0,0,ibasR,1)
+          Call icopy( nneq*lmax,[0],0,ibasR,1)
           mem_local=mem_local+nneq*lmax*ItoB
         End If
         Call mma_allocate(WR,exchR,'WR')
-        Call dcopy_(exchR,0.0_wp,0,WR,1)
+        Call dcopy_(exchR,[0.0_wp],0,WR,1)
         mem_local=mem_local+exchR*RtoB
 
         Call mma_allocate(ZR,exchR,exchR,'ZR')
         Call mma_allocate(MR,3,exchR,exchR,'MR')
         Call mma_allocate(SR,3,exchR,exchR,'SR')
-        Call zcopy_(  exchR*exchR,(0.0_wp,0.0_wp),0,ZR,1)
-        Call zcopy_(3*exchR*exchR,(0.0_wp,0.0_wp),0,MR,1)
-        Call zcopy_(3*exchR*exchR,(0.0_wp,0.0_wp),0,SR,1)
+        Call zcopy_(  exchR*exchR,[(0.0_wp,0.0_wp)],0,ZR,1)
+        Call zcopy_(3*exchR*exchR,[(0.0_wp,0.0_wp)],0,MR,1)
+        Call zcopy_(3*exchR*exchR,[(0.0_wp,0.0_wp)],0,SR,1)
         mem_local=mem_local+7*exchR*exchR*CtoB
       End If
 
-      If(npair>0) Then
+      If(npair>=0) Then
         Call mma_allocate(HKEXR,npair,2,2,2,2,'HKEXR')
-        Call zcopy_(npair*2*2*2*2,(0.0_wp,0.0_wp),0,HKEXR,1)
+        Call zcopy_(npair*2*2*2*2,[(0.0_wp,0.0_wp)],0,HKEXR,1)
         mem_local=mem_local+npair*2*2*2*2*CtoB
       End If
 
-      If(lmax>0) Then
+      If(lmax>=0) Then
         Call mma_allocate(intcR,lmax,'intcR')
-        Call icopy(lmax,0,0,intcR,1)
+        Call icopy(lmax,[0],0,intcR,1)
         mem_local=mem_local+lmax*ItoB
       End If
       If(dbg) Write(6,*) 'EXCHCTL:  memory allocated (local):'
@@ -411,7 +420,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 ! Lines model of magnetic couping  -- 1 parameter
       If ( AnisoLines1 ) Then
        If(nPair>0) Then
-       Call zcopy_(ibuf,(0.0_wp,0.0_wp),0,HLIN1,1)
+       Call zcopy_(ibuf,[(0.0_wp,0.0_wp)],0,HLIN1,1)
        Do lp=1, npair
         lb1=i_pair(lp,1)
         lb2=i_pair(lp,2)
@@ -427,17 +436,19 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         ! to the local pseudospin basis
         If(itype(i1)=='A') Then
          Call prep_mom_exchange( n1, rot(i1,j1,1:3,1:3),
-     &                            SM(i1,1:3,1:n1,1:n1),
-     &                            MM(i1,1:3,1:n1,1:n1), mg1, .true. )
+     &                           SM(i1,1:3,1:n1,1:n1),
+     &                           MM(i1,1:3,1:n1,1:n1), mg1, .true. )
         End If
         If(itype(i2)=='A') Then
          Call prep_mom_exchange( n2, rot(i2,j2,1:3,1:3),
-     &                            SM(i2,1:3,1:n2,1:n2),
-     &                            MM(i2,1:3,1:n2,1:n2), mg2, .true. )
+     &                           SM(i2,1:3,1:n2,1:n2),
+     &                           MM(i2,1:3,1:n2,1:n2), mg2, .true. )
         End If
 
-        If(dbg) Call prMom('SM(i1) bf Lines1',SM(i1,1:3,1:n1,1:n1),n1)
-        If(dbg) Call prMom('SM(i2) bf Lines1',SM(i2,1:3,1:n2,1:n2),n2)
+        !If(dbg)
+        Call prMom('SM(i1) bf Lines1',SM(i1,1:3,1:n1,1:n1),n1)
+        !If(dbg)
+        Call prMom('SM(i2) bf Lines1',SM(i2,1:3,1:n2,1:n2),n2)
 
         ! build the Lines exchange matrix:
         Call Lines_Exchange( Jex(lp), n1, n2,
@@ -475,7 +486,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       ! Jxx, Jyy, Jzz
       If (AnisoLines3 ) Then
        If(nPair>0) Then
-       Call zcopy_(ibuf,(0.0_wp,0.0_wp),0,HLIN3,1)
+       Call zcopy_(ibuf,[(0.0_wp,0.0_wp)],0,HLIN3,1)
        Do lp=1, npair
         lb1=i_pair(lp,1)
         lb2=i_pair(lp,2)
@@ -532,7 +543,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       ! Jxx, Jxy, Jxz, Jyx, Jyy, Jyz, Jzx, Jzy, Jzz
       If ( AnisoLines9 ) Then
        If(nPair>0) Then
-       Call zcopy_(ibuf,(0.0_wp,0.0_wp),0,HLIN9,1)
+       Call zcopy_(ibuf,[(0.0_wp,0.0_wp)],0,HLIN9,1)
        Do lp=1, npair
         lb1=i_pair(lp,1)
         lb2=i_pair(lp,2)
@@ -593,7 +604,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 !     dipolar couping
       If(Dipol) Then
        If(nPair>0) Then
-       Call zcopy_(ibuf,(0.0_wp,0.0_wp),0,HDIP,1)
+       Call zcopy_(ibuf,[(0.0_wp,0.0_wp)],0,HDIP,1)
        Do lp=1,npair
         lb1=i_pair(lp,1)
         lb2=i_pair(lp,2)
@@ -657,7 +668,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 !     Dzyaloshinsky-Morya antisymmetric couping
       If(DM_exchange) Then
        If(nPair>0) Then
-       Call zcopy_(ibuf,(0.0_wp,0.0_wp),0,HDMO,1)
+       Call zcopy_(ibuf,[(0.0_wp,0.0_wp)],0,HDMO,1)
        Do lp=1,npair
         lb1=i_pair(lp,1)
         lb2=i_pair(lp,2)
@@ -711,7 +722,7 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       If(JITO_exchange) Then
        If(dbg) Write(6,'(A)') 'EXCHCTL:  Enterring  JITO_exchange'
        If(nPair>0) Then
-       Call zcopy_(ibuf,(0.0_wp,0.0_wp),0,HITO,1)
+       Call zcopy_(ibuf,[(0.0_wp,0.0_wp)],0,HITO,1)
        Do lp=1,npair
         lb1=i_pair(lp,1)
         lb2=i_pair(lp,2)
@@ -790,10 +801,10 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 
           n1=nexch(i1)
           n2=nexch(i2)
-          Call zcopy_(3*n1*n1,(0.0_wp,0.0_wp),0, S1,1)
-          Call zcopy_(3*n2*n2,(0.0_wp,0.0_wp),0, S2,1)
-          Call zcopy_(3*n1*n1,(0.0_wp,0.0_wp),0, M1,1)
-          Call zcopy_(3*n2*n2,(0.0_wp,0.0_wp),0, M2,1)
+          Call zcopy_(3*n1*n1,[(0.0_wp,0.0_wp)],0, S1,1)
+          Call zcopy_(3*n2*n2,[(0.0_wp,0.0_wp)],0, S2,1)
+          Call zcopy_(3*n1*n1,[(0.0_wp,0.0_wp)],0, M1,1)
+          Call zcopy_(3*n2*n2,[(0.0_wp,0.0_wp)],0, M2,1)
           Call rotmom2( MM(i1,1:3,1:n1,1:n1), n1, rot(i1,j1,1:3,1:3),
      &                  M1(1:3,1:n1,1:n1) )
           Call rotmom2( SM(i1,1:3,1:n1,1:n1), n1, rot(i1,j1,1:3,1:3),
@@ -810,18 +821,23 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
           SM1=(0.0_wp,0.0_wp)
           MM2=(0.0_wp,0.0_wp)
           SM2=(0.0_wp,0.0_wp)
-          Call KE_Exchange(n1,n2,
-     &                     M1( 1:3, 1:n1, 1:n1 ),
-     &                     S1( 1:3, 1:n1, 1:n1 ),
-     &                     M2( 1:3, 1:n2, 1:n2 ),
-     &                     S2( 1:3, 1:n2, 1:n2 ),
-     &                     eso(i1,1:n1),eso(i2,1:n2),
-     &                     tpar, upar, lant, KEOPT,
-     &       HKEX(lp,1:n1,1:n1,1:n2,1:n2),
-     &                     MM1(1:3, 1:n1, 1:n1 ),
-     &                     SM1(1:3, 1:n1, 1:n1 ),
-     &                     MM2(1:3, 1:n2, 1:n2 ),
-     &                     SM2(1:3, 1:n2, 1:n2 ) )
+!IFG: this call to KE_Exchange does not match at all its definition, please fix
+          Call WarningMessage(2,'There is surely a bug here')
+          If (.False.) Call Unused_real(tpar)
+          If (.False.) Call Unused_real(upar)
+          If (.False.) Call Unused_integer(lant)
+!         Call KE_Exchange(n1,n2,
+!    &                     M1( 1:3, 1:n1, 1:n1 ),
+!    &                     S1( 1:3, 1:n1, 1:n1 ),
+!    &                     M2( 1:3, 1:n2, 1:n2 ),
+!    &                     S2( 1:3, 1:n2, 1:n2 ),
+!    &                     eso(i1,1:n1),eso(i2,1:n2),
+!    &                     tpar, upar, lant, KEOPT,
+!    &       HKEX(lp,1:n1,1:n1,1:n2,1:n2),
+!    &                     MM1(1:3, 1:n1, 1:n1 ),
+!    &                     SM1(1:3, 1:n1, 1:n1 ),
+!    &                     MM2(1:3, 1:n2, 1:n2 ),
+!    &                     SM2(1:3, 1:n2, 1:n2 ) )
 
           If((KEOPT.eq.1).OR.(KEOPT.eq.2)) Then
             Do is1=1,n2
@@ -910,9 +926,9 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
           End If ! KEOPT
         End Do ! lp
 
-        ! in case of KEOPT=3 or KEOPT=4 Then we need to compute the spectrum and the properties
-        ! in the reduced form, where nexch(i1)=2 ( ground Doublet only).
-        ! exchnew=8:
+!       in case of KEOPT=3 or KEOPT=4 Then we need to compute the spectrum and the properties
+!       in the reduced form, where nexch(i1)=2 ( ground Doublet only).
+!       exchnew=8:
         If(KEOPT.le.4) Then
           nmaxR=2
           nexchR(1)=2
@@ -959,8 +975,9 @@ cccc----------------------------------------------------------------------------
      &                HDIP(1:npair,1:nmaxR,1:nmaxR,1:nmaxR,1:nmaxR),
      &               HKEXR(1:npair,1:nmaxR,1:nmaxR,1:nmaxR,1:nmaxR),
      &                HDMO(1:npair,1:nmaxR,1:nmaxR,1:nmaxR,1:nmaxR),
+     &                HITO(1:npair,1:nmaxR,1:nmaxR,1:nmaxR,1:nmaxR),
      &                Dipol, AnisoLines1, AnisoLines3, AnisoLines9, KE,
-     &                DM_exchange )
+     &                DM_exchange, .False. )
           ! diagonalize the Hamiltonian:
           Call pa_diagham( exchR, npair, i_pair, nneq, neq, nexchR,
      &                     nmaxR,
@@ -971,17 +988,20 @@ cccc----------------------------------------------------------------------------
      &                HDIP(1:npair,1:nmaxR,1:nmaxR,1:nmaxR,1:nmaxR),
      &               HKEXR(1:npair,1:nmaxR,1:nmaxR,1:nmaxR,1:nmaxR),
      &                HDMO(1:npair,1:nmaxR,1:nmaxR,1:nmaxR,1:nmaxR),
-     &                Dipol, AnisoLines1, AnisoLines3, AnisoLines9, KE,
+     &                HITO(1:npair,1:nmaxR,1:nmaxR,1:nmaxR,1:nmaxR),
+     &                Dipol, .False.,
+     &                AnisoLines1, AnisoLines3, AnisoLines9, KE,.False.,
      &                WLIN1(1:exchR), WLIN3(1:exchR), WLIN9(1:exchR),
      &                WLIN(1:exchR), WDIP(1:exchR), WKEX(1:exchR),
-     &                WDMO(1:exchR),
+     &                WDMO(1:exchR), WITO(1:exchR),
      &                  WR(1:exchR), ZR(1:exchR,1:exchR) )
           ! print the resulting eigenstates:
           Call pa_preigen( exchR,  lmax,   ibasR,  Dipol,
      &                     AnisoLines1, AnisoLines3, AnisoLines9, KE,
+     &                     .False., .False.,
      &                     WLIN(1:exchR), WDIP(1:exchR),
-     &                     WKEX(1:exchR),
-     &                     WR(1:exchR), ZR(1:exchR,1:exchR) )
+     &                     WKEX(1:exchR), WDMO(1:exchR), WITO(1:exchR),
+     &                     WR(1:exchR), ZR(1:exchR,1:exchR), 0 )
           ! compute the moments:
           rotR=0.0_wp
           rotR(1,1,1,1)=1.0_wp
@@ -1050,15 +1070,18 @@ cccc----------------------------------------------------------------------------
           ! print the localized moments on sites:
           nsta=exchR
           ! assuming max 10 equivalent magnetic sites
-          Call momloc2(nsta, nmaxR, nneq, neq, rotR(1:nneq,1:10,:,:),
-     &                 lmax, nexchR,
+          Call momloc2(nsta, nmaxR, nneq, neq, neqv,
+     &                rotR(1:nneq,1:10,:,:), lmax, nexchR,
      &                wR(1:nsta),zR(1:nsta,1:nsta),
      &                MR(1:3,1:nsta,1:nsta),
      &                SR(1:3,1:nsta,1:nsta),
      &                MMR(1:nneq,1:3,1:nmaxR,1:nmaxR),
      &                SMR(1:nneq,1:3,1:nmaxR,1:nmaxR) )
 
-          Call barrier(exchR,MR(1:3,1:exchR,1:exchR),WR(1:exchR),1,2)
+          Call WarningMessage(2,'Wrong code in poly_aniso/exchctl.f')
+          ! FIXME: This call is missing 3 arguments
+          !Call barrier(exchR,MR(1:3,1:exchR,1:exchR),WR(1:exchR),1,2)
+          Call Abend()
         End If !KEOPT
 
         End If ! npair>0, index lp
@@ -1134,16 +1157,16 @@ c printout the Hamiltonians:
 
       !some verification
       If(dnrm2_(exch,WLIN,1).gt.1.0d-13)
-     &   Call Add_Info('EXCHCTL::  WLIN',WLIN(1:NmaxPop),NmaxPop,8)
+     &   Call Add_Info('EXCHCTL::  WLIN',[dnrm2_(exch,WLIN,1)],1,8)
       If(dnrm2_(exch,WDIP,1).gt.1.0d-13)
-     &   Call Add_Info('EXCHCTL::  WDIP',WDIP(1:NmaxPop),NmaxPop,8)
+     &   Call Add_Info('EXCHCTL::  WDIP',[dnrm2_(exch,WDIP,1)],1,8)
       If(dnrm2_(exch,WKEX,1).gt.1.0d-13)
-     &   Call Add_Info('EXCHCTL::  WKEX',WKEX(1:NmaxPop),NmaxPop,8)
+     &   Call Add_Info('EXCHCTL::  WKEX',[dnrm2_(exch,WKEX,1)],1,8)
       If(dnrm2_(exch,W,1).gt.1.0d-13)
-     &   Call Add_Info('EXCHCTL::     W',W(1:exch),exch,8)
+     &   Call Add_Info('EXCHCTL::     W',[dnrm2_(exch,W,1)],1,8)
 c compute the moments:
-      Call zcopy_(3*exch*exch,(0.0_wp,0.0_wp),0,M,1)
-      Call zcopy_(3*exch*exch,(0.0_wp,0.0_wp),0,S,1)
+      Call zcopy_(3*exch*exch,[(0.0_wp,0.0_wp)],0,M,1)
+      Call zcopy_(3*exch*exch,[(0.0_wp,0.0_wp)],0,S,1)
       If(dbg) Then
        Write(6,'(A)') 'Magnetic moments before the build of '//
      &                'coupled M and S matrices'
@@ -1194,23 +1217,23 @@ c compute the moments:
         End Do  ! isite
 
         ! magnetic moment
-        Call zcopy_(exch*exch,(0.0_wp,0.0_wp),0,TMP,1)
+        Call zcopy_(exch*exch,[(0.0_wp,0.0_wp)],0,TMP,1)
         Call zgemm_('C','N',EXCH,EXCH,EXCH,
      &             (1.0_wp,0.0_wp),Z, EXCH,
      &                             M(L,:,:), EXCH,
      &             (0.0_wp,0.0_wp),TMP, EXCH )
-        Call zcopy_(exch*exch,(0.0_wp,0.0_wp),0,M(L,:,:),1)
+        Call zcopy_(exch*exch,[(0.0_wp,0.0_wp)],0,M(L,:,:),1)
         Call zgemm_('N','N',EXCH,EXCH,EXCH,
      &             (1.0_wp,0.0_wp),TMP,EXCH,
      &                               Z,EXCH,
      &             (0.0_wp,0.0_wp), M(L,:,:), EXCH )
-        Call zcopy_(exch*exch,(0.0_wp,0.0_wp),0,TMP,1)
+        Call zcopy_(exch*exch,[(0.0_wp,0.0_wp)],0,TMP,1)
         ! spin moment
         Call zgemm_('C','N',EXCH,EXCH,EXCH,
      &             (1.0_wp,0.0_wp),Z,EXCH,
      &                             S(L,:,:), EXCH,
      &             (0.0_wp,0.0_wp),TMP,EXCH )
-        Call zcopy_(exch*exch,(0.0_wp,0.0_wp),0,S(L,:,:),1)
+        Call zcopy_(exch*exch,[(0.0_wp,0.0_wp)],0,S(L,:,:),1)
         Call zgemm_('N','N',EXCH,EXCH,EXCH,
      &             (1.0_wp,0.0_wp),TMP,EXCH,
      &                               Z,EXCH,
@@ -1240,16 +1263,16 @@ c      Write(6,'(A)')
 
 !-----------------------------------------------------------------------
 ! deallocate memory for this function:
-      If(lmax>0) Then
+      If(lmax>=0) Then
         ! exchange energy spectrum
         Call mma_deallocate(intc)
         Call mma_deallocate(icoord)
         Call mma_deallocate(nind)
-        If(exch>0) Then
+        If(exch>=0) Then
           Call mma_deallocate(ibas)
         End If
       End If
-      If(exch>0) Then
+      If(exch>=0) Then
         Call mma_deallocate(wlin)
         Call mma_deallocate(wlin1)
         Call mma_deallocate(wlin3)
@@ -1259,7 +1282,7 @@ c      Write(6,'(A)')
         Call mma_deallocate(wdmo)
         Call mma_deallocate(wito)
       End If
-      If(nmax>0) Then
+      If(nmax>=0) Then
         Call mma_deallocate(S1)
         Call mma_deallocate(M1)
         Call mma_deallocate(S2)
@@ -1270,7 +1293,7 @@ c      Write(6,'(A)')
         Call mma_deallocate(SM2)
         Call mma_deallocate(MM1)
         Call mma_deallocate(MM2)
-        If(npair>0) Then
+        If(npair>=0) Then
           Call mma_deallocate(HLIN1)
           Call mma_deallocate(HLIN3)
           Call mma_deallocate(HLIN9)
@@ -1281,21 +1304,21 @@ c      Write(6,'(A)')
         End If
       End If
 
-      If(exch>0) Then
+      If(exch>=0) Then
         Call mma_deallocate(tmp)
       End If
 
-      If(nneq>0) Then
+      If(nneq>=0) Then
         Call mma_deallocate(nexchR)
         Call mma_deallocate(SMR)
         Call mma_deallocate(MMR)
-        If(neqv>0) Then
+        If(neqv>=0) Then
           Call mma_deallocate(rotR)
         End If
       End If
 
-      If(exchR>0) Then
-        If(lmax>0) Then
+      If(exchR>=0) Then
+        If(lmax>=0) Then
           Call mma_deallocate(ibasR)
         End If
         Call mma_deallocate(WR)
@@ -1304,11 +1327,11 @@ c      Write(6,'(A)')
         Call mma_deallocate(SR)
       End If
 
-      If(npair>0) Then
+      If(npair>=0) Then
         Call mma_deallocate(HKEXR)
       End If
 
-      If(lmax>0) Then
+      If(lmax>=0) Then
         Call mma_deallocate(intcR)
       End If
 
@@ -1374,7 +1397,6 @@ c        End If
 c        End Do
 c      End Do
 c 199  Continue
-      Call qExit('PA_exchctl')
       Return
       End
 
@@ -1383,94 +1405,95 @@ c 199  Continue
       Subroutine prep_mom_exchange( n, R, S, M, mg, dbg)
 
       Implicit None
-      Integer, parameter            :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter        :: wp=kind(0.d0)
 #include "stdalloc.fh"
       Integer, intent(in)             :: n
-      Real(kind=wp), intent(in)       :: R(3,3)
-      Real(kind=wp), intent(out)      :: mg(3,3)
-      Complex(kind=wp), intent(inout) :: S(3,n,n), M(3,n,n)
+      Real(kind=8), intent(in)       :: R(3,3)
+      Real(kind=8), intent(out)      :: mg(3,3)
+      Complex(kind=8), intent(inout) :: S(3,n,n), M(3,n,n)
       Logical                         :: dbg
       ! local data:
-      Real(kind=wp)                   :: g(3)
-      Complex(kind=wp), allocatable   :: Mt(:,:,:), St(:,:,:), Z(:,:)
+      Integer                         :: i
+      Complex(kind=8), allocatable   :: Mt(:,:,:), St(:,:,:)
+!      Real(kind=8)                   :: g(3)
+!      Complex(kind=8), allocatable   :: Z(:,:)
 
-      Call qEnter('PA_prep_mom_exch')
 !-----------------------------------------------------------------------
       Call mma_allocate(Mt,3,n,n,'Mt')
       Call mma_allocate(St,3,n,n,'St')
-      Call mma_allocate(Z,n,n,'Z')
+!      Call mma_allocate(Z,n,n,'Z')
+!      Call dcopy_(3  ,[0.0_wp],0,  g,1)
+      Call zcopy_(3*n*n,[(0.0_wp,0.0_wp)],0,Mt,1)
+      Call zcopy_(3*n*n,[(0.0_wp,0.0_wp)],0,St,1)
+      Call dcopy_(3*3,[0.0_wp],0, mg,1)
 
-      Call zcopy_(3*n*n,(0.0_wp,0.0_wp),0,Mt,1)
-      Call zcopy_(3*n*n,(0.0_wp,0.0_wp),0,St,1)
-      Call dcopy_(3  ,0.0_wp,0,  g,1)
-      Call dcopy_(3*3,0.0_wp,0, mg,1)
       ! make a local backup of the data:
       Call zcopy_(3*n*n,M,1,Mt,1)
       Call zcopy_(3*n*n,S,1,St,1)
+      Do i=1,3
+        mg(i,i)=1.0_wp
+      End Do
 
       If(dbg) Call prMom('PA_prep_mom_exch, input S',St,n)
       If(dbg) Call prMom('PA_prep_mom_exch, input M',Mt,n)
 
-
       ! rotate the momentum using the R rotation matrix --
       ! to the local axes for a symmetric compound:
-      Call zcopy_(3*n*n,(0.0_wp,0.0_wp),0,M,1)
-      Call zcopy_(3*n*n,(0.0_wp,0.0_wp),0,S,1)
+      Call zcopy_(3*n*n,[(0.0_wp,0.0_wp)],0,M,1)
+      Call zcopy_(3*n*n,[(0.0_wp,0.0_wp)],0,S,1)
       Call rotmom2( St, n, R, S)
       Call rotmom2( Mt, n, R, M)
       ! back-up again:
-      Call zcopy_(3*n*n,M,1,Mt,1)
-      Call zcopy_(3*n*n,S,1,St,1)
+!      Call zcopy_(3*n*n,M,1,Mt,1)
+!      Call zcopy_(3*n*n,S,1,St,1)
 
 
 
-      ! find local magnetic axes:
-      Call atens( M, n, g, mg, 2)
-      ! rotate the momentum using the  mg  rotation matrix --
-      ! to the local magnetic axes:
-      Call zcopy_(3*n*n,(0.0_wp,0.0_wp),0,M,1)
-      Call zcopy_(3*n*n,(0.0_wp,0.0_wp),0,S,1)
-      Call rotmom2( St, n, mg, S)
-      Call rotmom2( Mt, n, mg, M)
-
-
-
-      ! find local pseudospin:
-      Call zcopy_(n*n,(0.0_wp,0.0_wp),0,Z,1)
-      Call pseudospin( M, n, Z, 3,1, 1)
-      If(dbg) Call pa_prmat('PA_prep_mom_exch, Z:',Z,n)
-
-      ! Transform the moment into their local pseudospins
-      Call UTMU2( n, n, Z, S )
-      Call UTMU2( n, n, Z, M )
-      If(dbg) Call prMom('PA_prep_mom_exch, S:', S, n)
-      If(dbg) Call prMom('PA_prep_mom_exch, M:', M, n)
-      ! back-up again:
-      Call zcopy_(3*n*n,M,1,Mt,1)
-      Call zcopy_(3*n*n,S,1,St,1)
-
-
-
-      ! rotate back the moment, so that we preserve the
-      ! original coordinate system of the computed molecule
-      Call zcopy_(3*n*n,(0.0_wp,0.0_wp),0,M,1)
-      Call zcopy_(3*n*n,(0.0_wp,0.0_wp),0,S,1)
-      Call rotmom( St, n, mg, S)
-      Call rotmom( Mt, n, mg, M)
-
+!------------------------------------------
+! experimental:
+!      If (.FALSE.) THEN
+!         ! find local magnetic axes:
+!         Call atens( M, n, g, mg, 2)
+!         ! rotate the momentum using the  mg  rotation matrix --
+!         ! to the local magnetic axes:
+!         Call zcopy_(3*n*n,[(0.0_wp,0.0_wp)],0,M,1)
+!         Call zcopy_(3*n*n,[(0.0_wp,0.0_wp)],0,S,1)
+!         Call rotmom2( St, n, mg, S)
+!         Call rotmom2( Mt, n, mg, M)
+!
+!         ! find local pseudospin:
+!         Call zcopy_(n*n,[(0.0_wp,0.0_wp)],0,Z,1)
+!         Call pseudospin( M, n, Z, 3,1, 1)
+!         If(dbg) Call pa_prmat('PA_prep_mom_exch, Z:',Z,n)
+!
+!         ! Transform the moment into their local pseudospins
+!         Call UTMU2( n, n, Z, S )
+!         Call UTMU2( n, n, Z, M )
+!         If(dbg) Call prMom('PA_prep_mom_exch, S:', S, n)
+!         If(dbg) Call prMom('PA_prep_mom_exch, M:', M, n)
+!         ! back-up again:
+!         Call zcopy_(3*n*n,M,1,Mt,1)
+!         Call zcopy_(3*n*n,S,1,St,1)
+!
+!         ! rotate back the moment, so that we preserve the
+!         ! original coordinate system of the computed molecule
+!         Call zcopy_(3*n*n,[(0.0_wp,0.0_wp)],0,M,1)
+!         Call zcopy_(3*n*n,[(0.0_wp,0.0_wp)],0,S,1)
+!         Call rotmom( St, n, mg, S)
+!         Call rotmom( Mt, n, mg, M)
+!      END IF
 !-----------------------------------------------------------------------
 
       Call mma_deallocate(Mt)
       Call mma_deallocate(St)
-      Call mma_deallocate(Z)
+!      Call mma_deallocate(Z)
 
-      Call qExit('PA_prep_mom_exch')
 
 !-----------------------------------------------------------------------
 ! old preparation of the data for Lines exchange
 !        ! rotate the moments to the general coordinate system
-!        Call zcopy_(3*nmax*nmax,(0.0_wp,0.0_wp),0, S1,1)
-!        Call zcopy_(3*nmax*nmax,(0.0_wp,0.0_wp),0, S2,1)
+!        Call zcopy_(3*nmax*nmax,[(0.0_wp,0.0_wp)],0, S1,1)
+!        Call zcopy_(3*nmax*nmax,[(0.0_wp,0.0_wp)],0, S2,1)
 !
 !        Call rotmom2( SM(i1,1:3,1:n1,1:n1), n1, rot(i1,j1,1:3,1:3),
 !     &                S1(1:3,1:n1,1:n1) )

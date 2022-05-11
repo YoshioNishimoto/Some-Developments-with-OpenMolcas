@@ -22,7 +22,6 @@
 * coefficients of  natural orbitals. Frozen, inactive and virtual
 C orbitals are copied unchanged.
 
-      CALL QENTER('REF_NATO')
 
       IDREF=0
       IOCC=0
@@ -35,7 +34,7 @@ C orbitals are copied unchanged.
 C Frozen and inactive orbitals:
         NFI=NF+NI
         IF(NFI.GT.0) THEN
-          CALL DCOPY_(NFI,2.0D00,0,OCC(IOCC+1),1)
+          CALL DCOPY_(NFI,[2.0D00],0,OCC(IOCC+1),1)
           IOCC=IOCC+NFI
           CALL DCOPY_(NB*NFI,CMO(ICMO+1),1,CNAT(ICMO+1),1)
           ICMO=ICMO+NB*NFI
@@ -55,7 +54,7 @@ C For correct ordering, change sign.
             LIJ=LIJ+1
            END DO
           END DO
-          CALL NIDiag(WORK(LTMP),CNAT(ICMO+1),NA,NB,0)
+          CALL NIDiag(WORK(LTMP),CNAT(ICMO+1),NA,NB)
           CALL JACORD(WORK(LTMP),CNAT(ICMO+1),NA,NB)
           CALL VEIG(NA,WORK(LTMP),OCC(IOCC+1))
           CALL GETMEM('TMP','FREE','REAL',LTMP,NTMP)
@@ -77,14 +76,13 @@ C Change back to positive sign.
 C Secondary and deleted orbitals:
         NSD=NB-(NFI+NA)
         IF(NSD.GT.0) THEN
-          CALL DCOPY_(NSD,0.0D00,0,OCC(IOCC+1),1)
+          CALL DCOPY_(NSD,[0.0D0],0,OCC(IOCC+1),1)
           IOCC=IOCC+NSD
           CALL DCOPY_(NB*NSD,CMO(ICMO+1),1,CNAT(ICMO+1),1)
           ICMO=ICMO+NB*NSD
         END IF
       END DO
 
-      CALL QEXIT('REF_NATO')
 
       RETURN
       END

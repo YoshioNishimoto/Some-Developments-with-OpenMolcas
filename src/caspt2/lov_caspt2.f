@@ -31,15 +31,13 @@
 #include "Molcas.fh"
 #include "real.fh"
 #include "WrkSpc.fh"
-      COMMON /LovCAS3/ STrA, STrF, STrX
-*
       Integer nBas(nSym),nFro(nSym),nIsh(nSym),nAsh(nSym),nSsh(nSym),
      &        nDel(nSym)
       Integer irc,nUniqAt,IFQCAN
       Real*8  Thrs, EMP2
       Logical DoMP2, DoEnv, all_Vir
-      Character(LENIN8) NAME(*)
-      Character(LENIN) blank, NamAct(mxAtom)
+      Character(Len=LENIN8) NAME(*)
+      Character(Len=LENIN) blank, NamAct(mxAtom)
       Logical ortho
       Real*8  TrA(8), TrF(8), TrX(8)
       Integer ns_O(8), ns_V(8)
@@ -48,7 +46,7 @@
 *
 *
       irc=0
-      EMP2=0.0d0
+      EMP2=Zero
       blank='   '
       iDo=0
       jDo=0
@@ -153,13 +151,14 @@ C     -----------------------------------------------------------
          ipAsh=LCMO+iOff+nBas(iSym)*(nFro(iSym)+nIsh(iSym))
          nBx=Max(1,nBas(iSym))
          Call DGEMM_('N','N',nBas(iSym),nAsh(iSym),nBas(iSym),
-     &                      1.0d0,Work(iSQ),nBx,
-     &                            Work(ipAsh),nBx,
-     &                      0.0d0,Work(ipZ),nBx)
+     &                      One,Work(iSQ),nBx,
+     &                          Work(ipAsh),nBx,
+     &                      Zero,Work(ipZ),nBx)
          jBas=lBas+1
          kBas=lBas+nBas(iSym)
-         Call BasFun_Atom_(iWork(ip_nBas_per_Atom),iWork(ip_nBas_Start),
-     &                     Name,jBas,kBas,nUniqAt,.false.)
+         Call BasFun_Atom_Sym(iWork(ip_nBas_per_Atom),
+     &                        iWork(ip_nBas_Start),
+     &                        Name,jBas,kBas,nUniqAt,.false.)
          Do ik=0,nAsh(iSym)-1
             nAk=nUniqAt*ik
             nBk=nBas(iSym)*ik
@@ -260,7 +259,7 @@ C     -----------------------------------------------------------
       Call GetMem('XMO','Allo','Real',ipXmo,2*NCMO)
       iCMO=ipXmo+NCMO
       Call GetMem('Saa','Allo','Real',ipSaa,nOrb)
-      call dcopy_(nOrb,1.0d0,0,Work(ipSaa),1)
+      call dcopy_(nOrb,[One],0,Work(ipSaa),1)
 
 
 *     Inactive orbital selection                                       *
@@ -442,7 +441,7 @@ C     -----------------------------------------------------------
             Endif
             iV=ip_X
             Do iSym=1,nSym
-             TrF(iSym)=ddot_(lnVir(iSym),Work(iV),1+lnVir(iSym),1.0d0,0)
+             TrF(iSym)=ddot_(lnVir(iSym),Work(iV),1+lnVir(iSym),[One],0)
               iV=iV+lnVir(iSym)**2
             End Do
          EndIf
@@ -476,9 +475,9 @@ C     -----------------------------------------------------------
       write(6,*)'------------------------------------------------------'
       write(6,*)' Symm.  Tr(D):  Active        Frozen        Full      '
       write(6,*)'------------------------------------------------------'
-      STrA=0.0d0
-      STrF=0.0d0
-      STrX=0.0d0
+      STrA=Zero
+      STrF=Zero
+      STrX=Zero
       Do iSym=1,nSym
         If (DoEnv) TrF(iSym)=TrX(iSym) ! just a convention
         write(6,'(2X,I4,10X,G11.4,3X,G11.4,3X,G11.4)') iSym,TrA(iSym),
@@ -525,9 +524,9 @@ c         Write(6,*)
      &            ip_nBas_Start,l_nBas_Start)
       Return
       End
-***********************************************************************
-*                                                                     *
-***********************************************************************
+************************************************************************
+*                                                                      *
+************************************************************************
       Subroutine get_Saa(nSym,nBas,nOrb,Smn,Xmo,Saa)
       Implicit Real*8 (a-h,o-z)
       Integer nSym, nBas(nSym), nOrb(nSym)
@@ -565,9 +564,9 @@ c         Write(6,*)
 *
       Return
       End
-***********************************************************************
-*                                                                     *
-***********************************************************************
+************************************************************************
+*                                                                      *
+************************************************************************
       SubRoutine LovCASPT2_putInf(mSym,lnOrb,lnOcc,lnFro,lnDel,lnVir,
      &                            ip_X,ip_Y,isFNO)
 C
@@ -672,6 +671,8 @@ C
          koff=koff+nSsh(iSym)
       End Do
 *
+      iDummy=0
+      jDummy=0
       Call LovCASPT2_putInf(nSym,lnOrb,lnOcc,lnFro,lnDel,lnVir,iDummy,
      &                           jDummy,.false.)
       Call GetMem('CMON','Allo','Real',iCMO,nBB)

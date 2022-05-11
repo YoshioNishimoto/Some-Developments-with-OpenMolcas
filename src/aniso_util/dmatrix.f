@@ -16,18 +16,17 @@ C   TO OBTAIN THE MAIN ANISOTROPY AXES
 C
 
       Implicit None
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter         :: wp=kind(0.d0)
       Integer, intent(in)        :: iprint
-      Real(kind=wp),intent(in)   :: Z(3,3)
-      Complex(kind=wp),intent(in):: E(0:2), F(0:2)
+      Real(kind=8),intent(in)   :: Z(3,3)
+      Complex(kind=8),intent(in):: E(0:2), F(0:2)
       Integer                    :: I, INFO, J
-      Real(kind=wp)              :: WD(3), CF,Unity(3,3), SMAT(3,3),
+      Real(kind=8)              :: WD(3), CF,Unity(3,3), SMAT(3,3),
      &                              DMATR(3,3), ZD(3,3),
      &                              dtens(3), daxes(3,3), D_factor,
      &                              E_factor, diff12, diff23, ZD2(3,3)
-      Complex(kind=wp)           :: DMAT(3,3)
+      Complex(kind=8)           :: DMAT(3,3)
 
-      Call qEnter('dmatrix')
 
       CF=sqrt(3.0_wp/2.0_wp)
 
@@ -50,7 +49,7 @@ C
       Call DIAG_R2(DMATR,3,INFO,WD,ZD)
 
 c  calculate the rotation matrix:
-      Call dcopy_(3*3,0.0_wp,0,Unity,1)
+      Call dcopy_(3*3,[0.0_wp],0,Unity,1)
       Do i=1,3
         Unity(i,i)=1.0_wp
       End Do
@@ -59,6 +58,7 @@ c  calculate the rotation matrix:
 
 C Set the dtens and daxes with respect to the gtens and maxes.
 cccccccccccccccccccccccccccccccc
+      dtens(:)=0.0_wp
       If ( (abs(SMAT(1,1)).gt.abs(SMAT(1,2))) .AND.
      &     (abs(SMAT(1,1)).gt.abs(SMAT(1,3))) ) Then
 c  the WD(1) and ZD(i,1) correspond to gtens(1) and maxes(i,1)
@@ -323,6 +323,5 @@ c the WD(3) and ZD(i,3) correspond to gtens(3) and maxes(i,3)
         Write(6,'(a,F9.4)') 'E = ', E_factor
       End If
 
-      Call qExit('dmatrix')
       Return
       End

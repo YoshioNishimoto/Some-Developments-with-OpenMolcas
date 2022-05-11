@@ -13,23 +13,22 @@
 
       Implicit None
 #include "stdalloc.fh"
-      Integer, Parameter            :: wp=selected_real_kind(p=15,r=307)
+      Integer, Parameter            :: wp=kind(0.d0)
       Integer, intent(in)           :: iprint, iDIM
       Integer, intent(in)           :: nDIMcf, iopt, nlanth
-      Real(kind=wp), intent(in)     :: ESOJ(nDIMcf)
-      Real(kind=wp), intent(in)     :: ZMAGN2(3,3)
-      Complex(kind=wp), intent(in)  :: DIPSO(3,nDIMcf,nDIMcf)
-      Complex(kind=wp), intent(in)  ::  S_SO(3,nDIMcf,nDIMcf)
+      Real(kind=8), intent(in)     :: ESOJ(nDIMcf)
+      Real(kind=8), intent(in)     :: ZMAGN2(3,3)
+      Complex(kind=8), intent(in)  :: DIPSO(3,nDIMcf,nDIMcf)
+      Complex(kind=8), intent(in)  ::  S_SO(3,nDIMcf,nDIMcf)
       Logical, intent(in)           :: GRAD
       ! local variables
       Integer :: info
-      Real(kind=wp), allocatable :: wtmp(:)
-      Complex(kind=wp), allocatable ::  DIPJ(:,:,:)
-      Complex(kind=wp), allocatable ::    SJ(:,:,:), ztmp(:,:)
+      Real(kind=8), allocatable :: wtmp(:)
+      Complex(kind=8), allocatable ::  DIPJ(:,:,:)
+      Complex(kind=8), allocatable ::    SJ(:,:,:), ztmp(:,:)
       Integer                       :: i,j
-      Real(kind=wp), allocatable    :: gtens(:), zmagn(:,:)
+      Real(kind=8), allocatable    :: gtens(:), zmagn(:,:)
 
-      Call qEnter('SA_CF')
 
       Write(6,'(/)')
       Write(6,'(100A)') ('%',i=1,95)
@@ -48,8 +47,8 @@
 
       Call mma_allocate(gtens,3,'gtens')
       Call mma_allocate(zmagn,3,3,'zmagn')
-      Call dcopy_(  3,0.0_wp,0,gtens,1)
-      Call dcopy_(3*3,0.0_wp,0,zmagn,1)
+      Call dcopy_(  3,[0.0_wp],0,gtens,1)
+      Call dcopy_(3*3,[0.0_wp],0,zmagn,1)
       If(iopt.eq.1) Then
 c  coordinate system for decomposition of the CF matrix identic to the coordinate system
 c  of the main magnetic axes of the ground multiplet (NDIM(1))
@@ -99,8 +98,8 @@ c  of the main magnetic axes of the ground multiplet (NDIM(1))
       ! rotate the momentum:
       Call mma_allocate(DIPJ,3,nDIMcf,nDIMcf,'DIPJ')
       Call mma_allocate(SJ,3,nDIMcf,nDIMcf,'SJ')
-      Call zcopy_(3*nDIMcf*nDIMcf,(0.0_wp,0.0_wp),0,DIPJ,1)
-      Call zcopy_(3*nDIMcf*nDIMcf,(0.0_wp,0.0_wp),0,  SJ,1)
+      Call zcopy_(3*nDIMcf*nDIMcf,[(0.0_wp,0.0_wp)],0,DIPJ,1)
+      Call zcopy_(3*nDIMcf*nDIMcf,[(0.0_wp,0.0_wp)],0,  SJ,1)
       CALL rotmom2( DIPSO, nDIMCF, ZMAGN, DIPJ )
       CALL rotmom2(  S_SO, nDIMCF, ZMAGN,   SJ )
 
@@ -164,7 +163,6 @@ c  of the main magnetic axes of the ground multiplet (NDIM(1))
       Call mma_deallocate(SJ)
       Call mma_deallocate(gtens)
       Call mma_deallocate(zmagn)
-      Call qExit('SA_CF')
       Return
       End
 
@@ -191,27 +189,24 @@ C================== Variable declarations =============================
 
       Implicit None
 #include "stdalloc.fh"
-      Integer, Parameter            :: wp=selected_real_kind(p=15,r=307)
+      Integer, Parameter            :: wp=kind(0.d0)
       Integer, intent(in)           :: nDIMcf, nlanth, iprint
       Logical, intent(in)           :: GRAD
-      Real(kind=wp), intent(in)     :: ESOJ(nDIMcf)
-      Complex(kind=wp), intent(in)  :: MM(3,nDIMcf,nDIMcf)
+      Real(kind=8), intent(in)     :: ESOJ(nDIMcf)
+      Complex(kind=8), intent(in)  :: MM(3,nDIMcf,nDIMcf)
       ! local variables:
       Integer                       :: info, i, j, k, q
       Integer                       :: LuCF, IsFreeUnit
-      Real(kind=wp)                 :: dznrm2
-      Real(kind=wp), allocatable    :: Winit(:), Eloc(:), a(:)
-      Real(kind=wp)                 :: BNC(nDIMcf,0:nDIMcf)
-      Real(kind=wp)                 :: BNS(nDIMcf,0:nDIMcf)
-      Real(kind=wp)                 :: Bstev(nDIMcf,-nDIMcf:nDIMcf)
-      Complex(kind=wp)              :: trace
-      Complex(kind=wp)              ::
+      Real(kind=8), allocatable    :: Winit(:), Eloc(:), a(:)
+      Real(kind=8)                 :: BNC(nDIMcf,0:nDIMcf)
+      Real(kind=8)                 :: BNS(nDIMcf,0:nDIMcf)
+      Real(kind=8)                 :: Bstev(nDIMcf,-nDIMcf:nDIMcf)
+      Complex(kind=8)              ::
      &                   Akq((nDIMcf-1),-(nDIMcf-1):(nDIMcf-1))
-      Complex(kind=wp), allocatable :: Zinit(:,:), Z(:,:),
+      Complex(kind=8), allocatable :: Zinit(:,:), Z(:,:),
      &                                  HCF(:,:)
-      External           :: trace, dznrm2, IsFreeUnit
+      External           :: IsFreeUnit
 
-      Call qEnter('SA_CF1')
 C============== End of variable declarations ==========================
       Call mma_allocate(Winit,nDIMcf,'Winit')
       Call mma_allocate(Eloc,nDIMcf,'Eloc')
@@ -221,12 +216,12 @@ C============== End of variable declarations ==========================
       Call mma_allocate(HCF,nDIMcf,nDIMcf,'HCF')
 
       info=0
-      Call dcopy_(nDIMcf,0.0_wp,0,Winit,1)
-      Call dcopy_(nDIMcf,0.0_wp,0,Eloc,1)
-      Call dcopy_(6,0.0_wp,0,A,1)
-      Call zcopy_(nDIMcf*nDIMcf,(0.0_wp,0.0_wp),0,Zinit,1)
-      Call zcopy_(nDIMcf*nDIMcf,(0.0_wp,0.0_wp),0,Z,1)
-      Call zcopy_(nDIMcf*nDIMcf,(0.0_wp,0.0_wp),0,HCF,1)
+      Call dcopy_(nDIMcf,[0.0_wp],0,Winit,1)
+      Call dcopy_(nDIMcf,[0.0_wp],0,Eloc,1)
+      Call dcopy_(6,[0.0_wp],0,A,1)
+      Call zcopy_(nDIMcf*nDIMcf,[(0.0_wp,0.0_wp)],0,Zinit,1)
+      Call zcopy_(nDIMcf*nDIMcf,[(0.0_wp,0.0_wp)],0,Z,1)
+      Call zcopy_(nDIMcf*nDIMcf,[(0.0_wp,0.0_wp)],0,HCF,1)
 
       ! find the J-pseudospin:
       !iDir=3
@@ -269,7 +264,8 @@ C============== End of variable declarations ==========================
      &                    '-FIELD HAMILTONIAN:'
         Write(6,*)
         Call print_ZFS_naoya('J',Zinit,nDIMcf)
-      End If ! End  the checking of the main values of the initial crystal-field
+!     End  the checking of the main values of the initial crystal-field
+      End If
 
 C  calculating the coeficients of the crystal filed operators Bnm
 C    Akq=(2k+1)/(2J+1) * 1/|< J || O || J >|^2 * Trace{HCF*O(k,-q)}
@@ -310,9 +306,9 @@ c-----------------------------------------------------------------------
       Call individual_ranks(nDIMCF,BNC,BNS,HCF,'J',iprint)
 c-----------------------------------------------------------------------
 C  saving some information for tests:
-      CALL Add_Info('CRYS_BNMC_20',DBLE(BNC(2,0)),1,4)
-      CALL Add_Info('CRYS_BNMC_40',DBLE(BNC(4,0)),1,4)
-      CALL Add_Info('CRYS_BNMC_60',DBLE(BNC(6,0)),1,4)
+      CALL Add_Info('CRYS_BNMC_20',[DBLE(BNC(2,0))],1,4)
+      CALL Add_Info('CRYS_BNMC_40',[DBLE(BNC(4,0))],1,4)
+      CALL Add_Info('CRYS_BNMC_60',[DBLE(BNC(6,0))],1,4)
 c-----------------------------------------------------------------------
       ! for the interface related to CF gradient calculation:
       If (GRAD) Then
@@ -332,7 +328,6 @@ c-----------------------------------------------------------------------
       Call mma_deallocate(Zinit)
       Call mma_deallocate(Z)
       Call mma_deallocate(HCF)
-      Call qExit('SA_CF1')
 
       Return
       End
@@ -347,24 +342,23 @@ c-----------------------------------------------------------------------
 
       Subroutine newCF(H,n,A, B,C,Bstev)
       Implicit none
-      Integer, Parameter          :: wp=selected_real_kind(p=15,r=307)
+      Integer, Parameter            :: wp=kind(0.d0)
 #include "stdalloc.fh"
       Integer, intent(in)           :: n
-      Complex(kind=wp),intent(in)   :: H(n,n)
-      Complex(kind=wp), intent(out) :: A( (n-1), -(n-1):(n-1) )
-      Real(kind=wp), intent(out)    :: B(n,0:n), C(n,0:n)
-      Real(kind=wp), intent(out)    :: Bstev(n,-n:n)
+      Complex(kind=8),intent(in)   :: H(n,n)
+      Complex(kind=8), intent(out) :: A( (n-1), -(n-1):(n-1) )
+      Real(kind=8), intent(out)    :: B(n,0:n), C(n,0:n)
+      Real(kind=8), intent(out)    :: Bstev(n,-n:n)
       ! local variables:
       Integer                       :: ik,iq
-      Real(kind=wp)                 :: rfact,cr,mfact,C0
-      Complex(kind=wp)              :: trace, cfact
-      Complex(kind=wp), allocatable :: Cp(:,:), Cm(:,:)
-      Complex(kind=wp)              :: mf
-      Real(kind=wp)                 :: knm(12,0:12)
+      Real(kind=8)                 :: rfact,cr,mfact,C0
+      Complex(kind=8)              :: trace, cfact
+      Complex(kind=8), allocatable :: Cp(:,:), Cm(:,:)
+      Complex(kind=8)              :: mf
+      Real(kind=8)                 :: knm(12,0:12)
       External                      :: trace
       Logical                       :: dbg
 
-      Call qEnter('SA_newCF')
 !-------------------------------------------
       If(n<1) Return
 !-------------------------------------------
@@ -441,7 +435,6 @@ c-----------------------------------------------------------------------
 
       Call mma_deallocate(Cp)
       Call mma_deallocate(Cm)
-      Call qExit('SA_newCF')
 
       Return
       End subroutine newCF
@@ -454,18 +447,18 @@ c-----------------------------------------------------------------------
 
       Subroutine recover_CF(N,HAM,Akq,B,C,Bstev)
       Implicit none
-      Integer, Parameter           :: wp=selected_real_kind(p=15,r=307)
+      Integer, Parameter            :: wp=kind(0.d0)
       Integer, intent(in)          :: n
-      Complex(kind=wp), intent(in) :: HAM(n,n)
-      Complex(kind=wp), intent(in) :: Akq((n-1), -(n-1):(n-1))
-      Real(kind=wp), intent(in)    :: B(n,0:n), C(n,0:n), Bstev(n,-n:n)
+      Complex(kind=8), intent(in) :: HAM(n,n)
+      Complex(kind=8), intent(in) :: Akq((n-1), -(n-1):(n-1))
+      Real(kind=8), intent(in)    :: B(n,0:n), C(n,0:n), Bstev(n,-n:n)
 
       Integer          :: k,q,i,j,info
-      Real(kind=wp)    :: tdiff
-      Complex(kind=wp) :: Cp(n,n), Cm(n,n), redME
-      Complex(kind=wp) :: O(n,n), W(n,n),zfact
-      Complex(kind=wp) :: HCF(n,n), Z(n,n)
-      Real(kind=wp)    :: w1(n), w2(n),c0,dznrm2_
+      Real(kind=8)    :: tdiff
+      Complex(kind=8) :: Cp(n,n), Cm(n,n), redME
+      Complex(kind=8) :: O(n,n), W(n,n),zfact
+      Complex(kind=8) :: HCF(n,n), Z(n,n)
+      Real(kind=8)    :: w1(n), w2(n),c0,dznrm2_
       External         :: dznrm2_
 
       Do k=2,n-1
@@ -477,7 +470,7 @@ c-----------------------------------------------------------------------
 !==================================================================
       Write(6,'(A,ES20.10)') 'recover from Akq parameters'
       tdiff=0.0_wp
-      Call zcopy_(n*n,(0.0_wp,0.0_wp),0,HCF,1)
+      Call zcopy_(n*n,[(0.0_wp,0.0_wp)],0,HCF,1)
       Do k=1,n-1
         Do q=0,k
           ! generate the operator matrix K=ik, Q=iq, dimension=na
@@ -516,7 +509,7 @@ c-----------------------------------------------------------------------
 !==================================================================
       Write(6,'(A,ES20.10)') 'recover from B and C parameters'
       tdiff=0.0_wp
-      Call zcopy_(n*n,(0.0_wp,0.0_wp),0,HCF,1)
+      Call zcopy_(n*n,[(0.0_wp,0.0_wp)],0,HCF,1)
       Do k=1,n-1
         Do q=0,k
           Call Liviu_ESO(n,k,q,O,W,redME)
@@ -557,7 +550,7 @@ c-----------------------------------------------------------------------
 !==================================================================
       Write(6,'(A,ES20.10)') 'recover from Bstev'
       tdiff=0.0_wp
-      Call zcopy_(n*n,(0.0_wp,0.0_wp),0,HCF,1)
+      Call zcopy_(n*n,[(0.0_wp,0.0_wp)],0,HCF,1)
       Do k=1,n-1
         Do q=0,k
           Call ESO(n,k,q,O,W,redME)

@@ -157,7 +157,7 @@ c Avoid unused argument warnings
       Real*8, Allocatable :: EVal(:), EVec(:,:), Diag(:,:), HU(:,:)
       Real*8 H(nH,nH)
 *
-      Lu=6
+*     Lu=6
 *
       Call mma_allocate(EVal,nH*(nH+1)/2,label='EVal')
       Call mma_allocate(EVec,nH,nH,label='EVec')
@@ -176,8 +176,8 @@ c Avoid unused argument warnings
 *
 *---- Set up a unit matrix
 *
-      call dcopy_(nH*nH,Zero,0,EVec,1)
-      call dcopy_(nH,One,0,EVec,nH+1)
+      call dcopy_(nH*nH,[Zero],0,EVec,1)
+      call dcopy_(nH,[One],0,EVec,nH+1)
 *
 *---- Compute eigenvalues and eigenvectors
 *
@@ -195,7 +195,7 @@ c Avoid unused argument warnings
       Call mma_allocate(Diag,nH,nH,label='Diag')
       Call mma_allocate(HU,nH,nH,label='HU')
 *
-      call dcopy_(nH*nH,Zero,0,Diag,1)
+      call dcopy_(nH*nH,[Zero],0,Diag,1)
       Do i = 1, nH
          ii=i*(i+1)/2
          temp = EVal(ii)

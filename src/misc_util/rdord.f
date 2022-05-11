@@ -51,9 +51,10 @@
       Implicit Real*8 (a-h,o-z)
 
       Integer rc
+      Dimension Buf(*)
 
       Logical First,DoCholesky
-      Common / DoCho / DoCholesky
+      Save DoCholesky
 
       Data First /.true./
       Save First

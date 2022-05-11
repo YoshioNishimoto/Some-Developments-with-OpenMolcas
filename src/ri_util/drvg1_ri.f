@@ -21,19 +21,21 @@
 *             January '07                                              *
 *                                                                      *
 ************************************************************************
+      use Basis_Info, only: nBas, nBas_Aux
+      use pso_stuff
+      use RICD_Info, only: Do_RI, Cholesky
+      use Symmetry_Info, only: nIrrep
+      use Para_Info, only: myRank, nProcs
+      use Data_Structures, only: Deallocate_DT
+      use ExTerm, only: iMP2prpt, LuAVector, LuBVector
       Implicit Real*8 (A-H,O-Z)
-#include "itmax.fh"
-#include "info.fh"
+#include "Molcas.fh"
 #include "disp.fh"
 #include "print.fh"
-#include "pso.fh"
-#include "para_info.fh"
 #include "cholesky.fh"
-#include "choptr.fh"
-#include "WrkSpc.fh"
+#include "stdalloc.fh"
 #include "real.fh"
 #include "exterm.fh"
-#include "chomp2g_alaska.fh"
 *#define _CD_TIMING_
 #ifdef _CD_TIMING_
 #include "temptime.fh"
@@ -44,6 +46,40 @@
       Character*8 Method
       Logical Found
       Integer nAct(0:7)
+      Real*8, Allocatable:: V_k_new(:,:), U_k_new(:)
+      Integer, Allocatable:: iZk(:), iVk(:), iUk(:)
+
+      Real*8, Allocatable:: DMTmp(:), Tmp(:)
+      Integer, Allocatable :: SO_ab(:), ij2(:,:)
+*                                                                      *
+************************************************************************
+*                                                                      *
+      Interface
+
+      Subroutine Compute_AuxVec(ipVk,ipZpk,myProc,nProc,ipUk)
+      Integer nProc, myProc
+      Integer ipVk(nProc), ipZpk(nProc)
+      Integer, Optional:: ipUk(nProc)
+      End Subroutine Compute_AuxVec
+
+      Subroutine Effective_CD_Pairs(ij2,nij_Eff)
+      Integer, Allocatable:: ij2(:,:)
+      Integer nij_Eff
+      End Subroutine Effective_CD_Pairs
+
+      SubRoutine Drvg1_2Center_RI(Grad,Temp,nGrad,ij2,nij_Eff)
+      Integer nGrad, nij_Eff
+      Real*8  Grad(nGrad), Temp(nGrad)
+      Integer, Allocatable :: ij2(:,:)
+      End SubRoutine Drvg1_2Center_RI
+
+      SubRoutine Drvg1_3Center_RI(Grad,Temp,nGrad,ij3,nij_Eff)
+      Integer nGrad, nij_Eff
+      Real*8  Grad(nGrad), Temp(nGrad)
+      Integer, Allocatable:: ij3(:,:)
+      End SubRoutine Drvg1_3Center_RI
+
+      End Interface
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -61,7 +97,7 @@
 ************************************************************************
 *                                                                      *
       Call FZero(Temp,nGrad)
-      Call Allocate_Work(ipTemp,nGrad)
+      Call mma_allocate(Tmp,nGrad,Label='Tmp')
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -125,7 +161,7 @@
 *                                                                      *
 *-----Prepare handling of two-particle density.
 *
-      Call PrepP
+      Call PrepP()
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -145,7 +181,7 @@
       nKvec=nKdens
 *
       If (lPSO.and.lSA) Then
-        nJdens=4
+        nJdens=5
         nKdens=4
         nKVec=2
         nAdens=2
@@ -171,17 +207,17 @@
            n_Txy=n_Txy+ntmp**2
            mAO=mAO+nAct(ijsym)*nBas(ijsym)
          EndDo
-         Call GetMem('Txy','Allo','Real',ip_Txy,n_Txy*nAdens)
-         Call GetMem('DM2diag','Allo','Real',ipDMdiag,nG1*nAdens)
-         Call GetMem('Tmp','Allo','Real',ipDMtmp,nG1*(nG1+1)/2)
+         m_Txy=nAdens
+         Call mma_allocate(Txy,n_Txy,nAdens,Label='Txy')
+         Call mma_allocate(DMdiag,nG1,nAdens,Label='DMdiag')
+         Call mma_allocate(DMtmp,nG1*(nG1+1)/2,Label='DMtmp')
          Call iZero(nnP,nIrrep)
-         Call Compute_txy(Work(ipG2),Work(ipG1),nG1,Work(ip_Txy),
-     &                   n_Txy,nAdens,nIrrep,Work(ipDMdiag),
-     &                   Work(ipDMtmp),nAct)
-         Call GetMem('Tmp','Free','Real',ipDMtmp,nG1*(nG1+1)/2)
+         Call Compute_txy(G1(1,1),nG1,Txy,n_Txy,nAdens,nIrrep,DMdiag,
+     &                    DMtmp,nAct)
+         Call mma_deallocate(DMtmp)
       Else
-         ip_Txy=ip_Dummy
-         ipDMdiag=ip_Dummy
+         Call mma_allocate(Txy,1,1,Label='Txy')
+         Call mma_allocate(DMdiag,1,1,Label='DMdiag')
       EndIf
       n_ij2K=0
       nZ_p_k=0
@@ -190,18 +226,21 @@
       Do i=0,nIrrep-1
          iOff_ij2K(i+1) = n_ij2K
          n_ij2K = n_ij2K + nBas(i)*(nBas(i)+1)/2
-         nZ_p_k = nZ_p_k + nnP(i)*nBas_Aux(i)
-         nZ_p_l = nZ_p_l + nnP(i)*NumCho(i+1)
+         nZ_p_k = nZ_p_k + nnP(i)*nBas_Aux(i)         ! Global size
+         nZ_p_l = nZ_p_l + nnP(i)*NumCho(i+1)         ! Local size
          nZ_p_k_New = nZ_p_k_New + nnP(i)*nBas(i)*(nBas(i)+1)/2
       End Do
       If (Do_RI) nZ_p_k=nZ_p_k-nnP(0)
+
+*     Allocate the "global" Z_p_k array
+
       If (lPSO) Then
-         Call GetMem('Z_p_k','Allo','Real',ip_Z_p_k,nZ_p_k*nAvec)
-         Call FZero(Work(ip_Z_p_k),nZ_p_k*nAvec)
+         Call mma_allocate(Z_p_k,nZ_p_k,nAVec,Label='Z_p_k')
       Else
-         ip_Z_p_k=ip_Dummy
+         nZ_p_k=1
+         Call mma_allocate(Z_p_k,1,nAVec,Label='Z_p_k')
       EndIf
-      ip_Thpkl=ip_Dummy
+      Z_p_k(:,:)=Zero
 *
 *     Preprocess the RI and Q vectors as follows
 *
@@ -216,13 +255,13 @@
       End Do
 *
 *
-      Call GetMem('V_k','Allo','Real',ip_V_k,nV_k*nJdens)
-      Call FZero(Work(ip_V_k),nV_k*nJdens)
+      call mma_allocate(V_K,nV_k,nJdens,Label='V_k')
+      V_k(:,:)=Zero
       If(iMp2prpt .eq. 2) Then
-         Call GetMem('U_k','Allo','Real',ip_U_k,nV_k)
-         Call FZero(Work(ip_U_k),nV_k)
+         call mma_allocate(U_K,nV_k,Label='U_k')
+         U_k(:)=Zero
       Else
-         ip_U_k = ip_Dummy
+         call mma_allocate(U_K,1,Label='U_k')
       End If
 *                    ~
 *     1) Compute the V_k vector
@@ -231,103 +270,112 @@
 *
 *     Note: the above two points apply to Z_p_k as well (active space)
 *
-      Call GetMem('iVk','Allo','Inte',iVk,nProcs)
-      Call GetMem('iZk','Allo','Inte',iZk,nProcs)
-      Call IZero(iWork(iVk),nProcs)
-      Call IZero(iWork(iZk),nProcs)
-      iWork(iVk+myRank) = NumCho(1)*nJdens
-      iWork(iZk+myRank) = nZ_p_l*nAvec
-      Call GAIGOP(iWork(iVk),nProcs,'+')
-      Call GAIGOP(iWork(iZk),nProcs,'+')
-      iStart=ip_V_k
-      jStart=ip_Z_p_k
-      Do j=0,nProcs-1
-         itmp=iWork(iVk+j)
-         iWork(iVk+j)=iStart
+      Call mma_allocate(iVk,[0,nProcs-1],Label='iVk')
+      Call mma_allocate(iZk,[0,nProcs-1],Label='iZk')
+      iVk(:)=0
+      iZk(:)=0
+*     iVk(myRank) = NumCho(1)*nJdens
+      iVk(myRank) = NumCho(1)
+*     iZk(myRank)= nZ_p_l*nAvec           ! store the local size of Zk
+      iZk(myRank)= nZ_p_l                 ! store the local size of Zk
+      Call GAIGOP(iVk,nProcs,'+')
+      Call GAIGOP(iZk,nProcs,'+')           ! distribute to all nodes
+
+!     Compute the starting position in the global sense for each node.
+
+      iStart=1
+      jStart=1
+      Do j=0,nProcs-1    !  Loop over all nodes
+         itmp=iVk(j)
+         iVk(j)=iStart
          iStart = iStart + itmp
-         jtmp=iWork(iZk+j)
-         iWork(iZk+j)=jStart
+
+         jtmp=iZk(j)
+         iZk(j)=jStart
          jStart = jStart + jtmp
       End Do
 *
       If(iMp2prpt .eq. 2) Then
-         Call GetMem('iUk','Allo','Inte',iUk,nProcs)
-         Call IZero(iWork(iUk),nProcs)
-         iWork(iUk+myRank) = NumCho(1)
-         Call GAIGOP(iWork(iUk),nProcs,'+')
-         kStart=ip_U_k
+         Call mma_allocate(iUk,[0,nProcs-1],Label='iUk')
+         iUk(:)=0
+         iUk(myRank) = NumCho(1)
+         Call GAIGOP(iUk,nProcs,'+')
+         kStart=1
          Do j = 0,nProcs-1
-            kTmp=iWork(iUk+j)
-            iWork(iUk+j)=kStart
+            kTmp=iUk(j)
+            iUk(j)=kStart
             kStart = kStart + kTmp
          End Do
-      Else
-         iUk = ip_iDummy
-      End If
 *
-      Call Compute_AuxVec(iWork(iVk),iWork(iUk),iwork(iZk),
-     &                    myRank+1,nProcs)
+         Call Compute_AuxVec(iVk,iZk,myRank+1,nProcs,ipUk=iUk)
+
+      Else
+
+         Call Compute_AuxVec(iVk,iZk,myRank+1,nProcs)
+
+      End If
 *                                                                      *
 ************************************************************************
 *                                                                      *
 
       If (Cholesky.and..Not.Do_RI) Then
 *
-*              Map from Cholesky auxiliary basis to the full
-*              1-center valence product basis.
+*        Map from Cholesky auxiliary basis to the full
+*        1-center valence product basis.
 *
-         Call GetMem('ij2K','Allo','INTE',ip_ij2K,n_ij2K)
-         Call IZero(iWork(ip_ij2K),n_ij2K)
+         Call mma_allocate(ij2K,n_ij2K,Label='ij2K')
+         ij2K(:)=0
          nV_k_New=nBas(0)*(nBas(0)+1)/2
-         Call GetMem('V_k_New','Allo','Real',ip_V_k_New,nV_k_New*nJdens)
-         Call FZero(Work(ip_V_k_New),nV_k_New*nJdens)
+         Call mma_allocate(V_k_new,nV_k_New,nJdens,Label="V_k_new")
+         V_k_new(:,:)=Zero
 *
-         If(iMp2prpt .eq. 2) Then
-            Call GetMem('U_k_New','Allo','Real',ip_U_k_New,nV_k_New)
-            Call FZero(Work(ip_U_k_New),nV_k_New)
-         Else
-            ip_U_k_New = ip_Dummy
+         If (iMp2prpt .eq. 2) Then
+            Call mma_allocate(U_k_new,nV_k_New,Label="U_k_new")
+            U_k_new(:)=Zero
          End If
 
 *
-         Call GetMem('SO_ab','Allo','INTE',ipSO_ab,2*nAux_Tot)
-         Call IZero(iWork(ipSO_ab),2*nAux_Tot)
-         iOff = 0
+         Call mma_allocate(SO_ab,2*nAux_Tot,Label='SO_ab')
+         SO_ab(:)=0
+         iOff = 1
          Do iSym = 1, nSym
-            ip_List_rs=ip_InfVec+MaxVec*InfVec_N2*(iSym-1)
-            Call CHO_X_GET_PARDIAG(iSym,ip_List_rs,iWork(ipSO_ab+iOff))
+            Call CHO_X_GET_PARDIAG(iSym,SO_ab(iOff))
 
             If((iSym .eq. 1) .and. (iMp2prpt .eq. 2)) Then
-               Call ReMap_U_k(Work(ip_U_k),nV_k,
-     &              Work(ip_U_k_New),nV_k_New,
-     &              iWork(ipSO_ab))
+               Call ReMap_U_k(U_k,nV_k,U_k_New,nV_k_New,SO_ab)
             End If
-            iOff_ij2K(iSym) = iOff_ij2K(iSym) + ip_ij2K - 1
+            m_ij2K = nBas(iSym-1)*(nBas(iSym-1)+1)/2
             Do i=0,nJDens-1
-              Call ReMap_V_k(iSym,Work(ip_V_k+i*NumCho(1)),nV_k,
-     &                     Work(ip_V_k_New+i*nV_k_New),nV_k_New,
-     &                     iWork(ipSO_ab+iOff),iWork(iOff_ij2K(iSym)+1))
+              Call ReMap_V_k(iSym,V_k(1,1+i),nV_k,
+     &                     V_k_new(1,1+i),nV_k_New,
+     &                     SO_ab(iOff),ij2K(iOff_ij2K(iSym)+1),
+     &                     m_ij2K)
             EndDo
             iOff = iOff + 2*nBas_Aux(iSym-1)
          End Do
-         Call Free_iWork(ipSO_ab)
-         Call Free_Work(ip_V_k)
-         ip_V_k=ip_V_k_New
+*
+         nV_k=nV_k_new
+*
+         Call mma_deallocate(SO_ab)
+         Call mma_deallocate(V_k)
+         Call mma_allocate(V_k,nV_k,nJdens,Label='V_k')
+         V_k(:,:)=V_k_new(:,:)
+         Call mma_deallocate(V_k_new)
 
          If(iMp2prpt .eq. 2) Then
-            Call Free_Work(ip_U_k)
-            ip_U_k=ip_U_k_New
+            Call mma_deallocate(U_k)
+            Call mma_allocate(U_k,nV_k,Label='U_k')
+            U_k(:)=U_k_new(:)
+            Call mma_deallocate(U_k_new)
          End If
 
-         nV_k  =nV_k_New
 *                                                                      *
 ************************************************************************
 *                                                                      *
 *        Get the effective list of shell-pairs in case of CD
 *
-         Call Effective_CD_Pairs(ip_ij2,nij_Eff)
+         Call Effective_CD_Pairs(ij2,nij_Eff)
       Else
-         ip_ij2 = ip_iDummy
          nij_Eff = 0
       End If
 *                                                                      *
@@ -372,13 +420,13 @@
 *     Compute contributions due to the "2-center" two-electron integrals
 *
       Case_2C=.True.
-      Call Drvg1_2center_RI(Temp,Work(ipTemp),nGrad,ip_ij2,nij_Eff)
-      Call GADGOP(Work(ipTemp),nGrad,'+')
+      Call Drvg1_2center_RI(Temp,Tmp,nGrad,ij2,nij_Eff)
+      Call GADGOP(Tmp,nGrad,'+')
       If (iPrint.ge.15) Call PrGrad(
      &    ' RI-Two-electron contribution - 2-center term',
-     &    Work(ipTemp),nGrad,lIrrep,ChDisp,iPrint)
+     &    Tmp,nGrad,ChDisp)
       Call DaXpY_(nGrad,One,Temp,1,Grad,1) ! Move any 1-el contr.
-      call dcopy_(nGrad,Work(ipTemp),1,Temp,1)
+      call dcopy_(nGrad,Tmp,1,Temp,1)
       Call DScal_(nGrad,-One,Temp,1)
       Case_2C=.False.
 *                                                                      *
@@ -387,18 +435,21 @@
 *     Compute contributions due to the "3-center" two-electron integrals
 *
       Case_3C=.True.
-      Call Drvg1_3center_RI(Temp,Work(ipTemp),nGrad,ip_ij2,nij_Eff)
-      Call GADGOP(Work(ipTemp),nGrad,'+')
+      Call Drvg1_3center_RI(Temp,Tmp,nGrad,ij2,nij_Eff)
+      Call GADGOP(Tmp,nGrad,'+')
       If (iPrint.ge.15) Call PrGrad(
      &    ' RI-Two-electron contribution - 3-center term',
-     &    Work(ipTemp),nGrad,lIrrep,ChDisp,iPrint)
-      Call DaXpY_(nGrad,Two,Work(ipTemp),1,Temp,1)
+     &    Tmp,nGrad,ChDisp)
+      Call DaXpY_(nGrad,Two,Tmp,1,Temp,1)
       Case_3C=.False.
-      If (lPSO) Then
-        Call GetMem('Txy','Free','Real',ip_Txy,n_Txy)
-        Call GetMem('DM2diag','Free','Real',ipDMdiag,nG1*nAdens)
-      EndIf
-      Call GetMem('AOrb','Free','Real',ipAOrb(0,1),mAO*nADens)
+      If(Allocated(Txy))  Call mma_deallocate(Txy)
+      If(Allocated(DMdiag))  Call mma_deallocate(DMdiag)
+      If (Allocated(AOrb)) Then
+         Do iADens = 1, nADens
+            Call Deallocate_DT(AOrb(iADens))
+         End Do
+         deallocate(AOrb)
+      End If
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -419,27 +470,27 @@
 
 
       If (Cholesky.and..Not.Do_RI) Then
-         Call Free_iWork(ip_ij2)
-         Call Free_iWork(ip_ij2K)
+         Call mma_deallocate(ij2)
+         Call mma_deallocate(ij2K)
       End If
       Call CloseP
-      Call Free_iWork(iZk)
-      Call Free_iWork(iVk)
-      if (lPSO) Call Free_Work(ip_Z_p_k)
-      Call Free_Work(ip_V_k)
-      If(iMp2prpt .eq. 2) Then
-         Call Free_iWork(iUk)
-         Call Free_Work(ip_U_k)
-      End If
+      Call mma_deallocate(iZk)
+      Call mma_deallocate(iVk)
+
+      If (Allocated(iUk))   Call mma_deallocate(iUk)
+      If (Allocated(Z_p_k)) Call mma_deallocate(Z_p_k)
+      If (Allocated(V_k))   Call mma_deallocate(V_k)
+      If (Allocated(U_k))   Call mma_deallocate(U_k)
+
       Call Cho_X_Final(irc)
       If (irc.ne.0) Then
          Call WarningMessage(2,' Drvg1_RI: Cho_X_Final failed')
          Call Abend()
       End If
-      Call Free_Work(ipTemp)
+      Call mma_deallocate(Tmp)
       If (iPrint.ge.15)  Call PrGrad(
      &    ' RI-Two-electron contribution - Temp',
-     &    Temp,nGrad,lIrrep,ChDisp,iPrint)
+     &    Temp,nGrad,ChDisp)
 *                                                                      *
 ************************************************************************
 *                                                                      *

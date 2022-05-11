@@ -50,6 +50,16 @@
       Integer IDAHLF2(LIOTAB),IRLHLF2(LIOTAB),
      &        IDAHLF3(LIOTAB),IRLHLF3(LIOTAB)
 *
+      Call TRAMO_MCLR_INTERNAL(Buffer)
+c Avoid unused argument warnings
+      IF (.FALSE.) CALL Unused_integer_array(len)
+*
+*     This is to allow type punning without an explicit interface
+      Contains
+      Subroutine TRAMO_MCLR_INTERNAL(Buffer)
+      Use Iso_C_Binding
+      Real*8, Target :: Buffer(*)
+      Integer, Pointer :: iBuffer(:)
       ione=1
       if (nofile) ione=0
 *
@@ -125,8 +135,6 @@
 *    &      nAR*(nAP*nBQ*nBS+nAQ*nBP*nBS),
 *    &      NAR*nAS*nBQ*nBP)
 *
-*     We wont manage it with less than this
-      nLimit=Max(nAP*nBQ+nAQ*nBP,NAR*nAS)
       If (nBuf*iMax+NOUT.le.MemXX) Then
          Incore=0 ! We can do the calculation totally in core
       Else
@@ -142,7 +150,6 @@
         If (iMax.lt.1) Then
            Write (6,*) 'TraMO_MCLR: iMax.lt.1'
            Write (6,*) 'iMax=',iMax
-           Call QTrace
            Call Abend()
         End If
         Call DAName(LUHLF2,FNHLF2)
@@ -204,7 +211,6 @@
             Call GADSum(Buffer(ipB),LBuf)
             If (irc.ne.0) Then
                Write (6,*) 'TraMO_MCLR: error reading ORDINT!'
-               Call QTrace
                Call Abend()
             End If
             IOPT=2
@@ -253,7 +259,6 @@
                   IF ( iBuf2.GT.LIOTAB ) THEN
                      Write (6,*) 'TraMO_MCLR: iBuf2.GT.LIOTAB'
                      Write (6,*) 'iBuf2,LIOTAB=',iBuf2,LIOTAB
-                     Call QTrace
                      Call Abend()
                   ENDIF
                   CALL PKR8(0,iMax,NBYTES,Buffer(ip2+ist2-1),
@@ -263,7 +268,10 @@
                   IRLHLF2(iBUF2)=LPKREC
 *                 Save the address of this record
                   IDAHLF2(iBUF2)=iAD2
-                  CALL iDAFILE(LUHLF2,1,Buffer(ip2+IST2-1),LPKREC,IAD2)
+                  Call C_F_Pointer(C_Loc(Buffer(ip2+IST2-1)),iBuffer,
+     &                             [LPKREC])
+                  CALL iDAFILE(LUHLF2,1,iBuffer,LPKREC,IAD2)
+                  Nullify(iBuffer)
                   iST2=iST2+iMax
                End Do
              End If
@@ -290,7 +298,6 @@
                 IF ( IBUF3.GT.LIOTAB ) THEN
                    Write (6,*) 'TraMO_MCLR: iBuf3.GT.LIOTAB'
                    Write (6,*) 'iBuf3,LIOTAB=',iBuf3,LIOTAB
-                   Call QTrace
                    Call Abend()
                 ENDIF
                 CALL PKR8(0,IMAX,NBYTES,Buffer(ip3+IST3-1),
@@ -298,7 +305,10 @@
                 LPKREC=(NBYTES+itob-1)/itob
                 IRLHLF3(IBUF3)=LPKREC
                 IDAHLF3(IBUF3)=IAD3
-                CALL iDAFILE(LUHLF3,1,Buffer(ip3+IST3-1),LPKREC,IAD3)
+                Call C_F_Pointer(C_Loc(Buffer(ip3+IST3-1)),iBuffer,
+     &                           [LPKREC])
+                CALL iDAFILE(LUHLF3,1,iBuffer,LPKREC,IAD3)
+                Nullify(iBuffer)
                 IST3=IST3+iMax
 34             CONTINUE
             End If
@@ -316,10 +326,10 @@
 *
           If (NAR*NAS.ne.0) Then
           IF(ISR.EQ.ISS) THEN
-            CALL MXMT(X2,        NBR,1,
-     *                CMR, 1,NBR,
-     *                X4,
-     *                NAR,NBR)
+            CALL DGEMM_Tri('T','N',NAR,NAR,NBR,
+     &                1.0D0,X2,NBR,
+     &                      CMR,NBR,
+     &                0.0D0,X4,NAR)
           ELSE
             CALL DGEMM_('T','N',
      &                  NAS,NAR,NBR,
@@ -354,14 +364,15 @@
           IF ( IBUF2.GT.LIOTAB ) THEN
              Write (6,*) 'TraMO_MCLR: iBuf2.GT.LIOTAB'
              Write (6,*) 'iBuf2,LIOTAB=',iBuf2,LIOTAB
-             Call QTrace
              Call Abend()
           ENDIF
           CALL PKR8(0,iMax,NBYTES,Buffer(ip2+IST-1),Buffer(ip2+IST-1))
           LPKREC=(NBYTES+itob-1)/ItoB
           IDAHLF2(IBUF2)=IAD2
           IRLHLF2(IBUF2)=LPKREC
-          CALL iDAFILE(LUHLF2,1,Buffer(ip2+IST-1),LPKREC,IAD2)
+          Call C_F_Pointer(C_Loc(Buffer(ip2+IST-1)),iBuffer,[LPKREC])
+          CALL iDAFILE(LUHLF2,1,iBuffer,LPKREC,IAD2)
+          Nullify(iBuffer)
           IST=IST+IMAX
  61     CONTINUE
         If (iSS.ne.iSR) Then
@@ -371,14 +382,15 @@
           IF ( IBUF3.GT.LIOTAB ) THEN
              Write (6,*) 'TraMO_MCLR: iBuf3.GT.LIOTAB'
              Write (6,*) 'iBuf3,LIOTAB=',iBuf3,LIOTAB
-             Call QTrace
              Call Abend()
           ENDIF
           CALL PKR8(0,iMax,NBYTES,Buffer(ip3+IST-1),Buffer(ip3+IST-1))
           LPKREC=(NBYTES+itob-1)/itob
           IDAHLF3(IBUF3)=IAD3
           IRLHLF3(IBUF3)=LPKREC
-          CALL iDAFILE(LUHLF3,1,Buffer(ip3+IST-1),LPKREC,IAD3)
+          Call C_F_Pointer(C_Loc(Buffer(ip3+IST-1)),iBuffer,[LPKREC])
+          CALL iDAFILE(LUHLF3,1,iBuffer,LPKREC,IAD3)
+          Nullify(iBuffer)
           IST=IST+IMAX
 71       CONTINUE
         End If
@@ -390,19 +402,16 @@
       If (Buffer(ip3-1).ne.-99999.0d0) Then
          Write (6,*) 'TraMO_MCLR: Buffer(ip3-1).ne.-99999.0d0'
          Write (6,*) 'Buffer(ip3-1)=',Buffer(ip3-1)
-         Call QTrace
          Call Abend()
       End If
       If (Buffer(ip4-1).ne.-99999.0d0) Then
          Write (6,*) 'TraMO_MCLR: Buffer(ip4-1).ne.-99999.0d0'
          Write (6,*) 'Buffer(ip4-1)=',Buffer(ip4-1)
-         Call QTrace
          Call Abend()
       End If
       If (Buffer(ipB-1).ne.-99999.0d0) Then
          Write (6,*) 'TraMO_MCLR: Buffer(ipB-1).ne.-99999.0d0'
          Write (6,*) 'Buffer(ipB-1)=',Buffer(ipB-1)
-         Call QTrace
          Call Abend()
       End If
       If (nAP+nAQ.eq.0) Goto 987
@@ -426,7 +435,6 @@
       If (ipz.gt.memx) Then
          Write (6,*) 'TraMO_MCLR: ipz.gt.memx'
          Write (6,*) 'ipz,memx=',ipz,memx
-         Call QTrace
          Call Abend()
       End If
       Buffer(ipX-1)=-99999.0d0
@@ -436,8 +444,6 @@
       IAD2=0
       IAD3=0
       IVX=0
-      ii3=0
-      ii2=0
       DO 125 NS=1,nAS
         nr2=(NS-1)*NBR*NBP*NAQ
         nr3=(NS-1)*nBR*NBQ*NAP
@@ -455,8 +461,6 @@
 *
          IF(INCORE.EQ.1) THEN
            ipq=0
-           MemInt=((nBPQ-1)/iMax+1)*iMax
-           MemY=MemXX-MemInt
            ip2=1
            ip5=ip2+((nBPQ-1)/iMax+1)*iMax
            ipX=ip5+iMax+1
@@ -470,7 +474,9 @@
 112        CONTINUE
            IAD2=IDAHLF2(IBUF)
            LPKREC=IRLHLF2(IBUF)
-           CALL iDAFILE(LUHLF2,2,Buffer(ip5),LPKREC,IAD2)
+           Call C_F_Pointer(C_Loc(Buffer(ip5)),iBuffer,[LPKREC])
+           CALL iDAFILE(LUHLF2,2,iBuffer,LPKREC,IAD2)
+           Nullify(iBuffer)
            CALL UPKR8(0,iMax,NBYTES,Buffer(ip5),Buffer(ip2+IPQ-1))
            IPQ=IPQ+iMax
            iBuf=iBuf+nAS*nBR
@@ -561,19 +567,16 @@
       If (buffer(ipX-1).ne.-99999.0d0) Then
          Write (6,*) 'TraMO_MCLR: buffer(ipX-1).ne.-99999.0d0'
          Write (6,*) 'buffer(ipX-1)=',buffer(ipX-1)
-         Call QTrace
          Call Abend()
       End If
       If (buffer(ipY-1).ne.-99999.0d0) Then
          Write (6,*) 'TraMO_MCLR: buffer(ipY-1).ne.-99999.0d0'
          Write (6,*) 'buffer(ipY-1)=',buffer(ipY-1)
-         Call QTrace
          Call Abend()
       End If
       If (buffer(ipZ-1).ne.-99999.0d0) Then
          Write (6,*) 'TraMO_MCLR: buffer(ipZ-1).ne.-99999.0d0'
          Write (6,*) 'buffer(ipZ-1)=',buffer(ipZ-1)
-         Call QTrace
          Call Abend()
       End If
       If (iSS.ne.iSR) Then
@@ -601,8 +604,6 @@
 *****************************************************************
 *
          IF(INCORE.EQ.1) THEN
-           MemInt=((nBPQ-1)/iMax+1)*iMax
-           MemY=MemXX-MemInt
            ip2=1
            ip3=ip2
            ip5=ip3+((nBPQ-1)/iMax+1)*iMax
@@ -616,7 +617,9 @@
 212        CONTINUE
            IAD3=IDAHLF3(IBUF)
            LPKREC=IRLHLF3(IBUF)
-           CALL iDAFILE(LUHLF3,2,Buffer(ip5),LPKREC,IAD3)
+           Call C_F_Pointer(C_Loc(Buffer(ip5)),iBuffer,[LPKREC])
+           CALL iDAFILE(LUHLF3,2,iBuffer,LPKREC,IAD3)
+           Nullify(iBuffer)
            CALL UPKR8(0,iMax,NBYTES,Buffer(ip5),Buffer(ip3+IPQ-1))
            IPQ=IPQ+iMax
            iBuf=iBuf+nAR*nBS
@@ -682,19 +685,16 @@
       If (buffer(ipX-1).ne.-99999.0d0) Then
          Write (6,*) 'TraMO_MCLR: buffer(ipX-1).ne.-99999.0d0'
          Write (6,*) 'buffer(ipX-1)=',buffer(ipX-1)
-         Call QTrace
          Call Abend()
       End If
       If (buffer(ipY-1).ne.-99999.0d0) Then
          Write (6,*) 'TraMO_MCLR: buffer(ipY-1).ne.-99999.0d0'
          Write (6,*) 'buffer(ipY-1)=',buffer(ipY-1)
-         Call QTrace
          Call Abend()
       End If
       If (buffer(ipZ-1).ne.-99999.0d0) Then
          Write (6,*) 'TraMO_MCLR: buffer(ipZ-1).ne.-99999.0d0'
          Write (6,*) 'buffer(ipZ-1)=',buffer(ipZ-1)
-         Call QTrace
          Call Abend()
       End If
 
@@ -725,6 +725,6 @@
       END IF
 *
       RETURN
-c Avoid unused argument warnings
-      IF (.FALSE.) CALL Unused_integer_array(len)
+      End Subroutine TRAMO_MCLR_INTERNAL
+*
       END

@@ -105,7 +105,7 @@
 *.Scratch
       DIMENSION SB(*),CB(*),C2(*)
       DIMENSION XINT(*),XINT2(*),CSCR(*),SSCR(*)
-      DIMENSION I1(*),I2(*),I3(*),XI1S(*),XI2S(*),XI3S(*)
+      DIMENSION I1(*),I2(*),I3(*),I4(*),XI1S(*),XI2S(*),XI3S(*),XI4S(*)
       INTEGER   LCBLOCK(*),I1CBLOCK(*),ICBLOCK(8,*),LECBLOCK(*)
       DIMENSION ISTRFL(*)
 *. Zero order Hamiltonian
@@ -119,10 +119,10 @@
 #include "bk_approx.fh"
 #include "io_util.fh"
 *
-      COMMON/H_OCC_CONS/IH_OCC_CONS
 
-      DIMENSION C(1),ICOOSC(1),IPHGAS(*)
+      DIMENSION C(1),ICOOSC(1),IPHGAS(*),iDUMMY(1)
       INTEGER DXSTST(1)
+      DATA IH_OCC_CONS/0/
 * IH_OCC_CONS =1 implies that we should employ occupation conserving
 * part of Hamiltonian
 
@@ -130,7 +130,6 @@
 *.
 C-jwk-cleanup      REAL * 8 INPROD
 *
-      CALL QENTER('SBLOC')
 *
 C?    WRITE(6,*) ' IPERTOP in SBLOCKS = ', IPERTOP
 c      IF(IH_OCC_CONS.EQ.1) THEN
@@ -240,7 +239,6 @@ c      END IF
                   LLBTP = LBTP(IPERM)
 *.Loop over Sigma blocks in batch
                   DO JSBLOCK = 1, NSBLOCK
-                     IDENT = 0
                      IF(ISBLOCK(1,JSBLOCK).GT.0) THEN
                         IATP = ISBLOCK(1,JSBLOCK)
                         IBTP = ISBLOCK(2,JSBLOCK)
@@ -257,9 +255,6 @@ c      END IF
      &                                  MXEXC,
      &                                  IH_OCC_CONS,
      &                                  INTERACT)
-                        IDENT = 0
-                        IF(IASM.EQ.JASM.AND.IATP.EQ.JATP.AND.
-     &                       IBSM.EQ.JBSM.AND.IBTP.EQ.JBTP) IDENT = 1
 *
                      END IF
                   END DO
@@ -277,7 +272,8 @@ c      END IF
 *. Note in GSTTBL : ICOOSC only used for CI vectors in core,
             ELSE
 *. not relevant
-               CALL IDAFILE(LUC,2,LBL,1,IDISK(LUC))
+               CALL IDAFILE(LUC,2,iDUMMY,1,IDISK(LUC))
+               LBL=iDUMMY(1)
                CALL IDAFILE(LUC,2,iDUMMY,1,IDISK(LUC))
                CALL SKPRCD2(LBL,-1,LUC)
                SCLFAC(JBLOCK) = 0.0D0
@@ -408,7 +404,6 @@ C               IF(IPERTOP.NE.0) THEN
 *. Not exact Hamiltonian in use
                       IPTSPC = IH0SPC(IATP,IBTP)
                       JPTSPC = IH0SPC(JATP,JBTP)
-                      IJOP   = IH0INSPC(IPTSPC)
 *
                       IF(IPTSPC.NE.JPTSPC) GOTO 8764
 *. BK-like approximation stuff
@@ -471,7 +466,6 @@ C               IF(IPERTOP.NE.0) THEN
             IASM = ISBLOCK(3,ISBLK)
             IBSM = ISBLOCK(4,ISBLK)
             ISOFF  = ISBLOCK(5,ISBLK)
-            ISOFFP = ISBLOCK(6,ISBLK)
             NIA = NSSOA(IASM,IATP)
             NIB = NSSOB(IBSM,IBTP)
             IF(ICJKAIB.NE.0) THEN
@@ -493,6 +487,7 @@ C               IF(IPERTOP.NE.0) THEN
      &                   NSSOA,    NSSOB,        1)
       END IF
 *
-      CALL QEXIT('SBLOC')
       RETURN
+* Avoid unused argument warnings
+      IF (.FALSE.) CALL Unused_integer_array(IH0INSPC)
       END

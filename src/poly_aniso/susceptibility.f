@@ -8,7 +8,7 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
-       Subroutine susceptibility( exch, nLoc, nCenter, nneq,
+       Subroutine susceptibility_pa( exch, nLoc, nCenter, nneq,
      &                            neqv, neq, nss, nexch, nTempMagn,
      &                            nT, Tmin, Tmax, XTexp,
      &                            eso, dipso, s_so, w, dipexch,
@@ -18,84 +18,98 @@
 
 c       chi*t ----------- the units are cgsemu: [ cm^3*k/mol ]
       Implicit None
-      Integer, parameter        :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter        :: wp=kind(0.d0)
 
       Integer, intent(in) :: nLoc, nCenter, nTempMagn, nT, mem
       Integer, intent(in) :: exch, nneq, neqv, iopt
       Integer, intent(in) :: neq(nneq), nss(nneq), nexch(nneq)
 
-      Real(kind=wp), intent(in) :: T(nT+nTempMagn)
-      Real(kind=wp), intent(in) :: W(exch)
-      Real(kind=wp), intent(in) :: eso(nneq,nLoc)
-      Real(kind=wp), intent(in) :: zJ
-      Real(kind=wp), intent(in) :: Tmin, Tmax
-      Real(kind=wp), intent(in) :: XTexp(nT+nTempMagn)
-      Real(kind=wp), intent(in) :: R_LG(nneq,neqv,3,3)
-      Real(kind=wp), intent(out):: chit_theta(nT+nTempMagn)
+      Real(kind=8), intent(in) :: T(nT+nTempMagn)
+      Real(kind=8), intent(in) :: W(exch)
+      Real(kind=8), intent(in) :: eso(nneq,nLoc)
+      Real(kind=8), intent(in) :: zJ
+      Real(kind=8), intent(in) :: Tmin, Tmax
+      Real(kind=8), intent(in) :: XTexp(nT+nTempMagn)
+      Real(kind=8), intent(in) :: R_LG(nneq,neqv,3,3)
+      Real(kind=8), intent(out):: chit_theta(nT+nTempMagn)
 c contributions from local excited states, computed in the XT section:
-      Real(kind=wp), intent(out):: XLM( nCenter,nTempMagn,3,3)
-      Real(kind=wp), intent(out):: ZLM( nCenter,nTempMagn)
-      Real(kind=wp), intent(out):: XRM( nCenter,nTempMagn,3,3)
-      Real(kind=wp), intent(out):: ZRM( nCenter,nTempMagn)
+      Real(kind=8), intent(out):: XLM( nCenter,nTempMagn,3,3)
+      Real(kind=8), intent(out):: ZLM( nCenter,nTempMagn)
+      Real(kind=8), intent(out):: XRM( nCenter,nTempMagn,3,3)
+      Real(kind=8), intent(out):: ZRM( nCenter,nTempMagn)
       Logical, intent(in)       :: tinput, doplot
       ! BIG matrices:
-      Complex(kind=wp), intent(in) :: dipexch(3,exch,exch)
-      Complex(kind=wp), intent(in) ::  s_exch(3,exch,exch)
-      Complex(kind=wp), intent(in) :: dipso(nneq,3,nLoc,nLoc)
-      Complex(kind=wp), intent(in) ::  s_so(nneq,3,nLoc,nLoc)
+      Complex(kind=8), intent(in) :: dipexch(3,exch,exch)
+      Complex(kind=8), intent(in) ::  s_exch(3,exch,exch)
+      Complex(kind=8), intent(in) :: dipso(nneq,3,nLoc,nLoc)
+      Complex(kind=8), intent(in) ::  s_so(nneq,3,nLoc,nLoc)
 #include "stdalloc.fh"
 
 c local variables
-      Real(kind=wp), allocatable ::     chit_tens_l(:,:,:)   !chit_tens_l( nneq,3,3)
-      Real(kind=wp), allocatable :: smu_chit_tens_l(:,:,:)   !smu_chit_tens_l( nneq,3,3)
-      Real(kind=wp), allocatable ::  ss_chit_tens_l(:,:,:)   ! ss_chit_tens_l( nneq,3,3)
-      Real(kind=wp), allocatable ::     chit_tens_lr(:,:,:)  !    chit_tens_lr(nneq,3,3)
-      Real(kind=wp), allocatable :: smu_chit_tens_lr(:,:,:)  !smu_chit_tens_lr(nneq,3,3)
-      Real(kind=wp), allocatable ::  ss_chit_tens_lr(:,:,:)  ! ss_chit_tens_lr(nneq,3,3)
-      Real(kind=wp), allocatable ::     chit_tens_ex(:,:)    !    chit_tens_ex(3,3)
-      Real(kind=wp), allocatable :: smu_chit_tens_ex(:,:)    !smu_chit_tens_ex(3,3)
-      Real(kind=wp), allocatable ::  ss_chit_tens_ex(:,:)    ! ss_chit_tens_ex(3,3)
-      Real(kind=wp), allocatable ::     chit_tens_tot(:,:,:) !    chit_tens_tot(nT+nTempMagn,3,3)
-      Real(kind=wp), allocatable :: smu_chit_tens_tot(:,:)   !smu_chit_tens_tot(3,3)
-      Real(kind=wp), allocatable ::  ss_chit_tens_tot(:,:)   ! ss_chit_tens_tot(3,3)
-      Real(kind=wp), allocatable ::   chit_theta_tens(:,:,:) !  chit_theta_tens(nT+nTempMagn,3,3)
-      Real(kind=wp), allocatable :: zstat_l(:)               !zstat_l( nneq)
-      Real(kind=wp), allocatable :: zstat_lr(:)              !zstat_lr(nneq)
-      Real(kind=wp), allocatable :: zstat_tot(:)             !zstat_tot(nT+nTempMagn)
-      Real(kind=wp), allocatable :: chit(:)                  !chit(nT+nTempMagn)
-      Real(kind=wp), allocatable :: chi_theta_1(:)           !chi_theta_1(nT+nTempMagn)
-      Real(kind=wp), allocatable :: XL(:,:,:)                !XL(nCenter,3,3)
-      Real(kind=wp), allocatable :: ZL(:)                    !ZL(nCenter)
-      Real(kind=wp), allocatable :: XR(:,:,:)                !XR(nCenter,3,3)
-      Real(kind=wp), allocatable :: ZR(:)                    !ZR(nCenter)
-      Real(kind=wp), allocatable :: SMUR(:,:,:)              !SMUR(nCenter,3,3)
-      Real(kind=wp), allocatable :: SMUL(:,:,:)              !SMUL(nCenter,3,3)
-      Real(kind=wp), allocatable :: SSR(:,:,:)               !SSR( nCenter,3,3)
-      Real(kind=wp), allocatable :: SSL(:,:,:)               !SSL( nCenter,3,3)
-      Real(kind=wp), allocatable :: wt(:), zt(:,:)           !wt(3),zt(3,3)
-      Real(kind=wp), allocatable :: A_dir(:,:)               !A_dir(3,3)
-      Real(kind=wp), allocatable :: A_inv(:,:)               !A_inv(3,3)
-      Real(kind=wp), allocatable :: unity(:,:)               !unity(3,3)
-      Real(kind=wp) :: xxm
-      Real(kind=wp) :: zstat_ex
-      Real(kind=wp) :: boltz_k,coeff_chi
-      Real(kind=wp) :: det
-      Real(kind=wp) :: dev
-      Real(kind=wp) :: rdummy !, gtens(3),maxes(3,3)
+      Real(kind=8), allocatable ::     chit_tens_l(:,:,:)
+!                                       chit_tens_l( nneq,3,3)
+      Real(kind=8), allocatable :: smu_chit_tens_l(:,:,:)
+!                                   smu_chit_tens_l( nneq,3,3)
+      Real(kind=8), allocatable ::  ss_chit_tens_l(:,:,:)
+!                                    ss_chit_tens_l( nneq,3,3)
+      Real(kind=8), allocatable ::     chit_tens_lr(:,:,:)
+!                                       chit_tens_lr(nneq,3,3)
+      Real(kind=8), allocatable :: smu_chit_tens_lr(:,:,:)
+!                                   smu_chit_tens_lr(nneq,3,3)
+      Real(kind=8), allocatable ::  ss_chit_tens_lr(:,:,:)
+!                                    ss_chit_tens_lr(nneq,3,3)
+      Real(kind=8), allocatable ::     chit_tens_ex(:,:)
+!                                       chit_tens_ex(3,3)
+      Real(kind=8), allocatable :: smu_chit_tens_ex(:,:)
+!                                   smu_chit_tens_ex(3,3)
+      Real(kind=8), allocatable ::  ss_chit_tens_ex(:,:)
+!                                     ss_chit_tens_ex(3,3)
+      Real(kind=8), allocatable ::     chit_tens_tot(:,:,:)
+!                                       chit_tens_tot(nT+nTempMagn,3,3)
+      Real(kind=8), allocatable :: smu_chit_tens_tot(:,:)
+!                                   smu_chit_tens_tot(3,3)
+      Real(kind=8), allocatable ::  ss_chit_tens_tot(:,:)
+!                                    ss_chit_tens_tot(3,3)
+      Real(kind=8), allocatable ::   chit_theta_tens(:,:,:)
+!                                     chit_theta_tens(nT+nTempMagn,3,3)
+      Real(kind=8), allocatable :: zstat_l(:)       !zstat_l( nneq)
+      Real(kind=8), allocatable :: zstat_lr(:)      !zstat_lr(nneq)
+      Real(kind=8), allocatable :: zstat_tot(:)
+!                                   zstat_tot(nT+nTempMagn)
+      Real(kind=8), allocatable :: chit(:)          !chit(nT+nTempMagn)
+      Real(kind=8), allocatable :: chi_theta_1(:)
+!                                   chi_theta_1(nT+nTempMagn)
+      Real(kind=8), allocatable :: XL(:,:,:)        !XL(nCenter,3,3)
+      Real(kind=8), allocatable :: ZL(:)            !ZL(nCenter)
+      Real(kind=8), allocatable :: XR(:,:,:)        !XR(nCenter,3,3)
+      Real(kind=8), allocatable :: ZR(:)            !ZR(nCenter)
+      Real(kind=8), allocatable :: SMUR(:,:,:)      !SMUR(nCenter,3,3)
+      Real(kind=8), allocatable :: SMUL(:,:,:)      !SMUL(nCenter,3,3)
+      Real(kind=8), allocatable :: SSR(:,:,:)       !SSR( nCenter,3,3)
+      Real(kind=8), allocatable :: SSL(:,:,:)       !SSL( nCenter,3,3)
+      Real(kind=8), allocatable :: wt(:), zt(:,:)   !wt(3),zt(3,3)
+      Real(kind=8), allocatable :: A_dir(:,:)               !A_dir(3,3)
+      Real(kind=8), allocatable :: A_inv(:,:)               !A_inv(3,3)
+      Real(kind=8), allocatable :: unity(:,:)               !unity(3,3)
+      Real(kind=8) :: xxm
+      Real(kind=8) :: zstat_ex
+      Real(kind=8) :: boltz_k,coeff_chi
+      Real(kind=8) :: det
+      Real(kind=8) :: dev, Fa, Fb, Fc, Fd, Fe, Ff
       external dev
-      Character(25) :: lbl_XT
       Integer       :: i,iT,jT,ic,jc
       Integer       :: j,n1,n2,im,jm
       Integer       :: isite,info,mem_local,RtoB
       Logical       :: dbg
+      Character(len=50) :: label
+      Real(wp), external :: dnrm2_
 
-
-      Call qEnter('PA_suscept')
 
       mem_local=0
       dbg=.false.
       RtoB=8
-      coeff_chi=0.1250486120_wp*3.0_wp         ! = n_a*mu_bohr^2/(k_boltz) in cm^3*k/mol
+!     = n_a*mu_bohr^2/(k_boltz) in cm^3*k/mol
+      coeff_chi=0.1250486120_wp*3.0_wp
       boltz_k=0.69503560_wp                    !   in cm^-1*k-1
 !-----------------------------------------------------------------------
       If(dbg) Then
@@ -143,15 +157,15 @@ c local variables
 !         maxes=0.0_wp
 !         Call atens(dipexch, exch, gtens, maxes, 2)
 !      change to pseudospin:
-!        Call zcopy_(  exch*exch,(0.0_wp,0.0_wp),0,Z,1)
-!        Call zcopy_(3*exch*exch,(0.0_wp,0.0_wp),0,dipexch2,1)
-!        Call zcopy_(3*exch*exch,(0.0_wp,0.0_wp),0, s_exch2,1)
+!        Call zcopy_(  exch*exch,[(0.0_wp,0.0_wp)],0,Z,1)
+!        Call zcopy_(3*exch*exch,[(0.0_wp,0.0_wp)],0,dipexch2,1)
+!        Call zcopy_(3*exch*exch,[(0.0_wp,0.0_wp)],0, s_exch2,1)
 !        Call zcopy_(3*exch*exch,dipexch,1,dipexch2,1)
 !        Call zcopy_(3*exch*exch, s_exch,1, s_exch2,1)
 !        Call pseudospin(dipexch2,exch,Z,3,1)
 
-!        Call zcopy_(3*exch*exch,(0.0_wp,0.0_wp),0,dipexch,1)
-!        Call zcopy_(3*exch*exch,(0.0_wp,0.0_wp),0,s_exch,1)
+!        Call zcopy_(3*exch*exch,[(0.0_wp,0.0_wp)],0,dipexch,1)
+!        Call zcopy_(3*exch*exch,[(0.0_wp,0.0_wp)],0,s_exch,1)
 !        Call UTMU( exch, exch, Z, dipexch2, dipexch )
 !        Call UTMU( exch, exch, Z, s_exch2, s_exch )
 
@@ -203,9 +217,9 @@ c local variables
       mem_local=mem_local+(3+2*3*3)*(nT+nTempMagn)*RtoB
 
 
-      Call dcopy_(3*3*(nT+nTempMagn),0.0_wp,0,chit_tens_tot,1)
-      Call dcopy_(3*3*(nT+nTempMagn),0.0_wp,0,chit_theta_tens,1)
-      Call dcopy_(    (nT+nTempMagn),0.0_wp,0,zstat_tot,1)
+      Call dcopy_(3*3*(nT+nTempMagn),[0.0_wp],0,chit_tens_tot,1)
+      Call dcopy_(3*3*(nT+nTempMagn),[0.0_wp],0,chit_theta_tens,1)
+      Call dcopy_(    (nT+nTempMagn),[0.0_wp],0,zstat_tot,1)
 
       If (zJ == 0.0_wp) Then
          If(dbg) Write(6,*) 'SUSC:  memory allocated (local):'
@@ -215,15 +229,15 @@ c local variables
 
          Do iT=1,nT+nTempMagn
             ! initialize temporary variables:
-            Call dcopy_(3*3,0.0_wp,0,chit_tens_ex,1)
-            Call dcopy_(nneq*3*3,0.0_wp,0,chit_tens_l,1)
-            Call dcopy_(nneq*3*3,0.0_wp,0,chit_tens_lr,1)
-            Call dcopy_(nneq,0.0_wp,0,zstat_l,1)
-            Call dcopy_(nneq,0.0_wp,0,zstat_lr,1)
-            Call dcopy_(nCenter,0.0_wp,0,ZR,1)
-            Call dcopy_(nCenter,0.0_wp,0,ZL,1)
-            Call dcopy_(3*3*nCenter,0.0_wp,0,XL,1)
-            Call dcopy_(3*3*nCenter,0.0_wp,0,XR,1)
+            Call dcopy_(3*3,[0.0_wp],0,chit_tens_ex,1)
+            Call dcopy_(nneq*3*3,[0.0_wp],0,chit_tens_l,1)
+            Call dcopy_(nneq*3*3,[0.0_wp],0,chit_tens_lr,1)
+            Call dcopy_(nneq,[0.0_wp],0,zstat_l,1)
+            Call dcopy_(nneq,[0.0_wp],0,zstat_lr,1)
+            Call dcopy_(nCenter,[0.0_wp],0,ZR,1)
+            Call dcopy_(nCenter,[0.0_wp],0,ZL,1)
+            Call dcopy_(3*3*nCenter,[0.0_wp],0,XL,1)
+            Call dcopy_(3*3*nCenter,[0.0_wp],0,XR,1)
             zstat_ex=0.0_wp
 c------------------------------------------------------------------------------------
 cc  local susceptibility= total susceptibility coming from individual magnetic centers
@@ -246,12 +260,19 @@ cc  local susceptibility= total susceptibility coming from individual magnetic c
             End Do ! i (nneq)
             Call chi( dipexch, dipexch, W, exch, T(iT), zstat_ex,
      &                chit_tens_ex )
-            Call Add_Info('XT:  chit_tens_l'   ,chit_tens_l ,9*nneq,6)
-            Call Add_Info('XT:  chit_tens_lr'  ,chit_tens_lr,9*nneq,6)
-            Call Add_Info('XT:  chit_tens_exch',chit_tens_ex,9     ,6)
-            Call Add_Info('XT:  zstat_exch'    ,zstat_ex    ,1     ,6)
-            Call Add_Info('XT:  zstat_l'       ,zstat_l     ,  nneq,6)
-            Call Add_Info('XT:  zstat_lr'      ,zstat_lr    ,  nneq,6)
+
+            Fa=0.0_wp; Fb=0.0_wp; Fc=0.0_wp; Fd=0.0_wp; Fe=0.0_wp;
+            Fa=dnrm2_(9*nneq,chit_tens_l ,1)
+            Fb=dnrm2_(9*nneq,chit_tens_lr,1)
+            Fc=dnrm2_(9     ,chit_tens_ex,1)
+            Fd=dnrm2_(nneq  ,zstat_l     ,1)
+            Fe=dnrm2_(nneq  ,zstat_lr    ,1)
+            Call Add_Info('XT:  chit_tens_l'   ,[Fa],1,6)
+            Call Add_Info('XT:  chit_tens_lr'  ,[Fb],1,6)
+            Call Add_Info('XT:  chit_tens_exch',[Fc],1,6)
+            Call Add_Info('XT:  zstat_exch'    ,[zstat_ex],1,6)
+            Call Add_Info('XT:  zstat_l'       ,[Fd],1,6)
+            Call Add_Info('XT:  zstat_lr'      ,[Fe],1,6)
 c expand the basis and rotate local tensors to the general
 c coordinate system:
             isite=0
@@ -278,8 +299,12 @@ c coordinate system:
                   End Do
                End Do
             End Do
-            Call Add_Info('XT:  XL',XL,3*3*nCenter,6)
-            Call Add_Info('XT:  XR',XR,3*3*nCenter,6)
+
+            Fa=0.0_wp; Fb=0.0_wp;
+            Fa=dnrm2_(9*nCenter,XL,1)
+            Fb=dnrm2_(9*nCenter,XR,1)
+            Call Add_Info('XT:  XL',[Fa],1,6)
+            Call Add_Info('XT:  XR',[Fb],1,6)
 c save some data:
             If(it.le.nTempMagn) Then
                Call dscal_( 3*3*nCenter, coeff_chi, XR, 1 )
@@ -293,9 +318,12 @@ c save some data:
      &                    XL, ZL, XR, ZR, iopt,
      &                    chit_tens_tot(it,1:3,1:3), zstat_tot(it) )
 
-            Call Add_Info('XT:  ZL',ZL,nCenter,6)
-            Call Add_Info('XT:  ZR',ZR,nCenter,6)
-            Call Add_Info('XT: ZEx',zstat_ex,1,6)
+            Fa=0.0_wp; Fb=0.0_wp;
+            Fa=dnrm2_(nCenter,ZL,1)
+            Fb=dnrm2_(nCenter,ZR,1)
+            Call Add_Info('XT:  ZL',[Fa],1,6)
+            Call Add_Info('XT:  ZR',[Fb],1,6)
+            Call Add_Info('XT: ZEx',[zstat_ex],1,6)
 
             chit(it)=coeff_chi * ( chit_tens_tot(iT,1,1)
      &                            +chit_tens_tot(iT,2,2)
@@ -307,16 +335,14 @@ c save some data:
                chit_theta(iT)=1.0e-20_wp
             End If
             chi_theta_1(iT)=T(iT)/chit(iT)
-
             ! add some verification data:
-            Write(lbl_XT,'(A,i4)') 'XT: T',iT
-            Call Add_Info(lbl_XT,T(iT),1,6)
-!            Write(lbl_XT,'(A,i4)') 'XT: chit_tens_tot',iT
-!            Call Add_Info(lbl_XT,chit_tens_tot(iT,:,:),9,6)
-            Write(lbl_XT,'(A,i4)') 'XT: chit_theta_tens',iT
-            Call Add_Info(lbl_XT,chit_theta_tens(iT,:,:),9,6)
+            Fa=0.0_wp
+            Fa=dnrm2_(9,chit_theta_tens(iT,1:3,1:3),1)
+            Call Add_Info('XT: chit_theta_tens',[Fa],1,6)
          End Do ! iT
-
+         Fb=0.0_wp;
+         Fb=dnrm2_(nT+nTempMagn,T,1)
+         Call Add_Info('XT: T',[Fb],1,6)
 
       Else ! i.e. when (zJ .ne. 0)
 
@@ -346,30 +372,30 @@ c save some data:
 
          Do iT=1,nT+nTempMagn
             ! initialization:
-            Call dcopy_(     3*3   ,0.0_wp,0,chit_tens_ex,1)
-            Call dcopy_(     3*3   ,0.0_wp,0,smu_chit_tens_ex,1)
-            Call dcopy_(     3*3   ,0.0_wp,0,ss_chit_tens_ex,1)
-            Call dcopy_(nneq*3*3   ,0.0_wp,0,chit_tens_l,1)
-            Call dcopy_(nneq*3*3   ,0.0_wp,0,smu_chit_tens_l,1)
-            Call dcopy_(nneq*3*3   ,0.0_wp,0,ss_chit_tens_l,1)
-            Call dcopy_(nneq*3*3   ,0.0_wp,0,chit_tens_lr,1)
-            Call dcopy_(nneq*3*3   ,0.0_wp,0,smu_chit_tens_lr,1)
-            Call dcopy_(nneq*3*3   ,0.0_wp,0,ss_chit_tens_lr,1)
-            Call dcopy_(     3*3   ,0.0_wp,0,smu_chit_tens_tot,1)
-            Call dcopy_(     3*3   ,0.0_wp,0,ss_chit_tens_tot,1)
-            Call dcopy_(nneq       ,0.0_wp,0,zstat_l,1)
-            Call dcopy_(nneq       ,0.0_wp,0,zstat_lr,1)
-            Call dcopy_(nCenter    ,0.0_wp,0,ZR,1)
-            Call dcopy_(nCenter    ,0.0_wp,0,ZL,1)
-            Call dcopy_(nCenter*3*3,0.0_wp,0,XL,1)
-            Call dcopy_(nCenter*3*3,0.0_wp,0,XR,1)
-            Call dcopy_(nCenter*3*3,0.0_wp,0,SMUR,1)
-            Call dcopy_(nCenter*3*3,0.0_wp,0,SMUL,1)
-            Call dcopy_(nCenter*3*3,0.0_wp,0,SSR,1)
-            Call dcopy_(nCenter*3*3,0.0_wp,0,SSL,1)
-            Call dcopy_(        3*3,0.0_wp,0,A_dir,1)
-            Call dcopy_(        3*3,0.0_wp,0,A_inv,1)
-            Call dcopy_(        3*3,0.0_wp,0,Unity,1)
+            Call dcopy_(     3*3   ,[0.0_wp],0,chit_tens_ex,1)
+            Call dcopy_(     3*3   ,[0.0_wp],0,smu_chit_tens_ex,1)
+            Call dcopy_(     3*3   ,[0.0_wp],0,ss_chit_tens_ex,1)
+            Call dcopy_(nneq*3*3   ,[0.0_wp],0,chit_tens_l,1)
+            Call dcopy_(nneq*3*3   ,[0.0_wp],0,smu_chit_tens_l,1)
+            Call dcopy_(nneq*3*3   ,[0.0_wp],0,ss_chit_tens_l,1)
+            Call dcopy_(nneq*3*3   ,[0.0_wp],0,chit_tens_lr,1)
+            Call dcopy_(nneq*3*3   ,[0.0_wp],0,smu_chit_tens_lr,1)
+            Call dcopy_(nneq*3*3   ,[0.0_wp],0,ss_chit_tens_lr,1)
+            Call dcopy_(     3*3   ,[0.0_wp],0,smu_chit_tens_tot,1)
+            Call dcopy_(     3*3   ,[0.0_wp],0,ss_chit_tens_tot,1)
+            Call dcopy_(nneq       ,[0.0_wp],0,zstat_l,1)
+            Call dcopy_(nneq       ,[0.0_wp],0,zstat_lr,1)
+            Call dcopy_(nCenter    ,[0.0_wp],0,ZR,1)
+            Call dcopy_(nCenter    ,[0.0_wp],0,ZL,1)
+            Call dcopy_(nCenter*3*3,[0.0_wp],0,XL,1)
+            Call dcopy_(nCenter*3*3,[0.0_wp],0,XR,1)
+            Call dcopy_(nCenter*3*3,[0.0_wp],0,SMUR,1)
+            Call dcopy_(nCenter*3*3,[0.0_wp],0,SMUL,1)
+            Call dcopy_(nCenter*3*3,[0.0_wp],0,SSR,1)
+            Call dcopy_(nCenter*3*3,[0.0_wp],0,SSL,1)
+            Call dcopy_(        3*3,[0.0_wp],0,A_dir,1)
+            Call dcopy_(        3*3,[0.0_wp],0,A_inv,1)
+            Call dcopy_(        3*3,[0.0_wp],0,Unity,1)
             zstat_ex=0.0_wp
             det=0.0_wp
             Do ic=1,3
@@ -416,23 +442,6 @@ c save some data:
      &                 smu_chit_tens_ex )
             Call chi(  s_exch,  s_exch, W, exch, T(iT), zstat_ex,
      &                  ss_chit_tens_ex )
-
-            ! add verification data:
-!            Call Add_Info('XT:  chit_tens_l' ,chit_tens_l     ,9*nneq,6)
-!            Call Add_Info('XT:  chit_tens_lr',chit_tens_lr    ,9*nneq,6)
-!            Call Add_Info('XT:  chit_tens_ex',chit_tens_ex    ,9     ,6)
-!            Call Add_Info('XT:  smu_chit_tens_l' ,smu_chit_tens_l ,
-!     &                                                         9*nneq,6)
-!            Call Add_Info('XT:  smu_chit_tens_lr',smu_chit_tens_lr,
-!     &                                                         9*nneq,6)
-!            Call Add_Info('XT:  smu_chit_tens_ex',smu_chit_tens_ex,9 ,6)
-!            Call Add_Info('XT:  ss_chit_tens_l',ss_chit_tens_l,9*nneq,6)
-!            Call Add_Info('XT:  ss_chit_tens_lr',ss_chit_tens_lr,
-!     &                                                         9*nneq,6)
-!            Call Add_Info('XT:  ss_chit_tens_ex' ,ss_chit_tens_ex ,9 ,6)
-!            Call Add_Info('XT:  zstat_l'         ,zstat_l       ,nneq,6)
-!            Call Add_Info('XT:  zstat_lr'        ,zstat_lr      ,nneq,6)
-!            Call Add_Info('XT:  zstat_ex'        ,zstat_ex      ,1   ,6)
 c expand the basis and rotate local tensors to the general
 c coordinate system:
             isite=0
@@ -441,12 +450,12 @@ c coordinate system:
                isite=isite+1
                ZL(isite)=zstat_l(i)
                ZR(isite)=zstat_lr(i)
-               ! use R_lg matrices, which have arbitrary determinant:  +1  or -1;
-               ! reason:  X_ab is a bi-dimensional tensor.
-               !          We need to rotate twice ==> the sign of R does not
-               !          matter (+1 * +1) = (-1 * -1)
-               !  >> R_rot matrices have determinant strict +1, and are used to
-               !          rotate vectors
+!              use R_lg matrices, which have arbitrary determinant:  +1  or -1;
+!              reason:  X_ab is a bi-dimensional tensor.
+!                       We need to rotate twice ==> the sign of R does not
+!                       matter (+1 * +1) = (-1 * -1)
+!               >> R_rot matrices have determinant strict +1, and are used to
+!                       rotate vectors
                   Do ic=1,3
                      Do jc=1,3
                         Do n1=1,3
@@ -485,12 +494,21 @@ c coordinate system:
             End Do
 
             ! add verification data:
-!            Call Add_Info('XT:    XR',XR  ,9*nCenter,6)
-!            Call Add_Info('XT:    XL',XL  ,9*nCenter,6)
-!            Call Add_Info('XT:  SMUL',SMUL,9*nCenter,6)
-!            Call Add_Info('XT:  SMUR',SMUR,9*nCenter,6)
-!            Call Add_Info('XT:   SSL',SSL ,9*nCenter,6)
-!            Call Add_Info('XT:   SSR',SSR ,9*nCenter,6)
+            Fa=0.0_wp; Fb=0.0_wp; Fc=0.0_wp; Fd=0.0_wp; Fe=0.0_wp;
+            Ff=0.0_wp;
+            Fa=dnrm2_(9*nCenter,XR  ,1)
+            Fb=dnrm2_(9*nCenter,XL  ,1)
+            Fc=dnrm2_(9*nCenter,SMUL,1)
+            Fd=dnrm2_(9*nCenter,SMUR,1)
+            Fe=dnrm2_(9*nCenter,SSL,1)
+            Ff=dnrm2_(9*nCenter,SSR,1)
+            Call Add_Info('XT:    XR',[Fa],1,6)
+            Call Add_Info('XT:    XL',[Fb],1,6)
+            Call Add_Info('XT:  SMUL',[Fc],1,6)
+            Call Add_Info('XT:  SMUR',[Fd],1,6)
+            Call Add_Info('XT:   SSL',[Fe],1,6)
+            Call Add_Info('XT:   SSR',[Ff],1,6)
+
 c save some data:
             If(iT.le.nTempMagn) Then
                Call dscal_( 3*3*nCenter, coeff_chi, XR, 1 )
@@ -551,17 +569,21 @@ c
             chi_theta_1(iT)=t(iT)/chit_theta(iT)
 
             ! add some verification data:
-            Write(lbl_XT,'(A,i4)') 'XT: T',iT
-            Call Add_Info(lbl_XT,T(iT),1,6)
-!            Write(lbl_XT,'(A,i4)') 'XT: chit_tens_tot',iT
-!            Call Add_Info(lbl_XT,chit_tens_tot(iT,:,:),9,6)
-            Write(lbl_XT,'(A,i4)') 'XT: chit_theta_tens',iT
-            Call Add_Info(lbl_XT,chit_theta_tens(iT,:,:),9,6)
-!            Write(lbl_XT,'(A,i4)') 'XT: smu_chit_tens_tot',iT
-!            Call Add_Info(lbl_XT,smu_chit_tens_tot,9,6)
-!            Write(lbl_XT,'(A,i4)') 'XT: ss_chit_tens_tot',iT
-!            Call Add_Info(lbl_XT,ss_chit_tens_tot,9,6)
+            Fa=0.0_wp; Fb=0.0_wp; Fc=0.0_wp; Fd=0.0_wp; Fe=0.0_wp;
+            Ff=0.0_wp;
+            Fa=dnrm2_(9,    chit_tens_tot(it,1:3,1:3),1)
+            Fb=dnrm2_(9,  chit_theta_tens(it,1:3,1:3),1)
+            Fc=dnrm2_(9,smu_chit_tens_tot(1:3,1:3),1)
+            Fd=dnrm2_(9, ss_chit_tens_tot(1:3,1:3),1)
+
+            Call Add_Info('XT: chit_tens_tot'    ,[Fa],1,6)
+            Call Add_Info('XT: chit_theta_tens'  ,[Fb],1,6)
+            Call Add_Info('XT: smu_chit_tens_tot',[Fc],1,6)
+            Call Add_Info('XT:  ss_chit_tens_tot',[Fd],1,6)
          End Do ! it
+         Fb=0.0_wp;
+         Fb=dnrm2_(nT+nTempMagn,T,1)
+         Call Add_Info('XT: T',[Fb],1,6)
 
          Call mma_deallocate(smu_chit_tens_l)
          Call mma_deallocate(smu_chit_tens_lr)
@@ -617,38 +639,38 @@ c printing the results
       End Do
       Write(6,'(A)') '-----|----------------------------------------'//
      & '------------------------------------------|'
-
-
-      Call Add_Info('CHIT'        ,chiT       ,(nT+nTempMagn),6)
-      Call Add_Info('CHIT_THETA'  ,chiT_theta ,(nT+nTempMagn),6)
-      Call Add_Info('ZSTAT_TOT'   ,zstat_tot  ,(nT+nTempMagn),6)
+      Fb=0.0_wp;
+      Fb=dnrm2_(nT+nTempMagn,chiT,1)
+      Call Add_Info('XT: T',[Fb],1,6)
+      Fa=0.0_wp;
+      Fa=dnrm2_(nT+nTempMagn,chiT_theta,1)
+      Call Add_Info('XT: CHIT_THETA',[Fa],1,6)
+      Fa=0.0_wp;
+      Fa=dnrm2_(nT+nTempMagn,zstat_tot,1)
+      Call Add_Info('XT: CHIT_THETA',[Fa],1,6)
 c  calcualtion of the standard deviation:
       If (tinput) Then
          Write(6,'(a,5x, f20.14)') 'ST.DEV.CHIT:',
-     &        dev( (nT-nTempMagn), chit_theta( (1+nTempMagn):(nT) ),
-     &                                  XTexp( (1+nTempMagn):(nT) )  )
+     &        dev( nT, chit_theta( (1+nTempMagn):(nT+nTempMagn) ),
+     &                      XTexp( (1+nTempMagn):(nT+nTempMagn) )  )
       End If !tinput
 
 
 !-------------------------  PLOTs -------------------------------------!
-      If ( doplot ) Then
-         If ( tinput ) Then
-
-            Call plot_XT( nT,        T( (1+nTempMagn):(nT) ),
-     &                      chit_theta( (1+nTempMagn):(nT) ),
-     &                           XTexp( (1+nTempMagn):(nT) ),
-     &                    zJ )
-
-         Else
-
-            Call plot_XT( nT,        T( (1+nTempMagn):(nT) ),
-     &                      chit_theta( (1+nTempMagn):(nT) ),
-     &                          rdummy,
-     &                    zJ )
-
-         End If
-      End If
-!------------------------- END PLOTs -------------------------------------!
+      WRITE(label,'(A)') "no_field"
+      IF ( DoPlot ) THEN
+         IF ( tinput ) THEN
+            Call plot_XT_with_Exp(label, nT,
+     &                          T((1+nTempMagn):(nT+nTempMagn) ),
+     &                 chit_theta((1+nTempMagn):(nT+nTempMagn) ),
+     &                      XTexp((1+nTempMagn):(nT+nTempMagn) ), zJ )
+         ELSE
+            Call plot_XT_no_Exp( label, nT,
+     &                          T((1+nTempMagn):(nT+nTempMagn) ),
+     &                 chit_theta((1+nTempMagn):(nT+nTempMagn) ), zJ )
+         END IF
+      END IF
+! ------------------------- END PLOTs -------------------------------------!
 
 
 
@@ -668,8 +690,8 @@ c print out the main VAN VLECK SUSCEPTIBILITY TENSOR, its main values and main a
         Do iT=1,nT
           jT=iT+nTempMagn
           info=0
-          Call dcopy_(  3,0.0_wp,0,wt,1)
-          Call dcopy_(3*3,0.0_wp,0,zt,1)
+          Call dcopy_(  3,[0.0_wp],0,wt,1)
+          Call dcopy_(3*3,[0.0_wp],0,zt,1)
           Call DIAG_R2( chit_tens_tot(jT,:,:) ,3,info,wt,zt)
           Write(6,'(A)') '------------|---|'//
      &                   '------- x --------- y --------- z ---|'//
@@ -705,8 +727,8 @@ c print out the main VAN VLECK SUSCEPTIBILITY TENSOR, its main values and main a
         Do iT=1,nT
           jT=iT+nTempMagn
           info=0
-          Call dcopy_(  3,0.0_wp,0,wt,1)
-          Call dcopy_(3*3,0.0_wp,0,zt,1)
+          Call dcopy_(  3,[0.0_wp],0,wt,1)
+          Call dcopy_(3*3,[0.0_wp],0,zt,1)
           Call DIAG_R2( chit_theta_tens(jT,:,:) ,3,info,wt,zt)
           Write(6,'(A)') '------------|---|'//
      &                   '------- x --------- y --------- z ---|'//
@@ -730,7 +752,6 @@ c print out the main VAN VLECK SUSCEPTIBILITY TENSOR, its main values and main a
       End If
       Call mma_deallocate(wt)
       Call mma_deallocate(zt)
-
 
       Call mma_deallocate(chit_tens_tot)
       Call mma_deallocate(chit_theta_tens)
@@ -756,7 +777,6 @@ c-------------------------------------------------------------------------------
      &                  'tensor were not calculated.'
       Write(6,*)
   190 continue
-      Call qExit('PA_suscept')
       Return
       End
 

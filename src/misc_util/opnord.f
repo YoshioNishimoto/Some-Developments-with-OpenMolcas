@@ -46,11 +46,10 @@
 *
 
 #include "FileIDs.fh"
-#include "TwoRc.fh"
-#include "TwoFlags.fh"
 #include "Molcas.fh"
 #include "TwoDat.fh"
 *
+      Parameter (NaN = -1)
       Character*(*) Name
       Character*8   FnTwo
       Logical Exist,NewToc
@@ -62,7 +61,6 @@
 **---------------------------------------------------------------------*
 *     Start procedure:                                                *
 *---------------------------------------------------------------------*
-*      If ( Query ) Call qEnter(TheName)
       rc=rc0000
 *---------------------------------------------------------------------*
 *     Check the file status                                           *
@@ -101,7 +99,7 @@
 *----------------------------------------------------------------------*
       Else If( NewToc )  Then
          Call DaName_MF(LuTwo,FnTwo)
-         Call iCopy(lTocTwo,NaN,0,TocTwo,1)
+         Call iCopy(lTocTwo,[NaN],0,TocTwo,1)
          TocTwo(isId)=IDtwo
          TocTwo(isVer)=VNtwo
          TocTwo(isForm)=0
@@ -129,13 +127,11 @@
 *---- Call to GetOrd to fill nBatch etc.
 *
       If (Option.eq.0) Then
-         rc_Dummy=-1
          Call GetOrd(rd_Dummy,lDummy,iDummy,nDummy1,nDummy2)
       End If
 *
 *----------------------------------------------------------------------*
 *     normal end                                                       *
 *----------------------------------------------------------------------*
-*      If ( Query ) Call qExit(TheName)
       Return
       End

@@ -9,6 +9,7 @@
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
       SUBROUTINE NATORB_RASSI(DMAT,TDMZZ,VNAT,OCC,EIGVEC)
+      use rassi_aux, only : iDisk_TDM
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "SysDef.fh"
 #include "Molcas.fh"
@@ -24,8 +25,8 @@
 
       EXTERNAL ISFREEUNIT
       EXTERNAL DDOT_
+      DIMENSION Dummy(1),iDummy(7,8)
 
-      Call qEnter('NATORB')
 C ALLOCATE WORKSPACE AREAS.
       NSZZ=NBTRI
       NVEC=NBSQ
@@ -56,8 +57,8 @@ C DIAGONALIZE EACH SYMMETRY BLOCK OF THE OVERLAP MATRIX.
       LE=LEIG
       DO 100 ISYM=1,NSYM
         NB=NBASF(ISYM)
-        CALL DCOPY_(NB**2,0.0D0,0,WORK(LV),1)
-        CALL DCOPY_(NB,1.0D0,0,WORK(LV),NB+1)
+        CALL DCOPY_(NB**2,[0.0D0],0,WORK(LV),1)
+        CALL DCOPY_(NB,[1.0D0],0,WORK(LV),NB+1)
         CALL JACOB(WORK(LS),WORK(LV),NB,NB)
 C SCALE EACH VECTOR TO OBTAIN AN ORTHONORMAL BASIS.
         LS1=LS
@@ -81,7 +82,7 @@ C SCALE EACH VECTOR TO OBTAIN AN ORTHONORMAL BASIS.
 C VERY LONG LOOP OVER EIGENSTATES KEIG.
       DO KEIG=1,NRNATO
 
-        CALL DCOPY_(NBSQ,0.0D0,0,DMAT,1)
+        CALL DCOPY_(NBSQ,[0.0D0],0,DMAT,1)
 C DOUBLE LOOP OVER RASSCF WAVE FUNCTIONS, TRIANGULAR.
         DO I=1,NSTATE
           DO J=1,I
@@ -91,10 +92,16 @@ C HOWEVER, WE ARE LOOPING TRIANGULARLY AND WILL RESTORE SYMMETRY BY
 C ADDING TRANSPOSE AFTER DMAT HAS BEEN FINISHED, SO I=J IS SPECIAL CASE:
             X=EIGVEC(I,KEIG)*EIGVEC(J,KEIG)
             IF(ABS(X).GT.1.0D-12) THEN
-              IDISK=iWork(lIDTDM+(I-1)*NSTATE+J-1)
-              CALL DDAFILE(LUTDM,2,TDMZZ,NTDMZZ,IDISK)
-              IF(I.EQ.J) X=0.5D00*X
-              CALL DAXPY_(NTDMZZ,X,TDMZZ,1,DMAT,1)
+              iEmpty=iDisk_TDM(I,J,2)
+              If (IAND(iEmpty,1).ne.0) Then
+                 IDISK=iDisk_TDM(I,J,1)
+                 iOpt=2
+                 iGo=1
+                 CALL dens2file(TDMZZ,TDMZZ,TDMZZ,nTDMZZ,
+     &                          LUTDM,IDISK,iEmpty,iOpt,iGo,I,J)
+                 IF(I.EQ.J) X=0.5D00*X
+                 CALL DAXPY_(NTDMZZ,X,TDMZZ,1,DMAT,1)
+              End If
             END IF
           END DO
         END DO
@@ -135,8 +142,8 @@ C SYMMETRIZE THIS BLOCK INTO SCRATCH AREA, TRIANGULAR STORAGE:
             END DO
           END DO
 C DIAGONALIZE THE DENSITY MATRIX BLOCK:
-          CALL DCOPY_(NVEC2,0.0D0,0,WORK(LVEC2),1)
-          CALL DCOPY_(NB,1.0D0,0,WORK(LVEC2),NB+1)
+          CALL DCOPY_(NVEC2,[0.0D0],0,WORK(LVEC2),1)
+          CALL DCOPY_(NB,[1.0D0],0,WORK(LVEC2),NB+1)
           CALL JACOB(WORK(LSCR),WORK(LVEC2),NB,NB)
           CALL JACORD(WORK(LSCR),WORK(LVEC2),NB,NB)
 C JACORD ORDERS BY INCREASING EIGENVALUE. REVERSE THIS ORDER.
@@ -179,14 +186,13 @@ C SIORB.1, SIORB.2, ...
           ENDIF
           ISTOCC=ISTOCC+NB
         END DO
-        IFOCC=1
         LuxxVec=50
         LuxxVec=isfreeunit(LuxxVec)
         CALL WRVEC(FNAME,LUXXVEC,'CO',NSYM,NBASF,NBASF,
      &     VNAT, OCC, Dummy, iDummy,
      &     '* NATURAL ORBITALS FROM RASSI EIGENSTATE NR '//TRIM(KNUM) )
-        SUMOCC=DDOT_(NBASF,OCC,1,OCC,1)
-        CALL ADD_INFO("NATORB",SUMOCC,1,5)
+        SUMOCC=DDOT_(SUM(NBASF),OCC,1,OCC,1)
+        CALL ADD_INFO("NATORB",[SUMOCC],1,5)
 
 C End of very long loop over eigenstates KEIG.
       END DO
@@ -196,6 +202,5 @@ C End of very long loop over eigenstates KEIG.
       CALL GETMEM('VEC2  ','FREE','REAL',LVEC2,NVEC2)
       CALL GETMEM('SCR   ','FREE','REAL',LSCR,NSCR)
       CALL GETMEM('EIG   ','FREE','REAL',LEIG,NEIG)
-      Call qExit('NATORB')
       RETURN
       END

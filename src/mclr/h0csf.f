@@ -73,7 +73,7 @@
 *   SCR    : Scratch array of length ????
 *   NCONF : Number of configurations of symmetry IREFSM
 *   IPWAY : Defines way of choosing Primary space
-*    = 1  : use the first configurations (untill atmost
+*    = 1  : use the first configurations (until at most
 *           MXPDIM CSFs have been included )
 *   NP1CNF : Number of primary configurations obtained in P1(output)
 *   NP1CSF : Number of primary CSFs obtained in P1 (OUTPUT)
@@ -109,6 +109,15 @@
 #include "SysDef.fh"
 #include "spinfo_mclr.fh"
 *
+      CALL H0CSF_INTERNAL(SCR,DIAGCN)
+*
+*     This is to allow type punning without an explicit interface
+      CONTAINS
+      SUBROUTINE H0CSF_INTERNAL(SCR,DIAGCN)
+      USE ISO_C_BINDING
+      REAL*8, TARGET :: SCR(*),DIAGCN(*)
+      INTEGER, POINTER :: iPTR(:)
+*
 ** 1 : Obtain primary subspace
 *
       NP1CSF = 0
@@ -133,7 +142,6 @@
 * Just use the first CSFs as subspace
 *
         ICNF = 0
-        ICSF = 0
         DO 100 ITYP = 1, NTYP
           NJCNF = NCNATS(ITYP,IREFSM)
           NIRREP = NCPCNT(ITYP)
@@ -247,8 +255,10 @@
             DIAVAL = DIAGCN(     IPQCNF(IICNF) )
             IF(ABS(DIAVAL-XMIN) .LE. 1.0D-10) THEN
               NPQCNF = NPQCNF -1
-              CALL GETCNF(SCR(KLCONF),ITYP,IPQCNF(IICNF),
+              CALL C_F_POINTER(C_LOC(SCR(KLCONF)),iPTR,[1])
+              CALL GETCNF(iPTR,ITYP,IPQCNF(IICNF),
      &        ICONF,IREFSM,NEL,NTEST)
+              NULLIFY(iPTR)
               NPQCSF = NPQCSF - NCPCNT(ITYP)
               GOTO 600
             END IF
@@ -277,8 +287,10 @@
           IDGCSF = 0
           DO 780 IDGCNF = 1, IDGVL
             ICNF = ICNF + 1
-              CALL GETCNF(SCR(KLCONF),ITYP,IPQCNF(ICNF),
+              CALL C_F_POINTER(C_LOC(SCR(KLCONF)),iPTR,[1])
+              CALL GETCNF(iPTR,ITYP,IPQCNF(ICNF),
      &        ICONF,IREFSM,NEL,NTEST)
+              NULLIFY(iPTR)
               IDGCSF = IDGCSF + NCPCNT(ITYP)
   780    CONTINUE
          IF(NP1CSF+IDGCSF .LE. MXP1DM. AND. NP2CSF+NQCSF.EQ.0) THEN
@@ -323,10 +335,10 @@
 *. Pointers in H0
       KLPHP  = 1
       KLPHQ = KLPHP + NPCSF*(NPCSF+1)/2
-      KLQHQ = KLPHQ + NP1CSF*NQCSF
 *
 *.PHP matrix
 *
+*     CALL C_F_POINTER(C_LOC(DIAGCN(1)),iPTR,[1])
       CALL CNHCNM(H0(KLPHP),1,IPQCNF,NPCNF,IPQCNF,NPCNF,NPCSF,NPCSF,
      &     DIAGCN,ICONF,NEL,IREFSM,NAEL,NBEL,NINOB,NACTOB,ECORE,
      &     IPRODT,DTOC,INTSPC,ICOMBI,PSSIGN,NTEST)
@@ -336,6 +348,9 @@
       CALL CNHCNM(H0(KLPHQ),0,IPQCNF,NP1CNF,IPQCNF(1+NPCNF),NQCNF,
      &   NP1CSF,NQCSF,DIAGCN,ICONF,NEL,IREFSM,NAEL,NBEL,NINOB,NACTOB,
      &   ECORE,IPRODT,DTOC,INTSPC,ICOMBI,PSSIGN,NTEST)
+*     NULLIFY(iPTR)
 *
       RETURN
+      END SUBROUTINE H0CSF_INTERNAL
+*
       END

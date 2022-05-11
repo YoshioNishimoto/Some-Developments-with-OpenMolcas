@@ -8,7 +8,8 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine hess_svb1_cvb(orbs,
      >   civecp,civbs,civb,citmp,
@@ -20,7 +21,6 @@
      >   hessinp,hessout,owrk2,owrk3)
       implicit real*8 (a-h,o-z)
       logical orbopt2,strucopt2
-#include "ext_cvb.fh"
 #include "main_cvb.fh"
 #include "optze_cvb.fh"
 #include "files_cvb.fh"
@@ -28,11 +28,12 @@
 
 #include "frag_cvb.fh"
 #include "fx_cvb.fh"
-#include "malloc_cvb.fh"
+#include "WrkSpc.fh"
       dimension orbs(norb,norb)
       dimension civecp(ndet),civbs(ndet),civb(ndet),citmp(ndet)
       dimension orbinv(norb,norb),sorbs(norb,norb),owrk(norb,norb)
       dimension gjorb(*),gjorb2(*),gjorb3(*)
+      dimension owrk2(*),owrk3(*)
       dimension dvbdet(ndetvb)
       dimension grad1(npr),grad2(npr)
       dimension hessorb(nprorb,nprorb)
@@ -106,12 +107,12 @@ c  2nd-order term for structure coefficients
           call str2vbf_cvb(hessinp(1+nprorb),dvbdet)
           i1 = mstackr_cvb(ndetvb)
           i2 = mstackr_cvb(nvb)
-          call ci2ordr_cvb(civbs,dvbdet,w(i1))
-          call vb2strg_cvb(w(i1),w(i2))
-          call daxpy_(nvb,oaa2,w(i2),1,hessout(1+nprorb),1)
-          call ci2ordr_cvb(civecp,dvbdet,w(i1))
-          call vb2strg_cvb(w(i1),w(i2))
-          call daxpy_(nvb,aa1,w(i2),1,hessout(1+nprorb),1)
+          call ci2ordr_cvb(civbs,dvbdet,work(i1))
+          call vb2strg_cvb(work(i1),work(i2))
+          call daxpy_(nvb,oaa2,work(i2),1,hessout(1+nprorb),1)
+          call ci2ordr_cvb(civecp,dvbdet,work(i1))
+          call vb2strg_cvb(work(i1),work(i2))
+          call daxpy_(nvb,aa1,work(i2),1,hessout(1+nprorb),1)
           call mfreer_cvb(i1)
         endif
       elseif(proj.or.projcas)then
@@ -125,7 +126,7 @@ c  Structure coeff. <-> all
 
       if(orbopt2.and.nort.gt.0)then
 c  Non-linear correction for orthogonality constraints :
-        call fmove(sorbs,owrk,norb*norb)
+        call fmove_cvb(sorbs,owrk,norb*norb)
         call mxinv_cvb(owrk,norb)
         do 100 iort=1,nort
         iorb=iorts(1,iort)
@@ -138,8 +139,9 @@ c  Non-linear correction for orthogonality constraints :
         if(korb.gt.jorb)kj=kj-1
         if(korb.ne.iorb)corr1=corr1+owrk(jorb,korb)*
      >    (aa1*grad2(ki)+.5d0*oaa2*grad1(ki))
-200     if(korb.ne.jorb)corr1=corr1+owrk(iorb,korb)*
+        if(korb.ne.jorb)corr1=corr1+owrk(iorb,korb)*
      >    (aa1*grad2(kj)+.5d0*oaa2*grad1(kj))
+200     continue
         corr1=-.5d0*corr1
         do 300 korb=1,norb
         if(korb.eq.iorb)goto 300

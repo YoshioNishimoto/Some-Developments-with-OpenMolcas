@@ -17,10 +17,10 @@
 * SWEDEN                                     *
 *--------------------------------------------*
       SUBROUTINE NEWFOCK(FIFA)
+      use output_caspt2, only:iPrGlb,usual
       IMPLICIT NONE
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
       REAL*8 FIFA(NFIFA)
@@ -176,7 +176,7 @@ C Use also temporary DD, single symmetry blocks of D*(2I-D):
         END DO
 
 C Calculation of the exchange matrix, A(pq)=sum over rs of (ps,rq)*DD(rs)
-        CALL DCOPY_(NOSQT,0.0D0,0,WORK(LXMAT),1)
+        CALL DCOPY_(NOSQT,[0.0D0],0,WORK(LXMAT),1)
         NOSQES=0
         DO ISYMPQ=1,NSYM
           NI=NISH(ISYMPQ)
@@ -334,10 +334,10 @@ C and diagonalize it. The DDTR copy at LSC:
             CALL DCOPY_(NA3,WORK(LDDTR+NATRES),1,WORK(LSC),1)
 C A unit matrix at LEV1, to become eigenvectors:
             LEV1=LSC+NA2
-            CALL DCOPY_(NA2,0.0D0,0,WORK(LEV1),1)
-            CALL DCOPY_(NA, 1.0D0,0,WORK(LEV1),NA+1)
+            CALL DCOPY_(NA2,[0.0D0],0,WORK(LEV1),1)
+            CALL DCOPY_(NA, [1.0D0],0,WORK(LEV1),NA+1)
 C A call to NIDiag diagonalizes the triangular matrix:
-            CALL NIDiag(WORK(LSC),WORK(LEV1),NA,NA,0)
+            CALL NIDiag(WORK(LSC),WORK(LEV1),NA,NA)
             CALL JACORD(WORK(LSC),WORK(LEV1),NA,NA)
 C Make a copy of the eigenvector matrix:
             LEV2=LEV1+NA2

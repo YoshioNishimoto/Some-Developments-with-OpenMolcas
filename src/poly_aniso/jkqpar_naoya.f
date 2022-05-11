@@ -10,17 +10,17 @@
 ************************************************************************
       Subroutine JKQPar_Naoya(N1,N2,HEXCH,Jpar)
       Implicit None
-      Integer, parameter            :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter        :: wp=kind(0.d0)
 
       Integer, intent(in)           :: N1, N2
-      Complex(kind=wp), intent(in)  :: HEXCH(N1,N1,N2,N2)
-      Complex(kind=wp), intent(out) :: Jpar( (N1-1), (-N1+1):(N1-1),
+      Complex(kind=8), intent(in)  :: HEXCH(N1,N1,N2,N2)
+      Complex(kind=8), intent(out) :: Jpar( (N1-1), (-N1+1):(N1-1),
      &                                       (N2-1), (-N2+1):(N2-1) )
       ! local variables
       Integer          :: is1,is2,js1,js2,ms1,ms2,ns1,ns2,
      &                    k1,k2,q1,q2,j1,j2
-      Complex(kind=wp) :: QMAT(N1,N1,N2,N2), trace
-      Real(kind=wp)    :: WCG, OPER, FACT
+      Complex(kind=8) :: QMAT(N1,N1,N2,N2), trace
+      Real(kind=8)    :: WCG, OPER, FACT
       External         :: WCG
       Logical DBG
       DBG=.false.
@@ -37,9 +37,11 @@ c eq.40 in DoI:10.1103/PhysRevB.91.174438
         Do q1=-k1,k1
           Do k2=0,J2
             Do q2=-k2,k2
-              If( mod(k1,2).ne.1) Go To 104 ! the rank of individual spins must be even
-              If( mod(k2,2).ne.1) Go To 104 ! the rank of individual spins must be even
-              ! If the total rank is odd, Then it is a local ZFS contribution; ==> to be Done later
+!             the rank of individual spins must be even
+              If( mod(k1,2).ne.1) Go To 104
+!             the rank of individual spins must be even
+              If( mod(k2,2).ne.1) Go To 104
+!             If the total rank is odd, Then it is a local ZFS contribution; ==> to be Done later
               QMAT=0.0_wp
               ! compute the qmat:
               ! projections q and q' are with opposite sign:

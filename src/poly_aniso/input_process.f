@@ -26,7 +26,7 @@
 
      &                          Title, itype, namefile_aniso,
 
-     &                          Do_structure_abc,
+     &                          Do_structure_abc, old_aniso_format,
      &                          compute_barrier, fitCHI, fitM, hinput,
      &                          tinput, compute_magnetization,
      &                          compute_Mdir_vector, zeeman_energy,
@@ -38,34 +38,46 @@
      &                          JITO_exchange )
 
       Implicit None
-      Integer, parameter        :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter        :: wp=kind(0.d0)
 #include "mgrid.fh"
 
       Integer, intent(in)       :: iPrint
-      Integer, intent(in)       :: nneq      ! number of non-equivalent sites
-      Integer, intent(in)       :: neq(nneq), neqv ! number of equivalent sites of each type, neqv = MAXVAL(neq(:))
-      Integer, intent(in)       :: nexch(nneq), nmax ! number of equivalent sites of each type, neqv = MAXVAL(neq(:))
-      Character(1), intent(in)  :: itype(nneq)
+!     number of non-equivalent sites
+      Integer, intent(in)       :: nneq
+!     number of equivalent sites of each type, neqv = MAXVAL(neq(:))
+      Integer, intent(in)       :: neq(nneq), neqv
+!     number of equivalent sites of each type, neqv = MAXVAL(neq(:))
+      Integer, intent(in)       :: nexch(nneq), nmax
+      Character(len=1), intent(in)  :: itype(nneq)
       Integer, intent(in)       :: nCenter
       Integer, intent(in)       :: nLoc
-      Real(kind=wp), intent(in) :: R_LG( nneq,neqv,3,3)
-      Real(kind=wp), intent(in) :: gtens_input(3,nneq)
-      Real(kind=wp), intent(in) :: eso(nneq,nLoc)
+      Real(kind=8), intent(in) :: R_LG( nneq,neqv,3,3)
+      Real(kind=8), intent(in) :: gtens_input(3,nneq)
+      Real(kind=8), intent(in) :: eso(nneq,nLoc)
       Integer, intent(in)       :: nss(nneq), nsfs(nneq)
-      Character(180), intent(in) :: namefile_aniso(nneq)
+      Character(len=180), intent(in) :: namefile_aniso(nneq)
 c  definition of the exchange:
-      Integer, intent(in)       :: exch                           ! total number of exchange states
-      Integer, intent(inout)    :: nPair                          ! number of metal pairs (number of interactions)
-      Integer, intent(inout)    :: i_pair(nPair,2)                ! index of the metal site in a given interacting pair
-      Integer, intent(in)       :: imaxrank(nPair,2)              ! index of the ITO ranks for each pair
+!     total number of exchange states
+      Integer, intent(in)       :: exch
+!     number of metal pairs (number of interactions)
+      Integer, intent(inout)    :: nPair
+!     index of the metal site in a given interacting pair
+      Integer, intent(inout)    :: i_pair(nPair,2)
+!     index of the ITO ranks for each pair
+      Integer, intent(in)       :: imaxrank(nPair,2)
       Integer, intent(in)       :: MxRank1, MxRank2
       Logical, intent(in)       :: Lines, AnisoLines3, AnisoLines9
       Logical, intent(in)       :: Dipol, DM_exchange, JITO_exchange
-      Real(kind=wp), intent(in) :: Jex(nPair)                     ! Lines exchange    ( 1 parameter / interacting pair)
-      Real(kind=wp), intent(in) :: JAex(nPair,3)                  ! Anisotropic Lines ( 3 parameter / interacting pair)
-      Real(kind=wp), intent(in) :: JAex9(nPair,3,3)               ! Anisotropic Lines full ( 9 parameters / interacting pair)
-      Real(kind=wp), intent(in) :: JDMex(nPair,3)                 ! Dzyaloshinsky-Morya exchange
-      Real(kind=wp), intent(in) ::
+      Logical, intent(in)       :: old_aniso_format
+!     Lines exchange    ( 1 parameter / interacting pair)
+      Real(kind=8), intent(in) :: Jex(nPair)
+!     Anisotropic Lines ( 3 parameter / interacting pair)
+      Real(kind=8), intent(in) :: JAex(nPair,3)
+!     Anisotropic Lines full ( 9 parameters / interacting pair)
+      Real(kind=8), intent(in) :: JAex9(nPair,3,3)
+!     Dzyaloshinsky-Morya exchange
+      Real(kind=8), intent(in) :: JDMex(nPair,3)
+      Real(kind=8), intent(in) ::
      &                          JITOexR(nPair,MxRank1,-MxRank1:MxRank1,
      &                                        MxRank2,-MxRank2:MxRank2),
      &                          JITOexI(nPair,MxRank1,-MxRank1:MxRank1,
@@ -74,25 +86,25 @@ c  definition of the exchange:
       ! options used in connection with KE
       Integer, intent(in)       :: lant, KEOPT, multLn
       Logical, intent(in)       :: KE
-      Real(kind=wp), intent(in) :: tpar, upar
+      Real(kind=8), intent(in) :: tpar, upar
       ! options used in connection with Dipol-Dipol interaction
-      Real(kind=wp), intent(in) :: MagnCoords(nneq,3)
+      Real(kind=8), intent(in) :: MagnCoords(nneq,3)
 
 c  definition of data for susceptibility
       Integer, intent(inout)    :: nT
       Logical, intent(in)       :: tinput
       Logical, intent(inout)    :: compute_susceptibility
-      Real(kind=wp), intent(inout) :: tmin, tmax
-      Real(kind=wp), intent(in) :: chit_exp(nT), Texp(nT)
+      Real(kind=8), intent(inout) :: tmin, tmax
+      Real(kind=8), intent(in) :: chit_exp(nT), Texp(nT)
       ! options related to XT_MoverH
-      Real(kind=wp), intent(in) :: Xfield
+      Real(kind=8), intent(in) :: Xfield
       Integer, intent(in)       :: nH
       Integer, intent(in)       :: nTempMagn
       Integer, intent(in)       :: iopt
-      Real(kind=wp), intent(inout) :: TempMagn(nTempMagn)
-      Real(kind=wp), intent(in) :: Hexp(nH), Mexp(nH,nTempMagn)
-      Real(kind=wp), intent(in) :: thrs
-      Real(kind=wp), intent(in) :: hmin, hmax
+      Real(kind=8), intent(inout) :: TempMagn(nTempMagn)
+      Real(kind=8), intent(in) :: Hexp(nH), Mexp(nH,nTempMagn)
+      Real(kind=8), intent(in) :: thrs
+      Real(kind=8), intent(in) :: hmin, hmax
       Logical, intent(in)       :: hinput
       Logical, intent(in)       :: compute_magnetization
       Logical, intent(in)       :: compute_Mdir_vector
@@ -104,7 +116,7 @@ c  definition of data for susceptibility
       Integer, intent(in)       :: encut_definition
       Integer, intent(in)       :: nK, mG ! encut_definition=1;
       Integer, intent(in)       :: ncut   ! encut_definition=2;
-      Real(kind=wp), intent(in) :: encut_rate ! encut_definition=3;
+      Real(kind=8), intent(in) :: encut_rate ! encut_definition=3;
 
 c  definition of g and D tensors
       Integer, intent(in)       :: nMult
@@ -116,14 +128,16 @@ c  magnetization torque
       Logical, intent(in)       :: compute_torque
 c  Zeeman energy and M vector
       Integer, intent(in)       :: nDir, nDirZee
-      Real(kind=wp), intent(in) :: dirX(nDir), dirY(nDir), dirZ(nDir)
-      Real(kind=wp), intent(in) :: dir_weight(nDirZee,3)
+      Real(kind=8), intent(in) :: dirX(nDir), dirY(nDir), dirZ(nDir)
+      Real(kind=8), intent(in) :: dir_weight(nDirZee,3)
 c  definition of mean field parameter
-      Real(kind=wp), intent(in) :: zJ
+      Real(kind=8), intent(in) :: zJ
 c  definintion of the crystal axes:
       Logical, intent(in)       :: Do_structure_abc
-      Real(kind=wp), intent(in) :: cryst(6) ! a, b, c, alpha, beta, gamma
-      Real(kind=wp), intent(in) :: coord(3) ! Cartesian coordinates of the main metal site, or center
+!     a, b, c, alpha, beta, gamma
+      Real(kind=8), intent(in) :: cryst(6)
+!     Cartesian coordinates of the main metal site, or center
+      Real(kind=8), intent(in) :: coord(3)
 c  definitions for blocking barrier
       Integer, intent(inout)    :: nBlock
       Logical, intent(inout)    :: compute_barrier
@@ -132,11 +146,11 @@ c  options for automatic fitting of parameters:
       Logical, intent(in)       :: fitM !-- not used so far
 
       Logical, intent(in)       :: check_title
-      Character(180),intent(in) :: Title
+      Character(len=180),intent(in) :: Title
 
 
 ! local variables
-      Character(180) fmtline
+      Character(len=180) fmtline
       Logical  :: nosym
       Logical  :: ab_initio_all
       Logical  :: DBG
@@ -145,7 +159,6 @@ c  options for automatic fitting of parameters:
       Integer  :: icount_B_sites
 
 
-      Call qEnter('PA_input_process')
       DBG=.false.
 c-----------------------------------------------------------------------
 c print the data from this Subroutine:
@@ -230,6 +243,12 @@ c     INFORMATION about individual magnetic sites
          Write(6,'(17x,A,99F10.5)') 'gY = ',(gtens_input(2,i),i=1,nneq)
          Write(6,'(17x,A,99F10.5)') 'gZ = ',(gtens_input(3,i),i=1,nneq)
       End If
+
+      IF(old_aniso_format) THEN
+         Write(6,'(A,A)') 'OLDA :         = ',' Input data files are'//
+     &                     ' given in OLD format'
+      END IF
+
 ! ======================================================================
 c     INFORMATION about exchange
 ! ======================================================================
@@ -395,8 +414,8 @@ c    ...
 ! ======================================================================
 !  Print out of the SUSCEPTIBILITY
       compute_susceptibility=.true.
-      If(tmin==0.0_wp) tmin=0.0_wp
-      If(tmax==0.0_wp) tmax=0.0_wp
+!      If(tmin==0.0_wp) tmin=0.0_wp
+!      If(tmax==0.0_wp) tmax=0.0_wp
       If(compute_susceptibility) Then
        !-----------------------------------------!
          Write(6,'(A)') 'Magnetic susceptibility will be computed'//
@@ -604,7 +623,6 @@ c    ...
      &                     'is yet in the development'
       End If
 ! ======================================================================
-      Call qExit('PA_input_process')
 
       Return
       End subroutine input_process

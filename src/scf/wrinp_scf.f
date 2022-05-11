@@ -35,6 +35,10 @@
 *                                                                      *
 ************************************************************************
 *
+      Use Functionals, only: Print_Info
+      Use KSDFT_Info, only: CoefR, CoefX
+      Use InfSO
+*
       Implicit Real*8 (a-h,o-z)
 *
       Real*8 SIntTh
@@ -42,24 +46,15 @@
 
 #include "mxdm.fh"
 #include "infscf.fh"
-#include "infso.fh"
 #include "rctfld.fh"
 #include "ldfscf.fh"
-#include "ksdft.fh"
 *
 *---- Define local variables
       Character*60 Fmt, FmtR, FmtI
       Character*72 Line
       Character*3 lIrrep(8)
       Logical NonEq
-*
-*----------------------------------------------------------------------*
-*     Start                                                            *
-*----------------------------------------------------------------------*
-*
-#ifdef _DEBUG_
-      Call QEnter('WrInp')
-#endif
+
       If (jPrint.ge.2) Then
          Call CollapseOutput(1,'   Input section:')
          Write(6,'(3X,A)')     '   --------------'
@@ -70,9 +65,9 @@
       If (jPrint.ge.2) Then
          Write(6,'(6X,A)')  'Header of the integral files:'
          Write(Line,'(A72)') Header(1)
-         Write(6,'(6X,A)') Line(:mylen(Line))
+         Write(6,'(6X,A)') trim(Line)
          Write(Line,'(A72)') Header(2)
-         Write(6,'(6X,A)') Line(:mylen(Line))
+         Write(6,'(6X,A)') trim(Line)
          Write(6,*)
       End If
 *
@@ -84,7 +79,7 @@
          Else If (jPrint.ge.2) Then
              Write (6,'(6X,A)') ' Title:'
              Do iTit = 1, nTit
-                Write (6,'(8X,A)') Title(iTit)(:mylen(Title(iTit)))
+                Write (6,'(8X,A)') trim(Title(iTit))
              End Do
          End If
       End If
@@ -99,7 +94,7 @@
 *
       Call Get_cArray('Irreps',lIrrep,24)
       Do iSym = 1, nSym
-         Call RightAd(lIrrep(iSym))
+         lIrrep(iSym) = adjustr(lIrrep(iSym))
       End Do
 *
       If (jPrint.ge.2) Then
@@ -207,9 +202,8 @@ c           Call Abend()
          Call Put_dScalar('DFT exch coeff',CoefX)
          Call Put_dScalar('DFT corr coeff',CoefR)
          Call Put_dScalar('EThr',EThr)
-         Call Funi_Print
+         Call Funi_Print()
          If (jPrint.ge.2) Then
-            Write(6,*)
             If (One_Grid) Then
                Write (6,'(6X,A)') 'The same grid will be used for all'
      &                          //' iterations.'
@@ -217,6 +211,11 @@ c           Call Abend()
                Write (6,'(6X,A)') 'A smaller intermediate grid will b'
      &                          //'e used the first few iterations.'
             End If
+            Write(6,*)
+            Write(6,'(6X,A)') 'DFT functional specifications'
+            Write(6,'(6X,A)') '-----------------------------'
+            Call libxc_version()
+            Call Print_Info()
             Write(6,*)
          End If
       End If
@@ -462,7 +461,7 @@ c           Call Abend()
             Write(6,Fmt) 'Input vectors read from HDF5 file'
          Else
             Write(6,Fmt) 'Input vectors read from INPORB'
-            Write(6,Fmt) 'Orbital file label: ',VTitle(:mylen(VTitle))
+            Write(6,Fmt) 'Orbital file label: ',trim(VTitle)
          End If
       Else If (InVec.eq.3) Then
          Write(6,Fmt) 'Input density matrix read from RUNFILE'
@@ -490,15 +489,7 @@ c           Call Abend()
      &      'the robust representation')
          End If
       End If
-*
-#ifdef _DEBUG_
-      Call QExit('WrInp')
-#endif
-*
-*----------------------------------------------------------------------*
-*     Exit                                                             *
-*----------------------------------------------------------------------*
-*
+
+
       Call XFlush(6)
-      Return
       End

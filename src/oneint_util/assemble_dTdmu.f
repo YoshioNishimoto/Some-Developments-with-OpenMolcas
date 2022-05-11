@@ -16,11 +16,6 @@
 * Object: to assemble the diamagnetic shielding integrals from         *
 *         electric field integrals.                                    *
 *                                                                      *
-* Called from: DMSInt                                                  *
-*                                                                      *
-* Calling    : QEnter                                                  *
-*              QExit                                                   *
-*                                                                      *
 *     Author: Roland Lindh, Dept. of Theoretical Chemistry,            *
 *             University of Lund, SWEDEN                               *
 *             February '91                                             *
@@ -41,7 +36,6 @@
 *
       iRout = 231
       iPrint = nPrint(iRout)
-      Call qEnter('Assemble_dTdmu ')
 *
 *     Fact = -1.D6 * One2C2
       If (iPrint.ge.99) Then
@@ -87,23 +81,35 @@
             ipb = Ind(lb,ixb,izb)
 *
             Do iZeta = 1, nZeta
-               xyTmp=-Two*Beta(nzeta)*Elalbp(ixb,iyb+1,izb,1)
-               yxTmp=-Two*Beta(nzeta)*Elalbp(ixb+1,iyb,izb,2)
-               yzTmp=-Two*Beta(nzeta)*Elalbp(ixb,iyb,izb+1,2)
-               zyTmp=-Two*Beta(nzeta)*Elalbp(ixb,iyb+1,izb,3)
-               zxTmp=-Two*Beta(nzeta)*Elalbp(ixb+1,iyb,izb,3)
-               xzTmp=-Two*Beta(nzeta)*Elalbp(ixb,iyb,izb+1,1)
+               xyTmp=-Two*Beta(nzeta)*Elalbp(iZeta,ipa,
+     &                Ind(lb+1,ixb  ,izb  ),1)
+               yxTmp=-Two*Beta(nzeta)*Elalbp(iZeta,ipa,
+     &                Ind(lb+1,ixb+1,izb  ),2)
+               yzTmp=-Two*Beta(nzeta)*Elalbp(iZeta,ipa,
+     &                Ind(lb+1,ixb  ,izb+1),2)
+               zyTmp=-Two*Beta(nzeta)*Elalbp(iZeta,ipa,
+     &                Ind(lb+1,ixb  ,izb  ),3)
+               zxTmp=-Two*Beta(nzeta)*Elalbp(iZeta,ipa,
+     &                Ind(lb+1,ixb+1,izb  ),3)
+               xzTmp=-Two*Beta(nzeta)*Elalbp(iZeta,ipa,
+     &                Ind(lb+1,ixb  ,izb+1),1)
                If (ixb.ge.1) Then
-                  yxTmp = yxTmp + Dble(ixb)*Elalbm(ixb-1,iyb,izb,2)
-                  zxTmp = zxTmp + Dble(ixb)*Elalbm(ixb-1,iyb,izb,3)
+                  yxTmp = yxTmp + Dble(ixb)*Elalbm(iZeta,ipa,
+     &                                      Ind(lb-1,ixb-1,izb  ),2)
+                  zxTmp = zxTmp + Dble(ixb)*Elalbm(iZeta,ipa,
+     &                                      Ind(lb-1,ixb-1,izb  ),3)
                End If
                If (iyb.ge.1) Then
-                  xyTmp = xyTmp + Dble(iyb)*Elalbm(ixb,iyb-1,izb,1)
-                  zyTmp = xyTmp + Dble(iyb)*Elalbm(ixb,iyb-1,izb,3)
+                  xyTmp = xyTmp + Dble(iyb)*Elalbm(iZeta,ipa,
+     &                                      Ind(lb-1,ixb  ,izb  ),1)
+                  zyTmp = xyTmp + Dble(iyb)*Elalbm(iZeta,ipa,
+     &                                      Ind(lb-1,ixb  ,izb  ),3)
                End If
                If (izb.ge.1) Then
-                  xzTmp = xzTmp + Dble(izb)*Elalbm(ixb,iyb,izb-1,1)
-                  yzTmp = yzTmp + Dble(izb)*Elalbm(ixb,iyb,izb-1,2)
+                  xzTmp = xzTmp + Dble(izb)*Elalbm(iZeta,ipa,
+     &                                      Ind(lb-1,ixb  ,izb-1),1)
+                  yzTmp = yzTmp + Dble(izb)*Elalbm(iZeta,ipa,
+     &                                      Ind(lb-1,ixb  ,izb-1),2)
                End If
                Final(iZeta,ipa,ipb,1) = -(xyTmp - yxTmp)
                Final(iZeta,ipa,ipb,2) = -(yzTmp - zyTmp)
@@ -124,6 +130,5 @@
           End Do
       End If
 *
-      Call qExit('Assemble_dTdmu ')
       Return
       End

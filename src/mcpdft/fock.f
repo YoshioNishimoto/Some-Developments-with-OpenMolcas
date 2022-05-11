@@ -24,6 +24,7 @@ c     interaction matrix.
 c
 C          ********** IBM-3090 MOLCAS Release: 90 02 22 **********
 C
+      Use Fock_util_global, only: ALGO, DoCholesky
       IMPLICIT REAL*8 (A-H,O-Z)
       DIMENSION FI(*),FP(*),D(*),P(*),Q(*),FINT(*),F(*),BM(*),CMO(*)
       integer ISTSQ(8),ISTAV(8)
@@ -33,13 +34,12 @@ C
 #include "rasscf.fh"
 #include "general.fh"
 #include "output_ras.fh"
+#include "qmat_m.fh"
+      Character*16 ROUTINE
       Parameter (ROUTINE='FOCK    ')
 #include "WrkSpc.fh"
-      Logical DoActive,DoQmat,DoCholesky
-      Integer ALGO
+      Dimension P2reo(1)
 
-      COMMON /CHOTODO /DoActive,DoQmat,ipQmat
-      COMMON /CHLCAS  /DoCholesky,ALGO
 C
       IPRLEV=IPRLOC(4)
       IF(IPRLEV.ge.DEBUG) THEN
@@ -70,7 +70,7 @@ c       Call Get_Temp('TmpPUVX ',Work(ipFint),nFint)
         HALFQ1=0.0d0
         If(Exfac.ne.1.0d0) Then
           Call Get_Temp('nP2reo  ',P2reo,1)
-          nP2reo=Int(P2reo)
+          nP2reo=Int(P2reo(1))
           CALL GETMEM('P2_reo','ALLO','REAL',ipP2reo,nP2reo)
           Call Get_Temp('P2_reo  ',Work(ipP2reo),nP2reo)
         End If
@@ -86,7 +86,6 @@ C
       ISTBM=0
       IX1=0
       ISTZ=0
-      ioffQmat=0
       E2act=0.0d0
 C
 * A long loop over symmetry
@@ -165,7 +164,6 @@ c ---     Q(m,v) = C(a,m) * Q(a,v)
         Else
 
           Write(LF,*)'FOCK: illegal Cholesky parameter ALGO= ',ALGO
-          call qtrace()
           call abend()
 
         EndIf
@@ -364,6 +362,7 @@ c     interaction matrix.
 c
 C          ********** IBM-3090 MOLCAS Release: 90 02 22 **********
 C
+      Use Fock_util_global, only: ALGO, DoCholesky
       IMPLICIT REAL*8 (A-H,O-Z)
       DIMENSION FI(*),FP(*),D(*),P(*),Q(*),FINT(*),F(*),BM(*),CMO(*)
       integer ISTSQ(8),ISTAV(8),iTF
@@ -372,13 +371,11 @@ C
 #include "rasscf.fh"
 #include "general.fh"
 #include "output_ras.fh"
+      Character*16 ROUTINE
       Parameter (ROUTINE='FOCK    ')
 #include "WrkSpc.fh"
-      Logical DoActive,DoQmat,DoCholesky
-      Integer ALGO
+#include "mspdft.fh"
 
-      COMMON /CHOTODO /DoActive,DoQmat,ipQmat
-      COMMON /CHLCAS  /DoCholesky,ALGO
 C
       IPRLEV=IPRLOC(4)
       IF(IPRLEV.ge.DEBUG) THEN
@@ -388,7 +385,7 @@ C
       Call Unused_real_array(BM)
       Call Unused_integer(ifinal)
       Call GetMem('fockt','ALLO','REAL',iTF,NTOT4)
-      Call dcopy_(ntot4,0d0,0,Work(iTF),1)
+      Call dcopy_(ntot4,[0d0],0,Work(iTF),1)
 C
 C *** Cholesky section ********************
 c      Call DecideOnCholesky(DoCholesky)
@@ -458,16 +455,13 @@ C     LOOP OVER ALL SYMMETRY BLOCKS
       ISTBM=0
       IX1=0
       ISTZ=0
-      ioffQmat=0
       E2act=0.0d0
 C
 * A long loop over symmetry
       DO ISYM=1,NSYM
-       IX=IX1+NFRO(ISYM)
        NIO=NISH(ISYM)
        NAO=NASH(ISYM)
        NEO=NSSH(ISYM)
-       NIA=NIO+NAO
        NO=NORB(ISYM)
        NO2=(NO**2+NO)/2
        CSX=0.0D0
@@ -532,7 +526,6 @@ c         call wrtmat(P(ISTP),1,nFint,1,nFint)
         Else
 
           Write(LF,*)'FOCK: illegal Cholesky parameter ALGO= ',ALGO
-          call qtrace()
           call abend()
 
         EndIf
@@ -619,7 +612,11 @@ C
 !      Call Dscal_(ntot4,0.5d0,F,1)
 
 !For MCLR
-      Call put_dArray('Fock_PDFT',F,ntot4)
+      IF(DoGradMSPD) THEN
+       CALL DCopy_(nTot4,F,1,WORK(iFxyMS+(iIntS-1)*nTot4),1)
+      ELSE
+       Call put_dArray('Fock_PDFT',F,ntot4)
+      END IF
 
       call xflush(6)
       CALL FOCKOC_m(Q,F,CMO)

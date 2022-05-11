@@ -22,12 +22,15 @@
 ************************************************************************
 
       Subroutine RasScf_Init()
+      Use Fock_util_global, only: ALGO, Deco, DensityCheck, dmpk,
+     &                            DoCholesky, DoLocK, Estimate, Nscreen,
+     &                            Update
+      use CMS, only: iCMSOpt,CMSGiveOpt
       Implicit Real*8 (A-H,O-Z)
       External Get_SuperName
       Character*100 ProgName, Get_SuperName
 #include "rasdim.fh"
 #include "output_ras.fh"
-      Parameter (ROUTINE='RasScf_Init')
 #include "rasscf.fh"
 #include "casvb.fh"
 #include "general.fh"
@@ -36,24 +39,13 @@
 #include "lucia_ini.fh"
 #include "orthonormalize.fh"
 #include "WrkSpc.fh"
-#include "ksdft.fh"
       Integer IPRGLB_IN, IPRLOC_IN(7)
 * What to do with Cholesky stuff?
-      Logical DoCholesky,timings,DensityCheck
-      Logical DoLocK,Deco
-      Logical Estimate,Update
-      Integer ALGO,Nscreen
-      Real*8  dmpk,ChFracMem
       Logical, External :: Is_First_Iter
 
-      Common /CHLCAS / DoCholesky,ALGO
-      COMMON /CHODENSITY/ DensityCheck
-      COMMON /CHOTIME / timings
-      Common /CHOLK / DoLocK,Deco,dmpk,Nscreen
-      COMMON /CHOSCREEN/ Estimate,Update
-      COMMON /CHOPAR/ ChFracMem
+#include "chotime.fh"
+#include "chopar.fh"
 
-      Call qEnter(ROUTINE)
 
 *----------------------------------------------------------------------*
       ProgName=Get_SuperName()
@@ -80,8 +72,7 @@ C        ICIRST=1 ! to be activated!
       End If
 
 * Initialize print levels: See output_ras.fh
-* Global logical unit numbers for standard input and standard output
-      IO=5
+* Global logical unit numbers for standard output
       LF=6
 * Externally set default print level control. Should the program be silent?
       IPRGLB_IN=iPrintLevel(-1)
@@ -168,6 +159,12 @@ C        ICIRST=1 ! to be activated!
 * Default thresholds used to determine convergence in CI
       THREN=1.0D-04
       THFACT=1.0D-03
+* PAM 2017, Additional shift for douby occupied core states
+* in order to compute core hole states. The core orbital is
+* specified as one particular orbital in the input orbital set.
+      CORESHIFT=0.0D0
+      ITCORE=0
+      IFCRPR=.false.
 * PAM 2009, new default value for LVSHFT
 * level shift parameter
       LVSHFT=0.5D00
@@ -203,13 +200,13 @@ C        ICIRST=1 ! to be activated!
       LROOTS=1
 * sequence numbers for roots in CI counted from
 * lowest energy.
-      Call iCopy(mxRoot,0,0,iRoot,1)
+      Call iCopy(mxRoot,[0],0,iRoot,1)
       IROOT(1)=1
 * weights used for average energy calculations
-      Call dCopy_(mxRoot,0.0D0,0,WEIGHT,1)
+      Call dCopy_(mxRoot,[0.0D0],0,WEIGHT,1)
       WEIGHT(1)=1.0D0
 * iteration energies
-      Call dCopy_(mxRoot*(mxIter+2),0.0D0,0,ENER,1)
+      Call dCopy_(mxRoot*(mxIter+2),[0.0D0],0,ENER,1)
 *
       ICICH=0
 * if flag is active (ICICH=1) CI roots will be selected
@@ -229,6 +226,8 @@ C        ICIRST=1 ! to be activated!
 * Highly excited states are not default
       hRoots=0
 * No hidden roots by default
+      n_keep=0
+* Number of kept vectors in Davidson chosen in ini_david by default
       IORDEM=0
 * (SVC) do not force any ordering options
       IFORDE=1
@@ -259,9 +258,6 @@ C        ICIRST=1 ! to be activated!
 *
       KSDFT='SCF'
       ExFac=1.0D0
-* Initialize KSDF coefficients (S Dong, 2018)
-      CoefR = 1.0D0
-      CoefX = 1.0D0
 ** Default orthonormalization of CMOs to be with
 ** Gram-Schmidt
 *      Lowdin_ON=.False.
@@ -273,7 +269,7 @@ C        ICIRST=1 ! to be activated!
 * default spin value (singlet)
       ISPIN=1
 * default symmetry
-      LSYM=1
+      STSYM=1
 * default number of active electrons
       NACTEL=0
 * default maximum number of holes in RAS1
@@ -366,5 +362,15 @@ CSVC: lucia timers
       tsigma = 0.0d0
       tdensi = 0.0d0
 *
+C state rotation
+      iRotPsi=0
+      iXMSP=0
+      iCMSP=0
+      ICMSIterMax=100
+      ICMSIterMin=5
+      CMSThreshold=1.0d-8
+      CMSStartMat='XMS'
+      iCMSOpt=1
+      CMSGiveOpt=.false.
       RETURN
       END

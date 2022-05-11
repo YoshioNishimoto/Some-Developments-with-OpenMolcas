@@ -18,19 +18,6 @@
 * Object: kernel routine for the computation of electric field         *
 *         integrals.                                                   *
 *                                                                      *
-* Called from: OneEl                                                   *
-*                                                                      *
-* Calling    : QEnter                                                  *
-*              RecPrt                                                  *
-*              DCopy  (ESSL)                                           *
-*              SOS                                                     *
-*              DCR                                                     *
-*              XRys                                                    *
-*              Util1                                                   *
-*              DaXpY  (ESSL)                                           *
-*              GetMem                                                  *
-*              QExit                                                   *
-*                                                                      *
 *     Author: Roland Lindh, Dept. of Theoretical Chemistry, University *
 *             of Lund, Sweden, January '91                             *
 *                                                                      *
@@ -39,9 +26,6 @@
       Implicit Real*8 (A-H,O-Z)
       External TNAI, Fake, XCff2D, XRys2D
 #include "real.fh"
-#include "itmax.fh"
-#include "info.fh"
-#include "WrkSpc.fh"
 #include "print.fh"
       Real*8 Final(nZeta,(la+1)*(la+2)/2,(lb+1)*(lb+2)/2,nComp),
      &       Zeta(nZeta), ZInv(nZeta), Alpha(nAlpha), Beta(nBeta),
@@ -60,14 +44,13 @@
 *
       iRout = 200
       iPrint = nPrint(iRout)
-      Call qEnter('EFPrm')
 *
       If (iPrint.ge.99) Then
          Call RecPrt(' In EFPrm: Alpha',' ',Alpha,nAlpha,1)
          Call RecPrt(' In EFPrm: Beta',' ',Beta,nBeta,1)
       End If
 *
-      call dcopy_(nZeta*nElem(la)*nElem(lb)*nComp,Zero,0,Final,1)
+      call dcopy_(nZeta*nElem(la)*nElem(lb)*nComp,[Zero],0,Final,1)
 *
       iAnga(1) = la
       iAnga(2) = lb
@@ -112,8 +95,8 @@
       nT=nZeta
       NoSpecial=.True.
       Call Rys(iAnga,nT,Zeta,ZInv,nZeta,
-     &         One,One,1,P,nZeta,
-     &         CCoor,1,rKappa,One,Coori,Coori,CoorAC,
+     &         [One],[One],1,P,nZeta,
+     &         CCoor,1,rKappa,[One],Coori,Coori,CoorAC,
      &         mabMin,mabMax,mcdMin,mcdMax,Array(ip1),mArr*nZeta,
      &         TNAI,Fake,XCff2D,XRys2D,NoSpecial)
 *
@@ -160,8 +143,6 @@
  400     Continue
       End If
 *
-*     Call GetMem(' Exit EFPrm','LIST','REAL',iDum,iDum)
-      Call qExit('EFPrm')
       Return
 c Avoid unused argument warnings
       If (.False.) Call Unused_integer(nRys)

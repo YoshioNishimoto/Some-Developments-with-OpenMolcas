@@ -37,7 +37,7 @@
 * =====
 *
 *.Definition of c and sigma spaces
-      COMMON/CANDS/ICSM,ISSM,ICSPC,ISSPC
+#include "cands.fh"
 *. Sigma blocks require
       INTEGER IBLOCK(8,*)
 *
@@ -59,15 +59,12 @@
 #include "oper.fh"
 #include "io_util.fh"
 *
-      INTEGER ADASX,ASXAD,ADSXA,SXSXDX,SXDXSX
-      COMMON/CSMPRD/ADASX(MXPOBS,MXPOBS),ASXAD(MXPOBS,2*MXPOBS),
-     &              ADSXA(MXPOBS,2*MXPOBS),
-     &              SXSXDX(2*MXPOBS,2*MXPOBS),SXDXSX(2*MXPOBS,4*MXPOBS)
-      COMMON/HIDSCR/KLOCSTR(4),KLREO(4),KLZ(4),KLZSCR
+#include "csmprd.fh"
+#include "hidscr.fh"
 #include "cintfo.fh"
       DIMENSION CB(*),HCB(*)
 *
-      IDUM = 0
+*     IDUM = 0
 *     CALL MEMMAN(IDUM,IDUM,'MARK  ',IDUM,'SBLOCK')
 *
 C?    WRITE(6,*) ' IPERTOP in SBLOCK = ', IPERTOP
@@ -157,7 +154,6 @@ C     SPGRPCON(IOFSPGRP,NSPGRP,NGAS,MXPNGAS,IELFSPGRP,ISPGRPCON,IPRNT)
       END DO
       END DO
 C?    WRITE(6,*) ' MXTSOB = ', MXTSOB
-      MAXIJ = MXTSOB ** 2
 *.Local scratch arrays for blocks of C and sigma
 c      IF(ISIMSYM.EQ.0) THEN
         LSCR1 = MXSOOB
@@ -168,7 +164,7 @@ c      END IF
       IF(IPRCIX.GE.3)
      &WRITE(6,*) ' ICISTR,LSCR1 ',ICISTR,LSCR1
 *.SCRATCH space for integrals
-* A 4 index integral block with four indeces belonging OS class
+* A 4 index integral block with four indices belonging OS class
       INTSCR = MAX(MXTSOB ** 4, NTOOB**2)
       IF(IPRCIX.GE.3)
      &WRITE(6,*) ' Integral scratch space ',INTSCR
@@ -243,7 +239,6 @@ C  I assume memory was allocated for blocks, so
       CALL GETMEM('XI4S  ','ALLO','REAL',KXI4S,LSCR3)
       CALL ZBLTP(ISMOST(1,ICSM),NSMST,IDC,iWORK(KCBLTP),iWORK(KSVST))
 *.Some TTS arrays
-      NOOS = NOCTPA*NOCTPB*NSMCI
       NTTS = MXNTTS
 *
 *. for partitioning of vector
@@ -341,10 +336,10 @@ c      KSIPA = 1 ! jwk-cleanup
       END IF
 *
       IF(LUCBLK.GT.0) THEN
-        CALL ITODS(-1,1,-1,LUCBLK)
+        CALL ITODS([-1],1,-1,LUCBLK)
       END IF
 *. Eliminate local memory
-      IDUM = 0
+*     IDUM = 0
 *     CALL MEMMAN(IDUM ,IDUM,'FLUSM ',2,'SBLOCK')
       CALL GETMEM('CONSPA','FREE','INTE',KCONSPA,NOCTPA**2)
       CALL GETMEM('CONSPB','FREE','INTE',KCONSPB,NOCTPB**2)

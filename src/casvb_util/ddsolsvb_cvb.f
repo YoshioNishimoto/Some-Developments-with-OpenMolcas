@@ -8,7 +8,8 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine ddsolsvb_cvb(dum,rhsp,itdav,maxdav,nfrdim1,
      >  solp,solp_res,eig,eig_res)
@@ -18,11 +19,11 @@
       save one
       data one/1d0/
 
-      call fmove(rhsp,solp,itdav)
+      call fmove_cvb(rhsp,solp,itdav)
       eig=dnrm2_(itdav,solp,1)
       call dscal_(itdav,one/eig,solp,1)
       eig_res=eig
-      call fmove(solp,solp_res,itdav)
+      call fmove_cvb(solp,solp_res,itdav)
       return
       entry ddinitsvb_cvb(ifollow1,isaddle1,ip1)
       ifollow=ifollow1

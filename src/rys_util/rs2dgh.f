@@ -21,13 +21,6 @@
 *                                                                      *
 * Object:To compute the gradients and the Hessians of the 2D-integrals.*
 *                                                                      *
-* Called from: Rysg2                                                   *
-*                                                                      *
-* Calling    : QEnter                                                  *
-*              Exp1                                                    *
-*              DaXpY  (ESSL)                                           *
-*              QExit                                                   *
-*                                                                      *
 *     Author: Anders Bernhardsson & Roland Lindh,                      *
 *             Dept. of Theoretical Chemistry,                          *
 *             University of Lund, SWEDEN                               *
@@ -58,8 +51,8 @@
       mx=0
       my=0
       mz=0
-      Call ICopy(12,0,0,Index1,1)
-      Call ICopy(48,0,0,Index2,1)
+      Call ICopy(12,[0],0,Index1,1)
+      Call ICopy(48,[0],0,Index2,1)
 *
 *     Differentiate with respect to the first center
 *

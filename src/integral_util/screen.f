@@ -34,11 +34,6 @@
 *   the integral generation step whereas the 1st order density is      *
 *   canonically ordered.                                               *
 *                                                                      *
-* Called from: Twoel                                                   *
-*                                                                      *
-* Calling    : QEnter                                                  *
-*              QExit                                                   *
-*                                                                      *
 *     Author: Roland Lindh, Dept. of Theoretical Chemistry,            *
 *             University of Lund, SWEDEN                               *
 *             March '92                                                *
@@ -60,8 +55,8 @@
 #include "real.fh"
 *
 *     decalaration of local variables...
-*define _DEBUG_
-#ifdef _DEBUG_
+*define _DEBUGPRINT_
+#ifdef _DEBUGPRINT_
       Call RecPrt(' In Screen: Data1',' ',Data1,nZeta,nDArray-1)
       Call RecPrt(' In Screen: Data2',' ',Data2,nEta ,nDArray-1)
       Call FZero(P,nZeta*3)
@@ -182,8 +177,8 @@
       If (iphZ2.ne.1) Call DScal_(lEta,-One,Q(1,3),1)
 *
  999  Continue
-*define _DEBUG_
-#ifdef _DEBUG_
+*define _DEBUGPRINT_
+#ifdef _DEBUGPRINT_
       Write (6,*) ' In Screen'
       Call RecPrt(' Zeta  ',' ',Zeta,lZeta,1)
       Call RecPrt(' Eta   ',' ', Eta, lEta,1)
@@ -203,13 +198,13 @@ c Avoid unused argument warnings
       If (.False.) Then
          Call Unused_integer(nAlpha)
          Call Unused_integer(nBeta)
-         Call Unused_integer(ZtMax)
-         Call Unused_integer(ZtMaxD)
-         Call Unused_integer(abMaxD)
+         Call Unused_real(ZtMax)
+         Call Unused_real(ZtMaxD)
+         Call Unused_real(abMaxD)
          Call Unused_integer(nGamma)
          Call Unused_integer(nDelta)
-         Call Unused_integer(EtMax)
-         Call Unused_integer(EtMaxD)
-         Call Unused_integer(cdMaxD)
+         Call Unused_real(EtMax)
+         Call Unused_real(EtMaxD)
+         Call Unused_real(cdMaxD)
       End If
       End

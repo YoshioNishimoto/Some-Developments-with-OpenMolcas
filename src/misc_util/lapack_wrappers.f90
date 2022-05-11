@@ -20,6 +20,8 @@
 ! dstevr_
 ! dgetrs_
 ! dspev_
+! dgees_
+! dgeev_
 ! dgesvd_
 ! dgetrf_
 ! dgesv_
@@ -39,6 +41,7 @@
 ! dsteqr_
 ! dlascl_
 ! dorgtr_
+! zgesvd_
 
 ! For procedures known to raise floating point exceptions in the test suite,
 ! disable exception trapping locally: three pieces of code are needed
@@ -200,6 +203,52 @@ subroutine dspev_(jobz,uplo,n_,ap,w,z,ldz_,work,info_)
 #endif
 end subroutine
 
+subroutine dgees_( jobvs, sort, select, n_, a, lda_, sdim_, wr, wi, &
+  &                   vs, ldvs_, work, lwork_, bwork, info_ )
+  implicit none
+  character          jobvs, sort
+  integer            n_, lda_, sdim_, ldvs_, lwork_, info_
+  real*8             a( lda_, * ), wr( * ), wi( * ), vs( ldvs_, *), work( * )
+  logical            select, bwork( * )
+#ifdef MOLCAS_TO_LAPACK_INT
+  LAPACKINT          n, lda, sdim, ldvs, lwork, info
+  n=n_
+  lda=lda_
+  ldvs=ldvs_
+  lwork=lwork_
+  info=info_
+  call dgees( jobvs, sort, select, n, a, lda, sdim, wr, wi, &
+    &                   vs, ldvs, work, lwork, bwork, info )
+  info_=info
+  sdim_=sdim
+#else
+  call dgees( jobvs, sort, select, n_, a, lda_, sdim_, wr, wi, &
+    &                   vs, ldvs_, work, lwork_, bwork, info_ )
+#endif
+end subroutine
+
+subroutine dgeev_( jobvl, jobvr, n_, a, lda_, wr, wi, vl, ldvl_, &
+  &                   vr, ldvr_, work, lwork_, info_ )
+  implicit none
+  character          jobvl, jobvr
+  integer            info_, lda_, ldvl_, ldvr_, lwork_, n_
+  real*8             a(lda_,*),wr(*),wi(*),vl(ldvl_,*),vr(ldvr_,*),work(*)
+#ifdef MOLCAS_TO_LAPACK_INT
+  LAPACKINT          info, lda, ldvl, ldvr, lwork, n
+  lda=lda_
+  ldvl=ldvl_
+  ldvr=ldvr_
+  lwork=lwork_
+  n=n_
+  call dgeev( jobvl, jobvr, n, a, lda, wr, wi, vl, ldvl, &
+      &                   vr, ldvr, work, lwork, info )
+  info_=info
+#else
+  call dgeev( jobvl, jobvr, n_, a, lda_, wr, wi, vl, ldvl_, &
+      &                   vr, ldvr_, work, lwork_, info_ )
+#endif
+end subroutine
+
 subroutine dgesvd_( jobu, jobvt, m_, n_, a, lda_, s, u, ldu_, &
   &                   vt, ldvt_, work, lwork_, info_ )
   implicit none
@@ -232,11 +281,14 @@ subroutine dgetrf_( m_,n_,a,lda_,ipiv_,info_ )
   LAPACKINT          info, lda, m, n
   LAPACKINT, allocatable :: ipiv(:)
   integer :: i
+  lda=lda_
+  m=m_
+  n=n_
   allocate(ipiv(n))
-  do i=1,n
-    ipiv(i)=ipiv_(i)
-  end do
   call dgetrf( m,n,a,lda,ipiv,info )
+  do i=1,n
+    ipiv_(i)=ipiv(i)
+  end do
   deallocate(ipiv)
   info_=info
 #else
@@ -468,7 +520,7 @@ end function
 
 integer function ilaenv_( ispec_, name, opts, n1_, n2_, n3_, n4_ )
   implicit none
-  character(*)    name, opts
+  character(len=*)    name, opts
   integer            ispec_, n1_, n2_, n3_, n4_
 #ifdef MOLCAS_TO_LAPACK_INT
   LAPACKINT          ispec, n1, n2, n3, n4
@@ -567,3 +619,28 @@ subroutine dorgtr_( uplo, n_, a, lda_, tau, work, lwork_, info_ )
   call dorgtr( uplo, n_, a, lda_, tau, work, lwork_, info_ )
 #endif
 end subroutine
+
+subroutine zgesvd_( jobu, jobvt, m_, n_, a, lda_, s, u, ldu_, &
+  &                   vt, ldvt_, work, lwork_, rwork, info_ )
+  implicit none
+  character          jobu, jobvt
+  integer            info_, lda_, ldu_, ldvt_, lwork_, m_, n_
+  real*8             rwork(*),s(*)
+  complex*16         a(lda_,*),u(ldu_,*),vt(ldvt_,*),work(*)
+#ifdef MOLCAS_TO_LAPACK_INT
+  LAPACKINT          info, lda, ldu, ldvt, lwork, m, n
+  lda=lda_
+  ldu=ldu_
+  ldvt=ldvt_
+  lwork=lwork_
+  m=m_
+  n=n_
+  call zgesvd( jobu, jobvt, m, n, a, lda, s, u, ldu, &
+      &                   vt, ldvt, work, lwork, rwork, info )
+  info_=info
+#else
+  call zgesvd( jobu, jobvt, m_, n_, a, lda_, s, u, ldu_, &
+      &                   vt, ldvt_, work, lwork_, rwork, info_ )
+#endif
+end subroutine
+

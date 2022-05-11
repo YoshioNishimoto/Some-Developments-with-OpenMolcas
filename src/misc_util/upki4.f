@@ -36,8 +36,16 @@
 *                                                                      *
 ************************************************************************
 *
-      Character*1 InBuf(*)
+      Integer InBuf(*)
       Integer OutBuf(nData)
+      Interface
+        Subroutine iunzip(OpCode,nData,nBytes,InBuf,OutBuf)
+     &             bind(C,name='iunzip_')
+          use Definitions, only: MOLCAS_C_INT
+          Integer(kind=MOLCAS_C_INT) :: OpCode, nData, nBytes, InBuf(*),
+     &                                  OutBuf(*)
+        End Subroutine iunzip
+      End Interface
 *
 *----------------------------------------------------------------------*
 *
@@ -47,4 +55,5 @@
 *----------------------------------------------------------------------*
 *
       Return
+*
       End

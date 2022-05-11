@@ -13,11 +13,11 @@
       Integer LuInput
 * Used for input processing
       Integer NKeys
-      Parameter (NKeys=116)
+      Parameter (NKeys=137)
 *------------------------------------------------------
 * Logical flags, to check whether a keyword has been used
 * in the input:
-      Logical KeyFlags(0:NKeys+1)
+      Logical KeyFlags(0:NKeys)
       Logical KeyAAAA,
      &     KeyALTE, KeyATOM, KeyAVER, KeyCHAR, KeyCHOI,
      &     KeyCHOL, KeyCIMX, KeyCION, KeyCIRE, KeyCIRO,
@@ -32,17 +32,21 @@
      &     KeyRFPE, KeyCIRF, KeyRFRO, KeyRLXR, KeyRASS,
      &     KeySDAV, KeySPIN, KeySUPS, KeySXDA, KeySYMM,
      &     KeyTHRS, KeyTIGH, KeyTITL, KeyTYPE, KeyVB  ,
-     &     KeyEXPE, KeySPLI, KeyNUSP, keyENSP, keyPESP,
-     &     keyFOSP, KeyMDRL, keyOFEM, keyFTHA, keyDFMD,
-     &     keyBKAP, KeyALPH, keyFARO, keyDMRG, key3RDM,
-     &     keyNECI, keyNWAL, keyTIME, keyCYCL, keyRDMS,
-     &     keyRDMP, keyRSPC, keyDEFD, keyDISH, keyEXNE,
-     &     keyBLOK, keySOCC, keyRGIN, keyPRSD, KeyFCID,
+     &     KeyEXPE, KeySPLI, KeyNUSP, KeyENSP, KeyPESP,
+     &     KeyFOSP, KeyMDRL, KeyOFEM, KeyFTHA, KeyDFMD,
+     &     KeyBKAP, KeyALPH, KeyFARO, KeyDMRG, Key3RDM,
+     &     KeyNECI, KeyTOTA, KeyTIME, KeyNMCY, KeyCALC,
+     &     KeyRDMS, KeyREAL, KeyDEFI, KeyDIAG, KeyEMBD,
+     &     KeyBLOK, KeySOCC, KeyRGIN, KeyPRSD, KeyFCID,
      &     KeyNOCA, KeySAVE, KeyEXPA, KeyH5OR, KeyH5CI,
-     &     KeyHEXS, KeyHEUR, KeyDMPO, KeyNEVP, keyHFOC,
-     &     keyDAVT, keyCHRE, keyCHBL, keyMXSW, keyNOIS,
-     &     keyDMRE, keyMXCA, keyDEXS, keyHROO, KeyTDM,
-     &     KeyZZZZ, KeyDFCF
+     &     KeyHEXS, KeyHEUR, KeyDMPO, KeyNEVP, KeyHFOC,
+     &     KeyDAVT, KeyCHRE, KeyCHBL, KeyMXSW, KeyNOIS,
+     &     KeyDMRE, KeyMXCA, KeyDEXS, KeyHROO, KeyTDM,
+     &     KeyDFCF, KeyNKEE, KeyREOR, KeyTRIA, KeyPOPS,
+     &     KeySEMI, KeyMEMO, KeyIVO , KeyCRPR, KeyRDML,
+     &     KeyORTH, KeyCCCI, KeyROST, KeyXMSI, KeyCMSI,
+     &     KeyCMMA, KeyCMMI, KeyCMTH, KeyGUGA, KeyCMSS,
+     &     KeyCMSO, KeySSCR
 
       Common /InputFlags/ KeyAAAA,
      &     KeyALTE, KeyATOM, KeyAVER, KeyCHAR, KeyCHOI,
@@ -58,46 +62,54 @@
      &     KeyRFPE, KeyCIRF, KeyRFRO, KeyRLXR, KeyRASS,
      &     KeySDAV, KeySPIN, KeySUPS, KeySXDA, KeySYMM,
      &     KeyTHRS, KeyTIGH, KeyTITL, KeyTYPE, KeyVB  ,
-     &     KeyEXPE, KeySPLI, KeyNUSP, keyENSP, keyPESP,
-     &     keyFOSP, KeyMDRL, keyOFEM, keyFTHA, keyDFMD,
-     &     keyBKAP, KeyALPH, keyFARO, keyDMRG, key3RDM,
-     &     keyNECI, keyNWAL, keyTIME, keyCYCL, keyRDMS,
-     &     keyRDMP, keyRSPC, keyDEFD, keyDISH, keyEXNE,
-     &     keyBLOK, keySOCC, keyRGIN, keyPRSD, KeyFCID,
+     &     KeyEXPE, KeySPLI, KeyNUSP, KeyENSP, KeyPESP,
+     &     KeyFOSP, KeyMDRL, KeyOFEM, KeyFTHA, KeyDFMD,
+     &     KeyBKAP, KeyALPH, KeyFARO, KeyDMRG, Key3RDM,
+     &     KeyNECI, KeyTOTA, KeyTIME, KeyNMCY, KeyCALC,
+     &     KeyRDMS, KeyREAL, KeyDEFI, KeyDIAG, KeyEMBD,
+     &     KeyBLOK, KeySOCC, KeyRGIN, KeyPRSD, KeyFCID,
      &     KeyNOCA, KeySAVE, KeyEXPA, KeyH5OR, KeyH5CI,
-     &     KeyHEXS, KeyHEUR, KeyDMPO, KeyNEVP, keyHFOC,
-     &     keyDAVT, keyCHRE, keyCHBL, keyMXSW, keyNOIS,
-     &     keyDMRE, keyMXCA, KeyDEXS, keyHROO, KeyTDM,
-     &     KeyZZZZ, KeyDFCF
+     &     KeyHEXS, KeyHEUR, KeyDMPO, KeyNEVP, KeyHFOC,
+     &     KeyDAVT, KeyCHRE, KeyCHBL, KeyMXSW, KeyNOIS,
+     &     KeyDMRE, KeyMXCA, KeyDEXS, KeyHROO, KeyTDM,
+     &     KeyDFCF, KeyNKEE, KeyREOR, KeyTRIA, KeyPOPS,
+     &     KeySEMI, KeyMEMO, KeyIVO , KeyCRPR, KeyRDML,
+     &     KeyORTH, KeyCCCI, KeyROST, KeyXMSI, KeyCMSI,
+     &     KeyCMMA, KeyCMMI, KeyCMTH, KeyGUGA, KeyCMSS,
+     &     KeyCMSO, KeySSCR
 
       Equivalence(KeyAAAA,KeyFlags(0))
 *------------------------------------------------------
 * Actual keywords, note: Order matters!
       Character*4 CMD(nKeys)
-      DATA CMD / 'ALTE','ATOM','AVER','CHAR','CHOI',
-     &           'CHOL','CIMX','CION','CIRE','CIRO',
-     &           'CISE','CLEA','CORE','DELE','END ',
-     &           'FILE','FROZ','HOME','INAC','INPO',
-     &           'IPHN','ITER','JOBI','KSDF','LEVS',
-     &           'LINE','LOWD','LOWM','LUMO','MAXO',
-     &           'NACT','NEWI','NONE','NOQU','OPTO',
-     &           'ORBA','ORBL','ORBO','ORDE','OUTO',
-     &           'OUTP','PRIN','PROR','PRSP','PRWF',
-     &           'QUNE','RAS1','RAS2','RAS3','GASS',
-     &           'RFPE','CIRF','RFRO','RLXR','RASS',
-     &           'SDAV','SPIN','SUPS','SXDA','SYMM',
-     &           'THRS','TIGH','TITL','TYPE','VB  ',
-     &           'EXPE','SPLI','NUSP','ENSP','PESP',
-     &           'FOSP','MDRL','OFEM','FTHA','DFMD',
-     &           'BKAP','ALPH','FARO','DMRG','3RDM',
-     &           'NECI','NWAL','TIME','CYCL','RDMS',
-     &           'RDMP','RSPC','DEFD','DISH','EXNE',
-     &           'BLOK','SOCC','RGIN','PRSD','FCID',
-     &           'NOCA','SAVE','EXPA','H5OR','H5CI',
-     &           'HEXS','HEUR','DMPO','NEVP','HFOC',
-     &           'DAVT','CHRE','CHBL','MXSW','NOIS',
-     &           'DMRE','MXCA','DEXS','HROO','TDM ',
-     &           'DFCF'/
+      Parameter (CMD = ['ALTE','ATOM','AVER','CHAR','CHOI',
+     &                  'CHOL','CIMX','CION','CIRE','CIRO',
+     &                  'CISE','CLEA','CORE','DELE','END ',
+     &                  'FILE','FROZ','HOME','INAC','INPO',
+     &                  'IPHN','ITER','JOBI','KSDF','LEVS',
+     &                  'LINE','LOWD','LOWM','LUMO','MAXO',
+     &                  'NACT','NEWI','NONE','NOQU','OPTO',
+     &                  'ORBA','ORBL','ORBO','ORDE','OUTO',
+     &                  'OUTP','PRIN','PROR','PRSP','PRWF',
+     &                  'QUNE','RAS1','RAS2','RAS3','GASS',
+     &                  'RFPE','CIRF','RFRO','RLXR','RASS',
+     &                  'SDAV','SPIN','SUPS','SXDA','SYMM',
+     &                  'THRS','TIGH','TITL','TYPE','VB  ',
+     &                  'EXPE','SPLI','NUSP','ENSP','PESP',
+     &                  'FOSP','MDRL','OFEM','FTHA','DFMD',
+     &                  'BKAP','ALPH','FARO','DMRG','3RDM',
+     &                  'NECI','TOTA','TIME','NMCY','CALC',
+     &                  'RDMS','REAL','DEFI','DIAG','EMBD',
+     &                  'BLOK','SOCC','RGIN','PRSD','FCID',
+     &                  'NOCA','SAVE','EXPA','H5OR','H5CI',
+     &                  'HEXS','HEUR','DMPO','NEVP','HFOC',
+     &                  'DAVT','CHRE','CHBL','MXSW','NOIS',
+     &                  'DMRE','MXCA','DEXS','HROO','TDM ',
+     &                  'DFCF','NKEE','REOR','TRIA','POPS',
+     &                  'SEMI','MEMO','IVO ','CRPR','RDML',
+     &                  'ORTH','CCCI','ROST','XMSI','CMSI',
+     &                  'CMMA','CMMI','CMTH','GUGA','CMSS',
+     &                  'CMSO','SSCR'])
 *------------------------------------------------------
 * Input data sets:
       Integer iCI_I,IROOT_I,NFRO_I,NISH_I,NRS1_I,NRS2_I,NRS3_I,NDEL_I,

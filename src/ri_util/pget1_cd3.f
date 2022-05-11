@@ -10,7 +10,7 @@
 *                                                                      *
 * Copyright (C) 1992,2007, Roland Lindh                                *
 ************************************************************************
-      SubRoutine PGet1_CD3(PAO,ijkl,nPAO,iCmp,iShell,
+      SubRoutine PGet1_CD3(PAO,ijkl,nPAO,iCmp,
      &                 iAO,iAOst,Shijij,iBas,jBas,kBas,lBas,kOp,
      &                 DSO,DSSO,DSO_Var,nDSO,ExFac,CoulFac,PMax,V_k,
      &                 U_k,mV_k)
@@ -22,46 +22,30 @@
 *          Hence we must take special care in order to regain the can- *
 *          onical order.                                               *
 *                                                                      *
-* Called from: PGet0                                                   *
-*                                                                      *
-* Calling    : QEnter                                                  *
-*              RecPrt                                                  *
-*              QExit                                                   *
-*                                                                      *
 *     Author: Roland Lindh, Dept. of Theoretical Chemistry, University *
 *             of Lund, SWEDEN.                                         *
 *             January '92.                                             *
 *                                                                      *
 *             Modified for Cholesky 1-center gradients May 2007 by     *
 *             R. Lindh                                                 *
-*                                                                      *
 ************************************************************************
+      use Basis_Info, only: nBas
+      use SOAO_Info, only: iAOtSO
+      use ExTerm, only: CijK, CilK, BklK, BMP2, iMP2prpt, LuBVector,
+     &                  CMOi
       Implicit Real*8 (A-H,O-Z)
-#include "itmax.fh"
-#include "info.fh"
 #include "real.fh"
-#include "print.fh"
-#include "pso.fh"
-#include "chomp2g_alaska.fh"
 #include "exterm.fh"
-#include "WrkSpc.fh"
       Real*8 PAO(ijkl,nPAO), DSO(nDSO), DSSO(nDSO), V_k(mV_k),
      &       U_k(mV_k), DSO_Var(nDSO)
-      Integer iShell(4), iAO(4), kOp(4), iAOst(4), iCmp(4)
-      Logical Shijij, skip
+      Integer iAO(4), kOp(4), iAOst(4), iCmp(4)
+      Logical Shijij
 *                                                                      *
 ************************************************************************
 *                                                                      *
-      iRout = 39
-      iPrint = nPrint(iRout)
-*define _DEBUG_
-#ifdef _DEBUG_
-      Call qEnter('PGet1_CD3')
-      iPrint=99
-      If (iPrint.ge.99) Then
-         iComp = 1
-         Call PrMtrx('DSO     ',iD0Lbl,iComp,ipD0,Work)
-      End If
+#ifdef _DEBUGPRINT_
+      iComp = 1
+      Call PrMtrx('DSO     ',[iD0Lbl],iComp,1,D0)
 #endif
 *                                                                      *
 ************************************************************************
@@ -77,7 +61,6 @@ C     Fac = One / Four
 
       Fac = One / Two
       PMax=Zero
-      skip = .false.
       iPAO = 0
       jSym = 1
       kSym = 1
@@ -90,9 +73,7 @@ C     Fac = One / Four
          nLBas = lBas*iCmp(4)
 
          kSO = iAOtSO(iAO(3)+1,kOp(3))+iAOst(3)
-         index2k= NumOrb*(kSO-1)
          lSO = iAOtSO(iAO(4)+1,kOp(4))+iAOst(4)
-         index2l= NumOrb*(lSO-1)
 
          Do i1 = 1, iCmp(1)
             iSO = iAOtSO(iAO(1)+i1,kOp(1))+iAOst(1)
@@ -115,18 +96,18 @@ C     Fac = One / Four
                      If(ijVec.ne.0) Then
                         iAdr = nIJR(kSym,lSym,1)*(ijVec-1) +
      &                       iAdrCVec(jSym,kSym,1)
-                        Call dDaFile(LuCVector(jSym,1),2,Work(ip_CijK),
+                        Call dDaFile(LuCVector(jSym,1),2,CijK,
      &                       nIJR(kSym,lSym,1),iAdr)
 
                         Call dGEMM_('T','N',NumOrb,nKBas,NumOrb,
-     &                             1.0d0,Work(ip_CijK),NumOrb,
-     &                             Work(ip_CMOi(1)+index2k),NumOrb,
-     &                             0.0d0,Work(ip_CilK),Max(1,NumOrb))
+     &                             1.0d0,CijK,NumOrb,
+     &                                   CMOi(1)%SB(1)%A2(:,kSO),NumOrb,
+     &                             0.0d0,CilK,Max(1,NumOrb))
 
                         Call dGEMM_('T','N',nKBas,nLBas,NumOrb,
-     &                             1.0d0,Work(ip_CilK),NumOrb,
-     &                             Work(ip_CMOi(1)+index2l),NumOrb,
-     &                             0.0d0,Work(ip_BklK),Max(1,nKBas))
+     &                             1.0d0,CilK,NumOrb,
+     &                                   CMOi(1)%SB(1)%A2(:,lSO),NumOrb,
+     &                             0.0d0,BklK,Max(1,nKBas))
                      End If
 
                      Do i3 = 1, iCmp(3)
@@ -142,8 +123,7 @@ C     Fac = One / Four
                               lSOl = lSO + lAOl
                               Do kAOk = 0, kBas-1
                                  kSOk = kSO + kAOk
-                                 indexB = ip_BklK +
-     &                                    (kAOk + (i3-1)*kBas)
+                                 indexB = 1 + (kAOk + (i3-1)*kBas)
      &                                  + (lAOl + (i4-1)*lBas)*nKBas
                                  nijkl = iAOi + jAOj*iBas
      &                                 + kAOk*iBas*jBas
@@ -154,7 +134,7 @@ C     Fac = One / Four
                                  Indkl=(Indk-1)*Indk/2+Indl
                                  temp=V_k(Indij)*DSO(Indkl)*coulfac
                                  If(ijVec .ne. 0) Then
-                                    tempK = Work(indexB)
+                                    tempK = BklK(indexB)
                                  Else
                                     tempK = 0.0d0
                                  End If
@@ -178,9 +158,7 @@ C     Fac = One / Four
          nLBas = lBas*iCmp(4)
 
          kSO = iAOtSO(iAO(3)+1,kOp(3))+iAOst(3)
-         index2k= NumOrb*(kSO-1)
          lSO = iAOtSO(iAO(4)+1,kOp(4))+iAOst(4)
-         index2l= NumOrb*(lSO-1)
 
          Do i1 = 1, iCmp(1)
             iSO = iAOtSO(iAO(1)+i1,kOp(1))+iAOst(1)
@@ -202,23 +180,23 @@ C     Fac = One / Four
                      If(ijVec.ne.0) Then
                         iAdr = nIJR(kSym,lSym,1)*(ijVec-1) +
      &                       iAdrCVec(jSym,kSym,1)
-                        Call dDaFile(LuCVector(jSym,1),2,Work(ip_CijK),
+                        Call dDaFile(LuCVector(jSym,1),2,CijK,
      &                       nIJR(kSym,lSym,1),iAdr)
 
                         Call dGEMM_('T','N',NumOrb,nKBas,NumOrb,
-     &                             1.0d0,Work(ip_CijK),NumOrb,
-     &                             Work(ip_CMOi(1)+index2k),NumOrb,
-     &                             0.0d0,Work(ip_CilK),Max(1,NumOrb))
+     &                             1.0d0,CijK,NumOrb,
+     &                                   CMOi(1)%SB(1)%A2(:,kSO),NumOrb,
+     &                             0.0d0,CilK,Max(1,NumOrb))
 
                         Call dGEMM_('T','N',nKBas,nLBas,NumOrb,
-     &                             1.0d0,Work(ip_CilK),NumOrb,
-     &                             Work(ip_CMOi(1)+index2l),NumOrb,
-     &                             0.0d0,Work(ip_BklK),Max(1,nKBas))
+     &                             1.0d0,CilK,NumOrb,
+     &                                   CMOi(1)%SB(1)%A2(:,lSO),NumOrb,
+     &                             0.0d0,BklK,Max(1,nKBas))
                         lBVec = nBas(0)*nBas(0)
                         Do i = 1,2
                            iAdr = 1 + nBas(0)*nBas(0)*(ijVec-1)
-                           Call dDaFile(LuBVector(i),2,Work(ip_B_mp2(i))
-     &                                  , lBVec,iAdr)
+                           Call dDaFile(LuBVector(i),2,Bmp2(:,i),lBVec,
+     &                                  iAdr)
                         End Do
 
                      End If
@@ -235,8 +213,7 @@ C     Fac = One / Four
                               lSOl = lSO + lAOl
                               Do kAOk = 0, kBas-1
                                  kSOk = kSO + kAOk
-                                 indexB = ip_BklK +
-     &                                    (kAOk + (i3-1)*kBas)
+                                 indexB = 1 + (kAOk + (i3-1)*kBas)
      &                                  + (lAOl + (i4-1)*lBas)*nKBas
                                  nijkl = iAOi + jAOj*iBas
      &                                 + kAOk*iBas*jBas
@@ -248,7 +225,7 @@ C     Fac = One / Four
                                  temp=V_k(Indij)*DSO(Indkl)*coulfac
 
                                  If(ijVec.ne.0) Then
-                                    tempK = Work(indexB)
+                                    tempK = BklK(indexB)
                                  Else
                                     tempK = 0.0d0
                                  End If
@@ -257,13 +234,13 @@ C     Fac = One / Four
                                  temp = temp + V_k(indij)*
      &                               (DSO_Var(indkl)-DSO(indkl))*CoulFac
                                  if(ijVec.ne.0) Then
-                                    tempJ = Compute_B_4(irc,kSOk,
+                                    tempJ = Compute_B(irc,kSOk,
      &                                   lSOl,0,nBas(0),2)
                                     temp = temp + tempJ*CoulFac*
      &                                   fac_ij
 
                                     tempK = tempK +
-     &                                   Compute_B_4(irc,kSOk,lSOl,
+     &                                   Compute_B(irc,kSOk,lSOl,
      &                                   0,nBas(0),1)
                                  End If
                                  temp = temp - tempK*ExFac*Half*fac_ij
@@ -330,10 +307,8 @@ C     Fac = One / Four
          Call Abend
       End If
 *
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       Call RecPrt(' In PGet1_CD3:PAO ',' ',PAO,ijkl,nPAO)
-      Call GetMem(' Exit PGet1_CD3','CHECK','REAL',iDum,iDum)
-      Call qExit('PGet1_CD3')
 #endif
 
       Call CWTime(Cpu2,Wall2)
@@ -345,7 +320,6 @@ C     Fac = One / Four
       Return
 c Avoid unused argument warnings
       If (.False.) Then
-         Call Unused_integer_array(iShell)
          Call Unused_logical(Shijij)
          Call Unused_real_array(DSSO)
       End If

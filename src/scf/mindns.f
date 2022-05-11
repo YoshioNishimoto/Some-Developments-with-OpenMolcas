@@ -50,7 +50,8 @@
       Real*8 XCff(ltXCff,nD)
 *
 *---- Define local variables
-      Real*8 AMat(MxIter,MxIter,2),BVec(MxIter,2)
+      Real*8 BVec(MxIter,2)
+      Real*8, Dimension(:,:,:), Allocatable :: AMat
       Real*8, Dimension(:,:), Allocatable, Target:: DRow, DCol
       Real*8, Dimension(:,:), Pointer:: pDR, pDC
 *
@@ -58,14 +59,10 @@
 *     Start                                                            *
 *----------------------------------------------------------------------*
 *
-*define _DEBUG_
-#ifdef _DEBUG_
-      Call qEnter('MinDns')
-      Write(6,*)' ***** SubRoutine MinDns *****'
-#endif
 *
       Call mma_allocate(DRow,nBT,nD,Label='DRow')
       Call mma_allocate(DCol,nBT,nD,Label='DCol')
+      Call mma_allocate(AMat,MxIter,MxIter,2,label='AMat')
       Call FZero(XCff,ltXCff*nD)
       Call FZero(AMat,2*MxIter**2)
       Call FZero(BVec,2*MxIter   )
@@ -77,7 +74,7 @@
 *
 *     iStart = iter_d - iDMin
       iStart = Max(1,iter_d - 9)
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       Write (6,*) 'iter_d,iStart=',iter_d,iStart
 #endif
 *
@@ -93,12 +90,12 @@
             pDR => Dens(1:mBT,1:nD,iR)
          End If
 *
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
          Call NrmClc(pDR,nBT*nD,'MinDns','pDR')
 #endif
          Do iD = 1, nD
-            AMat(jRow,jRow,iD) = DDot_(nBT,pDR(1,iD),1,pDR(1,iD),1)
-            BVec(jRow,iD) = DDot_(nBT,pDR(1,iD),1,Dens(1,iD,iPsLst),1)
+            AMat(jRow,jRow,iD) = DDot_(nBT,pDR(:,iD),1,pDR(:,iD),1)
+            BVec(jRow,iD) = DDot_(nBT,pDR(:,iD),1,Dens(1,iD,iPsLst),1)
          End Do ! iD
 *
          jCol = 0
@@ -114,7 +111,7 @@
             End If
 *
             Do iD = 1, nD
-               AMat(jRow,jCol,iD) = DDot_(nBT,pDR(1,iD),1,pDC(1,iD),1)
+               AMat(jRow,jCol,iD) = DDot_(nBT,pDR(:,iD),1,pDC(:,iD),1)
                AMat(jCol,jRow,iD) = AMat(jRow,jCol,iD)
             End Do ! iD
 *
@@ -135,7 +132,7 @@
      &               1.0d0,AMat(1,1,iD),MxIter,
      &                     BVec(1,iD),iter_d-iStart,
      &               0.0d0,XCff(iStart,iD),iter_d-iStart)
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
          Write(6,*)' Coefficients minimizing density difference:'
          Write(6,'(5f16.8)')(XCff(i,iD),i=1,iter_d-1)
          Write(6,*)
@@ -156,24 +153,18 @@
 
          Do iD = 1, nD
             XC = - XCff(iMat,iD)
-            call daxpy_(nBT,XC,pDR(1,iD),1,Dens(1,iD,iPsLst),1)
+            call daxpy_(nBT,XC,pDR(:,iD),1,Dens(1,iD,iPsLst),1)
          End Do ! iD
 *
       End Do ! iMat
 *
+      Call mma_deallocate(AMat)
       Call mma_deallocate(DCol)
       Call mma_deallocate(DRow)
-*
-#ifdef _DEBUG_
-      Call qExit('MinDns')
-#endif
-*
-*----------------------------------------------------------------------*
-*     Exit                                                             *
-*----------------------------------------------------------------------*
-*
-      Return
-      End
+
+      end subroutine MinDns
+
+
       SubRoutine RmLDep(AMat,lDm,lth)
 ************************************************************************
 *                                                                      *
@@ -216,10 +207,6 @@
 *     Start                                                            *
 *----------------------------------------------------------------------*
 *
-#ifdef _DEBUG_
-      Call qEnter('RmLDep')
-      Write(6,*)' ***** SubRoutine RmLDep*****'
-#endif
 *
       lthT = lth*(lth + 1)/2
       lthS = lth*lth
@@ -228,8 +215,8 @@
       Call mma_allocate(EVal,lth ,Label='EVal')
 *
 *---- Put a unit matrix into the eigenvectors work space
-      call dcopy_(lthS,Zero,0,EVec,      1)
-      call dcopy_(lth, One, 0,EVec,lth + 1)
+      call dcopy_(lthS,[Zero],0,EVec,      1)
+      call dcopy_(lth, [One], 0,EVec,lth + 1)
 *
 *---- Copy trialangular part of AMat to work space
       ij = 1
@@ -237,7 +224,7 @@
          call dcopy_(i,AMat(i,1),lDm,ATri(ij),1)
          ij = ij + i
       End Do
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       Write(6,*)' Squared A-matrix in RmLDep:'
       Do i = 1, lth
          Write(6,'(5(2x,e12.6))')(AMat(i,j),j=1,lth)
@@ -254,13 +241,13 @@
      &                 Dummy,Dummy,iDum,iDum,EVal,EVec,
      &                 lth,1,0,'J',nFound,iErr)
       Call mma_deallocate(Scr)
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       Write(6,*)' Eigenvalues of A-matrix in RLnDep:'
       Write(6,'(5(2x,e12.6))')(EVal(i),i=1,lth)
 #endif
 *
 *---- Form the inverse
-      Call dCopy_(lDm*lth,Zero,0,AMat,1)
+      Call dCopy_(lDm*lth,[Zero],0,AMat,1)
       Do i = 1, lth
          If (EVal(i).gt.1.0d-12) Then
             AMat(i,i) = 1.0d+00/EVal(i)
@@ -286,13 +273,4 @@
       Call mma_deallocate(EVec)
       Call mma_deallocate(ATri)
 *
-#ifdef _DEBUG_
-      Call qExit('RmLDep')
-#endif
-*
-*----------------------------------------------------------------------*
-*     Exit                                                             *
-*----------------------------------------------------------------------*
-*
-      Return
       End

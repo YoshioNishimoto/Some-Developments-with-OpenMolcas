@@ -12,22 +12,13 @@
 ************************************************************************
       SubRoutine VrfMtrx(Label,lOper,nComp,ip,Matrix)
 ************************************************************************
-*                                                                      *
-* Object:                                                              *
-*                                                                      *
-* Called from:                                                         *
-*                                                                      *
-* Calling    : QEnter                                                  *
-*              RecPrt                                                  *
-*              TriPrt                                                  *
-*              QExit                                                   *
-*                                                                      *
 *     Author: Roland Lindh, Dept. of Theoretical Chemistry,            *
 *             University of Lund, Sweden, January '91                  *
 ************************************************************************
+      use Basis_Info, only: nBas
+      use Gateway_global, only: PrPrt
+      use Symmetry_Info, only: nIrrep
       Implicit Real*8 (A-H,O-Z)
-#include "itmax.fh"
-#include "info.fh"
 *     Local arrays
       Real*8 Matrix(*)
       Character Label*(*), Line*80, Status
@@ -60,7 +51,7 @@
          n2=4
          VrfSum=VrfSum+DDot_(n2,Matrix(ip1),1,Matrix(ip1),1)
          Write (Line,'(A,I5)') Label,iComp
-         Call Add_info(Line,VrfSum,1,8)
+         Call Add_info(Line,[VrfSum],1,8)
  10   Continue
 *
       Return

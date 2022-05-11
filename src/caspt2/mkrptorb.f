@@ -20,13 +20,12 @@
       IMPLICIT NONE
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
 C Transform to orbitals that diagonalize the diagonal
 C blocks of FIFA. Affected data sets are CMO,
 C EPS, EPSI, EPSA, and EPSE. Also, the CI arrays are
-C transformed on file LUONEM. Note: FIFA is unchanged
+C transformed on file LUCIEX. Note: FIFA is unchanged
 C and is not valid for the new orbitals. It will be
 C recomputed later.
 C The transformation matrices are returned in TORB.
@@ -51,10 +50,9 @@ C     work-array pointers
       INTEGER LXMAT,NXMAT
 #endif
 C     #orbitals per symmetry
-      INTEGER NF,NI,NA,NR1,NR2,NR3,NS,NO,NB
+      INTEGER NI,NA,NR1,NR2,NR3,NS,NO,NB
       INTEGER NSCT,NCMOSCT
 
-      CALL QENTER('MKRPTORB')
 
 * Allocate space for temporary square Fock matrix in each symmetry:
 * NBMX=Max number of basis functions in any symmetry, in common in caspt2.fh
@@ -79,7 +77,6 @@ C     #orbitals per symmetry
 * ICMOSTA,ICMOEND: Section of CMO for each subspace.
       ICMOEND=0
       DO ISYM=1,NSYM
-        NF=NFRO(ISYM)
         NI=NISH(ISYM)
         NA=NASH(ISYM)
         NR1=NRAS1(ISYM)
@@ -250,19 +247,19 @@ C Finally, loop again over symmetries, transforming the CI:
             IF(NA.GT.0) THEN
               IF(NR1.GT.0) THEN
                 ISTART=NAES(ISYM)+1
-                CALL TRACI_RPT2(ISTART,NR1,TORB(ITO),LSYM,
+                CALL TRACI_RPT2(ISTART,NR1,TORB(ITO),STSYM,
      &                                         NCONF,WORK(LCI))
               END IF
               ITO=ITO+NR1**2
               IF(NR2.GT.0) THEN
                 ISTART=NAES(ISYM)+NR1+1
-                CALL TRACI_RPT2(ISTART,NR2,TORB(ITO),LSYM,
+                CALL TRACI_RPT2(ISTART,NR2,TORB(ITO),STSYM,
      &                                         NCONF,WORK(LCI))
               END IF
               ITO=ITO+NR2**2
               IF(NR3.GT.0) THEN
                 ISTART=NAES(ISYM)+NR1+NR2+1
-                CALL TRACI_RPT2(ISTART,NR3,TORB(ITO),LSYM,
+                CALL TRACI_RPT2(ISTART,NR3,TORB(ITO),STSYM,
      &                                         NCONF,WORK(LCI))
               END IF
             END IF
@@ -278,7 +275,7 @@ C Finally, loop again over symmetries, transforming the CI:
           NXMAT=NASHT**2
 * Workspace for transformation matrix
           CALL GETMEM('XMAT','ALLO','REAL',LXMAT,NXMAT)
-          CALL DCOPY_(NXMAT,0.0D0,0,WORK(LXMAT),1)
+          CALL DCOPY_(NXMAT,[0.0D0],0,WORK(LXMAT),1)
           CALL MKXMAT(TORB,WORK(LXMAT))
 
           CALL block_tran2pdm(NASHT,WORK(LXMAT),JSTATE,JSTATE)
@@ -295,7 +292,6 @@ C Finally, loop again over symmetries, transforming the CI:
       END IF
 
 
-      CALL QEXIT('MKRPTORB')
 
       RETURN
       END

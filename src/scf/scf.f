@@ -33,19 +33,18 @@
 *     history: none                                                    *
 *                                                                      *
 ************************************************************************
-      use SCF_Arrays
+      Use SCF_Arrays
+      Use Interfaces_SCF, Only: OccDef
+      use OFembed, only: Do_OFemb
+      use InfSO
       Implicit Real*8 (a-h,o-z)
 *
 #include "mxdm.fh"
 #include "infscf.fh"
-#include "infso.fh"
 #include "stdalloc.fh"
 #include "twoswi.fh"
 #include "file.fh"
-#include "hflda.fh"
-#include "warnings.fh"
-      Logical Do_OFemb,KEonly,OFE_first
-      COMMON  / OFembed_L / Do_OFemb,KEonly,OFE_first
+#include "warnings.h"
 *
       Character*8 EMILOOP
       Logical FstItr, Semi_Direct
@@ -56,8 +55,6 @@
 *----------------------------------------------------------------------*
 *
       Call CWTime(TCPU1,TWall1)
-      Call qEnter('SCF')
-      HFLDA=0.0
       Call SCF_Init()
       iTerm=0
 *
@@ -68,7 +65,7 @@
       Semi_Direct = DSCF .and. (nDisc.ne.0 .or. (nCore.ne.0
      &      .and. nDisc.eq.0))
       If (Semi_Direct) Then
-         Call GetMem('MaxMem','Max','Real',iDum,MemSew)
+         Call mma_MaxDBLE(MemSew)
          MemLow=Min(MemSew/2,1024*1024)
          MemSew=Max(MemSew/10,MemLow)
          Call xsetmem_ints(MemSew)
@@ -97,7 +94,7 @@
 *                                                                      *
       Call WrInp_SCF(SIntTh)
 
-      Call Cre_SCFWfn
+      Call Cre_SCFWfn()
 
       FstItr=.True.
 
@@ -108,27 +105,23 @@
 *     so that iPsLst is right in case of nIter==0
       If (nIter(nIterP).eq.0) iter0=-1
       Call Final()
-      If (DSCF) Call Free_TLists
+      If (DSCF) Call Free_TLists()
 *
       Call CWTime(TCPU2,TWall2)
       Call SavTim(4,TCPU2-TCPU1,TWall2-TWall1)
 *
       Call GMFree()
-      Call ClsFls_SCF
-      If (Semi_Direct) Call xRlsMem_Ints
+      Call ClsFls_SCF()
+      If (Semi_Direct) Call xRlsMem_Ints()
 *
 *     Call MolDen Interface
 *
       If(iUHF.eq.0) Then
-         Call Molden_Interface(iUHF,'SCFORB','MD_SCF',AddFragments)
-c         Call grid_driver(-1,'SCF','SCFORB',iRc)
+         Call Molden_Interface(iUHF,'SCFORB','MD_SCF')
       Else
-         Call Molden_Interface(iUHF,'UHFORB','MD_SCF',AddFragments)
-c         Call grid_driver(-1,'SCF','UNAORB',iRc)
+         Call Molden_Interface(iUHF,'UHFORB','MD_SCF')
       End If
-      Call qExit('SCF')
       if(iStatPRN.gt.0) then
-       Call qStat(' ')
        Call FastIO('STATUS')
       endif
 *
@@ -157,20 +150,14 @@ c         Call grid_driver(-1,'SCF','UNAORB',iRc)
 ************************************************************************
       SubRoutine IniLLs
 *     initialize the diverse linked lists
+      use LnkLst
       Implicit Real*8 (a-h,o-z)
 
 #include "mxdm.fh"
 #include "infscf.fh"
-#include "infso.fh"
 #include "llists.fh"
-#include "lnklst.fh"
 *
-#ifdef _DEBUG_
-      Call QEnter('IniLLs')
-#endif
 *
-*     MemRsv set tentatively to the size of six density matrices
-c     MemRsv=6*nBT
       LLlist=0
       LLGrad=0
       Call IniLst(LLGrad,20)
@@ -180,11 +167,7 @@ c     MemRsv=6*nBT
       Call IniLst(LLx,MxOptm)
       Init_LLs=1
 *
-#ifdef _DEBUG_
-      Call QExit('IniLLs')
-#endif
-      Return
-      End
+      End subroutine IniLLs
 *----------------------------------------------------------------------*
 #ifdef _NOTUSED_
       Subroutine StatLLS()
@@ -223,8 +206,8 @@ c     MemRsv=6*nBT
       End
 *----------------------------------------------------------------------*
       Subroutine RclLLs(iDskPt)
+      use InfSO, only: MemRsv
       Implicit Real*8 (a-h,o-z)
-#include "infso.fh"
 #include "file.fh"
 #include "llists.fh"
       Integer iDskPt(5)
@@ -258,8 +241,8 @@ c     MemRsv=6*nBT
       End
 *----------------------------------------------------------------------*
       Subroutine StlLst(LLink)
+      use LnkLst, only: nLList
       Implicit Real*8 (a-h,o-z)
-#include "WrkSpc.fh"
       return
        Write (6,*)
        Write (6,*) '*********** Status of Linked List *************'
@@ -267,51 +250,32 @@ c     MemRsv=6*nBT
        Write (6,*) ' LLink:',LLink
        Write (6,*)
        Write (6,*) ' CNOD data'
-       Write (6,*) 'Error code:                       ',iWork(LLink  )
-       Write (6,*) 'Pointer to first NODE in the list:',iWork(LLink+1)
-       Write (6,*) 'Actual length of list:            ',iWork(LLink+2)
-       Write (6,*) '# of vectors in core:             ',iWork(LLink+3)
+       Write (6,*) 'Error code:                       ',nLList(LLink,0)
+       Write (6,*) 'Pointer to first NODE in the list:',nLList(LLink,1)
+       Write (6,*) 'Actual length of list:            ',nLList(LLink,2)
+       Write (6,*) '# of vectors in core:             ',nLList(LLink,3)
        Write (6,*)
-       iRoot=iWork(LLink+1)
+       iRoot=nLList(LLink,1)
        Do while (iRoot.ne.0)
           Write (6,*) ' NODE data'
           Write (6,*) 'NODE @:                         ',iRoot
-          Write (6,*) 'Pointer to next NODE:           ',iWork(iRoot  )
-          Write (6,*) 'Pointer to stored vector:       ',iWork(iRoot+1)
-          If (iWork(iRoot+5).ge.1) Then
+          Write (6,*) 'Pointer to next NODE:           ',nLList(iRoot,0)
+          Write (6,*) 'Pointer to stored vector:       ',nLList(iRoot,1)
+          If (nLList(iRoot,5).ge.1) Then
              Write (6,*) 'Vector status:                  in Core'
           Else
              Write (6,*) 'Vector status:                  on Disk'
           End If
-          Write (6,*) 'Next free position:             ',iWork(iRoot+2)
-          Write (6,*) 'Length of vector:               ',iWork(iRoot+3)
-          Write (6,*) 'Iteration number:               ',iWork(iRoot+4)
+          Write (6,*) 'Next free position:             ',nLList(iRoot,2)
+          Write (6,*) 'Length of vector:               ',nLList(iRoot,3)
+          Write (6,*) 'Iteration number:               ',nLList(iRoot,4)
           Write (6,*)
-          iRoot=iWork(iRoot)
+          iRoot=nLList(iRoot,0)
        End Do
        Write (6,*) '************ End of Status Report *************'
        Write (6,*)
       Return
       End
-#ifdef _NOTUSED_
-*----------------------------------------------------------------------*
-      Subroutine Init_TLists
-      Implicit Real*8 (a-h,o-z)
-*     Include 'mxdm.fh'
-#include <mxdm.fh>
-
-      Logical Triangular
-*
-      If (DSCF) Then
-         Triangular=.True.
-         Call Init_TList(Triangular)
-         Call Init_PPList
-         Call Init_GTList
-      End If
-*
-      Return
-      End
-#endif
 *----------------------------------------------------------------------*
       Subroutine Free_TLists
       Implicit Real*8 (a-h,o-z)
@@ -319,63 +283,24 @@ c     MemRsv=6*nBT
 #include "mxdm.fh"
 #include "infscf.fh"
 *
+      Write (6,*) 'Free_TLists:',DSCF
       If (DSCF) Then
-         Call Free_TList
-         Call Free_PPList
-         Call Free_GTList
+         Call Free_TList()
+         Call Free_PPList()
+         Call Free_GTList()
       End If
 *
       Return
       End
 *----------------------------------------------------------------------*
-#ifdef _NOTUSED_
-*debug routine
-      SubRoutine DumDum
-*     dummy routine with endless loop for parallel debugging
-      use Real_Spherical
-      Implicit Real*8 (a-h,o-z)
-#include "itmax.fh"
-#include "info.fh"
-#include "WrkSpc.fh"
-      Integer iflag
-      Integer   idbx1(MxShll),idbx2(Mxshll)
-      Real*8 rdbx1,rdbx2(mxdbsc)
-*
-      iflag=0
-      Write (6,*) 'nexp:'
-      Write (6,*) (nExp(i),i=1,10)
-c 100 If (iflag.eq.1) Go To 110
-c     Go To 100
-c 110 Continue
-      Do i=1,Mxshll
-        idbx1(i)=nExp(i)
-        idbx2(i)=ipBk(i)
-      End Do
-      rdbx1=TMass
-      Do i=1,mxdbsc
-        rdbx2(i)=Charge(i)
-      End Do
-      Do i=1,4
-        rdbx1=Work(ipCff(i))
-        rdbx1=Work(ipExp(i))
-      End Do
-      Do iAng = 0, iAngMx-1
-        idbx0=ipSph(iAng+1)
-        rdbx1=RSph(ipSph(iAng+1))
-      End Do
-      Return
-      End
-#endif
-*debug routine
       Subroutine Reduce_Thresholds(EThr_,SIntTh)
+      use InfSO, only: DltNTh
       Implicit Real*8 (a-h,o-z)
 #include "real.fh"
 *
 #include "mxdm.fh"
 #include "infscf.fh"
-#include "infso.fh"
-      Common /Save/ SIntTh_old, EThr_old, DThr_old, DltNTh_old,
-     &              FThr_old, ThrInt_Old
+#include "save.fh"
 *
       Write (6,*)
       Write (6,*) 'Temporary increase of thresholds...'
@@ -406,18 +331,16 @@ c 110 Continue
       Return
       End
       Subroutine Reset_Thresholds
+      use InfSO, only: DltNTh
       Implicit Real*8 (a-h,o-z)
 *
 #include "mxdm.fh"
 #include "infscf.fh"
-#include "infso.fh"
-      Common /Save/ SIntTh_old, EThr_old, DThr_old, DltNTh_old,
-     &              FThr_old, ThrInt_Old
+#include "save.fh"
 *
       Write (6,*)
       Write (6,*) 'Restore thresholds...'
       Write (6,*)
-      SIntTh=SIntTh_old
       EThr=EThr_old
       DThr=DThr_old
       DltNTh=DltNTh_old

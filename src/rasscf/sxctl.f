@@ -58,6 +58,11 @@
 #ifdef _DMRG_
       use qcmaquis_interface_cfg
 #endif
+      use fciqmc, only : DoNECI
+#ifdef _HDF5_
+      use mh5, only: mh5_put_dset
+#endif
+      use Fock_util_global, only: ALGO, DoCholesky
       Implicit Real*8 (A-H,O-Z)
 
       Dimension CMO(*),OCC(*),D(*),P(*),PA(*),FI(*),FA(*),D1A(*)
@@ -67,26 +72,18 @@
 #include "general.fh"
 #include "input_ras.fh"
 #include "output_ras.fh"
+      Character*16 ROUTINE
       Parameter (ROUTINE='SXCTL   ')
 #include "WrkSpc.fh"
 #include "wadr.fh"
-#include "fciqmc.fh"
 #include "raswfn.fh"
       Character*4 Word
 * PAM 2008 IndType, VecTyp added, see below at call to WrVec
       Integer IndType(56)
       Character*80 VecTyp
       Save nCall
-      Logical DoActive,DoQmat,DoCholesky,TraOnly,l_casdft
-      Integer ALGO
-
-      COMMON /CHOTODO /DoActive,DoQmat,ipQmat
-      COMMON /CHLCAS /DoCholesky,ALGO
-#ifndef _DMRG_
-      logical :: doDMRG = .false.
-#endif
-      ipDMAT=ip_Dummy
-      nDMAT = 1
+      Logical TraOnly
+      Dimension P2act(1),CIDUMMY(1)
 
 C PAM01 The SXCI part has been slightly modified by P-AA M Jan 15, 2001:
 C Changes affect several of the subroutines of this part.
@@ -110,7 +107,6 @@ C Extra term in overlaps (COVLP, SXHAM): 1.0D-14
 C Extra term in SIGVEC:                  1.0D-12
 
 
-      Call qEnter(ROUTINE)
 C Local print level (if any)
       IPRLEV=IPRLOC(4)
 c      write(6,*) 'Entering SXCTL!'
@@ -198,18 +194,16 @@ C --------------------------------------
          Call GetMem('DALT','Free','Real',iDA,nTot1)
 
          TraOnly=.true.
-         Call CHO_CAS_DRV(irc,CMO,D,FI,D1A,FA,P,TraOnly)
+         Call CHO_CAS_DRV(irc,CMO,D,FI,D1A,FA,Work(ip_Dummy),TraOnly)
 
          if (irc.ne.0) then
          Write(LF,*)'SXCTL: Cho_cas_drv non-zero return code! rc= ',irc
-         call qtrace()
          call abend()
          endif
 
       Else
 
          Write(LF,*)'SXCTL: Illegal Cholesky parameter ALGO= ',ALGO
-         call qtrace()
          call abend()
 
       EndIf
@@ -217,18 +211,6 @@ C --------------------------------------
 * reorder the two-body density matrix P
 ************************************************************************
       LP=1
-      l_casdft = KSDFT(1:5).eq.'TLSDA'   .or.
-     &           KSDFT(1:6).eq.'TLSDA5'  .or.
-     &           KSDFT(1:5).eq.'TBLYP'   .or.
-     &           KSDFT(1:6).eq.'TSSBSW'  .or.
-     &           KSDFT(1:5).eq.'TSSBD'   .or.
-     &           KSDFT(1:5).eq.'TS12G'   .or.
-     &           KSDFT(1:4).eq.'TPBE'    .or.
-     &           KSDFT(1:5).eq.'FTPBE'   .or.
-     &           KSDFT(1:7).eq.'TREVPBE' .or.
-     &           KSDFT(1:8).eq.'FTREVPBE'.or.
-     &           KSDFT(1:6).eq.'FTLSDA'  .or.
-     &           KSDFT(1:6).eq.'FTBLYP'
       IF(.not.l_casdft) then
 * ISTORP(NSYM+1) represents the size of the 2-body density matrix,d(vwxy), with vwxy all active.
 * the size is computed as NAP*NAQ*NRS (sum over all symmetries). If Sym_R = Sym_S then triangular
@@ -246,13 +228,13 @@ C --------------------------------------
             CALL GETMEM('P2_reo','ALLO','REAL',
      &                               ipP2reo,ISTORP(NSYM+1))
             Call Get_Temp('nP2Act  ',P2Act,1)
-            nP2Act=Int(P2Act)
+            nP2Act=Int(P2Act(1))
             CALL GETMEM('P2RAW','ALLO','REAL',ipP2_RAW,nP2Act)
             Call Get_Temp('P2_RAW  ',Work(ipP2_RAW),nP2Act)
             CALL PMAT_RASSCF(Work(ipP2_RAW),WORK(ipP2reo))
             CALL GETMEM('P2RAW','FREE','REAL',ipP2_RAW,nP2Act)
             P2reo=DBLE(ISTORP(NSYM+1))
-            Call Put_Temp('nP2reo  ',P2reo,1)
+            Call Put_Temp('nP2reo  ',[P2reo],1)
             Call Put_Temp('P2_reo  ',Work(ipP2reo),ISTORP(NSYM+1))
             CALL GETMEM('P2_reo','FREE','REAL',
      &                               ipP2reo,ISTORP(NSYM+1))
@@ -266,16 +248,13 @@ C --------------------------------------
        IF(ISTORP(NSYM+1).GT.0) THEN
 c         Write(LF,*)
 c         Write(LF,*) ' ---------------------'
-C         Call Get_D1MO(ipDMAT,nDmat)
-c         CALL TRIPRT('Averaged 1-body Dmat D in MO in SXCTL',' ',D,NAC)
          CALL GETMEM('ISTRP','ALLO','REAL',LP,ISTORP(NSYM+1))
          CALL DmatDmat(D,WORK(LP))
-C         If(ipDMAT.ne.ip_Dummy) Call Free_Work(ipDMAT)
        END IF
       end if
-***********************************************************************
+************************************************************************
 * Compute the MCSCF generalized Fock matrix and Brillouin matrix elements
-***********************************************************************
+************************************************************************
       WORD='FOCK'
       CALL GETMEM('FOCK','ALLO','REAL',LFOCK,NTOT4)
       CALL GETMEM('SXBM','ALLO','REAL',LBM,NSXS)
@@ -338,29 +317,8 @@ cGLM      end if
 * There is an array with occupation numbers, so use it, even if
 * possibly irrelevant. But put zeroes as orbital energies:
         Call GetMem('EDUM','ALLO','REAL',LEDUM,NTOT)
-        call dcopy_(NTOT,0.0D0,0,WORK(LEDUM),1)
+        call dcopy_(NTOT,[0.0D0],0,WORK(LEDUM),1)
 
-        IF (iDoNECI) THEN
-          write(6,*)'For NECI orbital energies are approximated'
-          write(6,*)'to the diagonal value of the Fock matrix (SXCTL)'
-          write(6,*)'These values are going to the temporary RasOrb'
-          write(6,*)'together with CMOs before orb rot is performed'
-c This is of course not true other than for special cases ... but some might find it beneficial!
-          iOff  = 0
-          iOff2 = 0
-          Do iSym = 1,nSym
-           iBas = nBas(iSym)
-           if(iBas.gt.0) then
-            do iDiag = 1,iBas
-             WORK(LEDUM+iDiag-1+iOff) = FA(iOff2+(iDiag*(iDiag+1)/2))
-            end do
-            write(6,*) 'OrbEn in line for sym = ',iSym
-            write(6,*) (Work(LEDUM+i+iOff), i = 0,iBas-1)
-             iOff  = iOff + iBas
-             iOff2 = iOff2 + (iBas*iBas+iBas)/2
-           end if
-          End Do
-        END IF
         Write(VecTyp,'(A)')
         VecTyp='* RASSCF average (pseudo-natural) orbitals (Not final)'
         LuvvVec=50
@@ -430,7 +388,7 @@ C LSQ and LWO: scratch areas
           call mh5_put_dset(wfn_occnum,OCC)
 #endif
         Else
-           ! this part (TRACI) need to be changed to "TRAMPS", not yet ! Yingjin
+!          this part (TRACI) need to be changed to "TRAMPS", not yet ! Yingjin
            CALL NEWORB_RASSCF(CMO,WORK(LCMON),FA,WORK(LFTR),WORK(LVEC),
      &                        WORK(LWO),WORK(LSQ),WORK(LCMOX),D,OCC)
 * compute orbital overlap matrix
@@ -448,7 +406,7 @@ c           IF (NACTEL.GT.0) THEN
                call mpsrot(work(lsmat),nac,nrs2,nsym)
 #endif
 #endif
-             else if(doBlockDMRG .or. iDoNECI)then
+             else if(doBlockDMRG .or. DoNECI)then
              else !CI
                IDISK=IADR15(4)
                CALL LUCIA_UTIL('TRACI',IDISK,JOBIPH,WORK(LSMAT))
@@ -650,26 +608,21 @@ C the super-CI coefficients, with a Quasi Newton update (NQUNE=1)
 
 C CMO:  before - old MO's           after - new MO's
 C LCMON: intermediate storage for new MO's (moved to CMO in ORTHO)
-C LVEC:  eigenvectors of exp(X)
 C LX2:  work area, also in ORTHO (AO overlap matrix)
 C LWSQ:  "     "     "    "   "
-C LY,LA, AND LB WORK AREAS
+C LY: WORK AREA
 
       WORD='ROTO'
       CALL GETMEM('CMO1','ALLO','REAL',LCMON,NTOT2)
-      CALL GETMEM('VEC1','ALLO','REAL',LVEC,NO2M)
       CALL GETMEM('XMAT','ALLO','REAL',LXMAT,NO2M)
       CALL GETMEM('SXX2','ALLO','REAL',LX2,NTOT1)
       CALL GETMEM('SXY2','ALLO','REAL',LY,NO2M)
-      CALL GETMEM('SXA1','ALLO','REAL',LA,MNO)
-      CALL GETMEM('SXB2','ALLO','REAL',LB,MNO)
       IF(IPRLEV.GE.DEBUG) THEN
-        Write(LF,3333)WORD,LCMON,LSXN,LCSXI,LXMAT,LX2,
-     &                          LY,LVEC,LA,LB
+        Write(LF,3333)WORD,LCMON,LSXN,LCSXI,LXMAT,LX2,LY
       END IF
 
       CALL ROTORB(CMO,WORK(LCMON),WORK(LCSXI),WORK(LXMAT),
-     &       WORK(LX2),WORK(LY),WORK(LVEC),WORK(LA),WORK(LB),THMAX,FA)
+     &       WORK(LX2),WORK(LY),THMAX,FA)
 
       IF(IPRLEV.GE.DEBUG) THEN
         Write(LF,*)
@@ -684,12 +637,9 @@ C LY,LA, AND LB WORK AREAS
         End Do
       END IF
       CALL GETMEM('CMO1','FREE','REAL',LCMON,NTOT2)
-      CALL GETMEM('VEC1','FREE','REAL',LVEC,NO2M)
       CALL GETMEM('XMAT','FREE','REAL',LXMAT,NO2M)
       CALL GETMEM('SXX2','FREE','REAL',LX2,NTOT1)
       CALL GETMEM('SXY2','FREE','REAL',LY,NO2M)
-      CALL GETMEM('SXA1','FREE','REAL',LA,MNO)
-      CALL GETMEM('SXB2','FREE','REAL',LB,MNO)
       CALL GETMEM('XSXN','FREE','REAL',LSXN,NSXS)
       CALL GETMEM('XDIA','FREE','REAL',LDIA,NIAIA)
       CALL GETMEM('XCSX','FREE','REAL',LCSX,NCR1)
@@ -705,6 +655,5 @@ C LY,LA, AND LB WORK AREAS
 
 9990  CONTINUE
       CALL GETMEM('SXBM','FREE','REAL',LBM,NSXS)
-      Call qExit(ROUTINE)
       RETURN
       END

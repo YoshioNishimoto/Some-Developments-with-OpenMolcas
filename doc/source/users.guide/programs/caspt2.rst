@@ -65,6 +65,7 @@ tested for 49 diatomic molecules, reducing the mean error in :math:`D_0` from 0.
 from 0.45 eV to less than 0.15 eV. Similar improvements were obtained for
 excitation and ionization energies. The IPEA modified :math:`H_0` (with a shift
 parameter of 0.25) is default in |molcas| from version 6.4.
+If :variable:`MOLCAS_NEW_DEFAULTS` is set to ``YES``, the default will be no IPEA shift.
 
 An alternative to IPEA is to use the options, called ":math:`g_1`", ":math:`g_2`", and
 ":math:`g_3`" (See Ref. :cite:`Andersson:95a`), that stabilizes the energies of the
@@ -112,7 +113,7 @@ interaction with the intruding Rydberg state is small. It might then be
 safe to neglect the warning. A safer procedure is to include the Rydberg
 orbital into the active space. It can sometimes be deleted from the MO space.
 
-Calculations on compounds with heavy atoms (transition metals, actinides, etc)
+Calculations on compounds with heavy atoms (transition metals, actinides, etc.)
 may yield many virtual orbitals with low energies. The interaction energies for
 excitations to states where these orbitals are occupied are often very small and
 the low denominators can then be removed by a suitable level shift (see below).
@@ -134,7 +135,9 @@ states.
 
 In some cases, where one can expect strong interaction between different CASSCF
 wave functions, it is advisable to use the Multi-State (MS) CASPT2 method
-:cite:`Finley:98b`. A second order effective Hamiltonian is constructed for a
+:cite:`Finley:98b`, the extended Multi-State (XMS) method :cite:`Granovsky2011,Shiozaki2011`
+or the new extended dynamically weighted CASPT2 :cite:`Battaglia2020`.
+A second order effective Hamiltonian is constructed for a
 number of CASSCF wave functions obtained in a state-average calculation. This
 introduces interaction matrix elements at second order between the different
 CASSCF states. The effective Hamiltonian is diagonalized to obtain the final
@@ -143,6 +146,13 @@ effective zeroth order wave functions, which are linear combinations of the
 original CASSCF states. This method has been used successfully to separate
 artificially mixed valence and Rydberg states and for transition metal compounds
 with low lying excited states of the same symmetry as the ground state.
+In the original multi-state method,
+perturbed wave functions are computed for each of several root functions,
+separately; these are used to compute the effective Hamiltonian.
+In the XMS-CASPT2 method, the perturbations are computed with one
+common zeroth-order Hamiltonian.
+The new XDW-CASPT2 method interpolates between the MS and XMS variants,
+retaining the advantages of both approaches.
 
 It is clear from the discussion above that it is not a "black box" procedure
 to perform CASPT2 calculations on excited states. It is often necessary to
@@ -165,7 +175,7 @@ compared to the Rydberg states. It is important that the AO basis set is
 chosen to contain a good representation of the Rydberg orbitals, in order to
 separate them from the valence excited states. For more details on how to
 perform calculations on excited states we refer to the
-literature :cite:`Roos:95b,Roos:96a` and section :ref:`TUT:sec:excited` of
+literature :cite:`Roos:95b,Roos:96a` and :numref:`TUT:sec:excited` of
 the examples manual.
 
 The first order wave function is obtained in the :program:`CASPT2` program as an
@@ -216,7 +226,7 @@ Input files
 
 :program:`CASPT2` will use the following input
 files: :file:`ONEINT`, :file:`ORDINT`, :file:`RUNFILE`, :file:`JOBIPH`
-(for more information see :ref:`UG:sec:files_list`).
+(for more information see :numref:`UG:sec:files_list`).
 
 Output files
 ............
@@ -257,22 +267,102 @@ Keywords
               </KEYWORD>
 
 :kword:`MULTistate`
-  Enter number of root states, and a list of which CI vector from
-  the CASSCF calculation to use for each state, for example "``2 1 2``"
-  would specify the first and second root.
-  Also used for single-state calculations, when the root state is not
-  the ground state, for example "``1 2``" would specify the second root.
-  The special value "``all``" can be used if all the states included
-  in the CASSCF orbital optimization (keyword :kword:`CIRoot` in :program:`RASSCF`)
-  are desired.
+  Perform a single-state CASPT2 (SS-CASPT2) or a multi-state CASPT2 (MS-CASPT2)
+  calculation.
+  Enter the total number of states desired followed by a list of which CASSCF
+  roots to include, for example "``3 1 2 4``" would specify a 3-state calculation
+  including the first, second and fourth root.
+  To perform a single-state calculation, simply enter "``1``" followed by
+  the desired root state, for example "``1 3``" would specify the third root.
+  The special value "``all``" can be used if all the states included in the
+  CASSCF calculation (keyword :kword:`CIRoot` in :program:`RASSCF`) are desired.
+  This keyword is mutually exclusive with :kword:`XMULtistate` and :kword:`RMULtistate`.
 
-  .. xmldoc:: <KEYWORD MODULE="CASPT2" NAME="MULTISTATE" APPEAR="Multi-State" KIND="INTS_COMPUTED" SIZE="1" LEVEL="BASIC">
+  .. xmldoc:: <KEYWORD MODULE="CASPT2" NAME="MULTISTATE" APPEAR="Multi-State" KIND="INTS_COMPUTED" SIZE="1" LEVEL="BASIC" EXCLUSIVE="XMULTISTATE,RMULTISTATE">
+              <ALTERNATE KIND="CHOICE" LIST="all" />
               %%Keyword: Multistate <basic> GUI:list
               <HELP>
-              Enter the number of states for CASPT2 to compute, and a list of numbers
-              showing which CASSCF state to use as root state for each.
-              Alternatively, enter "all" for all the states included in the CASSCF
-              orbital optimization.
+              Enter the number of states to include in the CASPT2 calculation
+              followed by a list of numbers indicating which CASSCF roots to use.
+              Alternatively, enter "all" to include all roots optimized in the
+              CASSCF calculation.
+              </HELP>
+              </KEYWORD>
+
+:kword:`XMULtistate`
+  Perform an extended MS-CASPT2 (XMS-CASPT2) calculation according to :cite:`Granovsky2011,Shiozaki2011`.
+  This keyword works in the same exact way as :kword:`MULTistate` and is
+  mutually exclusive with :kword:`MULTistate` and :kword:`RMULtistate`.
+
+  .. xmldoc:: <KEYWORD MODULE="CASPT2" NAME="XMULTISTATE" APPEAR="Extended Multi-State" KIND="INTS_COMPUTED" SIZE="1" LEVEL="BASIC" EXCLUSIVE="MULTISTATE,RMULTISTATE">
+              <ALTERNATE KIND="CHOICE" LIST="all" />
+              %%Keyword: XMultistate <basic> GUI:list
+              <HELP>
+              Enter the number of states to include in the CASPT2 calculation
+              followed by a list of numbers indicating which CASSCF roots to use.
+              Alternatively, enter "all" to include all roots optimized in the
+              CASSCF calculation.
+              </HELP>
+              </KEYWORD>
+
+:kword:`RMULtistate`
+  Perform a rotated MS-CASPT2 (RMS-CASPT2) calculation according to :cite:`Battaglia2021`.
+  In this type of calculation the input CASSCF states are rotated to diagonalize the
+  state-average Fock operator and subsequently used in a conventional MS-CASPT2 calculation.
+  This keyword works in the same exact way as :kword:`MULTistate` and is
+  mutually exclusive with :kword:`MULTistate` and :kword:`XMULtistate`.
+
+  .. xmldoc:: <KEYWORD MODULE="CASPT2" NAME="RMULTISTATE" APPEAR="Rotated Multi-State" KIND="INTS_COMPUTED" SIZE="1" LEVEL="BASIC" EXCLUSIVE="MULTISTATE,XMULTISTATE">
+              <ALTERNATE KIND="CHOICE" LIST="all" />
+              %%Keyword: RMultistate <basic> GUI:list
+              <HELP>
+              Enter the number of states to include in the CASPT2 calculation
+              followed by a list of numbers indicating which CASSCF roots to use.
+              Alternatively, enter "all" to include all roots optimized in the
+              CASSCF calculation.
+              </HELP>
+              </KEYWORD>
+
+:kword:`DWMS`
+  Used in conjunction with :kword:`XMULtistate` and :kword:`DWTYpe` it performs
+  an extended dynamically weighted CASPT2 (XDW-CASPT2) calculation according to
+  :cite:`Battaglia2020,Battaglia2021`, thereby rotating the input CASSCF states
+  to diagonalize the state-average Fock operator and constructing the zeroth-order
+  Hamiltonians using dynamically weighted densities.
+  A non-negative real number for the exponential factor :math:`\zeta`
+  has to be explicitly specified; reasonable values associated to :kword:`DWTYpe`
+  equal to 1, 2 and 3 are 50, 1e-8 and 1, respectively (see
+  :cite:`Battaglia2020,Battaglia2021` for more details).
+  It is also possible to use this option with :kword:`MULTistate` instead of
+  :kword:`XMULtistate`, in which case the original CASSCF states are used
+  instead of the rotated ones.
+
+  .. xmldoc:: <KEYWORD MODULE="CASPT2" NAME="DWMS" APPEAR="Dynamically Weighted Multi-State" KIND="REAL" LEVEL="BASIC">
+              %%Keyword: DWMS <basic> GUI:number
+              <HELP>
+              Enter a non-negative value specifying the exponent zeta used to
+              compute the weights.
+              </HELP>
+              </KEYWORD>
+
+:kword:`DWTYpe`
+  This keyword specifies which exponent is used to compute the weights
+  in a XDW-CASPT2 calculation.
+  Three options are available: :kword:`DWTYpe` equal to 1 uses the squared energy
+  difference between the states according to :cite:`Battaglia2020`. Note that this
+  option might mix states of different symmetry.
+  :kword:`DWTYpe` equal to 2 uses the square of the state total energy divided by
+  the Hamiltonian coupling between the states, while :kword:`DWTYpe` equal to 3
+  uses the energy difference divided by the square root of the
+  Hamiltonian coupling (see :cite:`Battaglia2021` for more info).
+  We suggest to use the third option associated with a value of 1 in
+  :kword:`DWMS`.
+
+  .. xmldoc:: <KEYWORD MODULE="CASPT2" NAME="DWTYPE" APPEAR="Dynamically Weighted Exponent" KIND="CHOICE" LIST="1: Squared energy difference,2: Square of total energy divided by Hamiltonian coupling,3: Energy difference divided by square root of Hamiltonian coupling" LEVEL="BASIC">
+              %%Keyword: DWType <basic> GUI:number
+              <HELP>
+              Set to either 1, 2 or 3 to select the exponent used to obtain
+              the weights in a XDW-CASPT2 calculation.
               </HELP>
               </KEYWORD>
 
@@ -285,7 +375,7 @@ Keywords
   :cite:`Ghigo:04a`. The modification of :math:`H_0` has been introduced (Nov 2005) to
   reduce the systematic error which leads to a relative overestimation of the
   correlation energy for open shell system. It also reduces the intruder problems.
-  Default is to use an IPEA shift of 0.25.
+  Default is to use an IPEA shift of 0.25, unless :variable:`MOLCAS_NEW_DEFAULTS` is set to ``YES``.
 
   .. xmldoc:: <KEYWORD MODULE="CASPT2" NAME="IPEA" APPEAR="IPEA shift" KIND="REAL" LEVEL="ADVANCED" DEFAULT_VALUE="0.25">
               %%Keyword: IPEAshift <basic> GUI:number
@@ -352,7 +442,9 @@ Keywords
   This input means that inactive orbitals with less than 0.1 of the density on
   the active sites will be frozen, while no virtual orbitals will be deleted.
 
-  .. xmldoc:: %%Keyword: AFREeze <advanced>
+  .. xmldoc:: <KEYWORD MODULE="CASPT2" NAME="AFREEZE" LEVEL="ADVANCED" KIND="CUSTOM">
+              %%Keyword: AFREeze <advanced>
+              <HELP>
               This keyword is used to select atoms for defining the correlation orbital
               space for the CASPT2 calculation. Inactive orbitals with Mulliken populations
               smaller than a given threshold on the selected atoms will be frozen and
@@ -360,6 +452,8 @@ Keywords
               selection thresholds. An additional line gives the names of the atoms as
               defined in the Seward input. Use with care! Not much tested yet, but is very
               effective in reducing the computational time for CASPT2 in large molecules.
+              </HELP>
+              </KEYWORD>
 
 :kword:`LOVCaspt2`
   "Freeze-and-Delete" type of CASPT2, available only in connection with Cholesky or RI.
@@ -382,14 +476,16 @@ Keywords
   A third possibility is to use the keyword :kword:`DoEnv` to compute the energy of the environment as total MP2 energy
   minus the MP2 energy of the active site.
 
-  .. xmldoc:: %%Keyword: LOVC <advanced>
+  .. xmldoc:: <KEYWORD MODULE="CASPT2" NAME="LOVCASPT2" APPEAR="Localized occupied-virtual CASPT2" LEVEL="ADVANCED" KIND="REAL">
+              %%Keyword: LOVC <advanced>
+              <HELP>
               "Freeze-and-Delete" type of CASPT2, available only in connection with Cholesky or RI.
               Needs (pseudo)canonical orbitals from RASSCF. An example of input for the keyword LOVC is the following:
-              ||
-              ||LovCASPT2
-              || 0.3
-              ||DoMP2  (or DoEnv)
-              ||
+
+                LovCASPT2
+                 0.3
+                DoMP2  (or DoEnv)
+
               In this case, both occupied and virtual orbitals (localized by the program) are divided in two groups: those mainly located on
               the region determined (automatically) by the spatial extent of the active orbitals ("active site"),
               and the remaining ones, which are obviously "outside" this region.
@@ -402,6 +498,14 @@ Keywords
               occupied orbitals of the active site.
               A third possibility is to use the keyword DoEnv to compute the energy of the environment as total MP2 energy
               minus the MP2 energy of the active site.
+              </HELP>
+              </KEYWORD>
+
+  .. xmldoc:: <KEYWORD MODULE="CASPT2" NAME="DOMP2" LEVEL="UNDOCUMENTED" KIND="SINGLE" />
+
+  .. xmldoc:: <KEYWORD MODULE="CASPT2" NAME="VIRALL" LEVEL="UNDOCUMENTED" KIND="SINGLE" />
+
+  .. xmldoc:: <KEYWORD MODULE="CASPT2" NAME="DOENV" LEVEL="UNDOCUMENTED" KIND="SINGLE" />
 
 :kword:`FNOCaspt2`
   Performs a Frozen Natural Orbital (FNO) CASPT2 calculation, available only in combination with Cholesky or RI integral representation.
@@ -415,17 +519,21 @@ Keywords
   (in each irrep) to be retained in the FNO-CASPT2 calculation.
   The keyword :kword:`DoMP2` is optional and used to compute the (estimated) correction for the truncation error.
 
-  .. xmldoc:: %%Keyword: FNOC <advanced>
+  .. xmldoc:: <KEYWORD MODULE="CASPT2" NAME="FNOCASPT2" APPEAR="Frozen natural orbital CASPT2" LEVEL="ADVANCED" KIND="REAL">
+              %%Keyword: FNOC <advanced>
+              <HELP>
               Performs a Frozen Natural Orbital (FNO) CASPT2 calculation, available only in combination with Cholesky or RI integral representation.
               Needs (pseudo)canonical orbitals from RASSCF. An example of input for the keyword FNOC is the following:
-              ||
-              ||FNOCaspt2
-              || 0.4
-              ||DoMP2
-              ||
+
+                FNOCaspt2
+                 0.4
+                DoMP2
+
               The keyword FNOC has one compulsory argument (real number in ]0,1]) specifying the fraction of virtual orbitals
               (in each irrep) to be retained in the FNO-CASPT2 calculation.
               The keyword DoMP2 is optional and used to compute the (estimated) correction for the truncation error.
+              </HELP>
+              </KEYWORD>
 
 :kword:`FOCKtype`
   Use an alternative Fock matrix. The default Fock matrix is described in
@@ -507,14 +615,14 @@ Keywords
 
 :kword:`RLXRoot`
   Specifies which root to be relaxed in a geometry optimization of a
-  multi state CASPT2 wave function. Defaults to the highest root or
+  multi-state CASPT2 wave function. Defaults to the highest root or
   root defined by the same keyword in the :program:`RASSCF` module.
 
   .. xmldoc:: <KEYWORD MODULE="CASPT2" NAME="RLXROOT" APPEAR="Relaxed root" KIND="INT" LEVEL="ADVANCED" MIN_VALUE="1">
               %%Keyword: RLXRoot <advanced>
               <HELP>
               Which root to use in a geometry optimization of a
-              multi state CASPT2 wave function. Default: root
+              multi-state CASPT2 wave function. Default: root
               defined by RLXROOT in the RASSCF module, if any,
               else the highest root.
               </HELP>
@@ -522,6 +630,8 @@ Keywords
 
   .. :kword:`HZERo`
        (No official variants. Perhaps in later versions.)
+
+  .. xmldoc:: <KEYWORD MODULE="CASPT2" NAME="HZERO" KIND="STRING" LEVEL="UNDOCUMENTED" />
 
 :kword:`THREsholds`
   On next line, enter two
@@ -568,11 +678,10 @@ Keywords
               </KEYWORD>
 
 :kword:`NOMIx`
-  Normally, a Multi-State CASPT2 calculation produces new jobiph file named
-  :file:`JOBMIX`. It has the same CASSCF wave functions as the original ones, except
-  that those CI vectors that was used in the Multi-State CASPT2 calculation
-  have been mixed, using the eigenvectors of the effective Hamiltonian matrix
-  as transformation coefficients.
+  Normally, an (X)MS-CASPT2 calculation produces a new jobiph file named :file:`JOBMIX`.
+  It has the same CASSCF wave functions as the original ones, except that those CI vectors
+  that were used in the (Extended) Multi-State CASPT2 calculation have been mixed,
+  using the eigenvectors of the effective Hamiltonian matrix as transformation coefficients.
   Keyword :kword:`NOMIX` prevents creation of this :file:`JOBMIX` file.
 
   .. xmldoc:: <KEYWORD MODULE="CASPT2" NAME="NOMIX" APPEAR="No JobMix" KIND="SINGLE" LEVEL="ADVANCED">
@@ -585,10 +694,12 @@ Keywords
 :kword:`NOMUlt`
   This keyword removes the multi-state part of the calculation and only runs a
   series of independent CASPT2 calculations for the roots specified by the
-  :kword:`MULTistate` keyword. Useful when many roots are required, but multi-state is
-  not needed, or desired. Note that a :file:`JOBMIX` file is produced anyway, but the
-  vectors will not be mixed, and the energies will be single-state CASPT2
-  energies.
+  :kword:`MULTistate` or :kword:`XMULtistate` keyword. Useful when many roots are required,
+  but multi-state is not needed, or desired. Note that a :file:`JOBMIX` file is produced
+  anyway, but the vectors will not be mixed, and the energies will be single-state CASPT2
+  energies. If used with the :kword:`XMULtistate` keyword, the zeroth-order Hamiltonian
+  will be constructed with the state-average density and therefore will be the same for
+  all the states.
 
   .. xmldoc:: <KEYWORD MODULE="CASPT2" NAME="NOMULTI" APPEAR="No Multi-State" KIND="SINGLE" LEVEL="BASIC">
               %%Keyword: NoMultistate <basic>
@@ -599,56 +710,56 @@ Keywords
               </KEYWORD>
 
 :kword:`ONLY`
-  This keyword requires the :kword:`MULTistate` keyword, and is
-  followed by an integer specifying one of the roots.
-  In a Multistate calculation, it requests to compute the energy of only
-  the specified root. However, the effective Hamiltonian coupling terms
-  between this root and all the others included in the Multistate
-  treatement will be computed and printed out.
-  This output will be used in a subsequent calculation, in conjuction
+  This keyword requires the :kword:`MULTistate` or :kword:`XMULtistate` keyword,
+  and is followed by an integer specifying one of the roots.
+  In a (Extended) Multistate calculation, it requests to compute the energy of
+  only the specified root. However, the effective Hamiltonian coupling terms
+  between this root and all the others included in the (Extended) Multistate
+  treatment will be computed and printed out.
+  This output will be used in a subsequent calculation, in conjunction
   with the :kword:`EFFE` keyword.
 
-  .. xmldoc:: <KEYWORD MODULE="CASPT2" NAME="ONLY" APPEAR="Only root" KIND="INT" LEVEL="ADVANCED" REQUIRE="MULTISTATE">
+  .. xmldoc:: <KEYWORD MODULE="CASPT2" NAME="ONLY" APPEAR="Only root" KIND="INT" LEVEL="ADVANCED">
               %%Keyword: ONLY <advanced>
               <HELP>
-              This keyword requires the MULTistate keyword, and is
+              This keyword requires the MULTistate or XMULtistate keyword, and is
               followed by an integer specifying one of the roots.
               In a Multistate calculation, it requests to compute the energy of only
               the specified root. However, the effective Hamiltonian coupling terms
               between this root and all the others included in the Multistate
-              treatement will be computed and printed out.
-              This output will be used in a subsequent calculation, in conjuction
+              treatment will be computed and printed out.
+              This output will be used in a subsequent calculation, in conjunction
               with the EFFE keyword.
               </HELP>
               </KEYWORD>
 
 :kword:`EFFE`
-  This keyword requires the :kword:`MULTistate` keyword. It is followed by
-  the number of states and a matrix of real numbers, specifying the effective Hamiltonian
-  couplings, as provided in a previous calculation using the
-  :kword:`ONLY` keyword.
-  In a Multistate calculation over, e.g., 3 states, 3 separate
+  This keyword requires the :kword:`MULTistate` or :kword:`XMULtistate` keyword.
+  It is followed by the number of states and a matrix of real numbers,
+  specifying the effective Hamiltonian couplings, as provided in a previous
+  calculation using the :kword:`ONLY` keyword.
+  In a (Extended) Multistate calculation over, e.g., 3 states, 3 separate
   calculations with the :kword:`ONLY` keyword will be performed, possibly
   on separate computing nodes, so as to speed up the overall process.
   The three couplings vectors will be given to the :kword:`EFFE`
   keyword in matrix form, i.e. the first column is made by the
   couplings of the first computed root, etc.
-  The program will then quickly compute the Multistate energies.
+  The program will then quickly compute the (Extended) Multistate energies.
 
-  .. xmldoc:: <KEYWORD MODULE="CASPT2" NAME="EFFE" APPEAR="Effective Hamiltonian couplings" KIND="STRINGS" LEVEL="ADVANCED" REQUIRE="MULTISTATE">
+  .. xmldoc:: <KEYWORD MODULE="CASPT2" NAME="EFFE" APPEAR="Effective Hamiltonian couplings" KIND="CUSTOM" LEVEL="ADVANCED">
               %%Keyword: EFFE <advanced>
               <HELP>
-              This keyword requires the MULTistate keyword. It is followed by
-              the number of states and a matrix of real numbers, specifying the effective Hamiltonian
-              couplings, as provided in a previous calculation using the
-              ONLY keyword.
-              In a Multistate calculation over, e.g., 3 states, 3 separate
+              This keyword requires the MULTistate or XMULtistate keyword. It is
+              followed by the number of states and a matrix of real numbers,
+              specifying the effective Hamiltonian couplings, as provided in
+              a previous calculation using the ONLY keyword.
+              In a (Extended) Multistate calculation over, e.g., 3 states, 3 separate
               calculations with the ONLY keyword will be performed, possibly
               on separate computing nodes, so as to speed up the overall process.
               The three couplings vectors will be given to the EFFE
               keyword in matrix form, i.e. the first column is made by the
               couplings of the first computed root, etc.
-              The program will then quickly compute the Multistate energies.
+              The program will then quickly compute the (Extended) Multistate energies.
               </HELP>
               </KEYWORD>
 
@@ -674,7 +785,8 @@ Keywords
               %%Keyword: Properties <basic>
               <HELP>
               Compute (approximate) density matrix, natural orbitals and properties.
-              </HELP></KEYWORD>
+              </HELP>
+              </KEYWORD>
 
 :kword:`NOTRansform`
   This keyword specifies that the wave function should not be transformed
@@ -708,17 +820,25 @@ Keywords
 
 :kword:`OFEMbedding`
   Adds an Orbital-Free Embedding potential to the Hamiltonian. Available only in combination with Cholesky or RI integral representation.
-  No arguments required. The runfile of the environment subsystem (AUXRFIL) must be available.
+  No arguments required. The runfile of the environment subsystem (:file:`AUXRFIL`) must be available.
 
-  .. xmldoc:: %%Keyword: OFEM <advanced>
+  .. xmldoc:: <KEYWORD MODULE="CASPT2" NAME="OFEMBEDDING" APPEAR="Orbital-free embedding" KIND="SINGLE" LEVEL="ADVANCED">
+              %%Keyword: OFEM <advanced>
+              <HELP>
               Adds an Orbital-Free Embedding potential to the Hamiltonian. Available only in combination with Cholesky or RI integral representation.
               No arguments required. The runfile of the environment subsystem (AUXRFIL) must be available.
+              </HELP>
+              </KEYWORD>
 
 :kword:`GHOStdelete`
   Excludes from PT2 treatment orbitals localized on ghost atoms. A threshold for this selection must be specified.
 
-  .. xmldoc:: %%Keyword: GHOS <advanced>
+  .. xmldoc:: <KEYWORD MODULE="CASPT2" NAME="GHOSTDELETE" APPEAR="Ghost delete" KIND="REAL" LEVEL="ADVANCED">
+              %%Keyword: GHOS <advanced>
+              <HELP>
               Excludes from PT2 treatment orbitals localized on ghost atoms. A threshold for this selection must be specified.
+              </HELP>
+              </KEYWORD>
 
 :kword:`OUTPut`
   Use this keyword, followed by any of the words :kword:`BRIEF`, :kword:`DEFAULT`, or :kword:`LONG`, to
@@ -760,7 +880,7 @@ Keywords
   Activate DMRG-CASPT2 calculation with |molcas|--CheMPS2 interface.
   The keyword :kword:`3RDM` must be used in :program:`RASSCF`.
   The program will skip the calculations of the :math:`n`-particle reduced density matrix.
-  Note that multistate calculations are not supported, the calculation will run but produce wrong CASPT2 total energy.
+  Note that multi-state calculations are not supported, the calculation will run but produce wrong CASPT2 total energy.
   Always specify :kword:`MULTi` = 1 *iroot*, where *iroot* is the root index.
 
   .. xmldoc:: <KEYWORD MODULE="CASPT2" NAME="CHEMPS2" APPEAR="DMRG-CASPT2 (CheMPS2)" KIND="SINGLE" LEVEL="BASIC">
@@ -861,5 +981,15 @@ Input example for SA-DMRG-CASPT2 with |molcas|--CheMPS2 interface
   &CASPT2
   CHEMps2
   MULTistate = 1 2
+
+.. xmldoc:: <KEYWORD MODULE="CASPT2" NAME="LROOT" KIND="INT" LEVEL="UNDOCUMENTED" />
+
+.. xmldoc:: <KEYWORD MODULE="CASPT2" NAME="FILE" KIND="STRING" LEVEL="UNDOCUMENTED" />
+
+.. xmldoc:: <KEYWORD MODULE="CASPT2" NAME="RHSD" KIND="SINGLE" LEVEL="UNDOCUMENTED" />
+
+.. xmldoc:: <KEYWORD MODULE="CASPT2" NAME="WTHR" KIND="REALS" SIZE="3" LEVEL="UNDOCUMENTED" />
+
+.. xmldoc:: <KEYWORD MODULE="CASPT2" NAME="G1SE" KIND="SINGLE" LEVEL="UNDOCUMENTED" />
 
 .. xmldoc:: </MODULE>

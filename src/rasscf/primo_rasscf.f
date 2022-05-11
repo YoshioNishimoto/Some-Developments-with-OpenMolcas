@@ -23,7 +23,6 @@
 #include "rasdim.fh"
 #include "general.fh"
 #include "output_ras.fh"
-      Parameter (ROUTINE='PRIMO   ')
 #include "rasscf.fh"
 #include "WrkSpc.fh"
 
@@ -62,7 +61,7 @@
       Call CollapseOutput(1,'   Molecular orbitals:')
       Write(LF,'(6X,A)') '-------------------'
       Write(LF,*)
-      Write(LF,Fmt2//'A)') VecTit(:mylen(VecTit))
+      Write(LF,Fmt2//'A)') trim(VecTit)
       Write(LF,*)
 
 * Flag ipt2 in common in src/Include/rasscf.fh
@@ -210,19 +209,19 @@
            ISEND=MIN(ISSTART+NCOLS-1,NS)
            Write(LF,*)
            Write(LF,*)
-           Write(LF,Fmt2//'A,6X,10I10)')'Orbital ',
+           Write(LF,Fmt2//'A,7X,10I10)')'Orbital ',
      &               (IWORK(LSLCT-1+ISOFF+I)-IBOFF,I=ISSTART,ISEND)
            IF (PRENE) THEN
-             Write(LF,Fmt2//'A,6X,10F10.4)')'Energy  ',
+             Write(LF,Fmt2//'A,7X,10F10.4)')'Energy  ',
      &               (ENE(IWORK(LSLCT-1+ISOFF+I)),I=ISSTART,ISEND)
            END IF
            IF (PROCC) THEN
-             Write(LF,Fmt2//'A,6X,10F10.4)')'Occ. No.',
+             Write(LF,Fmt2//'A,7X,10F10.4)')'Occ. No.',
      &               (OCC(IWORK(LSLCT-1+ISOFF+I)),I=ISSTART,ISEND)
            END IF
            Write(LF,*)
            DO IB=1,NB
-            Write(LF,'(2X,I3,1X,A,10F10.4)') IB,
+            Write(LF,'(2X,I4,1X,A,10F10.4)') IB,
      &        Clean_BName(NAME(IBOFF+IB),LENIN),
      &        (CMO(ICOFF+(IWORK(LSLCT-1+ISOFF+I)-1-IBOFF)*NB+IB),
      &        I=ISSTART,ISEND)

@@ -8,7 +8,8 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine ddrestart2_cvb(c,axc,vec,
      >  hp,solp,
@@ -22,7 +23,7 @@
       dimension solp(maxdav)
       dimension eigval(maxdav),eigvec(maxdav,maxdav)
 
-      call fmove(hp,eigvec,maxdav*maxdav)
+      call fmove_cvb(hp,eigvec,maxdav*maxdav)
       call mxdiag_cvb(eigvec,eigval,maxdav)
 
       nvrestart1=0
@@ -36,9 +37,10 @@ c  (Put lower-lying solutions in AxC :)
         else
           ir_use=ir
         endif
-200     call mxatb_cvb(c,eigvec(1,ir_use),n,maxdav,1,axc(1,ir+1))
-        call fmove(axc(1,2),c(1,2),n*(nroot-1))
+        call mxatb_cvb(c,eigvec(1,ir_use),n,maxdav,1,axc(1,ir+1))
+200     continue
+        call fmove_cvb(axc(1,2),c(1,2),n*(nroot-1))
       endif
-      call fmove(vec,c(1,1),n)
+      call fmove_cvb(vec,c(1,1),n)
       return
       end

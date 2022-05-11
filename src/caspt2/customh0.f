@@ -26,7 +26,6 @@
       IMPLICIT NONE
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
@@ -36,7 +35,6 @@
 
 C Modify B matrices, if requested.
 
-      CALL QENTER('NEWB')
 
       DO ICASE=1,11
         DO ISYM=1,NSYM
@@ -58,7 +56,6 @@ C Modify B matrix, using S matrix and some other data.
         END DO
       END DO
 
-      CALL QEXIT('NEWB')
 
       RETURN
 #endif
@@ -69,7 +66,6 @@ C Modify B matrix, using S matrix and some other data.
       IMPLICIT NONE
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
 #include "SysDef.fh"
@@ -80,7 +76,6 @@ C Modify B matrix, using S matrix and some other data.
 C Post-diagonalization modification of diagonal energy
 C denominator terms for active and for non-active superindex.
 
-      CALL QENTER('NEWDIA')
 
       DO ICASE=1,13
         DO ISYM=1,NSYM
@@ -101,8 +96,8 @@ C Active, and non-active, energy denominators:
           CALL DDAFILE(LUSBT,2,WORK(LID),NIS,ID)
 C Active, and non-active, corrections:
 C (Replace this strange example with something sensible)
-          CALL DCOPY_(NAS,0.0d0,0,WORK(LC1),1)
-          CALL DCOPY_(NIS,0.0d0,0,WORK(LC2),1)
+          CALL DCOPY_(NAS,[0.0d0],0,WORK(LC1),1)
+          CALL DCOPY_(NIS,[0.0d0],0,WORK(LC2),1)
 C Modifications are added to the usual diagonal energies:
           DO I=1,NAS
             WORK(LBD-1+I)=WORK(LBD-1+I)+WORK(LC1-1+I)
@@ -125,7 +120,6 @@ C Added modifications are saved on LUSBT.
         END DO
       END DO
 
-      CALL QEXIT('NEWDIA')
 
       RETURN
 #endif

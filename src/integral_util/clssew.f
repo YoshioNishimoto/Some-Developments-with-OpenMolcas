@@ -12,25 +12,19 @@
 ************************************************************************
       SubRoutine ClsSew
 ************************************************************************
-*                                                                      *
-* Object:                                                              *
-*                                                                      *
-* Called from:                                                         *
-*                                                                      *
-* Calling    : QEnter                                                  *
-*              QExit                                                   *
-*                                                                      *
 *     Author: Roland Lindh, Dept. of Theoretical Chemistry,            *
 *             University of Lund, SWEDEN                               *
 ************************************************************************
       use Her_RW
-      use Real_Spherical
+      use Real_Spherical, only: Sphere_Free
       use EFP_module
+      use External_Centers
+      use Basis_Info
+      use Center_Info
+      Use SOAO_Info
+      use Symmetry_Info, only: Symmetry_Info_Free
       Implicit Real*8 (A-H,O-Z)
-#include "itmax.fh"
-#include "info.fh"
 #include "real.fh"
-#include "WrkSpc.fh"
 #include "stdalloc.fh"
 #include "timtra.fh"
 #include "rctfld.fh"
@@ -43,23 +37,21 @@
       Call Term_Ints(.False.,.True.)
       Call Free_RctFld(iXPolType)
       Call Free_HerRW()
-*
-      If (Allocated(RSph)) Call mma_deallocate(RSph)
-      If (Allocated(ipSph)) Call mma_deallocate(ipSph)
-      If (Info_Status.eq.Active) Then
-         Call GetMem('Info','Free','Real',LctInf,nInfo)
-         Info_Status=InActive
-      End If
-*
+      Call Sphere_Free()
+      Call SOAO_Info_Free()
+      Call Basis_Info_Free()
+      Call SYmmetry_Info_Free()
+      Call Center_Info_Free()
+      Call External_Centers_Free()
       Call Free_iSD()
       Call Freek2()
       Call CloseR()
 *
-      If (EFP) Then
+      If (lEFP) Then
          Deallocate(FRAG_TYPE)
          Deallocate(ABC)
          Deallocate(EFP_COORS)
-         EFP=.FALSE.
+         lEFP=.FALSE.
       End If
 *
       Seward_Status=InActive

@@ -20,21 +20,20 @@ C     eigenfunctions
 C
       Implicit None
 #include "stdalloc.fh"
-      Integer, parameter            :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter        :: wp=kind(0.d0)
       Integer, intent(in)           :: dim
-      Complex(kind=wp), intent(in)  :: mm(3,dim,dim)
-      Complex(kind=wp), intent(in)  :: Zinp(dim,dim)
-      Complex(kind=wp), intent(out) :: Zout(dim,dim)
+      Complex(kind=8), intent(in)  :: mm(3,dim,dim)
+      Complex(kind=8), intent(in)  :: Zinp(dim,dim)
+      Complex(kind=8), intent(out) :: Zout(dim,dim)
 ! ------------------------------------------------------------
       Integer                       :: i, j, i1, i2, l
-      Real(kind=wp), allocatable    :: rxr(:) !dim)
-      Real(kind=wp), allocatable    :: rxi(:) !dim)
-      Complex(kind=wp), allocatable :: r(:) !(dim)
-      Complex(kind=wp), allocatable :: phs(:,:,:)  !3,dim,dim)
-      Complex(kind=wp), allocatable :: tmp(:,:) !dim,dim
+      Real(kind=8), allocatable    :: rxr(:) !dim)
+      Real(kind=8), allocatable    :: rxi(:) !dim)
+      Complex(kind=8), allocatable :: r(:) !(dim)
+      Complex(kind=8), allocatable :: phs(:,:,:)  !3,dim,dim)
+      Complex(kind=8), allocatable :: tmp(:,:) !dim,dim
       Logical :: dbg
 
-      Call qEnter('s_phase')
 
       dbg=.false.
 
@@ -44,11 +43,11 @@ C
       Call mma_allocate(phs,3,dim,dim,'phs')
       Call mma_allocate(tmp,dim,dim,'tmp')
 ! ------------------------------------------------------------
-      Call zcopy_(3*dim*dim,(0.0_wp,0.0_wp),0,phs,1)
-      Call zcopy_(  dim*dim,(0.0_wp,0.0_wp),0,tmp,1)
-      Call zcopy_(dim,(0.0_wp,0.0_wp),0,r,1)
-      Call dcopy_(dim,0.0_wp,0,rxr,1)
-      Call dcopy_(dim,0.0_wp,0,rxi,1)
+      Call zcopy_(3*dim*dim,[(0.0_wp,0.0_wp)],0,phs,1)
+      Call zcopy_(  dim*dim,[(0.0_wp,0.0_wp)],0,tmp,1)
+      Call zcopy_(dim,[(0.0_wp,0.0_wp)],0,r,1)
+      Call dcopy_(dim,[0.0_wp],0,rxr,1)
+      Call dcopy_(dim,[0.0_wp],0,rxi,1)
       rxr(1)=1.0_wp
       rxi(1)=0.0_wp
 
@@ -76,7 +75,7 @@ C
         r(1)=(1.0_wp,0.0_wp)
 
         ! kind=8, complex double precision
-        r(j)=CMPLX( rxr(j), rxi(j), kind=wp )
+        r(j)=DCMPLX( rxr(j), rxi(j))
 
         Do i1=1,dim
           Zout(i1,j)=CONJG(r(j))*Zinp(i1,j)
@@ -89,8 +88,8 @@ C
       End Do ! i
 
 
-      Call zcopy_(3*dim*dim,(0.0_wp,0.0_wp),0,phs,1)
-      Call zcopy_(  dim*dim,(0.0_wp,0.0_wp),0,tmp,1)
+      Call zcopy_(3*dim*dim,[(0.0_wp,0.0_wp)],0,phs,1)
+      Call zcopy_(  dim*dim,[(0.0_wp,0.0_wp)],0,tmp,1)
       Call zgemm_('C','N',  dim,  dim,  dim, (1.0_wp,0.0_wp),
      &            Zout(  1:dim,1:dim), dim,
      &              mm(1,1:dim,1:dim), dim, (0.0_wp,0.0_wp),
@@ -114,9 +113,9 @@ cc    mZ(i,i)   => diagonal
 
       If(dbg) Then
 
-        Call zcopy_(3*dim*dim,(0.0_wp,0.0_wp),0,phs,1)
+        Call zcopy_(3*dim*dim,[(0.0_wp,0.0_wp)],0,phs,1)
         Do l=1,3
-          Call zcopy_(  dim*dim,(0.0_wp,0.0_wp),0,tmp,1)
+          Call zcopy_(  dim*dim,[(0.0_wp,0.0_wp)],0,tmp,1)
           Call zgemm_('C','N',  dim,  dim,  dim, (1.0_wp,0.0_wp),
      &                Zout(  1:dim,1:dim), dim,
      &                  mm(l,1:dim,1:dim), dim, (0.0_wp,0.0_wp),
@@ -155,7 +154,6 @@ cc    mZ(i,i)   => diagonal
       Call mma_deallocate(r)
       Call mma_deallocate(phs)
       Call mma_deallocate(tmp)
-      Call qExit('s_phase')
 
       Return
       End
@@ -177,23 +175,22 @@ C     eigenfunctions
 C
       Implicit None
 #include "stdalloc.fh"
-      Integer, parameter            :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter        :: wp=kind(0.d0)
       Integer, intent(in)           :: dim
-      Complex(kind=wp), intent(in)  :: mm(3,dim,dim)
-      Complex(kind=wp), intent(in)  :: Zinp(dim,dim)
-      Complex(kind=wp), intent(out) :: Zout(dim,dim)
+      Complex(kind=8), intent(in)  :: mm(3,dim,dim)
+      Complex(kind=8), intent(in)  :: Zinp(dim,dim)
+      Complex(kind=8), intent(out) :: Zout(dim,dim)
 ! ------------------------------------------------------------
       Integer                       :: i, j, i1, l
-      Complex(kind=wp)              :: t
-      Real(kind=wp), allocatable    :: rxr(:) !dim)
-      Real(kind=wp), allocatable    :: rxi(:) !dim)
-      Complex(kind=wp), allocatable :: r(:) !(dim)
-      Complex(kind=wp), allocatable :: phs(:,:,:)  !3,dim,dim)
-      Complex(kind=wp), allocatable :: tmp(:,:) !dim,dim
+      Complex(kind=8)              :: t
+      Real(kind=8), allocatable    :: rxr(:) !dim)
+      Real(kind=8), allocatable    :: rxi(:) !dim)
+      Complex(kind=8), allocatable :: r(:) !(dim)
+      Complex(kind=8), allocatable :: phs(:,:,:)  !3,dim,dim)
+      Complex(kind=8), allocatable :: tmp(:,:) !dim,dim
       Logical :: dbg
 
-      Call qEnter('s_phase')
-      dbg=.true.
+      dbg=.false.
 
       Call mma_allocate(rxr,dim,'rxr')
       Call mma_allocate(rxi,dim,'rxi')
@@ -201,17 +198,17 @@ C
       Call mma_allocate(phs,3,dim,dim,'phs')
       Call mma_allocate(tmp,dim,dim,'tmp')
 ! ------------------------------------------------------------
-      Call zcopy_(3*dim*dim,(0.0_wp,0.0_wp),0,phs,1)
-      Call zcopy_(  dim*dim,(0.0_wp,0.0_wp),0,tmp,1)
-      Call zcopy_(dim,(0.0_wp,0.0_wp),0,r,1)
-      Call dcopy_(dim,0.0_wp,0,rxr,1)
-      Call dcopy_(dim,0.0_wp,0,rxi,1)
+      Call zcopy_(3*dim*dim,[(0.0_wp,0.0_wp)],0,phs,1)
+      Call zcopy_(  dim*dim,[(0.0_wp,0.0_wp)],0,tmp,1)
+      Call zcopy_(dim,[(0.0_wp,0.0_wp)],0,r,1)
+      Call dcopy_(dim,[0.0_wp],0,rxr,1)
+      Call dcopy_(dim,[0.0_wp],0,rxi,1)
       rxr(1)=1.0_wp
       rxi(1)=0.0_wp
 
       ! compute magnetic moment, X
-      Call zcopy_(3*dim*dim,(0.0_wp,0.0_wp),0,phs,1)
-      Call zcopy_(  dim*dim,(0.0_wp,0.0_wp),0,tmp,1)
+      Call zcopy_(3*dim*dim,[(0.0_wp,0.0_wp)],0,phs,1)
+      Call zcopy_(  dim*dim,[(0.0_wp,0.0_wp)],0,tmp,1)
       Call zgemm_('C','N', dim,  dim,  dim, (1.0_wp,0.0_wp),
      &            Zinp(  1:dim,1:dim), dim,
      &              mm(1,1:dim,1:dim), dim, (0.0_wp,0.0_wp),
@@ -234,7 +231,7 @@ C
         End If
 
         ! kind=8, complex double precision
-        r(j)=CMPLX( rxr(j),-rxi(j), kind=wp )
+        r(j)=DCMPLX( rxr(j),-rxi(j))
 
         If(dbg) Then
           Write(6,'(A,i2,A,2ES24.14)') 'SPIN-PHASE:'//
@@ -251,8 +248,8 @@ C
       End Do
 
       ! compute the momentum using the ZOUT functions:
-      Call zcopy_(3*dim*dim,(0.0_wp,0.0_wp),0,phs,1)
-      Call zcopy_(  dim*dim,(0.0_wp,0.0_wp),0,tmp,1)
+      Call zcopy_(3*dim*dim,[(0.0_wp,0.0_wp)],0,phs,1)
+      Call zcopy_(  dim*dim,[(0.0_wp,0.0_wp)],0,tmp,1)
       Call zgemm_('C','N',  dim,  dim,  dim, (1.0_wp,0.0_wp),
      &            Zout(  1:dim,1:dim), dim,
      &              mm(1,1:dim,1:dim), dim, (0.0_wp,0.0_wp),
@@ -277,9 +274,9 @@ cc    mZ(i,i)   => diagonal
 
       If(dbg) Then
 
-        Call zcopy_(3*dim*dim,(0.0_wp,0.0_wp),0,phs,1)
+        Call zcopy_(3*dim*dim,[(0.0_wp,0.0_wp)],0,phs,1)
         Do l=1,3
-           Call zcopy_(  dim*dim,(0.0_wp,0.0_wp),0,tmp,1)
+           Call zcopy_(  dim*dim,[(0.0_wp,0.0_wp)],0,tmp,1)
            CALL ZGEMM_('C','N',  dim,  dim,  dim, (1.0_wp,0.0_wp),
      &                 Zout(  1:dim,1:dim), dim,
      &                   mm(l,1:dim,1:dim), dim, (0.0_wp,0.0_wp),
@@ -317,7 +314,6 @@ cc    mZ(i,i)   => diagonal
       Call mma_deallocate(r)
       Call mma_deallocate(phs)
       Call mma_deallocate(tmp)
-      Call qExit('s_phase')
 
       Return
       End

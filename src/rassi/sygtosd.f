@@ -29,7 +29,7 @@ C     INTEGER ISTARR,LDIM,LOCARR,LORBARR,LSBSET,LSSARR,LSTARR
       INTEGER LSYM,MORSBITS,MXBLK,NAPART,NBLK,NHEAD
       INTEGER NHSHMAP,NOCC,NOP,NORB,NSP,NSSTP,NSYM
 C     INTEGER IERR,ICPL,KSBSMRS,JMORS,NFSB
-      INTEGER IERR,     KSBSMRS,      NFSB
+      INTEGER IERR,                   NFSB
       INTEGER OCC2MRS
       EXTERNAL OCC2MRS
 
@@ -61,7 +61,7 @@ C Unbutton the Substring Table:
       MORSBITS=ISSTAB(6)
       NSSTP =ISSTAB(7)
       KSSTTB=15
-      KSBSMRS=ISSTAB(11)
+CTEST      KSBSMRS=ISSTAB(11)
       KMRSSBS=ISSTAB(12)
 C Unbutton the Fock Sector Block table:
       NHEAD=7
@@ -186,7 +186,7 @@ CTEST      write(*,'(1x,a,20i3)')'Spin determinant:',
 CTEST     &                    (ISPNTAB(KSPN-1+I+NOPEN*(ISPD-1)),I=1,nopen)
             IBLK=IBLK+1
 C Construct occupation number array:
-            CALL ICOPY(2*NORB,0,0,IWORK(LOCARR),1)
+            CALL ICOPY(2*NORB,[0],0,IWORK(LOCARR),1)
             DO IEL=1,NCLSD
               IORB=IWORK(LORBARR-1+IEL)
               IWORK(LOCARR-1+2*IORB-1)=1

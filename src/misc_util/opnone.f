@@ -44,9 +44,6 @@
 *
 
 #include "FileIDs.fh"
-#include "OneRc.fh"
-#include "OneFlags.fh"
-
 #include "OneDat.fh"
 *
       Character*(*) Name
@@ -57,7 +54,6 @@
 *---------------------------------------------------------------------*
 *     Start procedure:                                                *
 *---------------------------------------------------------------------*
-*     If ( Query ) Call qEnter(TheName)
       rc=rc0000
 *---------------------------------------------------------------------*
 *     Get basis sets dimensions                                       *
@@ -97,8 +93,8 @@
 *     New toc                                                          *
 *----------------------------------------------------------------------*
        Else If (NewToc) Then
-         Call iCopy(lAux,NaN,0,AuxOne,1)
-         Call iCopy(lToc,NaN,0,TocOne,1)
+         Call iCopy(lAux,[NaN],0,AuxOne,1)
+         Call iCopy(lToc,[NaN],0,TocOne,1)
          Call DaName_MF(LuOne,FnOne)
          TocOne(pFID)=IDrlx
          TocOne(pVersN)=VNrlx
@@ -130,6 +126,5 @@
 *----------------------------------------------------------------------*
 *     exit                                                             *
 *----------------------------------------------------------------------*
-*      If ( Query ) Call qExit(TheName)
       Return
       End

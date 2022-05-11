@@ -28,12 +28,11 @@ C At position IVEC=IVECC2, the solution array, in covariant repr.
 C At position IVEC=IVECW, the RHS array, in contravariant repr.
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
+      DIMENSION DUMMY(1),IDUM(1)
 
-      CALL QENTER('EQCTL1')
       IRHS  =1
       IVECX =2
       IVECR =3
@@ -199,6 +198,5 @@ C over the excitation wave function terms.
 C IDTMAT() similarly addresses transformation matrices that
 C orthonormalize the S matrix blocks.
 
-      CALL QEXIT('EQCTL1')
       RETURN
       END

@@ -17,7 +17,7 @@ MODULE WAVEFUNCTION
 
   ! Steven Vancoillie, November 2013, Lund
 
-  USE ISO_FORTRAN_ENV
+  USE ISO_FORTRAN_ENV, ONLY: REAL64
   USE SECOND_QUANTIZATION
   IMPLICIT NONE
 
@@ -42,7 +42,7 @@ CONTAINS
     TYPE(DET), INTENT(IN) :: D
     INTEGER, INTENT(IN) :: NORB
     CHARACTER(LEN=64) FMT
-    WRITE(FMT,'("(2(X,B",I0,".",I0"))")') NORB, NORB
+    WRITE(FMT,'( 2(1X,B1,I0,".",I0) )') NORB, NORB
     WRITE(*,FMT) D%ALFA, D%BETA
   END SUBROUTINE DET_PRINT
 
@@ -85,7 +85,7 @@ CONTAINS
       END DO
     END DO
     NF=SQRT(NF)
-    PSI%COEF=PSI%COEF/NF
+    PSI%COEF(:,:)=PSI%COEF/NF
   END SUBROUTINE WFN_NORMALIZE
 
   SUBROUTINE WFN_PRINT(PSI,THR)
@@ -97,18 +97,18 @@ CONTAINS
     REAL(REAL64) :: THR
     INTEGER :: NBITS
     NBITS=MAX(PSI%NORB,5)
-    WRITE(*,'(X,A)') 'WAVEFUNCTION SPECS:'
-    WRITE(*,'(X,A)') '==================='
-    WRITE(*,'(X,A,I12)') '#ELECTRONS    = ', PSI%NEL
-    WRITE(*,'(X,A,I12)') '#ORBITALS     = ', PSI%NORB
-    WRITE(*,'(X,A,I12)') '#MULTIPLICITY = ', PSI%MULT
-    WRITE(*,'(X,A,I12)') '#DET (ALPHA)  = ', PSI%NDETA
-    WRITE(*,'(X,A,I12)') '#DET (BETA)   = ', PSI%NDETB
-    WRITE(*,'(X,A,I12)') '#DET (TOTAL)  = ', PSI%NDETA*PSI%NDETB
+    WRITE(*,'(1X,A)') 'WAVEFUNCTION SPECS:'
+    WRITE(*,'(1X,A)') '==================='
+    WRITE(*,'(1X,A,I12)') '#ELECTRONS    = ', PSI%NEL
+    WRITE(*,'(1X,A,I12)') '#ORBITALS     = ', PSI%NORB
+    WRITE(*,'(1X,A,I12)') '#MULTIPLICITY = ', PSI%MULT
+    WRITE(*,'(1X,A,I12)') '#DET (ALPHA)  = ', PSI%NDETA
+    WRITE(*,'(1X,A,I12)') '#DET (BETA)   = ', PSI%NDETB
+    WRITE(*,'(1X,A,I12)') '#DET (TOTAL)  = ', PSI%NDETA*PSI%NDETB
     WRITE(*,*)
-    WRITE(FMT,'("(A18,X,2(2X,A",I0,"))")') NBITS
-    WRITE(*,FMT) 'COEFFICIENTS','ALFA','BETA'
-    WRITE(FMT,'("(F18.14,X,2(2X,B",I0,".",I0,"))")') NBITS, PSI%NORB
+    WRITE(FMT,'("(A18,1X,2(2X,A",I0,"))")') NBITS
+    WRITE(*,FMT) 'COEFFICIENTS','ALPHA','BETA'
+    WRITE(FMT,'("(F18.14,1X,2(2X,B",I0,".",I0,"))")') NBITS, PSI%NORB
     DETB = LEX_INIT(PSI%NELB,PSI%NORB)
     DO IB = 1, PSI%NDETB
       DETA = LEX_INIT(PSI%NELA,PSI%NORB)
@@ -125,7 +125,7 @@ CONTAINS
     ! computes |TAU> = |TAU> + FACT * Ê_pq |DETA,DETB>
     USE SECOND_QUANTIZATION
     IMPLICIT NONE
-    
+
     REAL(REAL64),INTENT(IN) :: FACT
     INTEGER, INTENT(IN) :: P, Q
     INTEGER, INTENT(IN) :: DETA, DETB
@@ -134,20 +134,20 @@ CONTAINS
     INTEGER :: IA, IB
     INTEGER :: TMPA, TMPB
     REAL(REAL64) :: FA, FB
-    
+
     ! compute E_(pa)(qa)
     TMPA=EX1(P,Q,DETA)
     IF (TMPA.NE.-1) THEN
-      IA=RANK(TMPA)
-      IB=RANK(DETB)
+      IA=RANK_(TMPA)
+      IB=RANK_(DETB)
       FA=SIGN(1,TMPA)
       TAU%COEF(IA,IB)=TAU%COEF(IA,IB)+FA*FACT
     END IF
     ! compute E_(pb)(qb)
     TMPB=EX1(P,Q,DETB)
     IF (TMPB.NE.-1) THEN
-      IA=RANK(DETA)
-      IB=RANK(TMPB)
+      IA=RANK_(DETA)
+      IB=RANK_(TMPB)
       FB=SIGN(1,TMPB)
       TAU%COEF(IA,IB)=TAU%COEF(IA,IB)+FB*FACT
     END IF
@@ -199,8 +199,8 @@ CONTAINS
     IF (TMPA.NE.-1) THEN
       TMPA=CRE2(P,R,TMPA)
       IF (TMPA.NE.-1) THEN
-        IA=RANK(TMPA)
-        IB=RANK(DETB)
+        IA=RANK_(TMPA)
+        IB=RANK_(DETB)
         FA=SIGN(1,TMPA)
         TAU%COEF(IA,IB)=TAU%COEF(IA,IB)+FA*FACT
       END IF
@@ -210,8 +210,8 @@ CONTAINS
     IF (TMPB.NE.-1) THEN
       TMPB=CRE2(P,R,TMPB)
       IF (TMPB.NE.-1) THEN
-        IA=RANK(DETA)
-        IB=RANK(TMPB)
+        IA=RANK_(DETA)
+        IB=RANK_(TMPB)
         FB=SIGN(1,TMPB)
         TAU%COEF(IA,IB)=TAU%COEF(IA,IB)+FB*FACT
       END IF
@@ -223,8 +223,8 @@ CONTAINS
       TMPA=CRE(P,TMPA)
       TMPB=CRE(R,TMPB)
       IF (TMPA.NE.-1.AND.TMPB.NE.-1) THEN
-        IA=RANK(TMPA)
-        IB=RANK(TMPB)
+        IA=RANK_(TMPA)
+        IB=RANK_(TMPB)
         FA=SIGN(1,TMPA)
         FB=SIGN(1,TMPB)
         TAU%COEF(IA,IB)=TAU%COEF(IA,IB)+FA*FB*FACT
@@ -237,8 +237,8 @@ CONTAINS
       TMPA=CRE(R,TMPA)
       TMPB=CRE(P,TMPB)
       IF (TMPA.NE.-1.AND.TMPB.NE.-1) THEN
-        IA=RANK(TMPA)
-        IB=RANK(TMPB)
+        IA=RANK_(TMPA)
+        IB=RANK_(TMPB)
         FA=SIGN(1,TMPA)
         FB=SIGN(1,TMPB)
         TAU%COEF(IA,IB)=TAU%COEF(IA,IB)+FA*FB*FACT
@@ -267,7 +267,7 @@ CONTAINS
       DETA=LEX_INIT(SGM%NELA,SGM%NORB)
       DO IA=1,SGM%NDETA
         TAUA=ISHFT(DETA,NI)+INACTIVE
-        TAU%COEF(RANK(TAUA),RANK(TAUB))=SGM%COEF(IA,IB)
+        TAU%COEF(RANK_(TAUA),RANK_(TAUB))=SGM%COEF(IA,IB)
         DETA=LEX_NEXT(DETA)
       END DO
       DETB=LEX_NEXT(DETB)
@@ -300,7 +300,7 @@ CONTAINS
       DETB=LEX_NEXT(DETB)
     END DO
   END SUBROUTINE WFN_PK
-  
+
   SUBROUTINE WFN_PSD(NI,NA,NS,SGM,TAU)
     ! computes |TAU> = |TAU> + P_SD |SGM>
     USE SECOND_QUANTIZATION
@@ -338,7 +338,7 @@ CONTAINS
       DETB=LEX_NEXT(DETB)
     END DO
   END SUBROUTINE WFN_PSD
-  
+
   SUBROUTINE WFN_ORBROT(PSI,OVEC)
     ! Transforms the CI coefficients to match the orbital rotation given by the
     ! transformation matrix U. The dimensions of U should match those of the
@@ -363,7 +363,7 @@ CONTAINS
     IF (PSI%NORB.NE.NA) STOP 'WFN_ORBROT: NA != PSI%NORB'
 
     ALLOCATE(U(NA,NA))
-    U = OVEC
+    U(:,:) = OVEC
 
     CALL WFN_INIT(TAU,PSI%NEL,PSI%NORB,PSI%MULT)
     ALLOCATE(T(NA))
@@ -388,7 +388,7 @@ CONTAINS
         U(J,K) = FACT*T(J)
       END DO
       ! compute |PSI> := (1+E_ij+E_ijmj)|PSI>
-      TAU%COEF=(1.5D0-0.5D0*T(J))*PSI%COEF
+      TAU%COEF(:,:)=(1.5D0-0.5D0*T(J))*PSI%COEF
       DO I=1,NA
         FACT=0.5D0*T(I)
         IF (I.EQ.J) FACT=FACT-0.5D0
@@ -407,6 +407,7 @@ CONTAINS
   END SUBROUTINE WFN_ORBROT
 
   SUBROUTINE WFN_ENERGY(NI,NA,NS,D1,D2,ONEINT,TWOINT)
+    USE IEEE_ARITHMETIC, ONLY:IEEE_IS_NAN
     REAL(REAL64) :: D1(:,:), D2(:,:,:,:)
     REAL(REAL64) :: ONEINT(:,:), TWOINT(:,:,:,:)
     INTEGER :: NI, NA, NS
@@ -450,7 +451,7 @@ CONTAINS
       DO T=1,NA
         DO U=1,NA
           IF (D1(T,U).NE.0.0D0) THEN
-            IF (ISNAN(TWOINT(I,I,NI+T,NI+U)).OR.ISNAN(TWOINT(I,NI+U,NI+T,I))) THEN
+            IF (IEEE_IS_NAN(TWOINT(I,I,NI+T,NI+U)).OR.IEEE_IS_NAN(TWOINT(I,NI+U,NI+T,I))) THEN
               WRITE(*,*) 'NaN detected on: ', I, I, NI+T, NI+U
             END IF
             E2=E2+(2.0D0*TWOINT(I,I,NI+T,NI+U)-TWOINT(I,NI+U,NI+T,I))*D1(T,U)
@@ -466,7 +467,7 @@ CONTAINS
         DO V=1,NA
           DO X=1,NA
             IF (D2(V,T,X,U).NE.0.0D0) THEN
-              IF (ISNAN(TWOINT(NI+T,NI+U,NI+V,NI+X))) THEN
+              IF (IEEE_IS_NAN(TWOINT(NI+T,NI+U,NI+V,NI+X))) THEN
                 WRITE(*,*) 'NaN detected on: ', NI+T, NI+U, NI+V, NI+X
               END IF
               E2=E2+0.5*TWOINT(NI+T,NI+U,NI+V,NI+X)*D2(V,T,X,U)
@@ -480,6 +481,7 @@ CONTAINS
     WRITE(*,*)
     WRITE(*,'(1X,A10,F21.14)') 'total:', ETOT
     WRITE(*,*)
+    IF (.FALSE.) NS=NS
   END SUBROUTINE WFN_ENERGY
 
 END MODULE WAVEFUNCTION

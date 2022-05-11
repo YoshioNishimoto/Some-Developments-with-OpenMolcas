@@ -12,17 +12,17 @@
      &                       dM, sM, ST, dbg )
 
       Implicit None
-      Integer, parameter           :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter        :: wp=kind(0.d0)
 
       Integer, intent(in)          :: EXCH, N
-      Real(kind=wp), intent(in)    :: H, X,Y,Z, zJ, T
-      Real(kind=wp), intent(in)    :: thrs
-      Real(kind=wp), intent(in)    :: W(EXCH)
-      Complex(kind=wp), intent(in) :: DM(3,EXCH,EXCH)
-      Complex(kind=wp), intent(in) :: SM(3,EXCH,EXCH)
+      Real(kind=8), intent(in)    :: H, X,Y,Z, zJ, T
+      Real(kind=8), intent(in)    :: thrs
+      Real(kind=8), intent(in)    :: W(EXCH)
+      Complex(kind=8), intent(in) :: DM(3,EXCH,EXCH)
+      Complex(kind=8), intent(in) :: SM(3,EXCH,EXCH)
       Logical, intent(in)          :: dbg
       ! output
-      Real(kind=wp), intent(out)   :: ST(3)
+      Real(kind=8), intent(out)   :: ST(3)
 
       Integer                      :: iopt
 
@@ -59,27 +59,27 @@
 
       Subroutine mean_field_exch( N, H, X,Y,Z, zJ, T, thrs, W,
      &                               dM, sM, ST )
-      ! this Subroutine computes the mean field of neighboring spins ST(3)
-      ! for zJ .ne. 0.0_wp
-      ! using ONLY Zeeman basis (N)
+!     this Subroutine computes the mean field of neighboring spins ST(3)
+!     for zJ .ne. 0.0_wp
+!     using ONLY Zeeman basis (N)
 
       Implicit None
-      Integer, parameter           :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter        :: wp=kind(0.d0)
 
       Integer, intent(in)       :: N
-      Real(kind=wp), intent(in) :: H, X,Y,Z, zJ, T, W(N)
-      Complex(kind=wp), intent(in) :: DM(3,N,N), SM(3,N,N)
+      Real(kind=8), intent(in) :: H, X,Y,Z, zJ, T, W(N)
+      Complex(kind=8), intent(in) :: DM(3,N,N), SM(3,N,N)
       ! output
-      Real(kind=wp), intent(out) :: ST(3)
+      Real(kind=8), intent(out) :: ST(3)
 
 #include "stdalloc.fh"
       ! local variables:
       Integer :: i, l, mxIter, iter
       Logical :: DBG
-      Real(kind=wp)    :: WM(N), S(3), ZB, SCHK, THRS, SL(3)
-      Complex(kind=wp) :: ZM(N,N), SZ(3,N,N)
-      Real(kind=wp), allocatable :: RWORK(:)
-      Complex(kind=wp), allocatable :: HZEE(:), WORK(:), W_c(:)
+      Real(kind=8)    :: WM(N), S(3), ZB, SCHK, THRS, SL(3)
+      Complex(kind=8) :: ZM(N,N), SZ(3,N,N)
+      Real(kind=8), allocatable :: RWORK(:)
+      Complex(kind=8), allocatable :: HZEE(:), WORK(:), W_c(:)
 
       DBG=.false.
 
@@ -96,10 +96,10 @@
       Call mma_allocate(W_c,N,'ZEEM_W_c')
 
       ! zero everything:
-      Call dcopy_(3*N-2,0.0_wp,0,RWORK,1)
-      Call zcopy_(N*(N+1)/2,(0.0_wp,0.0_wp),0,HZEE,1)
-      Call zcopy_(2*N-1,(0.0_wp,0.0_wp),0,WORK,1)
-      Call zcopy_(N,(0.0_wp,0.0_wp),0,W_c,1)
+      Call dcopy_(3*N-2,[0.0_wp],0,RWORK,1)
+      Call zcopy_(N*(N+1)/2,[(0.0_wp,0.0_wp)],0,HZEE,1)
+      Call zcopy_(2*N-1,[(0.0_wp,0.0_wp)],0,WORK,1)
+      Call zcopy_(N,[(0.0_wp,0.0_wp)],0,W_c,1)
       ! determine first the average spin of neighboring
       ! molecules for each temperature point
       Do iter=1,mxIter
@@ -117,7 +117,7 @@
           SZ(1:3,1:N,1:N)=(0.0_wp,0.0_wp)
           Call UTMU( N, N, ZM(1:N,1:N), SM(1:3,1:N,1:N),
      &                                  SZ(1:3,1:N,1:N) )
-          ! compute the spin magnetization vector at this temperature (T):
+!         compute the spin magnetization vector at this temperature (T):
           If(iter==mxIter) Then
             SL=0.0_wp
             SL(1)=S(1)
@@ -195,27 +195,27 @@
 
       Subroutine mean_field_all( EXCH, N, H, X,Y,Z, zJ, T, thrs, W,
      &                           dM, SM, ST)
-      ! this Subroutine computes the mean field of neighboring spins ST(3)
-      ! for zJ .ne. 0.0_wp
-      ! using ONLY Zeeman basis (N)
+!     this Subroutine computes the mean field of neighboring spins ST(3)
+!     for zJ .ne. 0.0_wp
+!     using ONLY Zeeman basis (N)
 
       Implicit None
-      Integer, parameter           :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter        :: wp=kind(0.d0)
 
       Integer, intent(in)          :: EXCH, N
-      Real(kind=wp), intent(in)    :: H, X,Y,Z, zJ, T, W(EXCH)
-      Complex(kind=wp), intent(in) :: DM(3,EXCH,EXCH), SM(3,EXCH,EXCH)
+      Real(kind=8), intent(in)    :: H, X,Y,Z, zJ, T, W(EXCH)
+      Complex(kind=8), intent(in) :: DM(3,EXCH,EXCH), SM(3,EXCH,EXCH)
       ! output
-      Real(kind=wp), intent(out) :: ST(3)
+      Real(kind=8), intent(out) :: ST(3)
 
 #include "stdalloc.fh"
       ! local variables:
       Integer :: i, l, mxIter, iter
       Logical :: DBG
-      Real(kind=wp)    :: WM(EXCH), S(3), ZB, SCHK, THRS, SL(3)
-      Complex(kind=wp) :: ZM(N,N), SZ(3,EXCH,EXCH)
-      Real(kind=wp), allocatable :: RWORK(:)
-      Complex(kind=wp), allocatable :: HZEE(:), WORK(:), W_c(:)
+      Real(kind=8)    :: WM(EXCH), S(3), ZB, SCHK, THRS, SL(3)
+      Complex(kind=8) :: ZM(N,N), SZ(3,EXCH,EXCH)
+      Real(kind=8), allocatable :: RWORK(:)
+      Complex(kind=8), allocatable :: HZEE(:), WORK(:), W_c(:)
 
       DBG=.false.
 
@@ -232,10 +232,10 @@
       Call mma_allocate(W_c,N,'ZEEM_W_c')
 
       ! zero everything:
-      Call dcopy_(3*N-2,0.0_wp,0,RWORK,1)
-      Call zcopy_(N*(N+1)/2,(0.0_wp,0.0_wp),0,HZEE,1)
-      Call zcopy_(2*N-1,(0.0_wp,0.0_wp),0,WORK,1)
-      Call zcopy_(N,(0.0_wp,0.0_wp),0,W_c,1)
+      Call dcopy_(3*N-2,[0.0_wp],0,RWORK,1)
+      Call zcopy_(N*(N+1)/2,[(0.0_wp,0.0_wp)],0,HZEE,1)
+      Call zcopy_(2*N-1,[(0.0_wp,0.0_wp)],0,WORK,1)
+      Call zcopy_(N,[(0.0_wp,0.0_wp)],0,W_c,1)
       ! determine first the average spin of neighboring
       ! molecules for each temperature point
       Do iter=1,mxIter
@@ -253,10 +253,10 @@
             End Do
           End If
 
-          ! transform the spin momenta to the Zeeman eigenstate basis
-          Call zcopy_(3*EXCH*EXCH,(0.0_wp,0.0_wp),0,SZ,1)
+!         transform the spin momenta to the Zeeman eigenstate basis
+          Call zcopy_(3*EXCH*EXCH,[(0.0_wp,0.0_wp)],0,SZ,1)
           Call UTMU( EXCH, N, ZM(1:N,1:N), SM, SZ )
-          ! compute the spin magnetization vector at this temperature (T):
+!         compute the spin magnetization vector at this temperature (T):
           If(iter==mxIter) Then
             SL=0.0_wp
             SL(1)=S(1)

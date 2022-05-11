@@ -21,20 +21,20 @@ c  neq(Nneq) number of equivalent sites of type i
 c
       Implicit None
 #include "stdalloc.fh"
-      Integer, parameter        :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter        :: wp=kind(0.d0)
 c main input variables
       Integer, intent(in)          :: nneq, exch, nmax, lmax
       Integer, intent(in)          :: neq(nneq), nexch(nneq)
       Integer, intent(in)          :: NmaxPop
-      Complex(kind=wp), intent(in) :: Z(exch,exch)
+      Complex(kind=8), intent(in) :: Z(exch,exch)
 c local variables
       Integer          :: i,j,l,isite,i1,i2,nb1,nb2,nb3,tmp,il,nb
       Integer          :: nind(lmax,2),intc(lmax)
       Integer          :: ibas(exch,lmax)
-      Complex(kind=wp), allocatable :: pop(:,:,:,:) !pop(exch,lmax,nmax,nmax)
+!     pop(exch,lmax,nmax,nmax)
+      Complex(kind=8), allocatable :: pop(:,:,:,:)
       Character(len=50):: fmtline
       Logical          :: DBG
-      Call qEnter('PA_popanalysis')
       DBG=.false.
 
       If(DBG) Then
@@ -48,7 +48,7 @@ c local variables
          Write(6,'(A,8i3)') '  nexch(i) = ',(nexch(i),i=1,nneq)
       End If
       Call mma_allocate(pop,exch,lmax,nmax,nmax,'pop')
-      Call zcopy_(exch*lmax*nmax*nmax,(0.0_wp,0.0_wp),0,pop,1)
+      Call zcopy_(exch*lmax*nmax*nmax,[(0.0_wp,0.0_wp)],0,pop,1)
 c fill some general arrays:
 c generate the tables:
       nind(:,:)=0
@@ -104,8 +104,9 @@ c
       Write(6,fmtline) '--------|-----|',
      & ('------------|',i=1,lmax)
 
-      Do nb1=1,NmaxPop ! loop over all states for which we want density matrices and
-c                      expectation values to be calculated
+!     loop over all states for which we want density matrices and
+!     expectation values to be calculated
+      Do nb1=1,NmaxPop
          Do l=1,lmax
          isite=nind(l,1)
             Do i1=1,nexch(isite)
@@ -147,7 +148,6 @@ c     sum over all other components of other sites
 
       call mma_deallocate(pop)
 
-      Call qExit('PA_popanalysis')
       Return
       End
 

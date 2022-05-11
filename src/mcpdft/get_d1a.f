@@ -44,7 +44,6 @@
 #include "general.fh"
 #include "WrkSpc.fh"
 
-      Call qEnter('Get_D1A')
 
       Zero = 0.0d0
 
@@ -56,7 +55,7 @@
         iAsh = nAsh(iSym)
         iIsh = nIsh(iSym)
         iFro = nFro(iSym)
-        Call dCopy_(iBas*iBas,Zero,0,D1A_AO(iOff3),1)
+        Call dCopy_(iBas*iBas,[Zero],0,D1A_AO(iOff3),1)
         If ( iAsh.ne.0 ) then
           Call GetMem('Scr1','Allo','Real',iTmp1,iAsh*iAsh)
           Call GetMem('Scr2','Allo','Real',iTmp2,iAsh*iBas)
@@ -79,7 +78,6 @@
         iOff3 = iOff3 + iBas*iBas
       End Do
 
-      Call qExit('Get_D1A')
 
       Return
       End

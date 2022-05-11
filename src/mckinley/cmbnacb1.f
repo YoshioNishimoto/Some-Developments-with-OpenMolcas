@@ -40,10 +40,8 @@
 *******************************************************************************
       use Real_Spherical
       Implicit Real*8 (A-H,O-Z)
+#include "Molcas.fh"
 #include "real.fh"
-#include "itmax.fh"
-#include "info.fh"
-#include "WrkSpc.fh"
 #include "print.fh"
 #include "disp.fh"
 
@@ -56,13 +54,11 @@
       Integer Index(3,4)
 
       nelem(ixyz) = (ixyz+1)*(ixyz+2)/2
-      iprint =0
-
 
       nZeta = nAlpha*nBeta
       call dcopy_(nZeta*nElem(la)*nElem(lb)*6,
-     &                    Zero,0,Final,1)
-      Call iCopy(12,0,0,Index,1)
+     &                    [Zero],0,Final,1)
+      Call iCopy(12,[0],0,Index,1)
 
       mVec = 0
       Do iCent = 1, 2

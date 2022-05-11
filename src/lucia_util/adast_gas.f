@@ -65,6 +65,7 @@
 #include "lucinp.fh"
 #include "distsym.fh"
 #include "loff.fh"
+#include "stdalloc.fh"
 *. Input
       INTEGER IGRP(NIGRP)
 *. Local scratch
@@ -75,11 +76,7 @@
       INTEGER IISTSGP(MXPNSMST,MXPNGAS)
       INTEGER KGRP(MXPNGAS)
       INTEGER IACIST(MXPNSMST), NACIST(MXPNSMST)
-*. Temporary solution ( for once )
-cSJS      PARAMETER(LOFFI=8*8*8*8*8)
-cSJS * Declaring later so it can be in terms of NGAS and NIRREP
-cSJS      PARAMETER(LOFFI=NGAS**NIRREP) !SJS
-      DIMENSION IOFFI(LOFFI)
+      ALLOCATABLE IOFFI(:)
 *
 *
 * =======
@@ -92,7 +89,6 @@ cSJS      PARAMETER(LOFFI=NGAS**NIRREP) !SJS
 * (NKSTR,*), Where NKSTR is the number of K-strings of
 *  correct symmetry . Nk is provided by this routine.
 *
-      CALL QENTER('ADAST ')
 *
       NTEST = 00
       IF(NTEST.GE.100) THEN
@@ -122,6 +118,7 @@ cSJS      PARAMETER(LOFFI=NGAS**NIRREP) !SJS
       NORBTS= NOBPTS(IOBTP,IOBSM)
       NORBT= NOBPT(IOBTP)
       IACGAS = IOBTP
+      CALL mma_allocate(IOFFI,LOFFI,label='IOFFI')
 *. First orbital of given GASpace
        IBORBSP = IELSUM(NOBPT,IOBTP-1)+1
 *. First orbital of given GASpace and Symmetry
@@ -236,26 +233,28 @@ cSJS      PARAMETER(LOFFI=NGAS**NIRREP) !SJS
         NELB = NELB + NELFGP(IGRP(JGRP))
       END DO
       IF(NTEST.GE.1000) WRITE(6,*) ' NELB = ', NELB
-      ZERO =0.0D0
       IZERO = 0
       CALL ISETVC(I1,IZERO,NORBTS*NKSTR)
-*
 * Loop over symmetry distribtions of K strings
-*
       KFIRST = 1
       KSTRBS = 1
       DO IGAS = 1, NIGRP
         ISMFGS(IGAS) = 1
       END DO
  1000 CONTINUE
+cGLM        IF(KFIRST .EQ. 1 ) THEN
+cGLM          DO IGAS = 1, NIGRP
+cGLM            ISMFGS(IGAS) = MNVLI(IGAS)
+cGLM          END DO
+cGLM        ELSE
 *. Next distribution
-*        CALL NEXT_SYM_DISTR(  NGASL,  MNVLK,  MXVLK, ISMFGS,    KSM,
-*     &                       KFIRST,  NONEW)
-         CALL NEXT_SYM_DISTR_NEW(NSMST,NGRP,KGRP,NIGRP,
+          CALL NEXT_SYM_DISTR_NEW(NSMST,NGRP,KGRP,NIGRP,
      &                           ISMFGS,KSM,KFIRST,NONEW,
      &                  iWork(ISMDFGP),iWork(NACTSYM),iWork(ISMSCR))
+cGLM          IF(NONEW.EQ.1) GOTO 9999
+cGLM        END IF
         IF(NTEST.GE.1000) THEN
-          write(6,*) ' Symmetry distribution '
+          write(6,*) ' Symmetry distribution   '
           call iwrtma(ISMFGS,1,NIGRP,1,NIGRP)
         END IF
         IF(NONEW.EQ.1) GOTO 9999
@@ -270,6 +269,7 @@ cSJS      PARAMETER(LOFFI=NGAS**NIRREP) !SJS
         CALL  SYMCOM(3,1,IOBSM,ISMFGS(IACGRP),IACSM)
         ISMFGS(IACGRP) = IACSM
         IBSTRINI = IOFF_SYM_DIST(ISMFGS,NIGASL,IOFFI,MXVLI,MNVLI)
+c        write(6,*) 'IBSTRINI :', IBSTRINI
         ISMFGS(IACGRP) = ISAVE
 *. Number of strings before active GAS space
         NSTB = 1
@@ -289,7 +289,6 @@ C       DO IGAS =  IOBTP +1, NIGRP
         NKAC = NNSTSGP(ISMFGS(IACGRP),IACGRP)
         IKAC = IISTSGP(ISMFGS(IACGRP),IACGRP)
 *. I and K strings of given symmetry distribution
-        NISD = NSTB*NIAC*NSTA
         NKSD = NSTB*NKAC*NSTA
         IF(NTEST.GE.1000) THEN
         write(6,*) ' nstb nsta niac nkac ',
@@ -316,6 +315,7 @@ C       DO IGAS =  IOBTP +1, NIGRP
         GOTO 1000
 *
  9999 CONTINUE
+      CALL mma_deallocate(IOFFI)
 *
       IF(NTEST.GE.100) THEN
         WRITE(6,*) ' Output from ADAST_GAS '
@@ -332,7 +332,6 @@ C       DO IGAS =  IOBTP +1, NIGRP
         END IF
       END IF
 *
-      CALL QEXIT('ADAST ')
       RETURN
 c Avoid unused argument warnings
       IF (.FALSE.) THEN

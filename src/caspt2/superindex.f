@@ -34,9 +34,8 @@
       IMPLICIT NONE
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "stdalloc.fh"
-      CHARACTER(8) CSNAME(MXCASE)
+      CHARACTER(LEN=8) CSNAME(MXCASE)
       DATA CSNAME / 'VJTU    ','VJTIP   ','VJTIM   ',
      &     'ATVX    ','AIVX    ','VJAIP   ','VJAIM   ','BVATP   ',
      &     'BVATM   ','BJATP   ','BJATM   ','BJAIP   ','BJAIM   '/
@@ -57,10 +56,9 @@
       INTEGER N,N5,N6,N7,N10,N11
       INTEGER NAT,NAU,NAV,NII,NIJ,NSA,NSB
 
-      CALL QENTER('SUPINI')
 
-      CALL MMA_ALLOCATE(KTUV,NASHT,NASHT,NASHT)
-      CALL MMA_ALLOCATE(MTUV,3,NASHT**3)
+      CALL MMA_ALLOCATE(KTUV,NASHT,NASHT,NASHT,Label='KTUV')
+      CALL MMA_ALLOCATE(MTUV,3,NASHT**3,Label='MTUV')
       ITUV=0
       DO 20 ISYM=1,NSYM
         ICOUNT=0
@@ -68,41 +66,44 @@
         NTUVES(ISYM)=ITUV
         DO 10 ISV=1,NSYM
           NAV=NASH(ISV)
-          DO 10 ISU=1,NSYM
+          DO 11 ISU=1,NSYM
             NAU=NASH(ISU)
             ISUV=MUL(ISU,ISV)
             IST=MUL(ISUV,ISYM)
             NAT=NASH(IST)
             JCOUNT=NAV*NAU*NAT
-            IF (JCOUNT.EQ.0) GOTO 10
+            IF (JCOUNT.EQ.0) GOTO 11
             ICOUNT=ICOUNT+1
             NCOUNT=NCOUNT+JCOUNT
             DO 5 IV=1,NAV
               IVQ=NAES(ISV)+IV
-              DO 5 IU=1,NAU
+              DO 6 IU=1,NAU
                 IUQ=NAES(ISU)+IU
-                DO 5 IT=1,NAT
+                DO 7 IT=1,NAT
                   ITQ=NAES(IST)+IT
                   ITUV=ITUV+1
                   KTUV(ITQ,IUQ,IVQ)=ITUV
                   MTUV(1,ITUV)=ITQ
                   MTUV(2,ITUV)=IUQ
                   MTUV(3,ITUV)=IVQ
+   7            CONTINUE
+   6          CONTINUE
    5        CONTINUE
+  11      CONTINUE
   10    CONTINUE
         NSTUV(ISYM)=ICOUNT
         NTUV(ISYM)=NCOUNT
   20  CONTINUE
 
-      CALL MMA_ALLOCATE(KTU,NASHT,NASHT)
-      CALL MMA_ALLOCATE(MTU,3,NASHT**2)
+      CALL MMA_ALLOCATE(KTU,NASHT,NASHT,Label='KTU')
+      CALL MMA_ALLOCATE(MTU,3,NASHT**2,Label='MTU')
 
-      CALL MMA_ALLOCATE(KTGEU,NASHT,NASHT)
-      CALL MMA_ALLOCATE(KTGTU,NASHT,NASHT)
+      CALL MMA_ALLOCATE(KTGEU,NASHT,NASHT,Label='KTGEU')
+      CALL MMA_ALLOCATE(KTGTU,NASHT,NASHT,Label='KTGTU')
       NMTGEU=(NASHT*(NASHT+1))/2
       NMTGTU=(NASHT*(NASHT-1))/2
-      CALL MMA_ALLOCATE(MTGEU,2,NMTGEU)
-      CALL MMA_ALLOCATE(MTGTU,2,NMTGTU)
+      CALL MMA_ALLOCATE(MTGEU,2,NMTGEU,Label='MTGEU')
+      CALL MMA_ALLOCATE(MTGTU,2,NMTGTU,Label='MTGTU')
 
       ITU=0
       ITGEU=0
@@ -165,21 +166,21 @@
 CPAM99 Use allocated workspace instead of MAGEB, MAGTB:
       NMAGEB=(NSSHT*(NSSHT+1))/2
       NMAGTB=(NSSHT*(NSSHT-1))/2
-      CALL MMA_ALLOCATE(MAGEB,2,NMAGEB)
-      CALL MMA_ALLOCATE(MAGTB,2,NMAGTB)
+      CALL MMA_ALLOCATE(MAGEB,2,NMAGEB,Label='MAGEB')
+      CALL MMA_ALLOCATE(MAGTB,2,NMAGTB,Label='MAGTB')
       NMIGEJ=(NISHT*(NISHT+1))/2
       NMIGTJ=(NISHT*(NISHT-1))/2
-      CALL MMA_ALLOCATE(MIGEJ,2,NMIGEJ)
-      CALL MMA_ALLOCATE(MIGTJ,2,NMIGTJ)
+      CALL MMA_ALLOCATE(MIGEJ,2,NMIGEJ,Label='MIGEJ')
+      CALL MMA_ALLOCATE(MIGTJ,2,NMIGTJ,Label='MIGTJ')
 
-      CALL MMA_ALLOCATE(KIGEJ,NISHT,NISHT)
-      CALL MMA_ALLOCATE(KIGTJ,NISHT,NISHT)
-      CALL MMA_ALLOCATE(KAGEB,NSSHT,NSSHT)
-      CALL MMA_ALLOCATE(KAGTB,NSSHT,NSSHT)
+      CALL MMA_ALLOCATE(KIGEJ,NISHT,NISHT,Label='KIGEJ')
+      CALL MMA_ALLOCATE(KIGTJ,NISHT,NISHT,Label='KIGTJ')
+      CALL MMA_ALLOCATE(KAGEB,NSSHT,NSSHT,Label='KAGEB')
+      CALL MMA_ALLOCATE(KAGTB,NSSHT,NSSHT,Label='KAGTB')
 
-      CALL MMA_ALLOCATE(KIA,NISHT,NSSHT)
+      CALL MMA_ALLOCATE(KIA,NISHT,NSSHT,Label='KIA')
       NMIA=NISHT*NSSHT
-      CALL MMA_ALLOCATE(MIA,2,NMIA)
+      CALL MMA_ALLOCATE(MIA,2,NMIA,Label='MIA')
 
 C Construct tables for inactive and secondary pair indices:
       IIGEJ=0
@@ -318,7 +319,7 @@ C Inactive-Secondary pair indices:
  140  CONTINUE
       DO 150 ICASE=1,NCASES
         NSUM=0
-        DO 150 ISYM=1,NSYM
+        DO 151 ISYM=1,NSYM
           NEXCES(ISYM,ICASE)=NSUM
           N=NASUP(ISYM,ICASE)*NISUP(ISYM,ICASE)
           NEXC(ISYM,ICASE)=N
@@ -326,14 +327,15 @@ C Preliminary value for NINDEP: Nr of independent active params:
           NINDEP(ISYM,ICASE)=NASUP(ISYM,ICASE)
           IF(N.EQ.0) NINDEP(ISYM,ICASE)=0
           NSUM=NSUM+N
+ 151    CONTINUE
  150  CONTINUE
 
 CSVC: prepare tables to translate from absolute indices to
 C(index,symmetry) pairs.
 
-      CALL MMA_ALLOCATE(MIREL,2,NISHT)
-      CALL MMA_ALLOCATE(MTREL,2,NASHT)
-      CALL MMA_ALLOCATE(MAREL,2,NSSHT)
+      CALL MMA_ALLOCATE(MIREL,2,NISHT,Label='MIREL')
+      CALL MMA_ALLOCATE(MTREL,2,NASHT,Label='MTREL')
+      CALL MMA_ALLOCATE(MAREL,2,NSSHT,Label='MAREL')
 
       DO ISYM=1,NSYM
         DO II=1,NISH(ISYM)
@@ -353,7 +355,6 @@ C(index,symmetry) pairs.
         END DO
       END DO
 
-      CALL QEXIT('SUPINI')
 
       RETURN
       END SUBROUTINE

@@ -11,7 +11,7 @@
 * Copyright (C) 1998, Markus P. Fuelscher                              *
 *               2018, Ignacio Fdez. Galvan                             *
 ************************************************************************
-      Subroutine ReadVC(CMO,OCC,D,DS,P,PA)
+      Subroutine ReadVC(CMO,OCC,D,DS,P,PA,scheme)
 ************************************************************************
 *                                                                      *
 *     purpose:                                                         *
@@ -57,52 +57,81 @@
 *     none                                                             *
 *                                                                      *
 ************************************************************************
+      use stdalloc, only : mma_allocate, mma_deallocate
 
-      Implicit Real*8 (A-H,O-Z)
+      use rasscf_data, only : lRoots, nRoots,
+     &  iRoot, LENIN8, mxTit, Weight, mXOrb, mXroot,
+     &  nAcPar, iXsym, iAlphaBeta,
+     &  iOverwr, iSUPSM, iCIrst, iPhName, nAcpr2, nOrbT, iClean,
+     &  purify, iAdr15
+      use general_data, only : nSym, mXSym,
+     &  nDel, nBas, nOrb,
+     &  nTot, nTot2, Invec, LuStartOrb, StartOrbFile, JobOld,
+     &  JobIph, nSSH, maxbfn, mXAct
+
+      use orthonormalization, only : t_ON_scheme, ON_scheme_values,
+     &  orthonormalize
+
+#ifdef _HDF5_
+      use mh5, only: mh5_open_file_r, mh5_exists_dset, mh5_fetch_dset,
+     &               mh5_close_file
+#endif
+
+      implicit none
 
 *     global data declarations
-
-#include "rasdim.fh"
-#include "rasscf.fh"
-#include "general.fh"
 #include "output_ras.fh"
+      Character*16 ROUTINE
       Parameter (ROUTINE='READVC  ')
 #include "WrkSpc.fh"
 #include "SysDef.fh"
-#include "warnings.fh"
+#include "warnings.h"
 #include "wadr.fh"
 #include "casvb.fh"
-#include "raswfn.fh"
-      Common /IDSXCI/ IDXCI(mxAct),IDXSX(mxAct)
-*     calling arguments
+#include "sxci.fh"
 
-      Dimension CMO(*),OCC(*),D(*),DS(*),P(*),PA(*)
+      real*8 :: CMO(*),OCC(*),D(*),DS(*),P(*),PA(*)
+      type(t_ON_scheme), intent(in) :: scheme
 
-*     local data declarations
-
-      Character*72 JobTit(mxTit)
-      DIMENSION IADR19(30)
-      Character*80 VecTit
-      Character*4 Label
-c      Integer StrnLn
-      Logical Found
-      Logical Changed
-      Integer nTmp(8)
+      logical :: found, changed
+      integer :: iPrlev, nData,
+     &    i, j, iTIND, NNwOrd, iSym,
+     &    LNEWORD, LTMPXSYM, iErr, IAD19, iJOB,
+     &    lll, lJobH, ldJobH, lscr, iDisk,
+     &    jRoot, kRoot,
+     &    iDummy(1), IADR19(30), iAD15, lEne, nTmp(8)
+      real*8 :: Dummy(1), Scal
+      real*8, allocatable :: CMO_copy(:)
 #ifdef _HDF5_
-      Character(Len=maxbfn) typestring
+      integer mh5id
+      character(Len=maxbfn) typestring
 #endif
+      character(len=LENIN8*mxOrb) :: lJobH1
+      character(len=2*72) :: lJobH2
+      character(len=72) :: JobTit(mxTit)
+      character(len=80) :: VecTit
+      character(len=4) :: Label
+
+      interface
+        integer function isfreeunit(seed)
+          integer, intent(in) :: seed
+        end function
+
+        integer function ip_of_Work_i(A)
+          integer :: A
+        end function
+      end interface
 
 *----------------------------------------------------------------------*
 *                                                                      *
 *----------------------------------------------------------------------*
-      Call qEnter('ReadVc')
 C Local print level (if any)
       IPRLEV=IPRLOC(1)
       IF(IPRLEV.ge.DEBUG) THEN
         WRITE(LF,*)' Entering ',ROUTINE
       END IF
 *----------------------------------------------------------------------*
-* Do we use default orbitals?                                        *
+* Do we use default orbitals?                                          *
 *----------------------------------------------------------------------*
       If(InVec.eq.0) Then
          Call qpg_darray('RASSCF orbitals',Found,nData)
@@ -221,7 +250,7 @@ C Local print level (if any)
            end if
         Else
            If (IPRLEV.ge.TERSE) then
-              Write(LF,*) '  File JOBOLD not found -- use JOBIPH.'
+              Write(LF,'(6X,A)') 'File JOBOLD not found -- use JOBIPH.'
            End If
            If (JOBIPH.gt.0) Then
               JOBOLD=JOBIPH
@@ -244,23 +273,22 @@ C Local print level (if any)
         lll = MAX(lll,mxSym)
         lll = MAX(lll,mxOrb)
         lll = MAX(lll,RtoI)
-        lll = MAX(lll,LENIN8*mxOrb/ItoB)
-        lll = MAX(lll,2*72/ItoB)
         lll = MAX(lll,RtoI*mxRoot)
         CALL GETMEM('JOBOLD','ALLO','INTEGER',lJobH,lll)
+        ldJobH=ip_of_Work_i(iWork(lJobH))
         iAd19=iAdr19(1)
         CALL WR_RASSCF_Info(JobOld,2,iAd19,
      &                      iWork(lJobH),iWork(lJobH),iWork(lJobH),
      &                      iWork(lJobH),iWork(lJobH),iWork(lJobH),
      &                      iWork(lJobH),iWork(lJobH),iWork(lJobH),
      &                      mxSym,
-     &                      iWork(lJobH),LENIN8*mxOrb,iWork(lJobH),
-     &                      iWork(lJobH),2*72,JobTit,72*mxTit,
-     &                      iWork(lJobH),iWork(lJobH),
+     &                      lJobH1,LENIN8*mxOrb,iWork(lJobH),
+     &                      lJobH2,2*72,JobTit,72*mxTit,
+     &                      Work(ldJobH),iWork(lJobH),
      &                      iWork(lJobH),iWork(lJobH),mxRoot,
      &                      iWork(lJobH),iWork(lJobH),iWork(lJobH),
      &                      iWork(lJobH),iWork(lJobH),iWork(lJobH),
-     &                      iWork(lJobH))
+     &                      Work(ldJobH))
         IF(IPRLEV.ge.TERSE) THEN
          If (iJOB.eq.1) Then
             Write(LF,'(6X,A)')
@@ -269,7 +297,7 @@ C Local print level (if any)
          Else
             Write(LF,'(6X,A)')
      &      'The MO-coefficients are taken from the file:'
-            Write(LF,'(6X,A)') IPHNAME(:mylen(IPHNAME))
+            Write(LF,'(6X,A)') trim(iPhName)
          End If
          Write(VecTit(1:72),'(A72)') JobTit(1)
          Write(LF,'(6X,2A)') 'Title:',VecTit(1:72)
@@ -287,8 +315,7 @@ C Local print level (if any)
            Else
               Write(LF,'(6X,A)')
      &        'The active density matrices (D,DS,P,PA) are read from'//
-     &        ' file '//IPHNAME(:mylen(IPHNAME))//
-     &        ' and weighted together.'
+     &        ' file '//trim(iPhName)//' and weighted together.'
            End If
          End If
          Call GetMem('Scr','Allo','Real',lscr,NACPR2)
@@ -312,11 +339,12 @@ C Local print level (if any)
          Call GetMem('Scr','Free','Real',lscr,NACPR2)
         End If
 CSVC: read the L2ACT and LEVEL arrays from the jobiph file
-         IAD19=IADR19(18)
-         IF (IAD19.NE.0) THEN
-           CALL IDAFILE(JOBOLD,2,IDXSX,mxAct,IAD19)
-           CALL IDAFILE(JOBOLD,2,IDXCI,mxAct,IAD19)
-         END IF
+!IFG: disabled, since it breaks when changing active space specification
+        !IAD19=IADR19(18)
+        !IF (IAD19.NE.0) THEN
+        !  CALL IDAFILE(JOBOLD,2,IDXSX,mxAct,IAD19)
+        !  CALL IDAFILE(JOBOLD,2,IDXCI,mxAct,IAD19)
+        !END IF
         If(JOBOLD.gt.0.and.JOBOLD.ne.JOBIPH) Then
           Call DaClos(JOBOLD)
           JOBOLD=-1
@@ -489,7 +517,7 @@ CSVC: read the L2ACT and LEVEL arrays from the jobiph file
 *     print start orbitals
       IF(IPRLEV.GE.DEBUG) THEN
         CALL GETMEM('DumE','Allo','Real',LENE,nTot)
-        CALL DCOPY_(nTot,0.0D0,0,WORK(LENE),1)
+        CALL DCOPY_(nTot,[0.0D0],0,WORK(LENE),1)
         CALL PRIMO_RASSCF('Input orbitals',WORK(LENE),OCC,CMO)
         CALL GETMEM('DumE','Free','Real',LENE,nTot)
       END IF
@@ -500,13 +528,12 @@ CSVC: read the L2ACT and LEVEL arrays from the jobiph file
       If(PURIFY(1:6).eq.'LINEAR') CALL LINPUR(CMO)
       If(PURIFY(1:4).eq.'ATOM') CALL SPHPUR(CMO)
 
-*     orthogonalize the molecular orbitals
-* New orthonormalization routine, with additional deletion of
-* linear dependence.
-      CALL GETMEM('CMOO','ALLO','REAL',LCMOO,NTOT2)
-      CALL DCOPY_(NTOT2,CMO,1,WORK(LCMOO),1)
-      CALL ONCMO(WORK(LCMOO),CMO)
-      CALL GETMEM('CMOO','FREE','REAL',LCMOO,NTOT2)
+      if (scheme%val /= ON_scheme_values%no_ON) then
+        call mma_allocate(CMO_copy, nTot2)
+        CMO_copy(:nTot2) = CMO(:nTot2)
+        call orthonormalize(CMO_copy, scheme, CMO(:nTot2))
+        call mma_deallocate(CMO_copy)
+      end if
 
 *     save start orbitals
 
@@ -516,6 +543,5 @@ CSVC: read the L2ACT and LEVEL arrays from the jobiph file
 
 *     exit
 
-      CALL QEXIT('READVC')
       RETURN
       END

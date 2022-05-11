@@ -13,8 +13,6 @@
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
-#include "WrkSpc.fh"
       EXTERNAL ASIND
 
 CPAM99 New call sequence for ASIND

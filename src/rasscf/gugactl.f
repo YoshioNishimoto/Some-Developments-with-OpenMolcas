@@ -21,16 +21,16 @@ C
       IMPLICIT REAL*8 (A-H,O-Z)
 C
 #include "rasdim.fh"
-#include "warnings.fh"
+#include "warnings.h"
 #include "rasscf.fh"
 #include "general.fh"
 #include "gas.fh"
 #include "output_ras.fh"
+      Character*16 ROUTINE
       Parameter (ROUTINE='GUGACTL ')
 #include "gugx.fh"
 #include "WrkSpc.fh"
 
-      Call qEnter('GugaCtl')
 C Local print level (if any)
       IPRLEV=IPRLOC(3)
       IF(IPRLEV.ge.DEBUG) THEN
@@ -110,11 +110,10 @@ C
 C     INITIALIZE GUGA TABLES:
 C
       CALL MKGUGA(NSM,IPRLEV)
-      NCONF=NCSF(LSYM)
+      NCONF=NCSF(STSYM)
       If ( NAC.eq.0 ) NCONF=1
 
 100   Continue
-       Call qExit('GugaCtl')
 
       RETURN
       END

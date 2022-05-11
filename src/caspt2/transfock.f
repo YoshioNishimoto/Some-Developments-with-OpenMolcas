@@ -17,7 +17,6 @@
 * Purpose: given an orbital transformation array and some
 * one-electron matrix in storage format as e.g. HONE, FIFA,
 * transform the matrix to use the new orbital basis.
-      CALL QENTER('TRANSFOCK')
 
       NT=0
       NOMX=0
@@ -45,7 +44,7 @@
         NO=NI+NR1+NR2+NR3+NS
         IF (NO.eq.0) GOTO 99
 * Copy the matrices to square storage: first fill with zeroes.
-        CALL DCOPY_(NO**2,0.0D0,0,WORK(LTSQ),1)
+        CALL DCOPY_(NO**2,[0.0D0],0,WORK(LTSQ),1)
 * Copy inactive TORB block to TSQ
         IOFF=0
         DO I=1,NI
@@ -133,7 +132,6 @@
       CALL GETMEM('TSQ','FREE','REAL',LTSQ,NOMX**2)
       CALL GETMEM('TMP','FREE','REAL',LTMP,NOMX**2)
 
-      CALL QEXIT('TRANSFOCK')
 
       RETURN
       END

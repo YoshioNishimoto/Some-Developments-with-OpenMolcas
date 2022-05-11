@@ -35,49 +35,47 @@ c                   iopt = 4   -- maxes is the unity matrix ( original Z
 c                                 is the quantization axis )
 c
       Implicit None
-      Integer, Parameter  :: wp=selected_real_kind(p=15,r=307)
+      Integer, Parameter            :: wp=kind(0.d0)
 #include "stdalloc.fh"
       Integer, intent(in)       :: ldimcf, iprint, iopt, nlanth, iDIM
-      Real(kind=wp), intent(in) :: esfs(ldimcf)
-      Real(kind=wp), intent(in) :: angmom(3,ldimcf,ldimcf)
-      Real(kind=wp), intent(in) :: amfi(3,ldimcf,ldimcf)
-      Real(kind=wp), intent(in) :: maxes2(3,3)
+      Real(kind=8), intent(in) :: esfs(ldimcf)
+      Real(kind=8), intent(in) :: angmom(3,ldimcf,ldimcf)
+      Real(kind=8), intent(in) :: amfi(3,ldimcf,ldimcf)
+      Real(kind=8), intent(in) :: maxes2(3,3)
 
-      Real(kind=wp)                 :: finddetr, dnrm2
-!      Real(kind=wp)                 :: knm(12,0:12)
-      Real(kind=wp), allocatable    :: maxes(:,:)
-      Real(kind=wp), allocatable    :: gtens(:)
-      Real(kind=wp), allocatable    :: eloc(:) ! lDIMcf
-      Real(kind=wp), allocatable    :: Winit(:) ! lDIMcf
+      Real(kind=8)                 :: finddetr
+!      Real(kind=8)                 :: knm(12,0:12)
+      Real(kind=8), allocatable    :: maxes(:,:)
+      Real(kind=8), allocatable    :: gtens(:)
+      Real(kind=8), allocatable    :: eloc(:) ! lDIMcf
+      Real(kind=8), allocatable    :: Winit(:) ! lDIMcf
 
-      Real(kind=wp)                 :: BNC(lDIMcf,0:lDIMcf)
-      Real(kind=wp)                 :: BNS(lDIMcf,0:lDIMcf)
-      Real(kind=wp)                 :: Bstev(lDIMcf,-lDIMcf:lDIMcf)
-      Complex(kind=wp)              ::
+      Real(kind=8)                 :: BNC(lDIMcf,0:lDIMcf)
+      Real(kind=8)                 :: BNS(lDIMcf,0:lDIMcf)
+      Real(kind=8)                 :: Bstev(lDIMcf,-lDIMcf:lDIMcf)
+      Complex(kind=8)              ::
      &                            Akq((lDIMcf-1),-(lDIMcf-1):(lDIMcf-1))
-      Complex(kind=wp)              :: trace
-      Complex(kind=wp), allocatable :: Angm(:,:,:) ! 3,ldimcf,ldimcf
-      Complex(kind=wp), allocatable :: dipso(:,:,:) ! 3,ldimcf,ldimcf
-      Complex(kind=wp), allocatable :: amfi_c(:,:,:) ! 3,ldimcf,ldimcf
-      Complex(kind=wp), allocatable :: amfi2(:,:,:) ! 3,ldimcf,ldimcf
-      Complex(kind=wp), allocatable :: amfi_l(:,:,:) ! 3,ldimcf,ldimcf
-      Complex(kind=wp), allocatable :: Z(:,:) !ldimcf,ldimcf
-      Complex(kind=wp), allocatable :: tmp(:,:) !ldimcf,ldimcf
-      Complex(kind=wp), allocatable :: HCF(:,:) !ldimcf,ldimcf
-      Complex(kind=wp), allocatable :: Zinit(:,:) !ldimcf,ldimcf
+      Complex(kind=8), allocatable :: Angm(:,:,:) ! 3,ldimcf,ldimcf
+      Complex(kind=8), allocatable :: dipso(:,:,:) ! 3,ldimcf,ldimcf
+      Complex(kind=8), allocatable :: amfi_c(:,:,:) ! 3,ldimcf,ldimcf
+      Complex(kind=8), allocatable :: amfi2(:,:,:) ! 3,ldimcf,ldimcf
+      Complex(kind=8), allocatable :: amfi_l(:,:,:) ! 3,ldimcf,ldimcf
+      Complex(kind=8), allocatable :: Z(:,:) !ldimcf,ldimcf
+      Complex(kind=8), allocatable :: tmp(:,:) !ldimcf,ldimcf
+      Complex(kind=8), allocatable :: HCF(:,:) !ldimcf,ldimcf
+      Complex(kind=8), allocatable :: Zinit(:,:) !ldimcf,ldimcf
 
       Integer       :: i, j, l, info, i1, i2
-      External      :: finddetr, trace, dnrm2
+      External      :: finddetr
       Logical       :: debug =.false.
-      Real(kind=wp) :: au2cm=2.194746313705d5
+      Real(kind=8) :: au2cm=2.194746313705d5
 
 !
-      Real(kind=wp) :: tS, tL, tJ, coeffCG, spinM, orbM,tJM,CF(100,100)
+      Real(kind=8) :: tS, tL, tJ, coeffCG, spinM, orbM,tJM,CF(100,100)
       Integer       :: MS, ML, MJ
       Integer       :: ij, iLS, nLS, ibasS(100), ibasL(100), ibasJ(100)
       Integer       :: irootL(100), ir, icas, k
-      complex(kind=wp) :: CFC(100,100),zl(lDIMcf,lDIMcf)
-      Call qEnter('TERMCF')
+      complex(kind=8) :: CFC(100,100)
 !============== End of variable declarations ==========================
       Call mma_allocate(maxes,3,3,'maxes')
       Call mma_allocate(gtens,3,'gtens')
@@ -94,20 +92,20 @@ c
       Call mma_allocate(tmp,ldimcf,ldimcf,'tmp')
       Call mma_allocate(HCF,ldimcf,ldimcf,'HCF')
 
-      Call dcopy_(3,0.0_wp,0,gtens,1)
-      Call dcopy_(3*3,0.0_wp,0,maxes,1)
-      Call dcopy_(lDIMcf,0.0_wp,0,eloc,1)
-      Call dcopy_(lDIMcf,0.0_wp,0,Winit,1)
+      Call dcopy_(3,[0.0_wp],0,gtens,1)
+      Call dcopy_(3*3,[0.0_wp],0,maxes,1)
+      Call dcopy_(lDIMcf,[0.0_wp],0,eloc,1)
+      Call dcopy_(lDIMcf,[0.0_wp],0,Winit,1)
 
-      Call zcopy_(3*ldimcf*ldimcf,(0.0_wp,0.0_wp),0,Angm,1)
-      Call zcopy_(3*ldimcf*ldimcf,(0.0_wp,0.0_wp),0,dipso,1)
-      Call zcopy_(3*ldimcf*ldimcf,(0.0_wp,0.0_wp),0,amfi_c,1)
-      Call zcopy_(3*ldimcf*ldimcf,(0.0_wp,0.0_wp),0,amfi2,1)
-      Call zcopy_(3*ldimcf*ldimcf,(0.0_wp,0.0_wp),0,amfi_l,1)
-      Call zcopy_(  ldimcf*ldimcf,(0.0_wp,0.0_wp),0,Z,1)
-      Call zcopy_(  ldimcf*ldimcf,(0.0_wp,0.0_wp),0,Zinit,1)
-      Call zcopy_(  ldimcf*ldimcf,(0.0_wp,0.0_wp),0,tmp,1)
-      Call zcopy_(  ldimcf*ldimcf,(0.0_wp,0.0_wp),0,HCF,1)
+      Call zcopy_(3*ldimcf*ldimcf,[(0.0_wp,0.0_wp)],0,Angm,1)
+      Call zcopy_(3*ldimcf*ldimcf,[(0.0_wp,0.0_wp)],0,dipso,1)
+      Call zcopy_(3*ldimcf*ldimcf,[(0.0_wp,0.0_wp)],0,amfi_c,1)
+      Call zcopy_(3*ldimcf*ldimcf,[(0.0_wp,0.0_wp)],0,amfi2,1)
+      Call zcopy_(3*ldimcf*ldimcf,[(0.0_wp,0.0_wp)],0,amfi_l,1)
+      Call zcopy_(  ldimcf*ldimcf,[(0.0_wp,0.0_wp)],0,Z,1)
+      Call zcopy_(  ldimcf*ldimcf,[(0.0_wp,0.0_wp)],0,Zinit,1)
+      Call zcopy_(  ldimcf*ldimcf,[(0.0_wp,0.0_wp)],0,tmp,1)
+      Call zcopy_(  ldimcf*ldimcf,[(0.0_wp,0.0_wp)],0,HCF,1)
 !----------------------------------------------------------------------
       Write(6,'(/)')
       Write(6,'(100A)') ('%',i=1,95)
@@ -241,8 +239,8 @@ c                   iopt = 4   -- maxes is the unity matrix ( original Z is the 
 
 
 !  rotate the angular momentum to the new axes, using "maxes"
-      Call zcopy_(3*ldimcf*ldimcf,(0.0_wp,0.0_wp),0,amfi2,1)
-      Call zcopy_(3*ldimcf*ldimcf,(0.0_wp,0.0_wp),0,angm,1)
+      Call zcopy_(3*ldimcf*ldimcf,[(0.0_wp,0.0_wp)],0,amfi2,1)
+      Call zcopy_(3*ldimcf*ldimcf,[(0.0_wp,0.0_wp)],0,angm,1)
       Call rotmom2( dipso(1:3,1:ldimcf,1:ldimcf), ldimcf,
      &              maxes, angm )
       Call rotmom2( amfi_c(1:3,1:ldimcf,1:ldimcf), ldimcf,
@@ -262,9 +260,6 @@ c                   iopt = 4   -- maxes is the unity matrix ( original Z is the 
           Do I=1,lDIMcf
             Write(6,'(A,I3,A,3X,20(2F9.6,1X))') '|',
      &                 (lDIMcf-1)/2+(1-I),' > :',(Z(j,I),j=1,lDIMcf)
-             do k=1,lDIMcf
-                zl( (lDIMcf-1)/2+(1-I),k)=Z(k,I)
-             enddo
           End Do
         Else
           Do I=1,lDIMcf
@@ -278,9 +273,9 @@ c  decompose the orbital moment AMSL in ITOs
 C  transform AMFI integrals to pseudo-L basis:
       ! calculate the matrix elements of the spin and magnetic moment
       ! in the spin-orbit basis:
-      Call zcopy_(3*ldimcf*ldimcf,(0.0_wp,0.0_wp),0,amfi_l,1)
+      Call zcopy_(3*ldimcf*ldimcf,[(0.0_wp,0.0_wp)],0,amfi_l,1)
       Do L=1,3
-         Call zcopy_(  ldimcf*ldimcf,(0.0_wp,0.0_wp),0,tmp,1)
+         Call zcopy_(  ldimcf*ldimcf,[(0.0_wp,0.0_wp)],0,tmp,1)
          ! amfi:
          Call ZGEMM_('C', 'N', lDIMcf, lDIMcf, lDIMcf, (1.0_wp,0.0_wp),
      &                     Z, lDIMcf,
@@ -298,9 +293,9 @@ C  transform AMFI integrals to pseudo-L basis:
 
 !cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
 !c  calculate the RASSI Crystal Field matrix
-      Call dcopy_(lDIMcf,0.0_wp,0,eloc,1)
+      Call dcopy_(lDIMcf,[0.0_wp],0,eloc,1)
       Call rtrace(lDIMcf,ESFS,ELOC)
-      Call zcopy_(ldimcf*ldimcf,(0.0_wp,0.0_wp),0,HCF,1)
+      Call zcopy_(ldimcf*ldimcf,[(0.0_wp,0.0_wp)],0,HCF,1)
       Do i=1,lDIMcf
         Do I1=1,lDIMcf
           Do I2=1,lDIMcf
@@ -310,8 +305,8 @@ C  transform AMFI integrals to pseudo-L basis:
       End Do
 
       info=0
-      Call dcopy_(lDIMcf,0.0_wp,0,Winit,1)
-      Call zcopy_(lDIMcf*lDIMcf,(0.0_wp,0.0_wp),0,Zinit,1)
+      Call dcopy_(lDIMcf,[0.0_wp],0,Winit,1)
+      Call zcopy_(lDIMcf*lDIMcf,[(0.0_wp,0.0_wp)],0,Zinit,1)
       Call DIAG_C2( HCF,lDIMcf,info,Winit,Zinit)
       Call print_ZFS('Ab Initio Calculated Crystal-Field Splitting '//
      &               'Matrix written in the basis of Pseudo-L '//
@@ -528,6 +523,5 @@ c     &   CfC(8,iLS), CfC(MJ-7,iLS)
       Call mma_deallocate(tmp)
       Call mma_deallocate(HCF)
 
-      Call qExit('TERMCF')
       Return
       End

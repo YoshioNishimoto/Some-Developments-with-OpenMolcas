@@ -21,13 +21,18 @@
 #include "mxpdim.fh"
       CHARACTER*2 TYPE
 *./NONAB/
-      LOGICAL INVCNT
-      COMMON/NONAB/ INVCNT,NIG,NORASM(MXPOBS),
-     &              MNMLOB,MXMLOB,NMLOB,
-     &              MXMLST,MNMLST,NMLST,
-     &              NMLSX ,MNMLSX,MXMLSX,
-     &              MNMLCI,MXMLCI,NMLCI,
-     &              MXMLDX,MNMLDX,NMLDX
+* FIXME: This common block is never initialized or referenced elsewhere
+* In the absence of further information, I'm setting the values to 0
+*      COMMON /NONAB/ MNMLOB,NMLOB,
+*     &               MNMLST,NMLST,
+*     &               MNMLSX,NMLSX,
+*     &               MNMLCI,NMLCI,
+*     &               MNMLDX,NMLDX
+       PARAMETER (MNMLOB=0,NMLOB=0,
+     &            MNMLST=0,NMLST=0,
+     &            MNMLSX=0,NMLSX=0,
+     &            MNMLCI=0,NMLCI=0,
+     &            MNMLDX=0,NMLDX=0)
 *./CSM/
 C     COMMON/CSM/NSMSX,NSMDX,NSMST,NSMCI,ITSSX,ITSDX
 #include "csm.fh"
@@ -35,28 +40,22 @@ C     COMMON/CSM/NSMSX,NSMDX,NSMST,NSMCI,ITSSX,ITSDX
 *.(Tired of warnings from 3090 Compiler so )
 * (
       NML = 0
-      MXML= 0
       MNML= 0
 *             )
       IF(TYPE.EQ.'OB') THEN
         NML = NMLOB
-        MXML = MXMLOB
         MNML = MNMLOB
       ELSE IF(TYPE.EQ.'SX') THEN
         NML = NMLSX
-        MXML = MXMLSX
         MNML = MNMLSX
       ELSE IF(TYPE.EQ.'DX') THEN
         NML = NMLDX
-        MXML = MXMLDX
         MNML = MNMLDX
       ELSE IF(TYPE.EQ.'ST') THEN
         NML = NMLST
-        MXML = MXMLST
         MNML = MNMLST
       ELSE IF(TYPE.EQ.'CI') THEN
         NML = NMLCI
-        MXML = MXMLCI
         MNML = MNMLCI
       END IF
 *

@@ -82,7 +82,8 @@
 * Jeppe Olsen , Winter of 1991
 *
       IMPLICIT REAL*8(A-H,O-Z)
-      INTEGER  ADSXA,SXSTST,STSTSX,DXSTST,STSTDX,SXDXSX
+      INTEGER ADSXA(*)
+      INTEGER SXSTST(*),STSTSX(*),DXSTST(*),STSTDX(*),SXDXSX(*)
 *. Input
       DIMENSION CB(*),SB(*)
 *. Output
@@ -90,9 +91,9 @@
 *. Scratch
       DIMENSION SSCR(*),CSCR(*)
       DIMENSION  I1(*),XI1S(*),I2(*),XI2S(*),I3(*),XI3S(*),I4(*),XI4S(*)
-      DIMENSION C2(*)
-*
-      IACTIVE = 0
+      DIMENSION C2(*),RHO1S(*),X(*)
+      DIMENSION IAOC(*),IBOC(*),JAOC(*),JBOC(*),NOBPTS(*),IOBPTS(*)
+      DIMENSION ITSOB(1)
 *
       iUseab=0
       ii=1
@@ -109,7 +110,7 @@
      &       SB,CB,
      &       ADSXA,SXSTST,STSTSX,MXPNGAS,
      &       NOBPTS,IOBPTS,ITSOB,MAXI,MAXK,
-     &       SSCR,CSCR,I1,XI1S,I2,XI2S,X,
+     &       SSCR,CSCR,I1,XI1S,I2,XI2S,X(1),
      &       NSMOB,NSMST,NSMSX,MXPOBS,RHO1S)
 *
 * ================================
@@ -147,7 +148,7 @@
      &                   SB,CB,
      &                   ADSXA,SXSTST,STSTSX,MXPNGAS,
      &                   NOBPTS,IOBPTS,ITSOB,MAXI,MAXK,
-     &                   SSCR,CSCR,I1,XI1S,I2,XI2S,X,
+     &                   SSCR,CSCR,I1,XI1S,I2,XI2S,X(1),
      &                   NSMOB,NSMST,NSMSX,MXPOBS,RHO1S)
 *
 * ===================================
@@ -185,7 +186,8 @@
         CALL GSBBD2B(RHO2(1,ii),
      &                    IASM,IATP,IBSM,IBTP,NIA,NIB,
      &                    JASM,JATP,JBSM,JBTP,NJA,NJB,
-     &                    IJAGRP,IJBGRP,NGAS,IAOC,IBOC,JAOC,JBOC,
+     &                    IJAGRP,IJBGRP,NGAS,
+     &                    IAOC(1),IBOC(1),JAOC(1),JBOC(1),
      &                    SB,CB,ADSXA,STSTSX,MXPNGAS,
      &                    NOBPTS,IOBPTS,MAXK,
      &                    I1,XI1S,I2,XI2S,I3,XI3S,I4,XI4S,X,
@@ -200,8 +202,8 @@
       RETURN
 c Avoid unused argument warnings
       IF (.FALSE.) THEN
-        Call Unused_integer(DXSTST)
-        Call Unused_integer(STSTDX)
+        Call Unused_integer_array(DXSTST)
+        Call Unused_integer_array(STSTDX)
         Call Unused_integer(IPRNT)
       END IF
       END

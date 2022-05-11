@@ -11,7 +11,7 @@
 * Copyright (C) 1993, Per-Olof Widmark                                 *
 *               1993, Markus P. Fuelscher                              *
 ************************************************************************
-      Subroutine WrOne(rc,Option,InLab,Comp,Data,SymLab)
+      Subroutine iWrOne(rc,Option,InLab,Comp,Data,SymLab)
 ************************************************************************
 *                                                                      *
 *     Purpose: write data to one-electron integral file                *
@@ -47,27 +47,22 @@
 ************************************************************************
       Implicit Integer (A-Z)
 *
-#include "OneRc.fh"
-#include "OneFlags.fh"
-
 #include "OneDat.fh"
 *
       Character*(*) InLab
       Dimension Data(*)
 *
-      Character*8 TmpLab,Label
+      Character*8 Label
       Dimension LabTmp(2)
-*     Equivalence (TmpLab,LabTmp)
       Logical debug, Close
 *----------------------------------------------------------------------*
 *     Start procedure:                                                 *
-*     Define inline function (symmetry multiplication)                 *
+*     Define statement function (symmetry multiplication)              *
 *----------------------------------------------------------------------*
       MulTab(i,j)=iEor(i-1,j-1)+1
 *----------------------------------------------------------------------*
 *     Pick up the file definitions                                     *
 *----------------------------------------------------------------------*
-*     Call qEnter('WrOne')
       rc    = rc0000
       LuOne = AuxOne(pLu  )
       Open  = AuxOne(pOpen)
@@ -97,12 +92,12 @@
 *----------------------------------------------------------------------*
       Label=InLab
       Call UpCase(Label)
-      TmpLab=Label
-      Call ByteCopy(TmpLab,LabTmp,8)
+      Length = Len(Label)/ItoB
+      LabTmp(:Length) = Transfer(Label,LabTmp,Length)
 *----------------------------------------------------------------------*
 *     Print debugging information                                      *
 *----------------------------------------------------------------------*
-      debug=.false.
+      debug=.False.
       If(iAnd(option,1024).ne.0) debug=.true.
       If(debug) Then
          Call DmpOne
@@ -144,22 +139,22 @@
             Write (6,*) 'WrOne: The total number of operators',
      &                  ' exceeds the limit'
             Write (6,*) 'k.eq.0'
-            Call QTrace()
             Call Abend()
          End If
-         Len=0
+         Length=0
          Do 510 i=1,nSym
-         Do 510 j=1,i
+         Do 511 j=1,i
             ij=MulTab(i,j)-1
             If(iAnd(2**ij,SymLab).ne.0) Then
                If(i.eq.j) Then
-                  Len=Len+nBas(i)*(nBas(i)+1)/2
+                  Length=Length+nBas(i)*(nBas(i)+1)/2
                Else
-                  Len=Len+nBas(i)*nBas(j)
+                  Length=Length+nBas(i)*nBas(j)
                End If
             End If
+511      Continue
 510      Continue
-         Len=RtoI*(Len+nAuxDt)
+         Length=RtoI*(Length+nAuxDt)
          TocOne(pOp+LenOp*(k-1)+oLabel  )=LabTmp(1)
 #ifndef _I8_
          TocOne(pOp+LenOp*(k-1)+oLabel+1)=LabTmp(2)
@@ -167,7 +162,7 @@
          TocOne(pOp+LenOp*(k-1)+oComp   )=Comp
          TocOne(pOp+LenOp*(k-1)+oSymLb  )=SymLab
          TocOne(pOp+LenOp*(k-1)+oAddr   )=iDisk
-         Call iDaFile(LuOne,1,Data,Len,iDisk)
+         Call iDaFile(LuOne,1,Data,Length,iDisk)
          TocOne(pNext)=Max(TocOne(pNext),iDisk)
 *----------------------------------------------------------------------*
 *     Finally copy the TocOne back to disk                             *
@@ -187,6 +182,27 @@
 *----------------------------------------------------------------------*
 *     Terminate procedure                                              *
 *----------------------------------------------------------------------*
-*     Call qExit('WrOne')
       Return
       End
+
+      Subroutine WrOne(rc,Option,InLab,Comp,Data,SymLab)
+      Implicit Integer (A-Z)
+*
+      Character*(*) InLab
+      Real*8 Data(*)
+*
+      Call WrOne_Internal(Data)
+*
+*     This is to allow type punning without an explicit interface
+      Contains
+      Subroutine WrOne_Internal(Data)
+      Use Iso_C_Binding
+      Real*8, Target :: Data(*)
+      Integer, Pointer :: iData(:)
+      Call C_F_Pointer(C_Loc(Data(1)),iData,[1])
+      Call iWrOne(rc,Option,InLab,Comp,iData,SymLab)
+      Nullify(iData)
+      return
+      End Subroutine WrOne_Internal
+*
+      end

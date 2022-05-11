@@ -144,7 +144,8 @@
          RecLab( 38)='Rotational Symme' !try Number
          RecLab( 39)='Saddle Iter     '
          RecLab( 40)='iMass           '
-         RecLab( 41)='mp2prpt         ' ! True(=1) if mbpt2 was run with prpt
+!        True(=1) if mbpt2 was run with prpt
+         RecLab( 41)='mp2prpt         '
          RecLab( 42)='NJOB_SINGLE     '
          RecLab( 43)='MXJOB_SINGLE    '
          RecLab( 44)='NSS_SINGLE      '
@@ -154,7 +155,7 @@
          RecLab( 48)='agrad           ' ! Forces analytical gradients
          RecLab( 49)='LDF Constraint  ' ! Constraint type for LDF
          RecLab( 50)='OptimType       ' ! Optimization type in hyper
-         RecLab( 51)='LSYM            ' ! symmetry of the CAS root(s)
+         RecLab( 51)='STSYM           ' ! symmetry of the CAS root(s)
          RecLab( 52)='RF CASSCF root  '
          RecLab( 53)='RF0CASSCF root  '
          RecLab( 54)='nCoordFiles     ' ! number of xyz-files in gateway
@@ -168,16 +169,25 @@ c         RecLab( 58)='GEO_nConnect    '
          RecLab( 61)='hopped          '
          RecLab( 62)='Invert constrain' !ts
          RecLab( 63)='Keep old gradien' !t
-         RecLab( 64)='embpot          ' ! Flag whether an embedding potential is present
+!        Flag whether an embedding potential is present
+         RecLab( 64)='embpot          '
          RecLab( 65)='nPrim           '
          RecLab( 66)='Seed            '
          RecLab( 67)='Track Done      '
          RecLab( 68)='MaxHopsTully    '
-         RecLab( 69)='EFP             ' ! Flag Effective fragment potentials
+!        Flag Effective fragment potentials
+         RecLab( 69)='EFP             '
          RecLab( 70)='nEFP_fragments  '
          RecLab( 71)='Coor_Type       ' ! EFP fragment coordinate format
-         RecLab( 72)='nEFP_Coor       ' ! Associated number of coordinates per fragment
-         RecLab( 72)='Relax Original r' !oot
+!        Associated number of coordinates per fragment
+         RecLab( 72)='nEFP_Coor       '
+         RecLab( 73)='Relax Original r' !oot
+         RecLab( 74)='Unique centers  '
+         RecLab( 75)='nXF             '
+         RecLab( 76)='CSPF            '
+*        For MS-PDFT gradient
+         RecLab( 77)='NCONF           '
+         RecLab( 78)='SH RASSI run    '
 *                     1234567890123456
 *
 *        Note, when the counter here exceeds 128 update this line
@@ -225,7 +235,7 @@ c         RecLab( 58)='GEO_nConnect    '
             Write(6,*) '*** Warning, writing temporary iScalar field'
             Write(6,*) '***   Field: ',Label
             Write(6,*) '***'
-#ifdef _BIGOT_
+#ifndef _DEVEL_
             Call AbEnd()
 #endif
          End If

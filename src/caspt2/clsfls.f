@@ -20,6 +20,7 @@
 *     University of Lund, Sweden, 1993                                 *
 *                                                                      *
 ************************************************************************
+      use output_caspt2, only:iPrGlb,silent
       Implicit real*8 (a-h,o-z)
 *----------------------------------------------------------------------*
 *     Start                                                            *
@@ -27,8 +28,6 @@
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
-      Call qEnter('ClsFls')
       Call DaClos(LUCIEX)
 * PAM08
 *      Call DaClos(LUMORB)
@@ -60,6 +59,5 @@
 *----------------------------------------------------------------------*
 *     Exit                                                             *
 *----------------------------------------------------------------------*
-      Call qExit('ClsFls')
       Return
       End

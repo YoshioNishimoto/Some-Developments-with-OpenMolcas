@@ -14,19 +14,19 @@ C THIS ROUTINE CALCULATES THE INVERSE OF A SQUARE 3x3 MATRIX, AND ITS DETERMINAN
 C
 
       Implicit None
-      Integer, parameter        :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real(kind=wp)  :: A_dir(3,3)
-      Real(kind=wp)  :: A_inv(3,3)
-      Real(kind=wp)  :: A(3,3)
-      Real(kind=wp)  :: B(3,3)
-      Real(kind=wp)  :: det
-      Real(kind=wp)  :: FindDetR
+      Integer, parameter        :: wp=kind(0.d0)
+      Real(kind=8)  :: A_dir(3,3)
+      Real(kind=8)  :: A_inv(3,3)
+      Real(kind=8)  :: A(3,3)
+      Real(kind=8)  :: B(3,3)
+      Real(kind=8)  :: det
+      Real(kind=8)  :: FindDetR
       External       :: FindDetR
 
       det=0.0_wp
-      Call dcopy_(3*3,0.0_wp,0,A,1)
-      Call dcopy_(3*3,0.0_wp,0,B,1)
-      Call dcopy_(3*3,0.0_wp,0,A_inv,1)
+      Call dcopy_(3*3,[0.0_wp],0,A,1)
+      Call dcopy_(3*3,[0.0_wp],0,B,1)
+      Call dcopy_(3*3,[0.0_wp],0,A_inv,1)
       Call dcopy_(3*3,A_dir,1,A,1)
 
       det=FindDetR(A,3)

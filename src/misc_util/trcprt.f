@@ -119,10 +119,10 @@
 *----------------------------------------------------------------------*
 *     print the data                                                   *
 *----------------------------------------------------------------------*
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
        Write(LuWr,*)
        Write(LuWr,'(E24.17)') DDot_(nCol*nRow,A,1,A,1),
-     &                       DDot_(nCol*nRow,A,1,One,0)
+     &                        DDot_(nCol*nRow,A,1,[One],0)
 #else
        Write(LuWr,*)
        Write(LuWr,'(2X,A)') 'row norms'

@@ -17,11 +17,6 @@
 *                                                                      *
 * Object: to assemble the gradients of the ERI's.                      *
 *                                                                      *
-* Called from: Rysg1                                                   *
-*                                                                      *
-* Calling    : QEnter                                                  *
-*              QExit                                                   *
-*                                                                      *
 *     Author: Roland Lindh, Dept. of Theoretical Chemistry,            *
 *             University of Lund, SWEDEN                               *
 *             October '91; modified by H.-J. Werner, Mai 1996          *
@@ -43,10 +38,7 @@
 *
       nElem(i) = (i+1)*(i+2)/2
 *
-      iRout = 248
-      iPrint = nPrint(iRout)
-*
-      call dcopy_(9,Zero,0,Temp,1)
+      call dcopy_(9,[Zero],0,Temp,1)
 *
       ii = la*(la+1)*(la+2)/6
       jj = lb*(lb+1)*(lb+2)/6
@@ -78,7 +70,6 @@
 *
          ixcd = ixc + ixd
          iycd = iyc + iyd
-         izcd = izc + izd
 *
       Do 300 ipb = 1, nElem(lb)
          ixb = ixyz(1,jj+ipb)
@@ -87,7 +78,6 @@
 *
          ixbcd = ixcd + ixb
          iybcd = iycd + iyb
-         izbcd = izcd + izb
 *
       Do 400 ipa = 1, nElem(la)
          ixa = ixyz(1,ii+ipa)
@@ -96,7 +86,6 @@
 *
          ixabcd = ixbcd + ixa
          iyabcd = iybcd + iya
-         izabcd = izbcd + iza
 *
 *
 *        Compute all desired gradients with respect to an x-component.

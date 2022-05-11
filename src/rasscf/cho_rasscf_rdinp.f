@@ -16,29 +16,21 @@
 *             in RASSCF                                                *
 *                                                                      *
 ************************************************************************
+      Use Fock_util_global, only: ALGO, Deco, DensityCheck, dmpK,
+     &                            DoLocK, Estimate, Nscreen, Update
       Implicit Real*8 (A-H,O-Z)
-#include "itmax.fh"
-#include "info.fh"
 #include "real.fh"
 #include "print.fh"
 #include "output_ras.fh"
-      Parameter (ROUTINE='CHO_RASS')
 #include "WrkSpc.fh"
       Character*180 KWord, Key, Get_Ln
       External Get_Ln
-      Logical  DFonly,DensityCheck,timings,DoLock,Deco
-      Logical  DoCholesky,Estimate,Update
+      Logical  DFonly
       character*16 SECNAM
       parameter (SECNAM = 'CHO_RASSCF_RDINP')
-      Integer  ALGO,Nscreen
-      Real*8   dmpk
 *
-      Common /CHLCAS / DoCholesky,ALGO
-      COMMON /CHODENSITY/ DensityCheck
-      COMMON /CHOTIME / timings
-      Common /CHOLK / DoLocK,Deco,dmpk,Nscreen
-      COMMON /CHOSCREEN/ Estimate,Update
-      COMMON /CHOPAR/ ChFracMem
+#include "chotime.fh"
+#include "chopar.fh"
 
 *
 *
@@ -85,13 +77,6 @@
       dmpk_dfl=1.0d-1
 ************************************************************************
 *                                                                      *
-*                                                                      *
-************************************************************************
-*     Define Blank lines
-*
-      Do i = 1, 80
-         BLine(i:i) = ' '
-      End Do
       iPrint=5
 *                                                                      *
 ************************************************************************
@@ -113,7 +98,7 @@
 *-------------------------------------------------------------------*
 
       If (KWord(1:1).eq.'*')    Go To 1000
-      If (KWord.eq.BLine)       Go To 1000
+      If (KWord.eq.'')       Go To 1000
       If (KWord(1:4).eq.'ALGO') Go To 900
       If (KWord(1:4).eq.'LOCK') Go To 910
       If (KWord(1:4).eq.'LK  ') Go To 910
@@ -146,9 +131,9 @@
 *-----Read Cholesky algorithm parameters
 *
  900  Continue
-c      Call Get_F(1,Eps,1)
-c      Call Get_F(2,rds,1)
-c      Call Get_I(1,ALGO,1)
+c      Call Get_F1(1,Eps)
+c      Call Get_F1(2,rds)
+c      Call Get_I1(1,ALGO)
 C      If (nToken(KWord).gt.1) goto 988
 *
        READ(LuInput,*) ALGO
@@ -262,11 +247,11 @@ c     &'LK screening for Exchange matrices turned off !'
 *
  700  Key=Get_Ln(LuInput)
       KWord=Key
-      Call Get_I(1,n,1)
+      Call Get_I1(1,n)
       Do i = 1, n
          KWord=Get_Ln(LuInput)
-         Call Get_I(1,jRout,1)
-         Call Get_I(2,iPrint,1)
+         Call Get_I1(1,jRout)
+         Call Get_I1(2,iPrint)
          nPrint(jRout)=iPrint
       End Do
       Go To 1000

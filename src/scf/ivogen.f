@@ -88,10 +88,10 @@
      &                  1.0d0,FckS,nBas(iSym),
      &                        CMO(iCMO),nBas(iSym),
      &                  0.0d0,FckH,nBas(iSym))
-            Call MxMt(CMO(iCMO),   nBas(iSym),1,
-     &                FckH,1,nBas(iSym),
-     &                FckT,
-     &                nOrbi,nBas(iSym))
+            Call DGEMM_Tri('T','N',nOrbi,nOrbi,nBas(iSym),
+     &                     One,CMO(iCMO),nBas(iSym),
+     &                        FckH,nBas(iSym),
+     &                     Zero,FckT,nOrbi)
 *
 *---------- Diagonalize OneHam within virtual space and form orbital energies
             Call mma_allocate(Scratch,nOrbi**2,Label='Scratch')
@@ -104,7 +104,7 @@
             Call mma_deallocate(Scratch)
 *
 *---------- Orbital energies are now meaningless; set them to zero
-            call dcopy_(nOrbi,Zero,0,EOrb(iEOr),1)
+            call dcopy_(nOrbi,[Zero],0,EOrb(iEOr),1)
 *
          End If
 *

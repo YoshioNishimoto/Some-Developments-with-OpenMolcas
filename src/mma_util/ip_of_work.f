@@ -28,10 +28,35 @@
       Implicit real*8 (a-h,o-z)
 #include "WrkSpc.fh"
       Real*8 A
+      Interface
+        Function idLoc(x) bind(C,name='idloc_')
+          use Definitions, only: MOLCAS_C_INT, MOLCAS_C_REAL
+          integer(MOLCAS_C_INT) :: idLoc
+          real(MOLCAS_C_REAL) :: x
+        End Function idLoc
+      End Interface
 *
       loc1=(idLoc(A)-idLoc(Work(ip_Dummy)))
       loc2=(idLoc(Work(ip_Dummy+1))-idLoc(Work(ip_Dummy)))
       ip_of_Work = ip_Dummy + loc1/loc2
 *
       Return
+      End
+
+      Integer Function ip_of_Work_i(A)
+      Implicit real*8 (a-h,o-z)
+      Integer A
+      ip_of_Work_i = ip_of_Work_i_internal(A)
+*
+*     This is to allow type punning without an explicit interface
+      Contains
+      Integer Function ip_of_Work_i_internal(A)
+      Use Iso_C_Binding
+      Integer, Target :: A
+      Real*8, Pointer :: dA
+      Call C_F_Pointer(C_Loc(A),dA)
+      ip_of_Work_i_internal = ip_of_Work(dA)
+      Nullify(dA)
+      End Function ip_of_Work_i_internal
+*
       End

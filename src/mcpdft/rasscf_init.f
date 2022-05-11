@@ -21,36 +21,30 @@
 *> Sets values in common blocks in rasscf.fh, general.fh, timers.fh
 ************************************************************************
       Subroutine RasScf_Init_m()
+      Use Fock_util_global, only: ALGO, Deco, DensityCheck, dmpk,
+     &                            DoLocK, DoCholesky, Estimate, Nscreen,
+     &                            Update
+      Use KSDFT_Info, Only: CoefR, CoefX
+      use hybridpdft, only: Ratio_WF, Do_Hybrid
       Implicit Real*8 (A-H,O-Z)
       External Get_SuperName
       Character*100 ProgName, Get_SuperName
 #include "rasdim.fh"
 #include "output_ras.fh"
-      Parameter (ROUTINE='RasScf_Init')
 #include "rasscf.fh"
 #include "casvb.fh"
 #include "general.fh"
 #include "gas.fh"
 #include "timers.fh"
 #include "lucia_ini.fh"
-#include "orthonormalize.fh"
+#include "orthonormalize_mcpdft.fh"
 #include "WrkSpc.fh"
-#include "ksdft.fh"
       Integer IPRGLB_IN, IPRLOC_IN(7)
 * What to do with Cholesky stuff?
-      Logical DoCholesky,timings,DensityCheck
-      Logical DoLocK,Deco
-      Logical Estimate,Update
-      Integer ALGO,Nscreen
-      Real*8  dmpk,ChFracMem
       Logical, External :: Is_First_Iter
 
-      Common /CHLCAS / DoCholesky,ALGO
-      COMMON /CHODENSITY/ DensityCheck
-      COMMON /CHOTIME / timings
-      Common /CHOLK / DoLocK,Deco,dmpk,Nscreen
-      COMMON /CHOSCREEN/ Estimate,Update
-      COMMON /CHOPAR/ ChFracMem
+#include "chotime.fh"
+#include "chopar.fh"
 *----------------------------------------------------------------------*
       ProgName=Get_SuperName()
 *----------------------------------------------------------------------*
@@ -76,8 +70,7 @@ C        ICIRST=1 ! to be activated!
       End If
 
 * Initialize print levels: See output_ras.fh
-* Global logical unit numbers for standard input and standard output
-      IO=5
+* Global logical unit number for standard output
       LF=6
 * Externally set default print level control. Should the program be silent?
       IPRGLB_IN=iPrintLevel(-1)
@@ -190,20 +183,21 @@ C        ICIRST=1 ! to be activated!
 * State used in response calculation
       iPCMROOT=1
 * State to alaska
-      iRLXROOT=0
+*TRS
+*      iRLXROOT=0
 * number of roots required in CI
       NROOTS=1
 * number of roots actually used in CI-DAVIDSON
       LROOTS=1
 * sequence numbers for roots in CI counted from
 * lowest energy.
-      Call iCopy(mxRoot,0,0,iRoot,1)
+      Call iCopy(mxRoot,[0],0,iRoot,1)
       IROOT(1)=1
 * weights used for average energy calculations
-      Call dCopy_(mxRoot,0.0D0,0,WEIGHT,1)
+      Call dCopy_(mxRoot,[0.0D0],0,WEIGHT,1)
       WEIGHT(1)=1.0D0
 * iteration energies
-      Call dCopy_(mxRoot*(mxIter+2),0.0D0,0,ENER,1)
+      Call dCopy_(mxRoot*(mxIter+2),[0.0D0],0,ENER,1)
 *
       ICICH=0
 * if flag is active (ICICH=1) CI roots will be selected
@@ -265,7 +259,7 @@ C        ICIRST=1 ! to be activated!
 * default spin value (singlet)
       ISPIN=1
 * default symmetry
-      LSYM=1
+      STSYM=1
 * default number of active electrons
       NACTEL=0
 * default maximum number of holes in RAS1
@@ -357,6 +351,12 @@ C The rest is at the present time just to allow testing
 CSVC: lucia timers
       tsigma = 0.0d0
       tdensi = 0.0d0
+
+*
+C Hybrid-PDFT
+      Ratio_WF=0.0d0
+      Do_Hybrid=.false.
+
 *
       RETURN
       END

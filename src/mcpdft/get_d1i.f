@@ -43,7 +43,6 @@
 
       Parameter ( Zero=0.0d0 , Two=2.0d0 )
 
-      Call qEnter('Get_D1I')
 
 * PAM Aug 2006, replace the following explicit code
 * with the corresponding DGEMM calls.
@@ -74,7 +73,7 @@
         nbsq=nb**2
         nfi=nfro(isym)+nish(isym)
         if(nb.gt.0) then
-          call dcopy_(nbsq,0.0d0,0,d1i(ista),1)
+          call dcopy_(nbsq,[0.0d0],0,d1i(ista),1)
           if(nfi.gt.0) then
             call DGEMM_('n','t',nb,nb,nfi,two,
      &           cmo(ista),nb,cmo(ista),nb,zero,d1i(ista),nb)
@@ -83,7 +82,6 @@
         end if
       end do
 
-      Call qExit('Get_D1I')
 
       Return
       End

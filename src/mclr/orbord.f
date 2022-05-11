@@ -150,7 +150,7 @@ C?    write(6,*) ' IAC ',IAC
 *. Symmetry ordered index
           IR0S = IBSM + NPREVS - 1 + IIR0
           ISFTO(IR0) = ISM
-          ITFSO(IR0S) = 4
+*         ITFSO(IR0S) = 4
           IREOST(IR0S) = IR0
           IREOTS(IR0) = IR0S
    19   CONTINUE
@@ -169,15 +169,16 @@ C?    write(6,*) ' IR0 ',IR0
         END IF
         NPREVS = NINOBS(ISM)+NR0OBS(ISM)+NACOBS(ISM)
         DO 29 ITP = 1, NR4TP
-        DO 29 IIR4 = 1, NR4OBS(ISM,ITP)
+        DO 28 IIR4 = 1, NR4OBS(ISM,ITP)
 *. Type ordered index
           IR4 = IR4 + 1
 *. Symmetry ordered index
           IR4S = IBSM + NPREVS - 1 + IIR4
           ISFTO(IR4) = ISM
-          ITFSO(IR4S) = 5
+*         ITFSO(IR4S) = 5
           IREOST(IR4S) = IR4
           IREOTS(IR4) = IR4S
+   28   CONTINUE
    29   CONTINUE
    30 CONTINUE
       NR4OB = IR4 - NACOB - NR0OB
@@ -199,7 +200,7 @@ C?    write(6,*) ' IR4 ',IR4
 *. Symmetry ordered index
           IINS = IBSM + NPREVS - 1 + IIIN
           ISFTO(IIN) = ISM
-          ITFSO(IINS) = 6
+*         ITFSO(IINS) = 6
           IREOST(IINS) = IIN
           IREOTS(IIN) = IINS
    39   CONTINUE
@@ -228,7 +229,7 @@ C?    write(6,*) ' IIN   ',IIN
 *. Symmetry ordered index
           IDES = IBSM + NPREVS - 1 + IIDE
           ISFTO(IDE) = ISM
-          ITFSO(IDES) = 7
+*         ITFSO(IDES) = 7
           IREOST(IDES) = IDE
           IREOTS(IDE) = IDES
    49   CONTINUE
@@ -261,7 +262,7 @@ C?    write(6,*) ' IDE ', IDE
 * =====================
 *
 *. Loop over types in input order
-      Call iCopy(NR4TP+6,0,0,NOBPT,1)
+      Call iCopy(NR4TP+6,[0],0,NOBPT,1)
       LORB  = 0 ! dummy initialize
       IOTYPE= 0 ! dummy initialize
       DO 2000 ISMOB = 1, NSMOB
@@ -346,8 +347,8 @@ C?    write(6,*) ' IDE ', IDE
 *
         WRITE(6,*) ' ISFTO array : '
         CALL IWRTMA(ISFTO,1,NTOOB,1,NTOOB)
-        WRITE(6,*) ' ITFSO array : '
-        CALL IWRTMA(ITFSO,1,NTOOB,1,NTOOB)
+*       WRITE(6,*) ' ITFSO array : '
+*       CALL IWRTMA(ITFSO,1,NTOOB,1,NTOOB)
 *
         WRITE(6,*) ' ISMFSO array : '
         CALL IWRTMA(ISMFSO,1,NTOOB,1,NTOOB)
@@ -358,5 +359,8 @@ C?    write(6,*) ' IDE ', IDE
 
       RETURN
 c Avoid unused argument warnings
-      IF (.FALSE.) CALL Unused_integer_array(NOCOBS)
+      IF (.FALSE.) Then
+         CALL Unused_integer_array(NOCOBS)
+         CALL Unused_integer_array(ITFSO)
+      END IF
       END

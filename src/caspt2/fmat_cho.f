@@ -13,7 +13,6 @@
 #include "rasdim.fh"
 #include "WrkSpc.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "SysDef.fh"
       DIMENSION  CMO(NCMO)
       DIMENSION FFAO(NBTRI),FIAO(NBTRI),FAAO(NBTRI)
@@ -24,9 +23,8 @@ C REPRESENTED BY CHOLESKY VECTORS:
 C TRANSFORM FOCK MATRICES COMPUTED BY TRACHO
 C TO MO BASIS FOR USE IN CASPT2.
 
-      CALL QENTER('FMAT_CHO')
 
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       IFTEST=1
 #else
       IFTEST=0
@@ -154,7 +152,10 @@ c   Orbital energies, EPS, EPSI,EPSA,EPSE:
       END DO
 
 C EASUM=CONTRACT EPSA WITH DIAGONAL OF ACTIVE DENS
-      EASUM=0.0D00
+C This is never used anywhere, and it is actually
+C wrong in XMS, since the DREF used is not the average
+C density.
+      EASUM=0.0D0
       DO ISYM=1,NSYM
         NA=NASH(ISYM)
         DO I=1,NA
@@ -208,7 +209,6 @@ C EASUM=CONTRACT EPSA WITH DIAGONAL OF ACTIVE DENS
         WRITE(6,'(1X,5F12.6)')(EPSE(I),I=1,NSSHT)
       END IF
 
-      CALL QEXIT('FMAT_CHO')
 
       RETURN
       END

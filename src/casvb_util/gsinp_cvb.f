@@ -8,19 +8,21 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine gsinp_cvb(
      >  orbs,irdorbs,ip_cvb,nvbinp,kbasiscvb_inp,
      >  mxaobf,mxorb,kbasis,strtvb)
       implicit real*8 (a-h,o-z)
-#include "malloc_cvb.fh"
+#include "WrkSpc.fh"
       parameter (ngs=7,ncmp=4)
       character*8 guess
       logical firsttime_cvb
       external firsttime_cvb
       dimension guess(ngs)
       dimension orbs(mxaobf,mxorb),irdorbs(mxorb)
+      dimension idum(1)
       save guess
       data guess/ 'ORB     ','STRUC   ','READ    ','AOBASIS ',
      >            'MOBASIS ','END     ','ENDGUESS'/
@@ -30,7 +32,8 @@
 3000  call fstring_cvb(guess,ngs,istr,ncmp,2)
       if(istr.eq.1)then
 c 'ORB'
-        call int_cvb(iorb,1,nread,0)
+        call int_cvb(idum,1,nread,0)
+        iorb=idum(1)
         if(iorb.le.0.or.iorb.gt.mxorb)then
           write(6,*)' Illegal orbital number read :',iorb
           call abend_cvb()
@@ -48,7 +51,7 @@ c  If previous orb. permutation disable:
         call mhpfreer_cvb(ip_cvb)
         mxread=mavailr_cvb()/2
         ip_cvb=mheapr_cvb(mxread)
-        call realz_cvb(w(ip_cvb),mxread,nvbinp,0)
+        call realz_cvb(work(ip_cvb),mxread,nvbinp,0)
         call mreallocr_cvb(ip_cvb,nvbinp)
         kbasiscvb_inp=kbasis
       elseif(istr.eq.3)then
@@ -58,14 +61,16 @@ c        if(istr2.eq.1)then
 cc 'ORB'
 c          iorb1=0
 c          iorb2=0
-c          call int_cvb(iorb1,1,nread,0)
+c          call int_cvb(idum,1,nread,0)
+c          iorb1=idum(1)
 c          if(nread.eq.0)then
 c            write(6,*)' No orbital number in READ,ORB keyword!'
 c            call abend_cvb()
 c          endif
 c          call fstring_cvb('TO      ',1,jstr,ncmp,1)
 c          if(jstr.ne.0)then
-c            call int_cvb(iorb2,1,nread,0)
+c            call int_cvb(idum,1,nread,0)
+c            iorb2=idum(1)
 c            if(nread.eq.0)then
 c              write(6,*)' No orbital number after READ,...,TO, !'
 c              call abend_cvb()
@@ -85,14 +90,16 @@ c              write(6,*)' No identifier after READ,...,FROM, !'
 c              call abend_cvb()
 c            endif
 c          elseif(istr3.eq.2)then
-c            call int_cvb(jorb1,1,nread,0)
+c            call int_cvb(idum,1,nread,0)
+c            jorb1=idum(1)
 c            if(nread.eq.0)then
 c              write(6,*)' No orbital number after READ,...,AS, !'
 c              call abend_cvb()
 c            endif
 c            call fstring_cvb('TO      ',1,jstr,ncmp,1)
 c            if(jstr.ne.0)then
-c              call int_cvb(jorb2,1,nread,0)
+c              call int_cvb(idum,1,nread,0)
+c              jorb2=idum(1)
 c              if(nread.eq.0)then
 c                write(6,*)' No orbital number after READ,...,TO, !'
 c                call abend_cvb()
@@ -102,20 +109,22 @@ c              jorb2=jorb1
 c            endif
 c          endif
 c          if(istr3.ne.0)goto 3100
-c          call othergs_cvb(orbs,w(ip_cvb),recordnm,1,
+c          call othergs_cvb(orbs,work(ip_cvb),recordnm,1,
 c     >      iorb1,iorb2,jorb1,jorb2)
 c        elseif(istr2.eq.2)then
 cc      'STRUC'
 c          istruc1=0
 c          istruc2=0
-c          call int_cvb(istruc1,1,nread,0)
+c          call int_cvb(idum,1,nread,0)
+c          istruc1=idum(1)
 c          if(nread.eq.0)then
 c            write(6,*)' No structure number in READ,STRUC keyword!'
 c            call abend_cvb()
 c          endif
 c          call fstring_cvb('TO      ',1,jstr,ncmp,1)
 c          if(jstr.ne.0)then
-c            call int_cvb(istruc2,1,nread,0)
+c            call int_cvb(idum,1,nread,0)
+c            istruc2=idum(1)
 c            if(nread.eq.0)then
 c              write(6,*)' No structure number after READ,...,TO, !'
 c              call abend_cvb()
@@ -135,14 +144,16 @@ c              write(6,*)' No identifier after READ,...,FROM, !'
 c              call abend_cvb()
 c            endif
 c          elseif(istr3.eq.2)then
-c            call int_cvb(jstruc1,1,nread,0)
+c            call int_cvb(idum,1,nread,0)
+c            jstruc1=idum(1)
 c            if(nread.eq.0)then
 c              write(6,*)' No structure number after READ,...,AS, !'
 c              call abend_cvb()
 c            endif
 c            call fstring_cvb('TO      ',1,jstr,ncmp,1)
 c            if(jstr.ne.0)then
-c              call int_cvb(jstruc2,1,nread,0)
+c              call int_cvb(idum,1,nread,0)
+c              jstruc2=idum(1)
 c              if(nread.eq.0)then
 c                write(6,*)' No structure number after READ,...,TO, !'
 c                call abend_cvb()
@@ -152,7 +163,7 @@ c              jstruc2=jstruc1
 c            endif
 c          endif
 c          if(istr3.ne.0)goto 3200
-c          call othergs_cvb(orbs,w(ip_cvb),recordnm,2,
+c          call othergs_cvb(orbs,work(ip_cvb),recordnm,2,
 c     >      istruc1,istruc2,jstruc1,jstruc2)
 c        elseif(istr2.eq.3)then
 cc 'ALL'
@@ -166,7 +177,7 @@ c              write(6,*)' No identifier after READ,...,FROM, !'
 c              call abend_cvb()
 c            endif
 c          endif
-c          call getguess_cvb(orbs,w(ip_cvb),recordnm,kbasiscvb_inp)
+c          call getguess_cvb(orbs,work(ip_cvb),recordnm,kbasiscvb_inp)
 c        endif
       elseif(istr.eq.4)then
 c 'AOBASIS'

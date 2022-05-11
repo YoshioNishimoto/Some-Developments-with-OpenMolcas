@@ -10,7 +10,7 @@ Quickstart Guide for |molcas|
 Introduction
 ------------
 
-Running |molcas| |molcasversion| requires a small number of operations.
+Running |molcas| requires a small number of operations.
 This section of the manual, entitled "Quickstart Guide for |molcas|"
 is aimed at those users who want to immediately
 run a simple |molcas| calculation in order to become familiar with the program.
@@ -44,7 +44,7 @@ files and :variable:`Project` to define the name of a project: ::
   export Project=MyMolecule
 
 |molcas| will provide default values if they are not explicitly defined. For a discussion of other |molcas|
-environment variables, please see the section on :ref:`TUT:sec:environment`. All environment variables can
+environment variables, please see :numref:`TUT:sec:environment`. All environment variables can
 either be defined explicitly or entered in a shell script which can be subsequently executed.
 
 .. index::
@@ -515,7 +515,7 @@ At the same time, LUSCUS provides a user-friendly interface, and contains many n
 options, compared to GV.
 
 LUSCUS can be obtained from http://luscus.sourceforge.net/, or
-from http://www.molcas.org/LUSCUS.
+from https://www.molcas.org/LUSCUS.
 
 LUSCUS can read the files only in one format: Luscus internal format (:file:`.lus`).
 This format contains two sections: XYZ cartesian coordinates, and XML

@@ -8,13 +8,13 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine o12sa2_cvb(c,sxc,nprm,
      >   civb,civbs,
      >   cvbdet,cvb,vec_all)
       implicit real*8 (a-h,o-z)
-#include "ext_cvb.fh"
 #include "main_cvb.fh"
 #include "optze_cvb.fh"
 #include "files_cvb.fh"
@@ -23,6 +23,7 @@
       dimension c(nprm),sxc(nprm)
       dimension civb(ndet),civbs(ndet)
       dimension cvbdet(ndetvb),cvb(nvb),vec_all(npr)
+      dimension dum(1)
 
 c  If no optimization of structure coefficients we are doing
 c  "Augmented" calc:
@@ -43,7 +44,7 @@ c  "Augmented" calc:
       call all2free_cvb(vec_all,sxc(ic1),1)
       if(.not.strucopt)sxc(1)=ddot_(nvb,cvb,1,vec_all(nprorb+1),1)
       call fzero(vec_all,nprorb)
-      call fmove(cvb,vec_all(nprorb+1),nvb)
+      call fmove_cvb(cvb,vec_all(nprorb+1),nvb)
       call all2free_cvb(vec_all,c(ic1),1)
       if(.not.strucopt)c(1)=ddot_(nvb,cvb,1,vec_all(nprorb+1),1)
       cnrm=ddot_(nprm,c,1,sxc,1)

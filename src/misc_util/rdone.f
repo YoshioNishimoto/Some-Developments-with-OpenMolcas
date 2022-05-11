@@ -11,7 +11,7 @@
 * Copyright (C) 1993, Per-Olof Widmark                                 *
 *               1993, Markus P. Fuelscher                              *
 ************************************************************************
-      Subroutine RdOne(rc,Option,InLab,Comp,Data,SymLab)
+      Subroutine iRdOne(rc,Option,InLab,Comp,Data,SymLab)
 ************************************************************************
 *                                                                      *
 *     Purpose: Read data from one-electron integral file               *
@@ -49,17 +49,12 @@
 ************************************************************************
       Implicit Integer (A-Z)
 *
-#include "OneRc.fh"
-#include "OneFlags.fh"
-
 #include "OneDat.fh"
 *
       Character*(*) InLab
       Dimension Data(*)
 *
       Character*8 TmpLab,Label
-*     Dimension LabTmp(2)
-*     Equivalence (TmpLab,LabTmp)
 *
       Parameter (lBuf=1024)
       Real*8    TmpBuf(lBuf),AuxBuf(4)
@@ -68,13 +63,12 @@
       Save CurrOp
 *----------------------------------------------------------------------*
 *     Start procedure:                                                 *
-*     Define inline function (symmetry multiplication)                 *
+*     Define statement function (symmetry multiplication)              *
 *----------------------------------------------------------------------*
       MulTab(i,j)=iEor(i-1,j-1)+1
 *----------------------------------------------------------------------*
 *     Pick up the file definitions                                     *
 *----------------------------------------------------------------------*
-*     Call qEnter('RdOne')
       rc    = rc0000
       LuOne = AuxOne(pLu  )
       Open  = AuxOne(pOpen)
@@ -106,6 +100,7 @@
       Label=InLab
       Call UpCase(Label)
       TmpLab=Label
+      iLen=Len(TmpLab)/ItoB
 *----------------------------------------------------------------------*
 *     Print debugging information                                      *
 *----------------------------------------------------------------------*
@@ -125,17 +120,14 @@
       If((iAnd(iAnd(option,sRdFst),sRdNxt)).ne.0) then
          Write (6,*) 'RdOne: Invalid option(s)'
          Write (6,*) 'option=',option
-         Call QTrace()
          Call Abend()
       Else If((iAnd(iAnd(option,sRdFst),sRdCur)).ne.0) then
          Write (6,*) 'RdOne: Invalid option(s)'
          Write (6,*) 'option=',option
-         Call QTrace()
          Call Abend()
       Else If((iAnd(iAnd(option,sRdNxt),sRdCur)).ne.0) then
          Write (6,*) 'RdOne: Invalid option(s)'
          Write (6,*) 'option=',option
-         Call QTrace()
          Call Abend()
       End If
 *----------------------------------------------------------------------*
@@ -143,10 +135,6 @@
 *----------------------------------------------------------------------*
       iDisk=0
       Call iDaFile(LuOne,2,TocOne,lToc,iDisk)
-*----------------------------------------------------------------------*
-*     Read data from ToC                                               *
-*----------------------------------------------------------------------*
-      NoGo=sRdFst+sRdNxt+sRdCur
 *----------------------------------------------------------------------*
 *     Read operators from integral records                             *
 *----------------------------------------------------------------------*
@@ -162,7 +150,8 @@
 *#ifndef _I8_
 *            LabTmp(2)=TocOne(pOp+LenOp*(i-1)+oLabel+1)
 *#endif
-            Call ByteCopy(TocOne(pOp+LenOp*(i-1)+oLabel),TmpLab,8)
+            idx=pOp+LenOp*(i-1)+oLabel
+            TmpLab=Transfer(TocOne(idx:idx+iLen-1),TmpLab)
             Label=TmpLab
             InLab=Label
             SymLab=TocOne(pOp+LenOp*(i-1)+oSymLb)
@@ -178,7 +167,8 @@
 *#ifndef _I8_
 *            LabTmp(2)=TocOne(pOp+LenOp*(i-1)+oLabel+1)
 *#endif
-            Call ByteCopy(TocOne(pOp+LenOp*(i-1)+oLabel),TmpLab,8)
+            idx=pOp+LenOp*(i-1)+oLabel
+            TmpLab=Transfer(TocOne(idx:idx+iLen-1),TmpLab)
             Label=TmpLab
             InLab=Label
             SymLab=TocOne(pOp+LenOp*(i-1)+oSymLb)
@@ -195,7 +185,8 @@
 *#ifndef _I8_
 *            LabTmp(2)=TocOne(pOp+LenOp*(i-1)+oLabel+1)
 *#endif
-            Call ByteCopy(TocOne(pOp+LenOp*(i-1)+oLabel),TmpLab,8)
+            idx=pOp+LenOp*(i-1)+oLabel
+            TmpLab=Transfer(TocOne(idx:idx+iLen-1),TmpLab)
             Label=TmpLab
             InLab=Label
             SymLab=TocOne(pOp+LenOp*(i-1)+oSymLb)
@@ -208,7 +199,8 @@
 *#ifndef _I8_
 *            LabTmp(2)=TocOne(pOp+LenOp*(i-1)+oLabel+1)
 *#endif
-            Call ByteCopy(TocOne(pOp+LenOp*(i-1)+oLabel),TmpLab,8)
+            idx=pOp+LenOp*(i-1)+oLabel
+            TmpLab=Transfer(TocOne(idx:idx+iLen-1),TmpLab)
             CmpTmp=TocOne(pOp+LenOp*(i-1)+oComp   )
             TmpCmp=Comp
             If(TmpLab.eq.Label .and. CmpTmp.eq.TmpCmp) CurrOp=i
@@ -224,28 +216,29 @@
          Go To 999
       End If
       SymLab=TocOne(pOp+LenOp*(CurrOp-1)+oSymLb)
-      Len=0
+      Length=0
       Do 510 i=1,nSym
-      Do 510 j=1,i
+      Do 511 j=1,i
          ij=MulTab(i,j)-1
          If(iAnd(2**ij,SymLab).ne.0) Then
             If(i.eq.j) Then
-               Len=Len+nBas(i)*(nBas(i)+1)/2
+               Length=Length+nBas(i)*(nBas(i)+1)/2
             Else
-               Len=Len+nBas(i)*nBas(j)
+               Length=Length+nBas(i)*nBas(j)
             End If
          End If
+511   Continue
 510   Continue
-      Data(1)=Len
+      Data(1)=Length
       If ( IAND(option,sOpSiz).eq.0 ) Then
          IndAux = 0
          IndDta = 0
          iDisk=TocOne(pOp+LenOp*(CurrOp-1)+oAddr)
-         Do i = 0,Len+3,lBuf
-           nCopy  = MAX(0,MIN(lBuf,Len+4-i))
-           nSave  = MAX(0,MIN(lBuf,Len-i))
+         Do i = 0,Length+3,lBuf
+           nCopy  = MAX(0,MIN(lBuf,Length+4-i))
+           nSave  = MAX(0,MIN(lBuf,Length-i))
            Call dDaFile(LuOne,2,TmpBuf,nCopy,iDisk)
-           Call dCopy_(nSave,TmpBuf,1,Data(IndDta+1),1)
+           Call idCopy(nSave,TmpBuf,1,Data(IndDta+1),1)
            IndDta = IndDta+RtoI*nSave
            Do j = nSave+1,nCopy
              IndAux = IndAux+1
@@ -254,10 +247,10 @@
            End Do
          End Do
          If(iAnd(sNoOri,option).eq.0) Then
-            Call dCopy_(3,AuxBuf,1,Data(IndDta+1),1)
+            Call idCopy(3,AuxBuf,1,Data(IndDta+1),1)
          End If
          If(iAnd(sNoNuc,option).eq.0) Then
-            Call dCopy_(1,AuxBuf(4),1,Data(IndDta+RtoI*3+1),1)
+            Call idCopy(1,AuxBuf(4),1,Data(IndDta+RtoI*3+1),1)
          End If
       End If
 *
@@ -275,16 +268,41 @@
 *----------------------------------------------------------------------*
 *     Terminate procedure                                              *
 *----------------------------------------------------------------------*
-*     Call qExit('RdOne')
       Return
+*
+*     This is to allow type punning without an explicit interface
+      Contains
+      Subroutine idCopy(n,Src,n1,Dst,n2)
+      Use iso_c_binding
+      Integer, Target :: Dst(*)
+      Real*8, Pointer :: dDst(:)
+      Real*8 :: Src(*)
+      Integer :: n,n1,n2
+      Call c_f_pointer(c_loc(Dst),dDst,[n])
+      Call dCopy_(n,Src,n1,dDst,n2)
+      Nullify(dDst)
+      End Subroutine idCopy
+*
       End
 
-      Subroutine iRdOne(rc,Option,InLab,Comp,iData,SymLab)
+      Subroutine RdOne(rc,Option,InLab,Comp,Data,SymLab)
       Implicit Integer (A-Z)
 *
       Character*(*) InLab
-      Dimension iData(*)
+      Real*8 Data(*)
 *
-      Call RdOne(rc,Option,InLab,Comp,iData,SymLab)
+      Call RdOne_Internal(Data)
+*
+*     This is to allow type punning without an explicit interface
+      Contains
+      Subroutine RdOne_Internal(Data)
+      Use Iso_C_Binding
+      Real*8, Target :: Data(*)
+      Integer, Pointer :: iData(:)
+      Call C_F_Pointer(C_Loc(Data(1)),iData,[1])
+      Call iRdOne(rc,Option,InLab,Comp,iData,SymLab)
+      Nullify(iData)
       return
+      End Subroutine RdOne_Internal
+*
       end

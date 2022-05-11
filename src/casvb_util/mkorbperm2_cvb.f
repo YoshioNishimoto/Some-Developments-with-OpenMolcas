@@ -8,11 +8,11 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine mkorbperm2_cvb(orbs,cvb,owrk,cvbdet)
       implicit real*8 (a-h,o-z)
-#include "ext_cvb.fh"
 #include "main_cvb.fh"
 #include "optze_cvb.fh"
 #include "files_cvb.fh"
@@ -29,9 +29,10 @@
       do 100 iorb=1,norb
       jorb=abs(iorbprm(iorb))
       sgn=dble(sign(1,iorbprm(iorb)))
-      call fmove(orbs(1,jorb),owrk(1,iorb),norb)
-100   call dscal_(norb,sgn,owrk(1,iorb),1)
-      call fmove(owrk,orbs,norb*norb)
+      call fmove_cvb(orbs(1,jorb),owrk(1,iorb),norb)
+      call dscal_(norb,sgn,owrk(1,iorb),1)
+100   continue
+      call fmove_cvb(owrk,orbs,norb*norb)
       call str2vbc_cvb(cvb,cvbdet)
       call permvb_cvb(cvbdet,iorbprm)
       call vb2strc_cvb(cvbdet,cvb)

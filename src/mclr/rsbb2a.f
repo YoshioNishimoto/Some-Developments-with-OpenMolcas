@@ -67,7 +67,7 @@
       IMPLICIT REAL*8(A-H,O-Z)
       Logical TimeDep
 *. General input
-      INTEGER ADSXA(MXPOBS,2*MXPOBS),DXSTST
+      INTEGER ADSXA(MXPOBS,2*MXPOBS),DXSTST(*)
       INTEGER STSTDX(NSMST,NSMST)
       INTEGER SXDXSX(2*MXPOBS,4*MXPOBS)
       INTEGER NTSOB(3,*),IBTSOB(3,*),ITSOB(*)
@@ -94,8 +94,8 @@
         KTYP = KTP(IDXTYP)
         LTYP = LTP(IDXTYP)
 *. Type of intermediate strings
-        CALL NEWTYP_MCLR(IGRP,ICCTP,1,JTYP,1,K1GRP,K1TP)
-        CALL NEWTYP_MCLR(K1GRP,K1TP,1,LTYP,1,K2GRP,K2TP)
+        CALL NEWTYP_MCLR(IGRP,ICCTP,[1],[JTYP],1,K1GRP,K1TP)
+        CALL NEWTYP_MCLR(K1GRP,K1TP,[1],[LTYP],1,K2GRP,K2TP)
         IF(K2TP.LE.0) GOTO 2000
 *. Symmetry of allowed Double excitation,loop over excitations
         DO 1950 IKSM = 1, NSMSX
@@ -131,7 +131,7 @@
             END IF
             IF(NOPART.EQ.1) THEN
 *             CALL SETVEC(SSCR,ZERO,NKSTREF*NROW*NIK)
-              call dcopy_(NKSTREF*NROW*NIK,ZERO,0,SSCR,1)
+              call dcopy_(NKSTREF*NROW*NIK,[ZERO],0,SSCR,1)
             END If
             DO 1930 JSM = 1, NSMOB
               LSM = ADSXA(JSM,JLSM)
@@ -192,8 +192,6 @@
                   L = 1
                   DO  IJL = 1, NJL
                     CALL NXTIJ(J,L,NJ,NL,JLPSM,NONEW)
-                    LEFF = L + LOFF - 1
-                    JEFF = J + JOFF - 1
 *.CB(IA,KB,jl) = +/-C(IA,a+la+jIA)
                     JLOFF = (IJL-1)*NKBTC*NIBTC+1
                     JLOFF2 = (IJL-1)*NKSTREF + 1
@@ -243,8 +241,6 @@
                    K = 1
                    DO  IK = 1, NIK
                     CALL NXTIJ(I,K,NI,NK,IKPSM,NONEW)
-                    IEFF = I + IOFF - 1
-                    KEFF = K + KOFF - 1
                     ISBOFF = 1+(IK-1)*NIBTC*NKBTC
                     IKOFF = (IK-1)*NKSTREF+1
                     IF( SIGN .EQ. -1.0D0)
@@ -271,8 +267,6 @@
                   K = 1
                   DO IK = 1, NIK
                     CALL NXTIJ(I,K,NI,NK,IKPSM,NONEW)
-                    IEFF = I + IOFF - 1
-                    KEFF = K + KOFF - 1
                     ISBOFF = 1+(IK-1)*NIBTC*NKBTC
                     IKOFF = (IK-1)*NKSTREF+1
 *. Well, someplace the minus must come in
@@ -292,7 +286,7 @@
       RETURN
 c Avoid unused argument warnings
       IF (.FALSE.) THEN
-        CALL Unused_integer(DXSTST)
+        CALL Unused_integer_array(DXSTST)
         CALL Unused_integer_array(ITSOB)
         CALL Unused_integer(NSMDX)
       END IF

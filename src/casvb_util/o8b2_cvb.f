@@ -8,7 +8,8 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine o8b2_cvb(nparm,
      >  dx,grad,eigvec,eigval,
@@ -31,7 +32,8 @@
       eigvec(iprm+1,1)=grad(iprm)
       eigvec(1,iprm+1)=grad(iprm)
       eigvec(iprm+1,iprm+1)=one
-100   call hess_cvb(eigvec(2,iprm+1))
+      call hess_cvb(eigvec(2,iprm+1))
+100   continue
       write(6,*)' Augmented Hessian matrix :'
       call mxprint_cvb(eigvec,nparm+1,nparm+1,0)
       call mxdiag_cvb(eigvec,eigval,nparm+1)
@@ -43,7 +45,7 @@
         call vecprint_cvb(eigvec(1,iroot),nparm+1)
       endif
       write(6,*)' Following root no :',iroot
-      call fmove(eigvec(2,iroot),dx,nparm)
+      call fmove_cvb(eigvec(2,iroot),dx,nparm)
       if(abs(eigvec(1,iroot)).gt.1d-8)then
         fac1=one/eigvec(1,iroot)
       else

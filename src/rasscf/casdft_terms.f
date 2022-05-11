@@ -34,7 +34,6 @@
 #include "rasdim.fh"
 #include "general.fh"
 #include "output_ras.fh"
-      Parameter (ROUTINE='CASDFT_Terms')
 #include "rasscf.fh"
 #include "WrkSpc.fh"
 #include "rctfld.fh"
@@ -47,7 +46,6 @@
       Logical First, Dff, Do_DFT
       Parameter ( Zero=0.0d0 , One=1.0d0 )
 
-      Call qEnter('CASDFT_Terms')
 
 ***********************************************************
 C Local print level (if any)
@@ -125,7 +123,6 @@ c      IPRLEV=100
          Write(LF,*) 'CASDFT_Terms: iRc from Call RdOne not 0'
          Write(LF,*) 'Label = ',Label
          Write(LF,*) 'iRc = ',iRc
-         Call QTrace
          Call Abend
       Endif
       Call GetMem('Ovrlp','Free','Real',iTmp0,nTot1+4)
@@ -156,7 +153,6 @@ c      IPRLEV=100
          Write(LF,*) 'CASDFT_Terms: iRc from Call RdOne not 0'
          Write(LF,*) 'Label = ',Label
          Write(LF,*) 'iRc = ',iRc
-         Call QTrace
          Call Abend
       Endif
       If ( IPRLEV.ge.DEBUG ) then
@@ -218,8 +214,8 @@ c      write(6,*) 'PotNuc in casdft_terms.f:', PotNuc
 *
       Call GetMem('htmp','Allo','Real',iTmp5,nTot1)
       Call GetMem('gtmp','Allo','Real',iTmp6,nTot1)
-      Call dcopy_(nTot1,0.0d0,0,Work(iTmp5),1)
-      Call dcopy_(nTot1,0.0d0,0,Work(iTmp6),1)
+      Call dcopy_(nTot1,[0.0d0],0,Work(iTmp5),1)
+      Call dcopy_(nTot1,[0.0d0],0,Work(iTmp6),1)
 *
       First=.True.
       Dff=.False.
@@ -353,7 +349,7 @@ c iTmp5 and iTmp6 are not updated in DrvXV...
       CALL MOTRAC(CMO,WORK(LX1),WORK(LX2),WORK(LX3))
       CALL GETMEM('XXX3','FREE','REAL',LX3,MXNB*MXNA)
       CALL GETMEM('XXX2','FREE','REAL',LX2,MXNB*MXNB)
-      CALL dcopy_(NACPAR,ZERO,0,F,1)
+      CALL dcopy_(NACPAR,[ZERO],0,F,1)
       NTU=0
       ITU=0
       IADD=0
@@ -398,7 +394,6 @@ c iTmp5 and iTmp6 are not updated in DrvXV...
         Call TriPrt(' ',' ',F,NAC)
       End If
 
-      Call qExit('CASDFT_terms')
 
       Return
       End

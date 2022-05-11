@@ -14,31 +14,31 @@
 *     Make a list of the largest such element for each shell-pair      *
 *     Store in SDG.                                                    *
 ************************************************************************
+      use ChoArr, only: iSOShl, iRS2F
       Implicit Real*8 (a-h,o-z)
       Integer nnSkal, MxBasSh
       Real*8 SDG(nnSkal)
+#include "real.fh"
 #include "cholesky.fh"
-#include "choptr.fh"
-#include "WrkSpc.fh"
+#include "stdalloc.fh"
+      Real*8, Allocatable :: Diag(:)
 *                                                                      *
 ************************************************************************
 *                                                                      *
 *     Statement functions
 *
-      iRS2F(i,j) = iWork(ip_iRS2F-1+2*(j-1)+i)
-      ISOSHL(I) = IWORK(ip_iSOShl-1+I)
       iTri(i,j)=max(i,j)*(max(i,j)-3)/2+i+j
 *                                                                      *
 ************************************************************************
 *                                                                      *
-      Call FZero(SDG(1),nnSkal)
+      SDG(:)=Zero
 *
       iLoc=1 ! point to 1st reduced set in index arrays
-      CALL GETMEM('diagI','Allo','Real',ipDIAG,NNBSTRT(iLoc))
+      Call mma_allocate(Diag,NNBSTRT(iLoc),Label='Diag')
 *
 *     Read the diagonal of the integrals, (mu,nu|mu,nu)
 *
-      CALL CHO_IODIAG(Work(ipDIAG),2)
+      CALL CHO_IODIAG(DIAG,2)
 *
       Do jSym=1,nSym
 *
@@ -54,12 +54,12 @@
 *
             iabSh= iTri(iaSh,ibSh)
 *
-            SDG(iabSh)= Max(SDG(iabSh),sqrt(abs(Work(ipDIAG+kRab-1))))
+            SDG(iabSh)= Max(SDG(iabSh),sqrt(abs(Diag(kRab))))
 *
          End Do  ! jRab loop
       End Do
 *
-      CALL GETMEM('diagI','Free','Real',ipDIAG,NNBSTRT(1))
+      Call mma_deallocate(Diag)
 *
       MxBasSh = MxOrSh
 *

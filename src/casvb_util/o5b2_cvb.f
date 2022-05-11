@@ -8,7 +8,8 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine o5b2_cvb(nparm,
      >  dx,grad,
@@ -25,7 +26,7 @@
       save one
       data one/1d0/
 
-      call fmove(grad,dx,nparm)
+      call fmove_cvb(grad,dx,nparm)
       if(.not.maxize)call dscal_(nparm,-one,dx,1)
       dxnrm=dnrm2_(nparm,dx,1)
       if(.not.close2conv)then

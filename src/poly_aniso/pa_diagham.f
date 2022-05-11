@@ -18,7 +18,7 @@
 c this function builds and diagonalizes the interaction Hamiltonians
       Implicit None
 #include "stdalloc.fh"
-      Integer, parameter            :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter        :: wp=kind(0.d0)
       Integer, intent(in)           :: exch
       Integer, intent(in)           :: npair
       Integer, intent(in)           :: i_pair(npair,2)
@@ -34,28 +34,28 @@ c this function builds and diagonalizes the interaction Hamiltonians
       Logical, intent(in)           :: AnisoLines3
       Logical, intent(in)           :: AnisoLines9
       Logical, intent(in)           :: JITO_exchange
-      Real(kind=wp), intent(in)     :: eso(nneq,nmax)
-      Complex(kind=wp), intent(in)  :: HLIN1(npair,nmax,nmax,nmax,nmax)
-      Complex(kind=wp), intent(in)  :: HLIN3(npair,nmax,nmax,nmax,nmax)
-      Complex(kind=wp), intent(in)  :: HLIN9(npair,nmax,nmax,nmax,nmax)
-      Complex(kind=wp), intent(in)  :: HDIP(npair,nmax,nmax,nmax,nmax)
-      Complex(kind=wp), intent(in)  :: HKEX(npair,nmax,nmax,nmax,nmax)
-      Complex(kind=wp), intent(in)  :: HDMO(npair,nmax,nmax,nmax,nmax)
-      Complex(kind=wp), intent(in)  :: HITO(npair,nmax,nmax,nmax,nmax)
+      Real(kind=8), intent(in)     :: eso(nneq,nmax)
+      Complex(kind=8), intent(in)  :: HLIN1(npair,nmax,nmax,nmax,nmax)
+      Complex(kind=8), intent(in)  :: HLIN3(npair,nmax,nmax,nmax,nmax)
+      Complex(kind=8), intent(in)  :: HLIN9(npair,nmax,nmax,nmax,nmax)
+      Complex(kind=8), intent(in)  :: HDIP(npair,nmax,nmax,nmax,nmax)
+      Complex(kind=8), intent(in)  :: HKEX(npair,nmax,nmax,nmax,nmax)
+      Complex(kind=8), intent(in)  :: HDMO(npair,nmax,nmax,nmax,nmax)
+      Complex(kind=8), intent(in)  :: HITO(npair,nmax,nmax,nmax,nmax)
       ! output data:
-      Real(kind=wp), intent(out)    :: wlin(exch) ! total 1+3+9
-      Real(kind=wp), intent(out)    :: wlin1(exch)
-      Real(kind=wp), intent(out)    :: wlin3(exch)
-      Real(kind=wp), intent(out)    :: wlin9(exch)
-      Real(kind=wp), intent(out)    :: wdip(exch)
-      Real(kind=wp), intent(out)    :: wkex(exch)
-      Real(kind=wp), intent(out)    :: wdmo(exch)
-      Real(kind=wp), intent(out)    :: wito(exch)
+      Real(kind=8), intent(out)    :: wlin(exch) ! total 1+3+9
+      Real(kind=8), intent(out)    :: wlin1(exch)
+      Real(kind=8), intent(out)    :: wlin3(exch)
+      Real(kind=8), intent(out)    :: wlin9(exch)
+      Real(kind=8), intent(out)    :: wdip(exch)
+      Real(kind=8), intent(out)    :: wkex(exch)
+      Real(kind=8), intent(out)    :: wdmo(exch)
+      Real(kind=8), intent(out)    :: wito(exch)
 
-      Real(kind=wp), intent(out)    :: w(exch)
-      Complex(kind=wp), intent(out) :: Z(exch,exch)
+      Real(kind=8), intent(out)    :: w(exch)
+      Complex(kind=8), intent(out) :: Z(exch,exch)
 c local variables
-      Complex(kind=wp), allocatable :: HTOT(:,:)
+      Complex(kind=8), allocatable :: HTOT(:,:)
       Integer, allocatable :: nind(:,:), intc(:), ibas(:,:), icoord(:)
       Integer  :: nb1, nb2, lb1, lb2, i1, i2, is1, is2,
      &            js1, js2, nb, i, j, l, lp, lb
@@ -63,38 +63,37 @@ c local variables
       external :: norder
 c diag:
       Integer          :: info, lwork
-      Real(kind=wp), allocatable :: rwork(:) !rwork(3*exch-2)
-      Complex(kind=wp), allocatable :: work(:) !work(2*exch-1)
-      Call qEnter('PA_diagham')
+      Real(kind=8), allocatable :: rwork(:) !rwork(3*exch-2)
+      Complex(kind=8), allocatable :: work(:) !work(2*exch-1)
 c allocate memory and initialize variables:
-      If( exch > 0 ) Then
+      If( exch >= 0 ) Then
          Call mma_allocate(HTOT,exch,exch,'HTOT')
          Call mma_allocate(WORK,(2*exch-1),'WORK')
-         If( lmax > 0 ) Then
+         If( lmax >= 0 ) Then
             Call mma_allocate(ibas,exch,lmax,'ibas')
          End If
          Call mma_allocate(rwork,(3*exch-2),'rwork')
       End If
 
-      If( lmax > 0 ) Then
+      If( lmax >= 0 ) Then
          Call mma_allocate(nind,lmax,2,'nind')
          Call mma_allocate(intc,lmax,'intc')
          Call mma_allocate(icoord,lmax,'icoord')
       End If
-      Call zcopy_(exch*exch, (0.0_wp,0.0_wp),0,Z,1)
-      Call dcopy_(exch,0.0_wp,0,w,1)
-      Call dcopy_(exch,0.0_wp,0,wlin,1)
-      Call dcopy_(exch,0.0_wp,0,wlin1,1)
-      Call dcopy_(exch,0.0_wp,0,wlin3,1)
-      Call dcopy_(exch,0.0_wp,0,wlin9,1)
-      Call dcopy_(exch,0.0_wp,0,wdip,1)
-      Call dcopy_(exch,0.0_wp,0,wkex,1)
-      Call dcopy_(exch,0.0_wp,0,wdmo,1)
-      Call dcopy_(exch,0.0_wp,0,wito,1)
+      Call zcopy_(exch*exch, [(0.0_wp,0.0_wp)],0,Z,1)
+      Call dcopy_(exch,[0.0_wp],0,w,1)
+      Call dcopy_(exch,[0.0_wp],0,wlin,1)
+      Call dcopy_(exch,[0.0_wp],0,wlin1,1)
+      Call dcopy_(exch,[0.0_wp],0,wlin3,1)
+      Call dcopy_(exch,[0.0_wp],0,wlin9,1)
+      Call dcopy_(exch,[0.0_wp],0,wdip,1)
+      Call dcopy_(exch,[0.0_wp],0,wkex,1)
+      Call dcopy_(exch,[0.0_wp],0,wdmo,1)
+      Call dcopy_(exch,[0.0_wp],0,wito,1)
 
 c generate the tables:
       l=0
-      Call icopy(2*lmax,0,0,nind,1)
+      Call icopy(2*lmax,[0],0,nind,1)
       Do i=1,nneq
         Do j=1,neq(i)
           l=l+1
@@ -103,7 +102,7 @@ c generate the tables:
         End Do
       End Do
 
-      Call icopy(lmax,0,0,intc,1)
+      Call icopy(lmax,[0],0,intc,1)
       intc(1)=1
       If (lmax.gt.1) Then
         Do i=2,lmax
@@ -112,7 +111,7 @@ c generate the tables:
         End Do
       End If
 
-      Call icopy(exch*lmax,0,0,ibas,1)
+      Call icopy(exch*lmax,[0],0,ibas,1)
       Do nb=1,exch
         nb1=nb-1
         Do i=1,lmax
@@ -123,10 +122,10 @@ c generate the tables:
 c build the interaction Hamiltonians
 !----------------------------------------------------------------------!
       If( AnisoLines1 ) Then
-        Call zcopy_(exch*exch, (0.0_wp,0.0_wp),0,HTOT,1)
+        Call zcopy_(exch*exch, [(0.0_wp,0.0_wp)],0,HTOT,1)
         Do nb1 = 1,exch
           Do lp = 1,npair
-            Call icopy(lmax,0,0,icoord,1)
+            Call icopy(lmax,[0],0,icoord,1)
             Do i = 1,lmax
               icoord(i) = ibas(nb1,i)
             End Do
@@ -164,8 +163,8 @@ c build the interaction Hamiltonians
         info=0
         lwork=0
         lwork=2*exch-1
-        Call dcopy_((3*exch-2),0.0_wp,0,rwork,1)
-        Call zcopy_((2*exch-1),(0.0_wp,0.0_wp),0,WORK,1)
+        Call dcopy_((3*exch-2),[0.0_wp],0,rwork,1)
+        Call zcopy_((2*exch-1),[(0.0_wp,0.0_wp)],0,WORK,1)
         Call zheev('n','u',exch,htot,exch,wlin1,work,lwork,rwork,info)
       End If
 
@@ -173,10 +172,10 @@ c build the interaction Hamiltonians
 
 !----------------------------------------------------------------------!
       If( AnisoLines3 ) Then
-        Call zcopy_(exch*exch, (0.0_wp,0.0_wp),0,HTOT,1)
+        Call zcopy_(exch*exch, [(0.0_wp,0.0_wp)],0,HTOT,1)
         Do nb1 = 1,exch
           Do lp = 1,npair
-            Call icopy(lmax,0,0,icoord,1)
+            Call icopy(lmax,[0],0,icoord,1)
             Do i = 1,lmax
               icoord(i) = ibas(nb1,i)
             End Do
@@ -214,8 +213,8 @@ c build the interaction Hamiltonians
         info=0
         lwork=0
         lwork=2*exch-1
-        Call dcopy_((3*exch-2),0.0_wp,0,rwork,1)
-        Call zcopy_((2*exch-1),(0.0_wp,0.0_wp),0,WORK,1)
+        Call dcopy_((3*exch-2),[0.0_wp],0,rwork,1)
+        Call zcopy_((2*exch-1),[(0.0_wp,0.0_wp)],0,WORK,1)
         Call zheev('n','u',exch,htot,exch,wlin3,work,lwork,rwork,info)
       End If
 
@@ -223,10 +222,10 @@ c build the interaction Hamiltonians
 
 !----------------------------------------------------------------------!
       If( AnisoLines9 ) Then
-        Call zcopy_(exch*exch, (0.0_wp,0.0_wp),0,HTOT,1)
+        Call zcopy_(exch*exch, [(0.0_wp,0.0_wp)],0,HTOT,1)
         Do nb1 = 1,exch
           Do lp = 1,npair
-            Call icopy(lmax,0,0,icoord,1)
+            Call icopy(lmax,[0],0,icoord,1)
             Do i = 1,lmax
               icoord(i) = ibas(nb1,i)
             End Do
@@ -264,8 +263,8 @@ c build the interaction Hamiltonians
         info=0
         lwork=0
         lwork=2*exch-1
-        Call dcopy_((3*exch-2),0.0_wp,0,rwork,1)
-        Call zcopy_((2*exch-1),(0.0_wp,0.0_wp),0,WORK,1)
+        Call dcopy_((3*exch-2),[0.0_wp],0,rwork,1)
+        Call zcopy_((2*exch-1),[(0.0_wp,0.0_wp)],0,WORK,1)
         Call zheev('n','u',exch,htot,exch,wlin9,work,lwork,rwork,info)
       End If
 
@@ -273,10 +272,10 @@ c build the interaction Hamiltonians
 
 !----------------------------------------------------------------------!
       If( AnisoLines1.OR.AnisoLines3.OR.AnisoLines9 ) Then
-        Call zcopy_(exch*exch, (0.0_wp,0.0_wp),0,HTOT,1)
+        Call zcopy_(exch*exch, [(0.0_wp,0.0_wp)],0,HTOT,1)
         Do nb1 = 1,exch
           Do lp = 1,npair
-            Call icopy(lmax,0,0,icoord,1)
+            Call icopy(lmax,[0],0,icoord,1)
             Do i = 1,lmax
               icoord(i) = ibas(nb1,i)
             End Do
@@ -316,8 +315,8 @@ c build the interaction Hamiltonians
         info=0
         lwork=0
         lwork=2*exch-1
-        Call dcopy_((3*exch-2),0.0_wp,0,rwork,1)
-        Call zcopy_((2*exch-1),(0.0_wp,0.0_wp),0,WORK,1)
+        Call dcopy_((3*exch-2),[0.0_wp],0,rwork,1)
+        Call zcopy_((2*exch-1),[(0.0_wp,0.0_wp)],0,WORK,1)
         Call zheev('n','u',exch,htot,exch,wlin,work,lwork,rwork,info)
       End If
 
@@ -325,10 +324,10 @@ c build the interaction Hamiltonians
 
 !----------------------------------------------------------------------!
       If(Dipol) Then
-        Call zcopy_(exch*exch,(0.0_wp,0.0_wp),0,HTOT,1)
+        Call zcopy_(exch*exch,[(0.0_wp,0.0_wp)],0,HTOT,1)
         Do nb1 = 1,exch
           Do lp = 1,npair
-            Call icopy(lmax,0,0,icoord,1)
+            Call icopy(lmax,[0],0,icoord,1)
             Do i = 1,lmax
               icoord(i) = ibas(nb1,i)
             End Do
@@ -366,8 +365,8 @@ c build the interaction Hamiltonians
         info=0
         lwork=0
         lwork=2*exch-1
-        Call dcopy_((3*exch-2),0.0_wp,0,rwork,1)
-        Call zcopy_((2*exch-1),(0.0_wp,0.0_wp),0,WORK,1)
+        Call dcopy_((3*exch-2),[0.0_wp],0,rwork,1)
+        Call zcopy_((2*exch-1),[(0.0_wp,0.0_wp)],0,WORK,1)
         Call zheev('n','u',exch,htot,exch,wdip,work,lwork,rwork,info)
       End If
 
@@ -375,10 +374,10 @@ c build the interaction Hamiltonians
 
 !----------------------------------------------------------------------!
       If( DM_exchange ) Then
-        Call zcopy_(exch*exch, (0.0_wp,0.0_wp),0,HTOT,1)
+        Call zcopy_(exch*exch, [(0.0_wp,0.0_wp)],0,HTOT,1)
         Do nb1 = 1,exch
           Do lp = 1,npair
-            Call icopy(lmax,0,0,icoord,1)
+            Call icopy(lmax,[0],0,icoord,1)
             Do i = 1,lmax
               icoord(i) = ibas(nb1,i)
             End Do
@@ -416,8 +415,8 @@ c build the interaction Hamiltonians
         info=0
         lwork=0
         lwork=2*exch-1
-        Call dcopy_((3*exch-2),0.0_wp,0,rwork,1)
-        Call zcopy_((2*exch-1),(0.0_wp,0.0_wp),0,WORK,1)
+        Call dcopy_((3*exch-2),[0.0_wp],0,rwork,1)
+        Call zcopy_((2*exch-1),[(0.0_wp,0.0_wp)],0,WORK,1)
         Call zheev('n','u',exch,htot,exch,wdmo,work,lwork,rwork,info)
       End If
 
@@ -425,10 +424,10 @@ c build the interaction Hamiltonians
 
 !----------------------------------------------------------------------!
       If(KE) Then
-        Call zcopy_(exch*exch,(0.0_wp,0.0_wp),0,HTOT,1)
+        Call zcopy_(exch*exch,[(0.0_wp,0.0_wp)],0,HTOT,1)
         Do nb1 = 1,exch
           Do lp = 1,npair
-            Call icopy(lmax,0,0,icoord,1)
+            Call icopy(lmax,[0],0,icoord,1)
             Do i = 1,lmax
               icoord(i) = ibas(nb1,i)
             End Do
@@ -453,8 +452,8 @@ c build the interaction Hamiltonians
         info=0
         lwork=0
         lwork=2*exch-1
-        Call dcopy_((3*exch-2),0.0_wp,0,rwork,1)
-        Call zcopy_((2*exch-1),(0.0_wp,0.0_wp),0,WORK,1)
+        Call dcopy_((3*exch-2),[0.0_wp],0,rwork,1)
+        Call zcopy_((2*exch-1),[(0.0_wp,0.0_wp)],0,WORK,1)
         Call zheev('n','u',exch,htot,exch,wkex,work,lwork,rwork,info)
       End If
 
@@ -462,10 +461,10 @@ c build the interaction Hamiltonians
 
 !----------------------------------------------------------------------!
       If(JITO_exchange) Then
-        Call zcopy_(exch*exch,(0.0_wp,0.0_wp),0,HTOT,1)
+        Call zcopy_(exch*exch,[(0.0_wp,0.0_wp)],0,HTOT,1)
         Do nb1 = 1,exch
           Do lp = 1,npair
-            Call icopy(lmax,0,0,icoord,1)
+            Call icopy(lmax,[0],0,icoord,1)
             Do i = 1,lmax
               icoord(i) = ibas(nb1,i)
             End Do
@@ -490,8 +489,8 @@ c build the interaction Hamiltonians
         info=0
         lwork=0
         lwork=2*exch-1
-        Call dcopy_((3*exch-2),0.0_wp,0,rwork,1)
-        Call zcopy_((2*exch-1),(0.0_wp,0.0_wp),0,WORK,1)
+        Call dcopy_((3*exch-2),[0.0_wp],0,rwork,1)
+        Call zcopy_((2*exch-1),[(0.0_wp,0.0_wp)],0,WORK,1)
         Call zheev('n','u',exch,htot,exch,wito,work,lwork,rwork,info)
       End If
 
@@ -499,10 +498,10 @@ c build the interaction Hamiltonians
 
 !----------------------------------------------------------------------!
       !cccccccc  total Hamiltonian cccccccc
-      Call zcopy_(exch*exch,(0.0_wp,0.0_wp),0,HTOT,1)
+      Call zcopy_(exch*exch,[(0.0_wp,0.0_wp)],0,HTOT,1)
       Do nb1 = 1,exch
         Do lp = 1,npair
-          Call icopy(lmax,0,0,icoord,1)
+          Call icopy(lmax,[0],0,icoord,1)
           Do i = 1,lmax
             icoord(i) = ibas(nb1,i)
           End Do
@@ -550,8 +549,8 @@ c diagonalize
       info =0
       lwork=0
       lwork=2*exch-1
-      Call dcopy_((3*exch-2),0.0_wp,0,rwork,1)
-      Call zcopy_((2*exch-1),(0.0_wp,0.0_wp),0,WORK,1)
+      Call dcopy_((3*exch-2),[0.0_wp],0,rwork,1)
+      Call zcopy_((2*exch-1),[(0.0_wp,0.0_wp)],0,WORK,1)
       Call zheev('v','u',exch,htot,exch,w,work,lwork,rwork,info)
       If (info.eq.0) Then
          Call zcopy_(exch*exch,htot,1,Z,1)
@@ -561,20 +560,19 @@ c diagonalize
 
 !----------------------------------------------------------------------!
 ! deallocate memory:
-      If( exch > 0 ) Then
+      If( exch >= 0 ) Then
          Call mma_deallocate(HTOT)
          Call mma_deallocate(WORK)
-         If( lmax > 0 ) Then
+         If( lmax >= 0 ) Then
             Call mma_deallocate(ibas)
          End If
          Call mma_deallocate(rwork)
       End If
 
-      If( lmax > 0 ) Then
+      If( lmax >= 0 ) Then
          Call mma_deallocate(nind)
          Call mma_deallocate(intc)
          Call mma_deallocate(icoord)
       End If
-      Call qExit('PA_diagham')
       Return
       End

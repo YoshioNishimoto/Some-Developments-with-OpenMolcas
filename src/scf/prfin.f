@@ -44,6 +44,7 @@
 *     history: UHF - V.Veryazov, 2003                                  *
 *                                                                      *
 ************************************************************************
+      use SpinAV, only: Do_SpinAV
       Implicit Real*8 (a-h,o-z)
       External EFP_ON
 *
@@ -58,8 +59,6 @@
 #include "stdalloc.fh"
 #include "rctfld.fh"
 #include "oneswi.fh"
-      Logical Do_SpinAV
-      COMMON  / SPAVE_L  / Do_SpinAV
 *
 *---- Define local variables
       Character Fmt*60
@@ -72,12 +71,13 @@ cnf
 cnf
 *     Save ipScr1
       Character AlphaLabel*30
+      Dimension Dumm0(1),Dumm1(1)
 *
 *----------------------------------------------------------------------*
 *     Warning!
-*  this routine uses a durty trick in UHF case
-*  ipScr1 is used to keep temporary array in memory
-*  which released during a second call.
+*  this routine uses a dirty trick in UHF case
+*  ipScr1 is used to keep a temporary array in memory
+*  which is released during a second call.
 *----------------------------------------------------------------------*
 *
 
@@ -96,10 +96,7 @@ cnf
 *
 *----------------------------------------------------------------------*
 *
-#ifdef _DEBUG_
-      Call qEnter('PrFin')
-#endif
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       Debug=.true.
 #else
       Debug=.false.
@@ -177,7 +174,7 @@ cnf      If ( (lRF .or. KSDFT.ne.'SCF') .and.  .Not.NDDO .and.
 *        Call Get_dScalar('PotNuc',PotNuc)
          Call Peek_dScalar('PotNuc',PotNuc)
          Call mma_allocate(RFfld,nBT,Label='RFfld')
-         call dcopy_(nBT,0.0D0,0,RFfld,1)
+         call dcopy_(nBT,[Zero],0,RFfld,1)
          First=.True.
          Dff = .False.
          Do_DFT=.False. ! We do not need to redo the DFT!
@@ -326,13 +323,5 @@ c         print *,'Elumo',Elumo
          Call mma_deallocate(Scr2)
 *
       End If
-#ifdef _DEBUG_
-      Call qExit('PrFin')
-#endif
-*
-*----------------------------------------------------------------------*
-*     Exit                                                             *
-*----------------------------------------------------------------------*
-*
-      Return
-      End
+
+      End subroutine PrFin

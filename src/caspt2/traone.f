@@ -9,11 +9,11 @@
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
       SUBROUTINE TRAONE(CMO)
+      use output_caspt2, only:iPrGlb,verbose
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
-#include "warnings.fh"
+#include "warnings.h"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
       DIMENSION CMO(NCMO)
@@ -23,8 +23,7 @@
 c Objective: Transformation of one-electron integrals
 c (effective one electron Hamiltonian) for CASPT2.
 
-      CALL QENTER('TRAONE')
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       IFTEST=1
 #else
       IFTEST=0
@@ -122,8 +121,8 @@ c the nuclear attraction by the cavity self-energy
          END IF
       End If
 
-      EONE=0.0d00
-      ETWO=0.0d00
+      EONE=0.0d0
+      ETWO=0.0d0
 c The following section is needed for frozen orbitals:
       IF(NFROT.EQ.0) GOTO 300
       CALL GETMEM('WDLT','ALLO','REAL',LWDLT,NBTRI)
@@ -132,8 +131,8 @@ c Compute the density matrix of the frozen orbitals
 c The DLT matrix contains the same data as DSQ, but
 c with symmetry blocks in lower triangular format, and
 c with non-diagonal elements doubled.
-      CALL DCOPY_(NBTRI,0.0D0,0,WORK(LWDLT),1)
-      CALL DCOPY_(NBSQT,0.0D0,0,WORK(LWDSQ),1)
+      CALL DCOPY_(NBTRI,[0.0D0],0,WORK(LWDLT),1)
+      CALL DCOPY_(NBSQT,[0.0D0],0,WORK(LWDSQ),1)
       ISTMO=1
       ISTSQ=LWDSQ
       ISTLT=LWDLT
@@ -170,10 +169,9 @@ c  one-electron hamiltonian.
 *     Look out-- we temporarily allocate all available memory.
 *
       ExFac=1.0D0
-
          Call FTwo_Drv(nSym,nBas,nFro,KEEP,
      &                 WORK(LWDLT),WORK(LWDSQ),WORK(LWFLT),NBTRI,
-     &                 ExFac,nBSQT,nBMX,CMO)
+     &                 ExFac,nBMX,CMO)
 
 *                                                                      *
 ************************************************************************
@@ -198,8 +196,8 @@ c Allocate FMO, TMP:
       CALL GETMEM('WTMP','ALLO','REAL',LWTMP,NWTMP)
 
 c Transform one-electron effective Hamiltonian:
-      CALL DCOPY_(notri,0.0D0,0,WORK(LWFMO),1)
-      CALL DCOPY_(NWTMP,0.0D0,0,WORK(LWTMP),1)
+      CALL DCOPY_(notri,[0.0D0],0,WORK(LWFMO),1)
+      CALL DCOPY_(NWTMP,[0.0D0],0,WORK(LWTMP),1)
       ICMO=1
       IAO =LWFLT
       IMO =LWFMO
@@ -213,10 +211,10 @@ c Transform one-electron effective Hamiltonian:
      &                  1.0d0,CMO(ICMO),NBAS(ISYM),WORK(LWTMP),
      &                  NBAS(ISYM),0.0d0,WORK(IOFF),NORB(ISYM))
 
-           CALL MXMT(WORK(IOFF),    1,NORB(ISYM),
-     &             CMO(ICMO),     1,NBAS(ISYM),
-     &             WORK(IMO),
-     &             NORB(ISYM),NBAS(ISYM))
+           Call DGEMM_Tri('N','N',NORB(ISYM),NORB(ISYM),NBAS(ISYM),
+     &                    1.0D0,WORK(IOFF),NORB(ISYM),
+     &                          CMO(ICMO),NBAS(ISYM),
+     &                    0.0D0,WORK(IMO),NORB(ISYM))
          END IF
          ICMO=ICMO+NBAS(ISYM)*(NORB(ISYM)+NDEL(ISYM))
          IAO =IAO +NBAS(ISYM)*(NBAS(ISYM)+1)/2
@@ -243,7 +241,6 @@ c Transform one-electron effective Hamiltonian:
       CALL GETMEM('WFMO','FREE','REAL',LWFMO,notri)
       CALL GETMEM('WFLT','FREE','REAL',LWFLT,NBTRI)
 
-      CALL QEXIT('TRAONE')
 
       RETURN
       End

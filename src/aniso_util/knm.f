@@ -22,10 +22,10 @@
 
       Implicit None
 
-      Integer, parameter :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter :: wp=kind(0.d0)
 
       Integer       :: i, j
-      Real(kind=wp) :: knm(12,0:12)
+      Real(kind=8) :: knm(12,0:12)
 
       Do i=1,12
          Do j=0,12

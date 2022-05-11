@@ -37,7 +37,15 @@
 ************************************************************************
 *
       Integer InBuf(nData)
-      Character*1 OutBuf(*)
+      Integer OutBuf(*)
+      Interface
+        Subroutine izip(OpCode,nData,nBytes,InBuf,OutBuf)
+     &             bind(C,name='izip_')
+          Use Definitions, only: MOLCAS_C_INT
+          Integer(kind=MOLCAS_C_INT) :: OpCode, nData, nBytes, InBuf(*),
+     &                                  OutBuf(*)
+        End Subroutine izip
+      End Interface
 *
 *----------------------------------------------------------------------*
 *
@@ -47,4 +55,5 @@
 *----------------------------------------------------------------------*
 *
       Return
+*
       End

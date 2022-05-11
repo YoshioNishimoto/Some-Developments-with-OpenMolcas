@@ -23,7 +23,6 @@
 *> and corresponding eigenvectors of a symmetric matrix.
 *> On input, \p Vec can contain an initial guess for the eigenvectors (from a previous
 *> run with smaller \p k, for example), only the non-zero vectors are used.
-*> If \p k > \p n on input, it will be set to \p n on output.
 *> This routine is adapted to an augmented Hessian, which is not explicitly expressed,
 *> rather the original Hessian is implicitly there, via a diagonal and an on-the-fly
 *> update when multiplied by a vector, and the gradient is explicit there.
@@ -31,16 +30,15 @@
 *> @param[in]     HDiag  Diagonal of the Hessian matrix
 *> @param[in]     g      Gradient vector
 *> @param[in]     m      Size of diagonal Hessian and gradient
-*> @param[in,out] k      Number of lowest eigenvalues to compute
+*> @param[in]     k      Number of lowest eigenvalues to compute
 *> @param[in]     Fact   Scaling factor
 *> @param[out]    Eig    Lowest eigenvalues
 *> @param[in,out] Vec    Lowest eigenvectors
-*> @param[in]     MemRsv Amount of reserved memory
 *> @param[out]    iRC    Return code (0 if converged)
 ************************************************************************
-      SUBROUTINE Davidson_SCF(HDiag,g,m,k,Fact,Eig,Vec,MemRsv,iRC)
+      SUBROUTINE Davidson_SCF(HDiag,g,m,k,Fact,Eig,Vec,iRC)
       IMPLICIT NONE
-      INTEGER m,n,k,iRC, MemRsv
+      INTEGER m,n,k,iRC
       REAL*8  HDiag(m),g(m),Eig(k),Vec(m+1,k), Fact
       REAL*8, DIMENSION(:,:), ALLOCATABLE :: Sub, Ab
       REAL*8, DIMENSION(:), ALLOCATABLE :: Eig_old, EVec, Proj, EVal
@@ -49,24 +47,28 @@
       real*8 ddot_
       INTEGER mk,old_mk,mink,maxk,ig,info,nTmp,iter,maxiter
       INTEGER i,j,ii,jj
-      INTEGER ipTmp,ipDum
-      INTEGER ipDiag,ipTVec,ipTAV,ipTRes
       LOGICAL Last,Augmented,Reduced
       external ddot_
       PARAMETER (Thr=1.0D-6, maxiter=300, Thr2=1.0D-16, Thr3=1.0D-16)
+      Real*8, Allocatable :: TmpVec(:), Diag(:), TVec(:), TAV(:),
+     &                       TRes(:)
+      Real*8 :: Dum(1)=0.0D0
+
 *
 #include "stdalloc.fh"
 #include "real.fh"
-#include "WrkSpc.fh"
-      INTEGER iPrint,iRout
 #include "print.fh"
+*define _DEBUGPRINT_
+#ifdef _DEBUGPRINT_
+      INTEGER iPrint,iRout
 
       iRout=216
       iPrint=nPrint(iRout)
+#endif
       n=m+1
 
-*define _DEBUG_
-#ifdef _DEBUG_
+*define _DEBUGPRINT_
+#ifdef _DEBUGPRINT_
       Call NrmClc(HDiag,m,'Davidson_SCF','HDiag')
       Call NrmClc(    g,m,'Davidson_SCF','g')
 *     CALL RecPrt('HDiag',' ',HDiag,m,1)
@@ -81,8 +83,9 @@
 *      maxk = maximum subspace size (25 if k=1)
 *      mink = subspace size to reduce to when the maximum is exceeded (5 if k=1)
 *
-*     (do not use MIN here, so that it's possible to use an explicit value for k)
-      IF (k.GT.n) k=n
+      IF (k.GT.n) THEN
+        CALL SysAbendMsg('Davidson_SCF','Wrong k value.','')
+      END IF
       mink=MIN(MAX(k+2,5),n)
       maxk=MIN(5*mink,n)
       mk=k
@@ -137,7 +140,7 @@
             Index_D(i)=jj
          END IF
       END DO
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
 *     Write (6,*) 'Index_D=',Index_D
 #endif
 
@@ -148,14 +151,14 @@
 *      The rest is set to zero, just in case
 *
       nTmp=0
-      CALL Allocate_Work(ipTmp,n)
+      Call mma_allocate(TmpVec,n,Label='TmpVec')
       DO i=1,k
-        call dcopy_(n,Vec(1,i),1,Work(ipTmp),1)
-        CALL Add_Vector(n,nTmp,Sub,Work(ipTmp),Thr3)
+        call dcopy_(n,Vec(1,i),1,TmpVec,1)
+        CALL Add_Vector(n,nTmp,Sub,TmpVec,Thr3)
       END DO
 *
       ii=0
-      CALL DZero(Work(ipTmp),n)
+      TmpVec(:)=Zero
 *
       DO WHILE ((nTmp .LT. mk) .AND. (ii .LT. n))
          ii=ii+1
@@ -171,15 +174,15 @@
            Aux=HDiag(jj)
          End If
          If (Aux.lt.1.0D10.and.Aux.gt.-0.10D0) Then
-            Work(ipTmp+jj-1)=One
-            CALL Add_Vector(n,nTmp,Sub,Work(ipTmp),Thr3)
-            Work(ipTmp+jj-1)=Zero
+            TmpVec(jj)=One
+            CALL Add_Vector(n,nTmp,Sub,TmpVec,Thr3)
+            TmpVec(jj)=Zero
          End If
       END DO
 *
 *     ig will be a global counter to loop across all n base vectors
       ig=ii
-      CALL Free_Work(ipTmp)
+      Call mma_deallocate(TmpVec)
       CALL DZero(Sub(1,mk+1),(maxk-mk)*n)
 
 *---- Iterative procedure starts here
@@ -191,15 +194,14 @@
       Last=.FALSE.
       old_mk=0
       iter=0
-      CALL Allocate_Work(ipDum,1)
-      CALL Allocate_Work(ipDiag,n)
-      CALL Allocate_Work(ipTVec,n)
-      CALL Allocate_Work(ipTAV,n)
-      CALL Allocate_Work(ipTRes,n)
+      Call mma_allocate(Diag,n,Label='Diag')
+      Call mma_allocate(TVec,n,Label='TVec')
+      Call mma_allocate(TAV ,n,Label='TAV ')
+      Call mma_allocate(TRes,n,Label='TRes')
       DO WHILE (.NOT. Last)
         iter=iter+1
         IF (iter .GT. 1) call dcopy_(k,Eig,1,Eig_old,1)
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
         IF (.NOT. Reduced) THEN
           WRITE(6,'(A)') '---------------'
           WRITE(6,'(A,1X,I5)') 'Iteration',iter
@@ -219,7 +221,7 @@
 *       Hessian and a trial vector can be computed on-the-fly.
 *
         Do j=old_mk,mk-1
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
            Write (6,*) 'Davidson_SCF: j,Fact=',j,Fact
            Call NrmClc(Sub(1,j+1),n,'Davidson_SCF','Sub(1,j+1)')
            Call RecPrt('Sub',' ',Sub(1,j+1),1,n)
@@ -227,7 +229,7 @@
 *
 *          Pick up the contribution for the updated Hessian (BFGS update)
 *
-           Call SOrUpV(MemRsv,Sub(1,j+1),HDiag,m,Ab(1,j+1),'GRAD',
+           Call SOrUpV(Sub(1,j+1),HDiag,m,Ab(1,j+1),'GRAD',
      &                                                     'BFGS')
            Call DScal_(m,One/Fact,Ab(1,j+1),1)
 *
@@ -237,7 +239,7 @@
            Call DaXpY_(m,One/Sqrt(Fact),g,1,Ab(1,j+1),1)
 *
            Ab(n,j+1) = DDot_(m,g,1,Sub(1,j+1),1)
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
            Call NrmClc(Ab(1,j+1),n,'Davidson_SCF','Ab(1,j+1)')
            Call RecPrt('Ab',' ',Ab(1,j+1),1,n)
 #endif
@@ -267,24 +269,24 @@
 *        If the subspace has been reduced, no need to compute new eigenpairs
 *
         IF (.NOT. Reduced) THEN
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
           WRITE(6,'(2X,A,1X,I5)') 'Solving for subspace size:',mk
 #endif
           call dcopy_(maxk*maxk,Proj,1,EVec,1)
           call dsyev_('V','L',mk,EVec,maxk,EVal,
-     &                          Work(ipDum),-1,info)
-          nTmp=INT(Work(ipDum))
-          CALL Allocate_Work(ipTmp,nTmp)
+     &                          Dum,-1,info)
+          nTmp=INT(Dum(1))
+          Call mma_allocate(TmpVec,nTmp,Label='TmpVec')
           call dsyev_('V','L',mk,EVec,maxk,EVal,
-     &                          Work(ipTmp),nTmp,info)
-          CALL Free_Work(ipTmp)
+     &                          TmpVec,nTmp,info)
+          Call mma_deallocate(TmpVec)
           CALL JacOrd2(EVal,EVec,mk,maxk)
           call dcopy_(k,EVal,1,Eig,1)
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
           CALL RecPrt('Current guess',' ',Eig,1,k)
 #endif
         END IF
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
         IF (iPrint .GE. 99) THEN
           CALL RecPrt('Eigenvalues',' ',EVal,1,mk)
           CALL SubRecPrt('Subspace Eigenvectors',' ',EVec,
@@ -320,7 +322,7 @@
                  Conv=MAX(Conv,ABS(Eig(i)-Eig_old(i)))
               END IF
            END DO
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
            IF (Augmented)
      &       WRITE(6,'(2X,A,1X,G12.6)') 'Maximum relative eigenvalue '//
      &                                 'change:',Conv
@@ -351,7 +353,7 @@
 *                                                                      *
 ************************************************************************
 *                                                                      *
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
               WRITE(6,'(A)') 'Converged due to small change'
 #endif
           Last=.TRUE.
@@ -362,7 +364,7 @@
 *                                                                      *
 ************************************************************************
 *                                                                      *
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
           WRITE(6,'(A)') 'Complete system solved'
 #endif
           Last=.TRUE.
@@ -373,7 +375,7 @@
 *                                                                      *
 ************************************************************************
 *                                                                      *
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
           WRITE(6,'(A)') 'Not converged'
 #endif
           Last=.TRUE.
@@ -394,17 +396,17 @@
 ************************************************************************
 *                                                                      *
           IF (iRC .EQ. 2) iRC=0
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
           WRITE(6,'(2X,A,1X,I5)') 'Reducing search space to',mink
 #endif
-          CALL Allocate_Work(ipTmp,mink*n)
+          Call mma_allocate(TmpVec,mink*n,Label='TmpVec')
           CALL DGeMM_('N','N',
      &                n,mink,mk,
      &                One,Sub,n,
      &                    EVec,maxk,
-     &                Zero,Work(ipTmp),n)
-          call dcopy_(mink*n,Work(ipTmp),1,Sub,1)
-          CALL Free_Work(ipTmp)
+     &                Zero,TmpVec,n)
+          call dcopy_(mink*n,TmpVec,1,Sub,1)
+          Call mma_deallocate(TmpVec)
 
 *----     To make sure Sub' is orthonormal, add the vectors one by one
 *
@@ -417,7 +419,7 @@
 
 *----     j should be mink, but who knows...
 *
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
           IF (j .LT. mink) THEN
             WRITE(6,'(2X,A,1X,I5)') 'Fewer vectors found:',j
           END IF
@@ -448,7 +450,7 @@
 *          computed from r and the eigenpair
 *          (different possible variants)
 *
-          CALL Allocate_Work(ipTmp,n)
+          Call mma_allocate(TmpVec,n,Label='TmpVec')
           Conv=Zero
 *
           jj=0
@@ -456,15 +458,15 @@
 *            Vector in full space: Sub*Vec(i)
              Call dGeMV_('N',n,mk,One,Sub,n,
      &                               EVec(1+i*maxk),1,
-     &                           Zero,Work(ipTVec),1)
+     &                           Zero,TVec,1)
 *            Product of matrix and vector: Ab*Vec(i)
              Call dGeMV_('N',n,mk,One,Ab,n,
      &                               EVec(1+i*maxk),1,
-     &                           Zero,Work(ipTAV),1)
+     &                           Zero,TAV,1)
 *            Residual: (A-Val(i))*Vec(i) = Ab*Vec(i) - Val(i)*Sub*Vec(i)
-             call dcopy_(n,Work(ipTAV),1,Work(ipTRes),1)
-             call daxpy_(n,-EVal(1+i),Work(ipTVec),1,Work(ipTRes),1)
-             Conv=MAX(Conv,DDot_(n,Work(ipTRes),1,Work(ipTRes),1))
+             call dcopy_(n,TAV,1,TRes,1)
+             call daxpy_(n,-EVal(1+i),TVec,1,TRes,1)
+             Conv=MAX(Conv,DDot_(n,TRes,1,TRes,1))
 
 *----        Scale vector, orthonormalize, and add to subspace
 *
@@ -477,50 +479,50 @@
                    Aux=HDiag(j+1)-Eval(1+i)
                 End If
                 If (j.eq.n-1) Then
-                   Work(ipDiag+j)=One/SIGN(MAX(ABS(Aux),Thr2),Aux)
+                   Diag(1+j)=One/SIGN(MAX(ABS(Aux),Thr2),Aux)
                 Else
                    If (HDiag(j+1).lt.1.0D20) Then
-                      Work(ipDiag+j)=One/SIGN(MAX(ABS(Aux),Thr2),Aux)
+                      Diag(1+j)=One/SIGN(MAX(ABS(Aux),Thr2),Aux)
                    Else
-                      Work(ipDiag+j)=1.0D20
+                      Diag(1+j)=1.0D20
                    End If
                 End If
              END DO
 *
 *            scale
              DO j=0,n-1
-                If (Work(ipDiag+j).lt.1.0D02) Then
-                   Work(ipTmp+j)=Work(ipTRes+j)*Work(ipDiag+j)
+                If (Diag(1+j).lt.1.0D02) Then
+                   TmpVec(1+j)=TRes(1+j)*Diag(1+j)
                 Else
-                   Work(ipTmp+j)=Zero
+                   TmpVec(1+j)=Zero
                 End If
              END DO
 *
              Alpha=Zero
              DO j=0,n-1
-                If (Work(ipDiag+j).lt.1.0D02) Then
-                   Alpha=Alpha+Work(ipDiag+j)*Work(ipTVec+j)**2
+                If (Diag(1+j).lt.1.0D02) Then
+                   Alpha=Alpha+Diag(1+j)*TVec(1+j)**2
                 End If
              END DO
-             Alpha=DDot_(n,Work(ipTVec),1,Work(ipTmp),1)/Alpha
+             Alpha=DDot_(n,TVec,1,TmpVec,1)/Alpha
 *            subtract
              DO j=0,n-1
-                If (Work(ipDiag+j).lt.1.0D02) Then
-                   Work(ipTVec+j)=Work(ipTVec+j)*Work(ipDiag+j)
+                If (Diag(1+j).lt.1.0D02) Then
+                   TVec(1+j)=TVec(1+j)*Diag(1+j)
                 Else
-                   Work(ipTVec+j)=Zero
+                   TVec(1+j)=Zero
                 End If
              END DO
-             call daxpy_(n,-Alpha,Work(ipTVec),1,Work(ipTmp),1)
+             call daxpy_(n,-Alpha,TVec,1,TmpVec,1)
 *
              IF (mk+jj .LE. n-1) THEN
                 jj=mk+jj
-                CALL Add_Vector(n,jj,Sub,Work(ipTmp),Thr3)
+                CALL Add_Vector(n,jj,Sub,TmpVec,Thr3)
                 jj=jj-mk
              END IF
           END DO
 *
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
           WRITE(6,'(2X,A,1X,G12.6)') 'Maximum residual:',Conv
 #endif
 *                                                                      *
@@ -530,7 +532,7 @@
 *                                                                      *
 *----------------------------------------------------------------------*
 *                                                                      *
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
              WRITE(6,'(A)') 'Converged due to small residual'
 #endif
              Last=.TRUE.
@@ -548,11 +550,11 @@
 *            the original matrix
 *
              IF (jj .EQ. 0) THEN
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
                WRITE(6,'(A)') 'Process stagnated'
 #endif
                IF (mk .LT. maxk) THEN
-                  CALL DZero(Work(ipTmp),n)
+                  TmpVec(:n)=Zero
                   i=0
 *
                   DO WHILE ((jj .LT. 1) .AND. (i .LT. n))
@@ -570,10 +572,10 @@
                        Aux=HDiag(ii)
                      End If
                      If (Aux.lt.1.0D20  .and. Aux.gt.-0.10D0) Then
-                        Work(ipTmp+ii-1)=One
+                        TmpVec(ii)=One
                         jj=mk+jj
-                        CALL Add_Vector(n,jj,Sub,Work(ipTmp),Thr3)
-                        Work(ipTmp+ii-1)=Zero
+                        CALL Add_Vector(n,jj,Sub,TmpVec,Thr3)
+                        TmpVec(ii)=Zero
                         jj=jj-mk
                      End If
 *
@@ -596,7 +598,7 @@
 *                                                                      *
 *----------------------------------------------------------------------*
 *                                                                      *
-          CALL Free_Work(ipTmp)
+          Call mma_deallocate(TmpVec)
           Reduced=.FALSE.
 *                                                                      *
 ************************************************************************
@@ -607,23 +609,22 @@
 *                                                                      *
       END DO
 *
-      CALL Free_Work(ipDum)
-      CALL Free_Work(ipDiag)
-      CALL Free_Work(ipTVec)
-      CALL Free_Work(ipTAV)
-      CALL Free_Work(ipTRes)
+      Call mma_deallocate(Diag)
+      Call mma_deallocate(TVec)
+      Call mma_deallocate(TAV )
+      Call mma_deallocate(TRes)
       Call mma_deallocate(Index_D)
 
-*---- Store the current lowest k eigenvectors (in the full space)
-*      Vec' = Sub * Vec(1:k)
-*
+!---- Store the current lowest k eigenvectors (in the full space)
+!      Vec' = Sub * Vec(1:k)
+
       CALL DGeMM_('N','N',
      &            n,k,mk,
      &            One,Sub,n,
      &                EVec,maxk,
      &            Zero,Vec,n)
 
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       Call NrmClc(Vec(1,1),m,'Davidson_SCF','Vec(1-m)')
       Call NrmClc(Vec(n,1),1,'Davidson_SCF','Vec(n)')
 #endif

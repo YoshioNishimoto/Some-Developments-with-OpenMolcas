@@ -20,7 +20,7 @@
 * Last update : May 1999 : ISIMSYM added
 *
 * Partition a CI vector into batches of blocks.
-* The length of a batch must be atmost MXLNG
+* The length of a batch must be at most MXLNG
 * If ISIMSYM.EQ.1, TTS blocks that differs only in symmetry are not
 *                  split.
 *
@@ -133,7 +133,7 @@ C Dummy initialize
       IF(IFINI.EQ.1) GOTO 2002
       IF(IOCOC(IA,IB).EQ.0) GOTO 1000
 *. Size of TT block ( all symmetries)
-      LBLOCK_AS = 0
+c      LBLOCK_AS = 0
 c      IF(ISIMSYM.EQ.1 .AND. ISM. EQ. 1 ) THEN
 c         DO IASM = 1, NSMST
 c            IBSM = ISMOST(IASM)
