@@ -431,6 +431,7 @@ c          If(n_unpaired_elec+n_paired_elec/2.eq.nac) n_Det=1
         end if
 #endif
       end if
+      Write(LF,*) 'DUMPING INTEGRALS'
       CALL DUMP_INT(TUVX,NACPR2,WORK(LW1),NACPAR)
 *
       lw1_cvb=lw1

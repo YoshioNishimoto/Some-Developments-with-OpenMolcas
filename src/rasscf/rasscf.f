@@ -148,6 +148,7 @@
       Call StatusLine('RASSCF:',' Just started.')
 
 * Set the return code(s)
+      WRITE(6,*) ' inside rasscf'
       ITERM  = 0
       IRETURN=_RC_ALL_IS_WELL_
 
