@@ -23,6 +23,7 @@
       contains
       SUBROUTINE ALLGATHER_R(SEND,NSEND,RECV,NRECV)
       use mpi
+      use Definitions, only: MPIInt, iwp
       implicit none
 ************************************************************************
 * allgather: gathers local buffers SEND of size NSEND on
@@ -39,13 +40,17 @@
       real*8, intent(out) :: RECV(nRecv)
       integer, intent(in) :: nRecv
 
-      integer*4 :: NSEND4(1), ITYPE4, IERROR4, nRecv4Tot
-      INTEGER*4, ALLOCATABLE :: NRECV4(:),IDISP4(:)
-      INTEGER*4, PARAMETER :: ONE4 = 1
-      integer :: nBytes, myrank, nProcs, i
+      integer(MPIInt) :: NSEND4(1), ITYPE4, IERROR4, nRecv4Tot
+      integer(MPIInt) :: WorkAround
+      INTEGER(MPIInt), ALLOCATABLE :: NRECV4(:),IDISP4(:)
+      INTEGER(MPIInt), PARAMETER :: ONE4 = 1
+      integer(MPIInt) :: nBytes, myrank, nProcs, i
 
       ITYPE4 = MPI_REAL8
       NBYTES = 8 * NRECV
+
+      WorkAround = MPI_INTEGER4
+      if (MPIInt == iwp) WorkAround = MPI_INTEGER8
 
       IF (NBYTES.GT.2147483647) THEN
         WRITE(6,'(1X,A)') 'WARNING: ALLGATHER: receive buffer > 2GB'
@@ -62,8 +67,8 @@
 
 ! first, gather the sendbuffer size of each process in NRECV4
       NSEND4(1)=INT(NSEND,KIND(NSEND4))
-      CALL MPI_ALLGATHER(NSEND4,ONE4,MPI_INTEGER4,
-     &                   NRECV4,ONE4,MPI_INTEGER4,
+      CALL MPI_ALLGATHER(NSEND4,ONE4,WorkAround,
+     &                   NRECV4,ONE4,WorkAround,
      &                   MPI_COMM_WORLD, IERROR4)
       IF (IERROR4.NE.0) THEN
         WRITE(6,'(1X,A,I4)') 'ERROR: ALLGATHER: MPI_Allgather ',IERROR4
@@ -98,6 +103,7 @@
 
       SUBROUTINE ALLGATHER_I(SEND,NSEND,RECV,NRECV)
       use mpi
+      use Definitions, only: MPIInt, iwp
       implicit none
 ************************************************************************
 * allgather: gathers local buffers SEND of size NSEND on
@@ -114,10 +120,11 @@
       integer, intent(out) :: RECV(nRecv)
       integer, intent(in) :: nRecv
 
-      integer*4 :: NSEND4(1), ITYPE4, IERROR4, nRecv4Tot
-      INTEGER*4, ALLOCATABLE :: NRECV4(:),IDISP4(:)
-      INTEGER*4, PARAMETER :: ONE4 = 1
-      integer :: nBytes, myrank, nProcs, i
+      integer(MPIInt) :: NSEND4(1), ITYPE4, IERROR4, nRecv4Tot
+      integer(MPIInt) :: WorkAround
+      INTEGER(MPIInt), ALLOCATABLE :: NRECV4(:),IDISP4(:)
+      INTEGER(MPIInt), PARAMETER :: ONE4 = 1
+      integer(MPIInt) :: nBytes, myrank, nProcs, i
 
 #ifdef _I8_
         ITYPE4=MPI_INTEGER8
@@ -126,6 +133,9 @@
         ITYPE4=MPI_INTEGER4
         NBYTES=4*NRECV
 #endif
+
+      WorkAround = MPI_INTEGER4
+      if (MPIInt == iwp) WorkAround = MPI_INTEGER8
 
       IF (NBYTES.GT.2147483647) THEN
         WRITE(6,'(1X,A)') 'WARNING: ALLGATHER: receive buffer > 2GB'
@@ -142,8 +152,8 @@
 
 ! first, gather the sendbuffer size of each process in NRECV4
       NSEND4(1)=INT(NSEND,KIND(NSEND4))
-      CALL MPI_ALLGATHER(NSEND4,ONE4,MPI_INTEGER4,
-     &                   NRECV4,ONE4,MPI_INTEGER4,
+      CALL MPI_ALLGATHER(NSEND4,ONE4,WorkAround,
+     &                   NRECV4,ONE4,WorkAround,
      &                   MPI_COMM_WORLD, IERROR4)
       IF (IERROR4.NE.0) THEN
         WRITE(6,'(1X,A,I4)') 'ERROR: ALLGATHER: MPI_Allgather ',IERROR4

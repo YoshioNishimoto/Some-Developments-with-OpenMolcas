@@ -467,6 +467,7 @@ C  - F(xvzyut) -> BA(yvx,zut)
      &                       NG3,F3,idxG3)
       USE MPI
       USE SUPERINDEX
+      use Definitions, only: MPIInt, iwp
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
@@ -481,21 +482,24 @@ C  - F(xvzyut) -> BA(yvx,zut)
       DIMENSION F3(NG3)
       INTEGER*1 idxG3(6,NG3)
 
-      INTEGER*4, ALLOCATABLE :: SCOUNTS(:), RCOUNTS(:)
-      INTEGER*4, ALLOCATABLE :: SCOUNTS2(:), RCOUNTS2(:)
-      INTEGER*4, ALLOCATABLE :: SDISPLS(:), RDISPLS(:)
-      INTEGER*4, ALLOCATABLE :: SDISPLS2(:), RDISPLS2(:)
+      INTEGER(MPIInt), ALLOCATABLE :: SCOUNTS(:), RCOUNTS(:)
+      INTEGER(MPIInt), ALLOCATABLE :: SCOUNTS2(:), RCOUNTS2(:)
+      INTEGER(MPIInt), ALLOCATABLE :: SDISPLS(:), RDISPLS(:)
+      INTEGER(MPIInt), ALLOCATABLE :: SDISPLS2(:), RDISPLS2(:)
 
-      INTEGER*4, ALLOCATABLE :: SENDIDX(:), RECVIDX(:)
+      INTEGER(MPIInt), ALLOCATABLE :: SENDIDX(:), RECVIDX(:)
       REAL*8,    ALLOCATABLE :: SENDVAL(:), RECVVAL(:)
 
-      INTEGER*4, PARAMETER :: ONE4=1, TWO4=2
-      INTEGER*4 :: IERROR4
+      INTEGER(MPIInt), PARAMETER :: ONE4=1, TWO4=2
+      INTEGER(MPIInt) :: IERROR4
       INTEGER, PARAMETER :: I4=KIND(ONE4)
-
+      integer(MPIInt) :: WorkAround
       INTEGER, ALLOCATABLE :: IBUF(:)
 
 #include "mpi_interfaces.fh"
+
+      WorkAround = MPI_INTEGER4
+      if (MPIInt == iwp) WorkAround = MPI_INTEGER8
 
       ! Since we are stuck with collective calls to MPI_Alltoallv in
       ! order to gather the elements, each process needs to loop over
@@ -849,10 +853,9 @@ C  - F(xvzyut) -> BA(yvx,zut)
         END DO
 
         ! Now we need to determine the receive counts.
-        CALL MPI_ALLTOALL(SCOUNTS, ONE4, MPI_INTEGER4,
-     &                    RCOUNTS, ONE4, MPI_INTEGER4,
+        CALL MPI_ALLTOALL(SCOUNTS, ONE4, WorkAround,
+     &                    RCOUNTS, ONE4, WorkAround,
      &                    MPI_COMM_WORLD, IERROR4)
-
         IOFFSET=0
         DO I=1,NPROCS
           RDISPLS(I)=INT(IOFFSET,I4)
@@ -872,10 +875,9 @@ C  - F(xvzyut) -> BA(yvx,zut)
         CALL MPI_ALLTOALLV(SENDVAL, SCOUNTS, SDISPLS, MPI_REAL8,
      &                     RECVVAL, RCOUNTS, RDISPLS, MPI_REAL8,
      &                     MPI_COMM_WORLD, IERROR4)
-        CALL MPI_ALLTOALLV(SENDIDX, SCOUNTS2, SDISPLS2, MPI_INTEGER4,
-     &                     RECVIDX, RCOUNTS2, RDISPLS2, MPI_INTEGER4,
+        CALL MPI_ALLTOALLV(SENDIDX, SCOUNTS2, SDISPLS2, WorkAround,
+     &                     RECVIDX, RCOUNTS2, RDISPLS2, WorkAround,
      &                     MPI_COMM_WORLD, IERROR4)
-
         ! Finally, fill the local chunk of the SA matrix (block of rows)
         ! with the received values at their appropriate place.
         DO I=1,NRECV
@@ -1278,6 +1280,7 @@ C  - F(xvzyut) -> BC(zvx,yut)
      &                       NG3,F3,idxG3)
       USE MPI
       USE SUPERINDEX
+      use Definitions, only: MPIInt, iwp
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
@@ -1292,21 +1295,24 @@ C  - F(xvzyut) -> BC(zvx,yut)
       DIMENSION F3(NG3)
       INTEGER*1 idxG3(6,NG3)
 
-      INTEGER*4, ALLOCATABLE :: SCOUNTS(:), RCOUNTS(:)
-      INTEGER*4, ALLOCATABLE :: SCOUNTS2(:), RCOUNTS2(:)
-      INTEGER*4, ALLOCATABLE :: SDISPLS(:), RDISPLS(:)
-      INTEGER*4, ALLOCATABLE :: SDISPLS2(:), RDISPLS2(:)
+      INTEGER(MPIInt), ALLOCATABLE :: SCOUNTS(:), RCOUNTS(:)
+      INTEGER(MPIInt), ALLOCATABLE :: SCOUNTS2(:), RCOUNTS2(:)
+      INTEGER(MPIInt), ALLOCATABLE :: SDISPLS(:), RDISPLS(:)
+      INTEGER(MPIInt), ALLOCATABLE :: SDISPLS2(:), RDISPLS2(:)
 
-      INTEGER*4, ALLOCATABLE :: SENDIDX(:), RECVIDX(:)
+      INTEGER(MPIInt), ALLOCATABLE :: SENDIDX(:), RECVIDX(:)
       REAL*8,    ALLOCATABLE :: SENDVAL(:), RECVVAL(:)
 
-      INTEGER*4, PARAMETER :: ONE4=1, TWO4=2
-      INTEGER*4 :: IERROR4
+      INTEGER(MPIInt), PARAMETER :: ONE4=1, TWO4=2
+      INTEGER(MPIInt) :: IERROR4
       INTEGER, PARAMETER :: I4=KIND(ONE4)
-
+      integer(MPIInt) :: WorkAround
       INTEGER, ALLOCATABLE :: IBUF(:)
 
 #include "mpi_interfaces.fh"
+
+      WorkAround = MPI_INTEGER4
+      if (MPIInt == iwp) WorkAround = MPI_INTEGER8
 
       ! Since we are stuck with collective calls to MPI_Alltoallv in
       ! order to gather the elements, each process needs to loop over
@@ -1661,10 +1667,9 @@ C  - F(xvzyut) -> BC(zvx,yut)
         END DO
 
         ! Now we need to determine the receive counts.
-        CALL MPI_ALLTOALL(SCOUNTS, ONE4, MPI_INTEGER4,
-     &                    RCOUNTS, ONE4, MPI_INTEGER4,
+        CALL MPI_ALLTOALL(SCOUNTS, ONE4, WorkAround,
+     &                    RCOUNTS, ONE4, WorkAround,
      &                    MPI_COMM_WORLD, IERROR4)
-
         IOFFSET=0
         DO I=1,NPROCS
           RDISPLS(I)=INT(IOFFSET,I4)
@@ -1684,10 +1689,9 @@ C  - F(xvzyut) -> BC(zvx,yut)
         CALL MPI_ALLTOALLV(SENDVAL, SCOUNTS, SDISPLS, MPI_REAL8,
      &                     RECVVAL, RCOUNTS, RDISPLS, MPI_REAL8,
      &                     MPI_COMM_WORLD, IERROR4)
-        CALL MPI_ALLTOALLV(SENDIDX, SCOUNTS2, SDISPLS2, MPI_INTEGER4,
-     &                     RECVIDX, RCOUNTS2, RDISPLS2, MPI_INTEGER4,
+        CALL MPI_ALLTOALLV(SENDIDX, SCOUNTS2, SDISPLS2, WorkAround,
+     &                     RECVIDX, RCOUNTS2, RDISPLS2, WorkAround,
      &                     MPI_COMM_WORLD, IERROR4)
-
         ! Finally, fill the local chunk of the SC matrix (block of rows)
         ! with the received values at their appropriate place.
         DO I=1,NRECV

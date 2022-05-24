@@ -286,6 +286,7 @@ C always write the chunks to LUDRA, both for serial and parallel
       USE MPI
       USE Para_Info, ONLY: nProcs, Is_Real_Par
 #endif
+      use Definitions, only: MPIInt
       IMPLICIT NONE
 #include "rasdim.fh"
 #include "warnings.h"
@@ -298,8 +299,8 @@ C always write the chunks to LUDRA, both for serial and parallel
 #ifdef _MOLCAS_MPP_
 #  include "global.fh"
 #  include "mafdecls.fh"
-      INTEGER*4 IERROR4,ITYPE
-      INTEGER*4, PARAMETER :: ONE4 = 1
+      INTEGER(MPIInt) IERROR4,ITYPE
+      INTEGER(MPIInt), PARAMETER :: ONE4 = 1
       INTEGER :: LDISP,LSIZE,LRECVBUF,LTRANSP
       INTEGER :: I,JNUM,JNUMT,NPQ,NUMSEND(1),IDISKT,IERROR
 #ifdef _DEBUGPRINT_
@@ -390,16 +391,17 @@ C Avoid unused argument warnings
 * Wrapper to MPI_Allgatherv dealing with ILP64 incompatibility.
 ************************************************************************
       USE MPI
+      use Definitions, only: MPIInt
       IMPLICIT NONE
       REAL*8 SENDBUF(*), RCVBUF(*)
       INTEGER NSEND, NRCV(*),NOFF(*)
 
-      INTEGER*4 MPITYPES, MPITYPER, MPICOMM
+      INTEGER(MPIInt) MPITYPES, MPITYPER, MPICOMM
 
-      INTEGER*4 NPROCS
-      INTEGER*4 NSEND4
-      INTEGER*4,ALLOCATABLE :: NRCV4(:),NOFF4(:)
-      INTEGER*4 IERROR4
+      INTEGER(MPIInt) NPROCS
+      INTEGER(MPIInt) NSEND4
+      INTEGER(MPIInt),ALLOCATABLE :: NRCV4(:),NOFF4(:)
+      INTEGER(MPIInt) IERROR4
       INTEGER, PARAMETER :: I4=KIND(NSEND4)
 
       INTEGER :: I, IERROR
