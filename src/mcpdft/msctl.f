@@ -52,6 +52,7 @@
 
 *
       Character*8 Label
+      Character(len=9) :: fock_title
       Logical First, Dff, Do_DFT,Found
       Parameter ( Zero=0.0d0 , One=1.0d0 )
       integer iD1I,iD1Act,iD1ActAO,iD1Spin,iD1SpinAO,IAD19
@@ -74,6 +75,7 @@
       External IsFreeUnit
 
 c      iTrii(i,j) = Max(i,j)*(Max(i,j)-1)/2 + Min(i,j)
+      integer iOvMat,id1aosq,itmp90,itmp91,itmp92
 
 
       Call unused_real_array(F)
@@ -1308,8 +1310,12 @@ cPS         call xflush(6)
         end do
       end do
 
+      write (fock_title, "(A8,I1)") "FOCK_AO_",jroot
+      write (*,*) fock_title
 
-      Open(unit=1999,file='FOCK_AO',action='write',iostat=ios)
+
+!      Open(unit=1999,file='FOCK_AO',action='write',iostat=ios)
+      Open(unit=1999,file=fock_title,action='write',iostat=ios)
       if (ios.ne.0) then
         write (6,*) "error opening FOCK_AO file"
       end if
@@ -1320,7 +1326,6 @@ cPS         call xflush(6)
       end do
       close(1999)
 
-      Call GetMem('OvMat','free','Real',iOvMat,ntot**2)
       Call GetMem('D1AOsq','free','Real',id1aosq,nTot**2)
       Call GetMem('temp90','free','Real',itmp90,ntot**2)
       Call GetMem('temp92','free','Real',itmp92,ntot**2)
@@ -1635,6 +1640,9 @@ cPS         call xflush(6)
       End If
 
 !Free up all the memory we can here, eh?
+      Call GetMem('OvMat','free','Real',iOvMat,ntot**2)
+
+
       Call GetMem('DtmpA','Free','Real',iTmp4,nTot1)
       Call GetMem('DtmpI','Free','Real',iTmp3,nTot1)
 
