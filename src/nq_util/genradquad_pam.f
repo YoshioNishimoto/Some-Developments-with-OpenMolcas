@@ -10,11 +10,10 @@
 ************************************************************************
       Subroutine GenRadQuad_PAM(iNQ,nR_Eff,mr,Alpha,Process,QuadR,
      &                          nQuadR)
+      use nq_Info
       Implicit Real*8 (a-h,o-z)
 #include "itmax.fh"
-#include "WrkSpc.fh"
 #include "real.fh"
-#include "nq_info.fh"
 #include "debug.fh"
       Real*8 Alpha(2), QuadR(2,nQuadR)
       Real*8 mr(2), ln_rn
@@ -34,6 +33,8 @@
 *
 *     Compute an approximative R_D_0
 *
+      Dr=Zero
+      h=Zero
        Do k = 0, l_Max, l_Max-1
       R_D_0=Relative_Max_Error/(10.0D0**k)
       Dr=-Log10(R_D_0)

@@ -32,7 +32,7 @@
 #include "cprnt.fh"
 *
 
-*#include <cstate.fh>
+*#include "cstate.fh"
 
 
 
@@ -41,9 +41,6 @@
       DIMENSION CVEC(*)
 *. Output
       DIMENSION SVEC(*)
-*
-      CALL QENTER('ADDDI')
-      IDUM=0
 *
       NTEST = 000
       NTEST = MAX(NTEST,IPRDIA)
@@ -106,6 +103,5 @@
       CALL GETMEM('KLBSTR','FREE','INTE',KLBSTR,MXNSTR*NBEL)
       CALL GETMEM('KLRJKA','FREE','REAL',KLRJKA,MAXA)
 
-      CALL QEXIT('ADDDI')
       RETURN
       END

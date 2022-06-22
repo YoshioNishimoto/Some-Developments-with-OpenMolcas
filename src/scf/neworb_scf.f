@@ -47,6 +47,7 @@
 *     history: none                                                    *
 *                                                                      *
 ************************************************************************
+      use SpinAV, only: Do_SpinAV
       Implicit Real*8 (a-h,o-z)
 #include "real.fh"
 #include "mxdm.fh"
@@ -61,25 +62,23 @@
       Logical AllowFlip
       Logical Scram, em_On
 *
-      Logical Do_SpinAV
-      COMMON  / SPAVE_L  / Do_SpinAV
       Real*8 Ovlp(nFO)
       Save iSeed
       Data iSeed/13/
 *
       Real*8 Fia
       Integer iCMO,iiBT,jEOr,iptr,nOrbmF,nOccmF,nVrt,ia,ij
-*
-***********************************************************************
-*
+*                                                                      *
+************************************************************************
+*                                                                      *
       Call Timing(Cpu1,Tim1,Tim2,Tim3)
-*define _SPECIAL_DEBUG_
-#ifdef _SPECIAL_DEBUG_
+*define _SPECIAL_DEBUGPRINT_
+#ifdef _SPECIAL_DEBUGPRINT_
       Call DebugCMOx(CMO,nCMO,nD,nBas,nOrb,nSym,'NewOrb: CMO old')
 #endif
 
-*define _DEBUG_
-#ifdef _DEBUG_
+*define _DEBUGPRINT_
+#ifdef _DEBUGPRINT_
       Call NrmClc(Fock,nFock*nD,'NewOrb','Fock')
 #endif
 *
@@ -147,18 +146,18 @@
      &                    1.0d0,FckS,nBas(iSym),
      &                    CMO(iCMO,iD),nBas(iSym),
      &                    0.0d0,HlfF,nBas(iSym))
-              Call MxMt(CMO(iCMO,iD),   nBas(iSym),1,
-     &                  HlfF,1,nBas(iSym),
-     &                  TraF,
-     &                  nOccmF,nBas(iSym))
-#ifdef _DEBUG_
+              Call DGEMM_Tri('T','N',nOccmF,nOccmF,nBas(iSym),
+     &                       One,CMO(iCMO,iD),nBas(iSym),
+     &                           HlfF,nBas(iSym),
+     &                       Zero,TraF,nOccmF)
+#ifdef _DEBUGPRINT_
 *             Call Triprt('Occupied Fock matrix in MO basis',
 *    &                    '(20F10.4)',TraF,nOccmF)
 #endif
               nOccmF=nOccmF-nConstr(iSym)
-              Call NIdiag(TraF,CMO(iCMO,iD),nOccmF,nBas(iSym),0)
+              Call NIdiag(TraF,CMO(iCMO,iD),nOccmF,nBas(iSym))
               nOccmF=nOccmF+nConstr(iSym)
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
 *             Call Triprt('Occupied Fock matrix in MO basis',
 *    &                    '(20F10.4)',TraF,nOccmF)
 #endif
@@ -181,16 +180,16 @@
      &                    1.0d0,FckS,nBas(iSym),
      &                    CMO(iCMO,iD),nBas(iSym),
      &                    0.0d0,HlfF,nBas(iSym))
-              Call MxMt(CMO(iCMO,iD),   nBas(iSym),1,
-     &                  HlfF,1,nBas(iSym),
-     &                  TraF,
-     &                  nVrt,nBas(iSym))
-#ifdef _DEBUG_
+              Call DGEMM_Tri('T','N',nVrt,nVrt,nBas(iSym),
+     &                      One,CMO(iCMO,iD),nBas(iSym),
+     &                          HlfF,nBas(iSym),
+     &                      Zero,TraF,nVrt)
+#ifdef _DEBUGPRINT_
 *             Call Triprt('Virtual Fock matrix in MO basis',
 *    &                    '(20F10.4)',TraF,nVrt)
 #endif
-              Call NIdiag(TraF,CMO(iCMO,iD),nVrt,nBas(iSym),0)
-#ifdef _DEBUG_
+              Call NIdiag(TraF,CMO(iCMO,iD),nVrt,nBas(iSym))
+#ifdef _DEBUGPRINT_
 *             Call Triprt('Virtual Fock matrix in MO basis',
 *    &                    '(20F10.4)',TraF,nVrt)
 #endif
@@ -239,10 +238,10 @@ C           Write(6,'(a,F12.6)') 'E(add)    ',GapAdd
      &                 1.0d0,FckS,nBas(iSym),
      &                 CMO(iCMO,iD),nBas(iSym),
      &                 0.0d0,HlfF,nBas(iSym))
-           Call MxMt(CMO(iCMO,iD),   nBas(iSym),1,
-     &               HlfF,1,nBas(iSym),
-     &               TraF,
-     &               nOrbmF,nBas(iSym))
+           Call DGEMM_Tri('T','N',nOrbmF,nOrbmF,nBas(iSym),
+     &                    One,CMO(iCMO,iD),nBas(iSym),
+     &                        HlfF,nBas(iSym),
+     &                    Zero,TraF,nOrbmF)
 c             Call Triprt('Case3 Fock matrix in MO basis',
 c    &                    '(20F10.4)',TraF,nOrbmF)
 *
@@ -393,7 +392,7 @@ c    &                 '(20F10.4)',TraF,nOrbmF)
 *--------- Constrained SCF section ends ----------------
 *
 *
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
 *          Call Triprt('Fock matrix in MO basis after modification',
 *    &                 '(10F10.4)',TraF,nOrbmF)
 #endif
@@ -414,13 +413,13 @@ c    &                 '(20F10.4)',TraF,nOrbmF)
      &                       nBas(iSym),0,-1,
      &                       'J',nFound,iErr)
 *
-*           Fix standard phase pf the orbitals
+*           Fix standard phase of the orbitals
 *
             Do i = 1, nBas(iSym)
-               tmp = OrbPhase(CMO(iCMO+(i-1)*nBas(iSym),iD),nBas(iSym))
+               call VecPhase(CMO(iCMO+(i-1)*nBas(iSym),iD),nBas(iSym))
             End Do
-*define _DEBUG_
-#ifdef _DEBUG_
+*define _DEBUGPRINT_
+#ifdef _DEBUGPRINT_
             Call NrmClc(Fcks,nbas(iSym)*nOrb(iSym),'NewOrb','Old CMOs')
             Call NrmClc(CMO(iCMO,iD),nbas(iSym)*nOrb(iSym),
      &                  'NewOrb','New CMOs')
@@ -553,7 +552,7 @@ c    &                 '(20F10.4)',TraF,nOrbmF)
      &                                   CMO(kOff,iD),1)
                End If
             End Do
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
             Call NrmClc(CMO(iCMO,iD),nbas(iSym)*nOrb(iSym),
      &                  'NewOrb','New CMOs')
 *           Call RecPrt('New CMOs',' ',CMO(iCMO,iD),nBas(iSym),
@@ -622,11 +621,11 @@ c    &                 '(20F10.4)',TraF,nOrbmF)
       End If
       If (MxConstr.gt.0) Call mma_deallocate(eConstr)
 *
-#ifdef _SPECIAL_DEBUG_
+#ifdef _SPECIAL_DEBUGPRINT_
       Call DebugCMOx(CMO,nCMO,nD,nBas,nOrb,nSym,'NewOrb: CMO new')
 #endif
-*define _DEBUG_
-#ifdef _DEBUG_
+*define _DEBUGPRINT_
+#ifdef _DEBUGPRINT_
 *     Do iD = 1, nD
 *        iOff=1
 *        jOff=1

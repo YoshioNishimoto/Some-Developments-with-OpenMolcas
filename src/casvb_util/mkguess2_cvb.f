@@ -8,17 +8,21 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine mkguess2_cvb(orbs,cvb,irdorbs,orbsao)
       implicit real*8 (a-h,o-z)
-#include "ext_cvb.fh"
+c ... Files/Hamiltonian available ...
+      logical, external :: tstfile_cvb
+c ... Make: up to date? ...
+      logical, external :: up2date_cvb
 #include "main_cvb.fh"
 #include "optze_cvb.fh"
 #include "files_cvb.fh"
 #include "print_cvb.fh"
 
-#include "malloc_cvb.fh"
+#include "WrkSpc.fh"
 #include "mo_cvb.fh"
       dimension orbs(norb,norb),cvb(nvb)
       dimension irdorbs(norb),orbsao(nbas_mo,norb)
@@ -43,7 +47,7 @@ c  -- restore from previous optim --
           i1=mstacki_cvb(ndetvb1)
           i2=mstackr_cvb(ndetvb1)
           call mkrestgs_cvb(orbsao,irdorbs,cvb,
-     >      w(lw(9)),iw(ll(11)),iw(ll(12)),iw(i1),w(i2))
+     >      work(lw(9)),iwork(ll(11)),iwork(ll(12)),iwork(i1),work(i2))
           call mfreei_cvb(i1)
         endif
         call untouch_cvb('RESTGS')
@@ -59,29 +63,30 @@ c  -- input --
       if(.not.up2date_cvb('INPGS'))then
         i1 = mstacki_cvb(norb)
         call rdioff_cvb(6,recinp,ioffs)
-        call rdi_cvb(iw(i1),norb,recinp,ioffs)
+        call rdi_cvb(iwork(i1),norb,recinp,ioffs)
         call rdioff_cvb(5,recinp,ioffs)
         do 200 iorb=1,norb
-        if(iw(iorb+i1-1).eq.1)then
+        if(iwork(iorb+i1-1).eq.1)then
 c MO basis ...
           irdorbs(iorb)=1
           call rdr_cvb(orbsao(1,iorb),norb,recinp,ioffs)
-        elseif(iw(iorb+i1-1).eq.2)then
+        elseif(iwork(iorb+i1-1).eq.2)then
 c AO basis ...
           irdorbs(iorb)=2
           call rdr_cvb(orbsao(1,iorb),nbas_mo,recinp,ioffs)
         endif
-200     ioffs=ioffs+mxaobf
+        ioffs=ioffs+mxaobf
+200     continue
         call mfreei_cvb(i1)
 
         i1 = mstackr_cvb(nvbinp)
         call rdioff_cvb(7,recinp,ioffs)
-        call rdrs_cvb(w(i1),nvbinp,recinp,ioffs)
-        if(dnrm2_(nvbinp,w(i1),1).gt.thresh)then
+        call rdrs_cvb(work(i1),nvbinp,recinp,ioffs)
+        if(dnrm2_(nvbinp,work(i1),1).gt.thresh)then
           call rdioff_cvb(3,recinp,ioffs)
           call rdis_cvb(idum,1,recinp,ioffs)
           kbasiscvb=idum(1)
-          call fmove_cvb(w(i1),w(lv(2)),nvbinp)
+          call fmove_cvb(work(i1),work(lv(2)),nvbinp)
         endif
         call mfreer_cvb(i1)
 
@@ -96,11 +101,13 @@ c  Leading diagonal, random but positive orbital overlaps :
         irdorbs(iorb)=1
         do 400 ii=1,norb
         orbsao(ii,iorb)=c*rand_cvb(zero)
-400     if(ii.eq.iorb)orbsao(ii,iorb)=one
+        if(ii.eq.iorb)orbsao(ii,iorb)=one
+400     continue
       else
 c  Dummy calls to RAND to get consistent guesses :
         do 500 ii=1,norb
-500     dum=rand_cvb(zero)
+        dum=rand_cvb(zero)
+500     continue
       endif
 300   continue
 
@@ -116,12 +123,12 @@ c  Collect orbitals and transform AO -> MO :
       endif
       enddo
       i1=mstackr_cvb(norb*norb_ao)
-      call ao2mo_cvb(orbsao,w(i1),norb_ao)
+      call ao2mo_cvb(orbsao,work(i1),norb_ao)
       iorb_ao=0
       do iorb=1,norb
       if(irdorbs(iorb).eq.2)then
         iorb_ao=iorb_ao+1
-        call fmove_cvb(w((iorb_ao-1)*norb+i1),orbs(1,iorb),norb)
+        call fmove_cvb(work((iorb_ao-1)*norb+i1),orbs(1,iorb),norb)
       endif
       enddo
       call mfreer_cvb(i1)
@@ -132,8 +139,10 @@ c  Collect orbitals and transform AO -> MO :
         dum=rand_cvb(.777d0)
         c=1d-1
         do 600 iorb=1,norb
-        do 600 ii=1,norb
-600     orbs(ii,iorb)=orbs(ii,iorb)+c*(one-two*rand_cvb(zero))
+        do 601 ii=1,norb
+        orbs(ii,iorb)=orbs(ii,iorb)+c*(one-two*rand_cvb(zero))
+601     continue
+600     continue
         if(abs(detm_cvb(orbs,norb)).lt.1d-8)then
           if(ip(1).ge.0)
      >      write(6,'(2a)')' Starting orbital guess was near-singular',
@@ -141,9 +150,11 @@ c  Collect orbitals and transform AO -> MO :
           dum=rand_cvb(.777d0)
           c=1d-1
           do 700 iorb=1,norb
-          do 700 ii=1,norb
+          do 701 ii=1,norb
           orbs(ii,iorb)=c*rand_cvb(zero)
-700       if(ii.eq.iorb)orbs(ii,iorb)=one
+          if(ii.eq.iorb)orbs(ii,iorb)=one
+701       continue
+700       continue
         else
           if(ip(1).ge.0)
      >      write(6,'(2a)')' Starting orbital guess was near-singular',

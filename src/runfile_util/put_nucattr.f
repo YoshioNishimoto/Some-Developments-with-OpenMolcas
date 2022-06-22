@@ -15,8 +15,7 @@
       Character*8 Label
       Integer nSym, nBas(8)
 *
-      Logical DoEMPC
-      Common /EmbPCharg/ DoEMPC
+#include "embpcharg.fh"
 *
       Call Get_iScalar('nSym',nSym)
       Call Get_iArray('nBas',nBas,nSym)
@@ -59,7 +58,7 @@
 *
       Call Put_dArray('Nuc Potential',Work(ipAttr),nLT_)
 *
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       iAttr=ipAttr
       Do i=1,nSym
          Call TriPrt('Attr Inte','',Work(iAttr),nBas(i))

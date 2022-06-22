@@ -12,17 +12,17 @@
 ************************************************************************
       SUBROUTINE TRACHOSZ
       USE CHOVEC_IO
+      USE Para_Info, ONLY: nProcs
+      use ChoSwp, only: InfVec
       IMPLICIT NONE
 * ----------------------------------------------------------------
 #include "rasdim.fh"
-#include "warnings.fh"
+#include "warnings.h"
 #include "caspt2.fh"
 #include "eqsolv.fh"
 #include "chocaspt2.fh"
-#include "choptr.fh"
 #include "choglob.fh"
 #include "WrkSpc.fh"
-#include "para_info.fh"
 #ifdef _MOLCAS_MPP_
 #include "global.fh"
 #include "mafdecls.fh"
@@ -30,15 +30,13 @@
       INTEGER IB,IBSTA,IBEND,IBATCH_TOT,NBATCH,NV
       INTEGER ICASE,ISYMA,ISYMB,ISYQ,JSYM,NPB,NPQ
       INTEGER JRED,JRED1,JRED2,JSTART
-      INTEGER IDISK,IPNT
+      INTEGER IDISK
       INTEGER MXFTARR,MXHTARR
       INTEGER MXSPC
       INTEGER NVACT,NVACC,NVECS_RED
 **********************************************************************
 *  Author : P. A. Malmqvist
 **********************************************************************
-
-      Call QEnter('TraChoSZ')
 
 * ======================================================================
 * Determine sectioning size to use for the full-transformed MO vectors
@@ -78,33 +76,38 @@ CSVC: MPI workaround: collected chovecs should not exceed 2GB
 * Max number of vectors actually used in one batch:
       NJSCT=0
       IBATCH_TOT=0
+
       DO JSYM=1,NSYM
 * Nr of batches in earlier symmetries:
         NBTCHES(JSYM)=IBATCH_TOT
         NBTCH(JSYM)=0
-        IF(NUMCHO_PT2(JSYM).LE.0) CYCLE
-        ipnt=ip_InfVec+MaxVec_PT2*(1+InfVec_N2_PT2*(jSym-1))
-        JRED1=iWork(ipnt)
-        JRED2=iWork(ipnt-1+NumCho_PT2(jSym))
+        Select Case (NUMCHO_PT2(JSYM))
+        Case (0)
+           NBTCH(JSYM)=0
+        Case Default
+           JRED1=InfVec(1,2,jSym)
+           JRED2=InfVec(NumCho_PT2(jSym),2,jSym)
 * Loop over the reduced sets:
-        DO JRED=JRED1,JRED2
-          CALL Cho_X_nVecRS(JRED,JSYM,JSTART,NVECS_RED)
+           DO JRED=JRED1,JRED2
+             CALL Cho_X_nVecRS(JRED,JSYM,JSTART,NVECS_RED)
 * It happens that a reduced set is empty:
-          IF(NVECS_RED.eq.0) CYCLE
+             IF(NVECS_RED.eq.0) CYCLE
 * Reduced set JRED contains NVECS_RED vectors
 * Reduced set JRED must be divided up into NBATCH batches
-          NBATCH=1+(NVECS_RED-1)/MXNVC
+             NBATCH=1+(NVECS_RED-1)/MXNVC
 * Necessary number of vectors in each batch is then:
-          NV=1+(NVECS_RED-1)/NBATCH
-          NJSCT=MAX(NV,NJSCT)
-          NBTCH(JSYM)=NBTCH(JSYM)+NBATCH
-        END DO
+             NV=1+(NVECS_RED-1)/NBATCH
+             NJSCT=MAX(NV,NJSCT)
+             NBTCH(JSYM)=NBTCH(JSYM)+NBATCH
+           END DO
+        End Select
         ! take maximum number of batches for this symmetry over any
         ! process, such that all procs have the same number of batches
         CALL GAIGOP(NBTCH(JSYM),1,'max')
         IBATCH_TOT=IBATCH_TOT+NBTCH(JSYM)
 * Nr of batches in this symmetry:
       END DO
+
       NBATCH_TOT=IBATCH_TOT
 
 #ifdef _MOLCAS_MPP_
@@ -121,7 +124,7 @@ CSVC: take the global sum of the individual maxima
       NFTSPC_TOT=NJSCT_TOT*MXFTARR
 #endif
 
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       WRITE(6,*)' To be allocated for ...'
       WRITE(6,'(A,1X,I12)')'   Chol. vectors: NCHSPC     =',NCHSPC
       WRITE(6,'(A,1X,I12)')'   half-transf  : NHTSPC     =',NHTSPC
@@ -145,9 +148,9 @@ CSVC: take the global sum of the individual maxima
       IBATCH_TOT=0
       DO JSYM=1,NSYM
         IF(NUMCHO_PT2(JSYM).LE.0) CYCLE
-        ipnt=ip_InfVec+MaxVec_PT2*(1+InfVec_N2_PT2*(jSym-1))
-        JRED1=iWork(ipnt)
-        JRED2=iWork(ipnt-1+NumCho_PT2(jSym))
+        JRED1=InfVec(1,2,jSym)
+        JRED2=InfVec(NumCho_PT2(jSym),2,jSym)
+
         DO JRED=JRED1,JRED2
           CALL Cho_X_nVecRS(JRED,JSYM,JSTART,NVECS_RED)
 * It happens that a reduced set is empty:
@@ -191,7 +194,7 @@ CSVC: take the global sum of the individual maxima
 * available from the CHOVEC_IO module.
 
       ALLOCATE(NVGLB_CHOBATCH(NBATCH_TOT))
-      NVGLB_CHOBATCH=NVLOC_CHOBATCH
+      NVGLB_CHOBATCH(:)=NVLOC_CHOBATCH(:)
 #ifdef _MOLCAS_MPP_
       ! for parrallel, sum over processes
       CALL GAIGOP(NVGLB_CHOBATCH,NBATCH_TOT,'+')
@@ -228,7 +231,6 @@ CSVC: take the global sum of the individual maxima
         END DO
       END DO
 
-      Call QExit('TraChoSZ')
       RETURN
       END
 

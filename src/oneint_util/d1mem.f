@@ -8,15 +8,17 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
-      Subroutine D1Mem(nHer,MemD1,la,lb,lr)
+      Subroutine D1Mem(
+#define _CALLING_
+#include "mem_interface.fh"
+     &)
+      use Sizes_of_Seward, only: S
       Implicit Real*8 (A-H,O-Z)
+#include "mem_interface.fh"
 *
-#include "itmax.fh"
-#include "info.fh"
-*
-      nHer=mCentr
-      MemD1 = 3*(la+1)*nHer +
-     &        3*(lb+1)*nHer
+      nHer=S%mCentr
+      Mem = 3*(la+1)*nHer +
+     &      3*(lb+1)*nHer
 *
       Return
 c Avoid unused argument warnings

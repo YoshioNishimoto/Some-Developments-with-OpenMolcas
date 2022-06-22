@@ -14,12 +14,12 @@
   O     0.0000000   -1.0853616    0.2216040
   O     0.0000000    0.0000000   -0.4432081
   O     0.0000000    1.0853616    0.2216040
- Basis set
+ Basis
   ANO-RCC-vtzp
 End of Input
 
 &SEWARD
- R02O02
+ Relativistic = R02O02
  CHOLESKY
 End Of Input
 
@@ -37,7 +37,7 @@ End Of Input
  Symmetry
   1
  Spin
-  1 
+  1
  orblisting
   all
  ITERation

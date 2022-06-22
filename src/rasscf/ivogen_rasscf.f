@@ -53,9 +53,8 @@
       Implicit None
 #include "real.fh"
 #include "stdalloc.fh"
-#include "warnings.fh"
+#include "warnings.h"
 #include "output_ras.fh"
-      Parameter (ROUTINE='IVOGEN_RASSCF   ')
 *
       Integer  nCMO, nEOrb, nSym
       Integer  nBas(nSym), nFro(nSym), nIsh(nSym), nAsh(nSym)
@@ -70,7 +69,7 @@
       Integer  MaxBas, MaxBOO, MaxOrO, nBT
       Integer  iRc, iOpt, iComp, iSyLbl
       Real*8   Dummy
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       Integer  iOff, iBas
 #endif
 
@@ -86,7 +85,7 @@
          MaxOrO = Max(MaxOrO,nBas(iSym) - nOcc(iSym))
          MaxBOO = Max(MaxBOO,nBas(iSym)*(nBas(iSym)-nOcc(iSym)))
       End Do
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       Do iSym=1, nSym
          Call RecPrt('IvoGen: CMO(in)',' ',CMO(iCMO),nBas(iSym),
      &                                               nBas(iSym) )
@@ -113,7 +112,7 @@
         Write(LF,*)' wrong with the file.'
         Call Quit(_RC_IO_ERROR_READ_)
       End If
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       Write(LF,*)
       Write(LF,*) ' OneHam in AO basis in RASSCF'
       Write(LF,*) ' ---------------------'
@@ -157,10 +156,10 @@
      &                        CMO(iCMO),nBas(iSym),
      &                  0.0d0,FckH,nBas(iSym))
             ! multiply FckT =  CMO x FckH
-            Call MxMt(CMO(iCMO),   nBas(iSym),1,
-     &                FckH,1,nBas(iSym),
-     &                FckT,
-     &                nOrbi,nBas(iSym))
+            Call DGEMM_Tri('T','N',nOrbi,nOrbi,nBas(iSym),
+     &                     One,CMO(iCMO), nBas(iSym),
+     &                         FckH,nBas(iSym),
+     &                     Zero,FckT,nOrbi)
 *
 *---------- Diagonalize OneHam within virtual space and form orbital energies
             Call mma_allocate(Scratch,nOrbi**2,Label='Scratch')

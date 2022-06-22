@@ -21,10 +21,7 @@
       DIMENSION X1(NX1MX),X2(NX2MX),X3(NX3MX),VXPQ(NVXPQ)
       DIMENSION CMO1(NCMO),CMO2(NCMO),TUVX(NGAM2)
 #include "rassi.fh"
-      COMMON/TRNSFRM/ NPQ,NBPQ,NBRS,LADX,NAVX,NAP,NAQ,NAR,NAS,
-     *               NBP,NBQ,NBR,NBS,ISP,ISQ,ISR,ISS,IAPR(8),
-     *               LMOP1,LMOQ1,LMOR1,LMOS1,NX1MX,NX2MX,
-     *               NX3MX,NVXPQ
+#include "trnsfrm.fh"
 C START LOOP OVER ORDERED AO-INTEGRALS: NPQ PQ-PAIRS IN EACH BUFFER.
 C FOR EACH PQ PAIR, THERE IS A MATRIX CONTAINING THE (PQ,RS)
 C INTEGRALS. INDEX S RUNS FASTEST, SO BY FORTRAN RULES, IF REGARDED
@@ -59,14 +56,6 @@ C START TRANSFORMATION OF THIS PQ=PAIR
           CALL DCOPY_(NBR*NBS,X1(IRSST),1,X2,1)
         ENDIF
 C X2 CONTAINS THE MATRIX JPQ TRANSPOSED, X2(IS,IR)=JPQ(R,S)=(PQ/RS).
-*         CALL MXMA(X2,        NBS,1,
-*     *             CMO2(LMOS1),1,NBS,
-*     *             X3,         1,NBR,
-*     *             NBR,NBS,NAS)
-*         CALL MXMA(X3,         NBR,1,
-*     *             CMO1(LMOR1),1,NBR,
-*     *             X2,         1,NAS,
-*     *             NAS,NBR,NAR)
          CALL DGEMM_('T','N',NBR,NAS,NBS,1.0D0,
      &              X2,NBS,CMO2(LMOS1),NBS,
      &        0.0D0,X3,NBR)
@@ -86,7 +75,7 @@ C FORTRAN ORDER IMPLIES THEN THAT U>=X AND, IF U=X, THEN T>=V.
       IPQST=1-NBPQ
       DO 20 IV=1,NAR
         IVF=IV+IAPR(ISR)
-        DO 20 IX=1,NAS
+        DO 21 IX=1,NAS
           IXF=IX+IAPR(ISS)
           IVX=IVF+NASHT*(IXF-1)
           IPQST=IPQST+NBPQ
@@ -99,10 +88,6 @@ C X3 IS HALF-TRANSFORMED JVX MATRIX, TRANSPOSED. X3(IQ,IP)=(PQ/VX).
 C WHEN TRANSFORMING, SKIP INDICES U=1..IUM.
           IUM=0
           IF(ISQ.EQ.ISS) IUM=IX-1
-*          CALL MXMA(X3,                 NBQ,1,
-*     *              CMO2(LMOQ1+IUM*NBQ),1,NBQ,
-*     *              X1,                 1,NBP,
-*     *              NBP,NBQ,NAQ-IUM)
          CALL DGEMM_('T','N',NBP,NAQ-IUM,NBQ,1.0D0,
      &              X3,NBQ,CMO2(LMOQ1+IUM*NBQ),NBQ,
      &        0.0D0,X1,NBP)
@@ -110,17 +95,13 @@ C X1(IU,IP) = (PU/VX) FOR THE GIVEN VX, ALL P, AND U>=X, WHERE P
 C IS BASIS FUNCTIONS IN SYMMETRY ISP, U AND X ARE ACTIVE ORBITALS
 C OF STATE 2 IN SYMMETRIES ISQ AND ISS, RESP., AND V IS ACTIVE ORB
 C OF STATE 1 AND HAS SYMMETRY ISR.
-*          CALL MXMA(X1,         NBP,1,
-*     *              CMO1(LMOP1),1,NBP,
-*     *              X2,         1,NAQ-IUM,
-*     *              NAQ-IUM,NBP,NAP)
          CALL DGEMM_('T','N',NAQ-IUM,NAP,NBP,1.0D0,
      &              X1,NBP,CMO1(LMOP1),NBP,
      &        0.0D0,X2,NAQ-IUM)
 C X2 NOW CONTAINS THE TRANSFORMED JVX MATRIX TRANSPOSED, I.E.,
 C X2(IU-IUM,IT)=JVX(T,U)=(TU/VX), IU=IUM+1,..,NAQ,  IT=1,..,NAP.
           II=0
-          DO 15 IT=1,NAP
+          DO 14 IT=1,NAP
             ITF=IT+IAPR(ISP)
             DO 15 IU=IUM+1,NAQ
               IUF=IU+IAPR(ISQ)
@@ -132,19 +113,16 @@ C X2(IU-IUM,IT)=JVX(T,U)=(TU/VX), IU=IUM+1,..,NAQ,  IT=1,..,NAP.
                 ITUVX=(ITU*(ITU-1))/2+IVX
               END IF
               TUVX(ITUVX)=X2(II)
-15        CONTINUE
-      IF(ISP.EQ.ISQ) GOTO 20
+15          CONTINUE
+14        CONTINUE
+      IF(ISP.EQ.ISQ) GOTO 21
 C X3 STILL CONTAINS THE JVX MATRIX, TRANSPOSED. X3(IQ,IP)=(PQ/VX).
 C PERM SYMMETRY OF P AND Q MEANS WE CAN LET THEM SWITCH IDENTITY.
-C FOR REMAINDER OF LOOP 20, IF ISP.NE.ISQ, THEN REGARD X3 AS
+C FOR REMAINDER OF LOOP 21, IF ISP.NE.ISQ, THEN REGARD X3 AS
 C CONTAINING X3(IQ,IP)=(QP/VX) AND TRANSFORM AS BEFORE.
 C WHEN TRANSFORMING, SKIP INDICES U=1..IUM.
           IUM=0
           IF(ISP.EQ.ISS) IUM=IX-1
-*          CALL MXMA(X3,                 1,NBQ,
-*     *              CMO2(LMOP1+IUM*NBP),1,NBP,
-*     *              X1,                 1,NBQ,
-*     *              NBQ,NBP,NAP-IUM)
          CALL DGEMM_('N','N',NBQ,NAP-IUM,NBP,1.0D0,
      &              X3,NBQ,CMO2(LMOP1+IUM*NBP),NBP,
      &        0.0D0,X1,NBQ)
@@ -152,10 +130,6 @@ C X1(IQ,IU) = (QU/VX) FOR THE GIVEN VX, ALL Q, AND U>=X, WHERE Q
 C IS BASIS FUNCTIONS IN SYMMETRY ISQ, U AND X ARE ACTIVE ORBITALS
 C OF STATE 2 IN SYMMETRIES ISP AND ISS, RESP., AND V IS ACTIVE ORB
 C OF STATE 1 AND HAS SYMMETRY ISR.
-*          CALL MXMA(X1,         NBQ,1,
-*     *              CMO1(LMOQ1),1,NBQ,
-*     *              X2,         1,NAP-IUM,
-*     *              NAP-IUM,NBQ,NAQ)
          CALL DGEMM_('T','N',NAP-IUM,NAQ,NBQ,1.0D0,
      &              X1,NBQ,CMO1(LMOQ1),NBQ,
      &        0.0D0,X2,NAP-IUM)
@@ -164,7 +138,7 @@ C X2(IU-IUM,IT)=JVX(T,U)=(TU/VX), IU=IUM+1,..,NAP,  IT=1,..,NAQ.
           II=0
           DO 16 IT=1,NAQ
             ITF=IT+IAPR(ISQ)
-            DO 16 IU=IUM+1,NAP
+            DO 17 IU=IUM+1,NAP
               IUF=IU+IAPR(ISP)
               II=II+1
               ITU=ITF+NASHT*(IUF-1)
@@ -174,7 +148,9 @@ C X2(IU-IUM,IT)=JVX(T,U)=(TU/VX), IU=IUM+1,..,NAP,  IT=1,..,NAQ.
                 ITUVX=(ITU*(ITU-1))/2+IVX
               END IF
               TUVX(ITUVX)=X2(II)
+17          CONTINUE
 16        CONTINUE
+21      CONTINUE
 20    CONTINUE
       IF(ISR.EQ.ISS) GOTO 100
 C NOW REPEAT IT ALL OVER AGAIN. THIS TIME, USE PERMUTATION
@@ -202,14 +178,6 @@ C IF NECESSARY, READ IN A FRESH INTEGRAL BUFFER OF NPQ MATRICES:
         CALL DCOPY_(NBR*NBS,X1(IRSST),1,X2,1)
 C X2 CONTAINS THE MATRIX JPQ , X2(IS,IR)=JPQ(S,R)=(PQ/SR).
 C NOTE THAT SYMMETRY OF R IS ISS AND SYMMETRY OF S IS ISR NOW.
-*         CALL MXMA(X2,         1,NBS,
-*     *             CMO2(LMOR1),1,NBR,
-*     *             X3,         1,NBS,
-*     *             NBS,NBR,NAR)
-*         CALL MXMA(X3,         NBS,1,
-*     *             CMO1(LMOS1),1,NBS,
-*     *             X2,         1,NAR,
-*     *             NAR,NBS,NAS)
          CALL DGEMM_('N','N',NBS,NAR,NBR,1.0D0,
      &              X2,NBS,CMO2(LMOR1),NBR,
      &        0.0D0,X3,NBS)
@@ -227,7 +195,7 @@ C FORTRAN ORDER IMPLIES THEN THAT U>=X AND, IF U=X, THEN T>=V.
       IPQST=1-NBPQ
       DO 40 IV=1,NAS
         IVF=IV+IAPR(ISS)
-        DO 40 IX=1,NAR
+        DO 41 IX=1,NAR
           IXF=IX+IAPR(ISR)
           IVX=IVF+NASHT*(IXF-1)
           IPQST=IPQST+NBPQ
@@ -240,10 +208,6 @@ C X3 IS HALF-TRANSFORMED JVX MATRIX, TRANSPOSED. X3(IQ,IP)=(PQ/VX).
 C WHEN TRANSFORMING, SKIP INDICES U=1..IUM.
           IUM=0
           IF(ISQ.EQ.ISR) IUM=IX-1
-*          CALL MXMA(X3,                 NBQ,1,
-*     *              CMO2(LMOQ1+IUM*NBQ),1,NBQ,
-*     *              X1,                 1,NBP,
-*     *              NBP,NBQ,NAQ-IUM)
           CALL DGEMM_('T','N',NBP,NAQ-IUM,NBQ,1.0D0,
      &               X3,NBQ,CMO2(LMOQ1+IUM*NBQ),NBQ,
      &        0.0D0, X1,NBP)
@@ -251,17 +215,13 @@ C X1(IU,IP) = (PU/VX) FOR THE GIVEN VX, ALL P, AND U>=X, WHERE P
 C IS BASIS FUNCTIONS IN SYMMETRY ISP, U AND X ARE ACTIVE ORBITALS
 C OF STATE 2 IN SYMMETRIES ISQ AND ISR, RESP., AND V IS ACTIVE ORB
 C OF STATE 1 AND HAS SYMMETRY ISS.
-*          CALL MXMA(X1,         NBP,1,
-*     *              CMO1(LMOP1),1,NBP,
-*     *              X2,         1,NAQ-IUM,
-*     *              NAQ-IUM,NBP,NAP)
           CALL DGEMM_('T','N',NAQ-IUM,NAP,NBP,1.0D0,
      &               X1,NBP,CMO1(LMOP1),NBP,
      &        0.0D0, X2,NAQ-IUM)
 C X2 NOW CONTAINS THE TRANSFORMED JVX MATRIX TRANSPOSED, I.E.,
 C X2(IU,IT)=JVX(T,U)=(TU/VX), IU=IUM+1,..,NAQ,  IT=1,..,NAP.
           II=0
-          DO 35 IT=1,NAP
+          DO 34 IT=1,NAP
             ITF=IT+IAPR(ISP)
             DO 35 IU=IUM+1,NAQ
               IUF=IU+IAPR(ISQ)
@@ -273,19 +233,16 @@ C X2(IU,IT)=JVX(T,U)=(TU/VX), IU=IUM+1,..,NAQ,  IT=1,..,NAP.
                 ITUVX=(ITU*(ITU-1))/2+IVX
               END IF
               TUVX(ITUVX)=X2(II)
-35        CONTINUE
-      IF(ISP.EQ.ISQ) GOTO 40
+35          CONTINUE
+34        CONTINUE
+      IF(ISP.EQ.ISQ) GOTO 41
 C X3 STILL CONTAINS THE JVX MATRIX, TRANSPOSED. X3(IQ,IP)=(PQ/VX).
 C PERM SYMMETRY OF P AND Q MEANS WE CAN LET THEM SWITCH IDENTITY.
-C FOR REMAINDER OF LOOP 40, IF ISP.NE.ISQ, THEN REGARD X3 AS
+C FOR REMAINDER OF LOOP 41, IF ISP.NE.ISQ, THEN REGARD X3 AS
 C CONTAINING X3(IQ,IP)=(QP/VX) AND TRANSFORM AS BEFORE.
 C WHEN TRANSFORMING, SKIP INDICES U=1..IUM.
           IUM=0
           IF(ISP.EQ.ISR) IUM=IX-1
-*          CALL MXMA(X3,                 1,NBQ,
-*     *              CMO2(LMOP1+IUM*NBP),1,NBP,
-*     *              X1,                 1,NBQ,
-*     *              NBQ,NBP,NAP-IUM)
           CALL DGEMM_('N','N',NBQ,NAP-IUM,NBP,1.0D0,
      &               X3,NBQ,CMO2(LMOP1+IUM*NBP),NBP,
      &        0.0D0, X1,NBQ)
@@ -293,10 +250,6 @@ C X1(IQ,IU) = (QU/VX) FOR THE GIVEN VX, ALL Q, AND U>=X, WHERE Q
 C IS BASIS FUNCTIONS IN SYMMETRY ISQ, U AND X ARE ACTIVE ORBITALS
 C OF STATE 2 IN SYMMETRIES ISP AND ISR, RESP., AND V IS ACTIVE ORB
 C OF STATE 1 AND HAS SYMMETRY ISS.
-*          CALL MXMA(X1,         NBQ,1,
-*     *              CMO1(LMOQ1),1,NBQ,
-*     *              X2,         1,NAP-IUM,
-*     *              NAP-IUM,NBQ,NAQ)
           CALL DGEMM_('T','N',NAP-IUM,NAQ,NBQ,1.0D0,
      &               X1,NBQ,CMO1(LMOQ1),NBQ,
      &        0.0D0, X2,NAP-IUM)
@@ -305,7 +258,7 @@ C X2(IU,IT)=JVX(T,U)=(TU/VX), IU=IUM+1,..,NAP,  IT=1,..,NAQ.
           II=0
           DO 36 IT=1,NAQ
             ITF=IT+IAPR(ISQ)
-            DO 36 IU=IUM+1,NAP
+            DO 37 IU=IUM+1,NAP
               IUF=IU+IAPR(ISP)
               II=II+1
               ITU=ITF+NASHT*(IUF-1)
@@ -315,7 +268,9 @@ C X2(IU,IT)=JVX(T,U)=(TU/VX), IU=IUM+1,..,NAP,  IT=1,..,NAQ.
                 ITUVX=(ITU*(ITU-1))/2+IVX
               END IF
               TUVX(ITUVX)=X2(II)
+37          CONTINUE
 36        CONTINUE
+41      CONTINUE
 40    CONTINUE
 100   CONTINUE
 *

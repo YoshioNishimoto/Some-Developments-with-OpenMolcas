@@ -135,8 +135,7 @@
 * ChFracMem - fraction of memory used as a buffer for keeping          *
 *             Cholesky vectors previously read from disk               *
 *----------------------------------------------------------------------*
-      Real*8 ChFracMem
-      COMMON /CHOPAR/ ChFracMem
+#include "chopar.fh"
 
       Integer MxConstr, nConstr(8), indxC(16,2,8), klockan
       COMMON /iCSCF/ MxConstr, nConstr, indxC, klockan
@@ -196,7 +195,7 @@
       Character*(LENIN)  Atom(MxBS)
       Character*8   Type(MxBS)
       Character*4   Neg2_Action
-      Character*16  KSDFT
+      Character*80  KSDFT
       Character*512 SCF_FileOrb
       Logical isHDF5
       Integer fileorb_id
@@ -214,7 +213,7 @@
 * TotCpu - total CPU time                                              *
 * TotIO  - total I/O time                                              *
 * TimFld - time of specified sections of the program                   *
-* NamFld - names of those sections (set up in scf.f)                   *
+* NamFld - names of those sections (set up in scf_init)                *
 *----------------------------------------------------------------------*
       Integer    nFld
       Parameter (nFld = 16)
@@ -266,7 +265,7 @@
 * Damping    - T   = 'Damping' is used...                              *
 * Diis       - T   = 'Diis' is used...                                 *
 * PmTime     - T   = Subroutine PMat_SCF is timed                      *
-* EmConv     - T   = Emergency converged is siganed by someone.        *
+* EmConv     - T   = Emergency converged is signaled by someone.       *
 * WarnCfg    - T   = Solution might not be lowest configuration        *
 * WarnPocc   - T   = Solution with partial occ. no. found              *
 * WarnSlow   - T   = Warn about slow convergence.                      *

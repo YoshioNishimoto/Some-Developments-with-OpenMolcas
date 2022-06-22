@@ -77,7 +77,7 @@
       num_IS_init=num_IS_init+1
 
       If(num_IS_init.gt.nTocIS) Then
-#ifdef _DEBUG__
+#ifdef _DEBUGPRINT__
         Do i=1,num_IS_init
            write(6,*) iLbl_IS_inmem(i), IS_init(i), i_IS_inmem(i)
         End Do
@@ -138,7 +138,7 @@
             Write(6,*) '*** Warning, reading temporary iScalar field'
             Write(6,*) '***   Field: ',Label
             Write(6,*) '***'
-#ifdef _BIGOT_
+#ifndef _DEVEL_
             Call AbEnd()
 #endif
          End If
@@ -148,10 +148,10 @@
 *----------------------------------------------------------------------*
       i_run_IS_used(item)=i_run_IS_used(item)+1
       If(item.eq.-1) Then
-         Call SysAbendMsg('get_iScalar','Could not locate',Label)
+         Call SysAbendMsg('get_iScalar','Could not locate: ',Label)
       End If
       If(RecIdx(item).eq.0) Then
-         Call SysAbendMsg('get_iScalar','Data not defined',Label)
+         Call SysAbendMsg('get_iScalar','Data not defined: ',Label)
       End If
       Data=RecVal(item)
 *----------------------------------------------------------------------*

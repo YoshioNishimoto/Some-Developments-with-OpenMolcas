@@ -36,18 +36,16 @@
       Implicit Real*8 (A-H,O-Z)
 *
 #include "rasdim.fh"
-#include "warnings.fh"
+#include "warnings.h"
 #include "rasscf.fh"
 #include "general.fh"
 #include "output_ras.fh"
 #include "orthonormalize.fh"
-      Parameter (ROUTINE='ORTHO   ')
 *
       Dimension Smat(*),SCRATCH(*),CMO(*),Temp(*)
 *                                                                      *
 ************************************************************************
 *                                                                      *
-      Call qEnter('ORTHO')
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -100,7 +98,7 @@ C           Call RecPrt('CMO',' ',CMO(ip_CMO),iBas,iBas)
 *
 * --- compute W^-1/2
 *
-               Call Lowdin(Temp,SCRATCH,iOcc)
+               Call Lowdin_LP(Temp,SCRATCH,iOcc)
 *
 * --- compute C' = C*W^-1/2
 *
@@ -128,7 +126,6 @@ C           Call RecPrt('CMO',' ',CMO(ip_CMO),iBas,iBas)
 *                                                                      *
 ************************************************************************
 *                                                                      *
-      Call qExit('ORTHO')
 *                                                                      *
 ************************************************************************
 *                                                                      *

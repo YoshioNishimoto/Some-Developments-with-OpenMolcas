@@ -21,21 +21,20 @@ c  neq(Nneq) number of equivalent sites of type i
 c
       Implicit None
 #include "stdalloc.fh"
-      Integer, parameter        :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter        :: wp=kind(0.d0)
 c main input variables
       Integer, intent(in)          :: nneq, exch, nmax, lmax
       Integer, intent(in)          :: neq(nneq), nexch(nneq)
       Integer, intent(in)          :: NmaxPop
-      Complex(kind=wp), intent(in) :: Z(exch,exch)
+      Complex(kind=8), intent(in) :: Z(exch,exch)
 c local variables
       Integer          :: i,j,l,isite,i1,i2,nb1,nb2,nb3,tmp,il,nb
       Integer          :: nind(lmax,2),intc(lmax)
       Integer          :: ibas(exch,lmax)
 !     pop(exch,lmax,nmax,nmax)
-      Complex(kind=wp), allocatable :: pop(:,:,:,:)
+      Complex(kind=8), allocatable :: pop(:,:,:,:)
       Character(len=50):: fmtline
       Logical          :: DBG
-      Call qEnter('PA_popanalysis')
       DBG=.false.
 
       If(DBG) Then
@@ -149,7 +148,6 @@ c     sum over all other components of other sites
 
       call mma_deallocate(pop)
 
-      Call qExit('PA_popanalysis')
       Return
       End
 

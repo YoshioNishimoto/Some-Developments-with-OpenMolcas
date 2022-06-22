@@ -20,12 +20,12 @@ C
       Integer n
       Integer nV(n)
 #include "cholesky.fh"
-#include "chopar.fh"
+#include "chpari.fh"
 #include "cho_para_info.fh"
 
       Integer iSym
 
-#if defined (_DEBUG_)
+#if defined (_DEBUGPRINT_)
       If (n .lt. nSym) Then
          Call Cho_Quit('Illegal input variable in Cho_X_GetTotV',104)
       End If

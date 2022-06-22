@@ -21,7 +21,6 @@ C
 #include "gugx.fh"
 #include "WrkSpc.fh"
 #include "output_ras.fh"
-      Parameter(Routine='MKSGNUM')
 C
       DIMENSION IDOWN(NVERT,0:3),IUP(NVERT,0:3)
       DIMENSION IDAW(NVERT,0:4),IRAW(NVERT,0:4)
@@ -30,7 +29,6 @@ C
       DIMENSION ICASE(NICASE)
       DIMENSION ISTEPVEC(mxact)
 
-      Call qEnter(Routine)
 C
 C     INITIALIZE NUMBERING TABLES
 C
@@ -50,7 +48,7 @@ C
         DO ISYM=1,NSYM
           IUOFF=1+IOW(1,ISYM,MIDV)
           NUW=NOW(1,ISYM,MIDV)
-          JSYM=MUL(ISYM,LSYM)
+          JSYM=MUL(ISYM,STSYM)
           ILOFF=1+IOW(2,JSYM,MIDV)
           NLW=NOW(2,JSYM,MIDV)
           IF( NUW.EQ.0 .OR. NLW.EQ.0 ) GOTO 110
@@ -133,6 +131,5 @@ C
         Write(LF,*)
       ENDIF
 
-      Call qExit(Routine)
       RETURN
       END

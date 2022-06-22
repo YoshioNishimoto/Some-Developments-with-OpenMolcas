@@ -17,10 +17,10 @@
 * SWEDEN                                     *
 *--------------------------------------------*
       SUBROUTINE ORBCTL(CMO)
+      use output_caspt2, only:iPrGlb,verbose,debug
       IMPLICIT NONE
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "pt2_guga.fh"
 #include "chocaspt2.fh"
 #include "WrkSpc.fh"
@@ -36,7 +36,6 @@
 C Calculate transformation matrix to PT2 orbitals, defined as those
 C that have standard Fock matrix FIFA diagonal within inactive,
 C active, and secondary subblocks.
-      CALL QENTER('ORBCTL')
 
 c Determine PT2 orbitals, and transform CI coeffs.
       IF(IPRGLB.GE.DEBUG) THEN
@@ -62,19 +61,25 @@ c Determine PT2 orbitals, and transform CI coeffs.
 * Use the transformation matrices to change the HONE, FIMO, and FIFA arrays:
       CALL TRANSFOCK(WORK(LTORB),WORK(LHONE),1)
       CALL TRANSFOCK(WORK(LTORB),WORK(LFIMO),1)
+
 * When doing XMS, FAMO refers only to the last state, therefore it's wrong!
 * However, we never use it anywhere else...
-      CALL TRANSFOCK(WORK(LTORB),WORK(LFAMO),1)
+      ! CALL TRANSFOCK(WORK(LTORB),WORK(LFAMO),1)
 *****
+
       CALL TRANSFOCK(WORK(LTORB),WORK(LFIFA),1)
 
 * When doing XMS, DREF refers to the last state considered and it is not the
 * state average density, therefore it's wrong to transform it!
 * However, it is never used again in this part, and next time it is used, it
 * is actually recomputed for the right place.
-      CALL TRANSDREF(WORK(LTORB),WORK(LDREF))
+      ! CALL TRANSDREF(WORK(LTORB),WORK(LDREF))
 *****
+
+* DREF is not really used for anything important in MKEPS, this is why we don't
+* care that we pass the wrong one in...
       CALL MKEPS(WORK(LFIFA),WORK(LDREF))
+
       IF(IPRGLB.GE.DEBUG) THEN
        WRITE(6,*)' ORBCTL back from TRANSFOCK.'
       END IF
@@ -93,7 +98,7 @@ c Print new orbitals. First, form array of orbital energies.
       I2=1
       DO ISYM=1,NSYM
         IF(NFRO(ISYM).GT.0) THEN
-          CALL DCOPY_(NFRO(ISYM),[0.0D00],0,WORK(LORBE-1+I2),1)
+          CALL DCOPY_(NFRO(ISYM),[0.0D0],0,WORK(LORBE-1+I2),1)
           I2=I2+NFRO(ISYM)
         END IF
         IF(NORB(ISYM).GT.0) THEN
@@ -102,7 +107,7 @@ c Print new orbitals. First, form array of orbital energies.
           I2=I2+NORB(ISYM)
         END IF
         IF(NDEL(ISYM).GT.0) THEN
-          CALL DCOPY_(NDEL(ISYM),[0.0D00],0,WORK(LORBE-1+I2),1)
+          CALL DCOPY_(NDEL(ISYM),[0.0D0],0,WORK(LORBE-1+I2),1)
           I2=I2+NDEL(ISYM)
         END IF
       END DO
@@ -137,7 +142,6 @@ C Print orbitals. Different options:
   99  CONTINUE
       CALL GETMEM('ORBE','FREE','REAL',LORBE,NBAST)
 
-      CALL QEXIT('ORBCTL')
 
       RETURN
       END

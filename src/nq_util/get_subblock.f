@@ -1,4 +1,4 @@
-************************************************************************
+***********************************************************************
 * This file is part of OpenMolcas.                                     *
 *                                                                      *
 * OpenMolcas is free software; you can redistribute it and/or modify   *
@@ -12,21 +12,12 @@
 ************************************************************************
       Subroutine Get_Subblock(Kernel,Func,ixyz,
      &                        Maps2p,list_s,list_exp,list_bas,
-     &                        nShell,nSym, list_p,R2_trial,nNQ,
-     &                        AOInt,nAOInt,
-     &                        FckInt,nFckDim,nFckInt,SOTemp,nSOTemp,
-     &                        Dens,nDens,nD,
-     &                        Grid,Weights,Rho,mGrid,nRho,
-     &                        ndF_dRho,nP2_ontop,ndF_dP2ontop,
-     &                        Do_Mo,Do_TwoEl,l_Xhol,
-     &                        TmpPUVX,nTmpPUVX,nMOs,CMOs,nCMO,DoIt,
-     &                        P2mo,np2act,D1mo,nD1mo,P2_ontop,
-     &                        Do_Grad,Grad,nGrad,List_G,IndGrd,iTab,
-     &                        Temp,mGrad,F_xc,dF_dRho,
-cGLM     &                        Temp,mGrad,F_xc,F_xca,F_xcb,dF_dRho,
-     &                        dF_dP2ontop,
-     &                        DFTFOCK,mAO,mdRho_dR,
-     &                        LOE_DB,LTEG_DB)
+     &                        nShell,nSym, list_p,nNQ,
+     &                        FckInt,nFckDim,nFckInt,nD,
+     &                        mGrid,nP2_ontop,Do_Mo,
+     &                        Do_Grad,Grad,nGrad,
+     &                        mAO,mdRho_dR,
+     &                        EG_OT,nTmpPUVX,PDFTPot1,PDFTFocI,PDFTFocA)
 ************************************************************************
 *                                                                      *
 * Object: to generate the list of the shell and exponent that have an  *
@@ -40,56 +31,42 @@ cGLM     &                        Temp,mGrad,F_xc,F_xca,F_xcb,dF_dRho,
 *             August 1999                                              *
 ************************************************************************
       use iSD_data
+      use Basis_Info
+      use Center_Info
+      use nq_Grid, only: Grid, Weights, TabAO,
+     &                   TabAO_Pack, dRho_dR, TabAO_Short,
+     &                   kAO, R2_trial
+      use nq_Grid, only: List_G, IndGrd, iTab, dW_dR, nR_Eff
+      use NQ_Structure, only: NQ_Data
+      use Grid_On_Disk
+      use nq_MO, only: nMOs
+      use nq_Info
       Implicit Real*8 (A-H,O-Z)
       External Kernel
 #include "itmax.fh"
-#include "nq_info.fh"
-#include "info.fh"
+#include "Molcas.fh"
 #include "nsd.fh"
 #include "setup.fh"
 #include "real.fh"
-#include "grid_on_disk.fh"
-#include "WrkSpc.fh"
+#include "stdalloc.fh"
 #include "debug.fh"
-#include "ksdft.fh"
-      Integer Maps2p(nShell,0:nSym-1), list_s(2,*), List_G(3,*),
+      Integer Maps2p(nShell,0:nSym-1), list_s(2,*),
      &        list_exp(nSym*nShell), list_bas(2,nSym*nShell),
-     &        list_p(nNQ), DoIt(nMOs), iTab(4,mGrad),IndGrd(mGrad)
-      Real*8 R2_trial(nNQ), FckInt(nFckInt,nFckDim),
-     &       AOInt(nAOInt,nAOInt,nD), SOTemp(nSOTemp,nD),
-     &       Dens(nDens,nD), Grad(nGrad), Temp(mGrad),
-     &       Grid(3,mGrid), Rho(nRho,mGrid), Weights(mGrid),
-     &       CMOs(nCMO), P2mo(np2act), D1mo(nD1mo),
-     &       P2_ontop(nP2_ontop,mGrid), Roots(3,3), F_xc(mGrid),
-cGLM     &       F_xca(mGrid),F_xcb(mGrid),
-     &       dF_dRho(ndF_dRho,mGrid),
-     &       dF_dP2ontop(ndF_dP2ontop,mGrid),
-     &       xyz0(3,2)
-      Real*8 TmpPUVX(nTmpPUVX)
-      Logical InBox(MxAtom), Do_Grad, lCar(3),
-     &        More_to_come
-      Logical Do_Mo,Do_TwoEl,l_Xhol
-      Character*4 DFTFOCK
-      Integer LOE_DB,LTEG_DB
+     &        list_p(nNQ)
+      Real*8 FckInt(nFckInt,nFckDim),Grad(nGrad),Roots(3,3),
+     &       xyz0(3,2),PDFTPot1(npot1),PDFTFocI(nPot1),PDFTFocA(nPot1)
+      Logical InBox(MxAtom), Do_Grad, More_to_come
+      Logical Do_Mo
+      Real*8 EG_OT(nTmpPUVX)
+      Integer, Allocatable:: Index(:)
+      Real*8, Allocatable:: dW_Temp(:,:), dPB(:,:,:)
+      Real*8, Allocatable:: TabMO(:), TabSO(:)
 *                                                                      *
 ************************************************************************
 *                                                                      *
-*     Statement functions
-*
-#include "nq_structure.fh"
-      declare_ip_coor
-      declare_ip_r_max
-      declare_ip_angular
-      iGridInfo(i,iNQ)=iWork(ip_GridInfo+(iNQ-1)*2+i-1)
-*                                                                      *
-************************************************************************
-*                                                                      *
-#ifdef _DEBUG_
-      Call QEnter('Get_Subblock')
-      If (Debug) Then
-         Write(6,*) 'Enter Get_Subblock'
-         Write(6,*) 'ip_nR_Eff GET_SBK',ip_nR_Eff
-      End If
+*#define _DEBUGPRINT_
+#ifdef _DEBUGPRINT_
+      Write(6,*) 'Enter Get_Subblock'
 #endif
 *
 *-----Resolve triplet index
@@ -114,16 +91,14 @@ cGLM     &       F_xca(mGrid),F_xcb(mGrid),
       If (iz.eq.1 ) z_min_=-1.0D99
       If (iz.eq.nz) z_max_= 1.0D99
 *                                                                      *
-#ifdef _DEBUG_
-      If (Debug) Then
-         Write(6,*)
-         Write(6,*) 'Block_Size=',Block_Size
-         Write(6,*) 'ix,iy,iz=',ix,iy,iz
-         Write(6,*) 'x_min_,x_max_',x_min_,x_max_
-         Write(6,*) 'y_min_,y_max_',y_min_,y_max_
-         Write(6,*) 'z_min_,z_max_',z_min_,z_max_
-         Write(6,*) 'nNQ=',nNQ
-      End If
+#ifdef _DEBUGPRINT_
+      Write(6,*)
+      Write(6,*) 'Block_Size=',Block_Size
+      Write(6,*) 'ix,iy,iz=',ix,iy,iz
+      Write(6,*) 'x_min_,x_max_',x_min_,x_max_
+      Write(6,*) 'y_min_,y_max_',y_min_,y_max_
+      Write(6,*) 'z_min_,z_max_',z_min_,z_max_
+      Write(6,*) 'nNQ=',nNQ
 #endif
 *                                                                      *
 ************************************************************************
@@ -137,9 +112,9 @@ cGLM     &       F_xca(mGrid),F_xcb(mGrid),
       Do 10 iNQ=1,nNQ
          InBox(iNQ)=.False.
 *--------Get the coordinates of the partitionning
-         x_NQ =Work(ip_Coor(iNQ)  )
-         y_NQ =Work(ip_Coor(iNQ)+1)
-         z_NQ =Work(ip_Coor(iNQ)+2)
+         x_NQ =NQ_Data(iNQ)%Coor(1)
+         y_NQ =NQ_Data(iNQ)%Coor(2)
+         z_NQ =NQ_Data(iNQ)%Coor(3)
 *
 *        1) center is in the box
 *
@@ -155,7 +130,7 @@ cGLM     &       F_xca(mGrid),F_xcb(mGrid),
 *
 *        2) atomic grid of this center extends inside the box.
 *
-         RMax = Work(ip_R_Max(iNQ))
+         RMax = NQ_Data(iNQ)%R_Max
          t1=(x_NQ-x_min_)/(x_max_-x_min_)
          If (t1.lt.Zero) t1=Zero
          If (t1.gt.One ) t1=One
@@ -174,9 +149,9 @@ cGLM     &       F_xca(mGrid),F_xcb(mGrid),
          EndIf
  10   Continue
       nlist_p=ilist_p
-      If (nlist_p.eq.0) Go To 999
-#ifdef _DEBUG_
-      If (debug) Write (6,*) 'Get_Subblock: List_p:',List_p
+      If (nlist_p.eq.0) return
+#ifdef _DEBUGPRINT_
+      Write (6,*) 'Get_Subblock: List_p:',List_p
 #endif
 *                                                                      *
 ************************************************************************
@@ -187,32 +162,30 @@ cGLM     &       F_xca(mGrid),F_xcb(mGrid),
 ************************************************************************
 *                                                                      *
       ilist_s=0
+*#define _ANALYSIS_
       Do iShell=1,nShell
-#ifdef _DEBUG_
-         If (debug) Write (6,*) 'iShell,nShell=',iShell,nShell
+#ifdef _DEBUGPRINT_
+        Write (6,*) 'iShell,nShell=',iShell,nShell
 #endif
          NrExp =iSD( 5,iShell)
          iAng  =iSD( 1,iShell)
-         ip_Exp=iSD( 6,iShell)
+         iShll =iSD( 0,iShell)
          NrBas =iSD( 3,iShell)
-         ip_Cff=iSD( 4,iShell)
          mdci  =iSD(10,iShell)
-         nDegi=nSym/nStab(mdci)
+         nDegi=nSym/dc(mdci)%nStab
 *
          Do jSym = 0, nDegi-1
-            iSym=iCoSet(jSym,0,mdci)
-#ifdef _DEBUG_
-            If (debug) Write (6,*) 'iSym,nDegi-1=',iSym,nDegi-1
+            iSym=dc(mdci)%iCoSet(jSym,0)
+#ifdef _DEBUGPRINT_
+            Write (6,*) 'iSym,nDegi-1=',iSym,nDegi-1
 #endif
 *
-            iNQ=Maps2p(iShell,NrOpr(iSym,iOper,nSym))
-            RMax_NQ = Work(ip_R_Max(iNQ))
-#ifdef _DEBUG_
-            If (debug) Then
-               Write (6,*) 'iNQ=',iNQ
-               Write (6,*) 'RMax_NQ=',RMax_NQ
-               Write (6,*) 'InBox(iNQ)=',InBox(iNQ)
-            End If
+            iNQ=Maps2p(iShell,NrOpr(iSym))
+            RMax_NQ = NQ_Data(iNQ)%R_Max
+#ifdef _DEBUGPRINT_
+            Write (6,*) 'iNQ=',iNQ
+            Write (6,*) 'RMax_NQ=',RMax_NQ
+            Write (6,*) 'InBox(iNQ)=',InBox(iNQ)
 #endif
 *
 *           1) the center of this shell is inside the box
@@ -223,10 +196,14 @@ cGLM     &       F_xca(mGrid),F_xcb(mGrid),
                list_s(2,ilist_s)=iSym
                list_exp(ilist_s)=NrExp
                list_bas(1,ilist_s)=NrBas
+#ifdef _ANALYSIS_
+               Write (6,*) ' Shell is in box, ilist_s: ',ilist_s
+#endif
                GoTo 20
             End If
-#ifdef _DEBUG_
-            If (debug) Write (6,*) 'Passed here!'
+#ifdef _DEBUGPRINT_
+            Write (6,*) 'Passed here!'
+            Write (6,*) 'Threshold:',Threshold
 #endif
 *
 *           2) the Gaussian has a grid point which extends inside the
@@ -236,22 +213,21 @@ cGLM     &       F_xca(mGrid),F_xcb(mGrid),
             nExpTmp=0
             Do iExp=1,NrExp
 *------------- Get the value of the exponent
-               ValExp=Work(ip_Exp+iExp-1)
+               ValExp=Shells(iShll)%Exp(iExp)
 *------------- If the exponent has an influence then increase the
 *              number of actives exponents for this shell, else
-*              there is no other active exponent (they ar ordered)
+*              there is no other active exponent (they are ordered)
                RMax=Min(Eval_RMax(ValExp,iAng,Threshold),RMax_NQ)
-#ifdef _DEBUG_
-               If (Debug) Then
-                  Write (6,*) 'iShell,iNQ=',iShell,iNQ
-                  Write (6,*) 'ValExp=',ValExp
-                  Write (6,*) 'RMax_NQ=',RMax_NQ
-                  Write (6,*) 'RMax_Exp=',
-     &                         Eval_RMax(ValExp,iAng,Threshold)
-                  Write (6,*) 'RMax=',RMax
-                  Write (6,*) 'R2_Trial(iNQ),RMax**2=',
-     &                         R2_Trial(iNQ),RMax**2
-               End If
+*#define _DEBUGPRINT_
+#ifdef _DEBUGPRINT_
+               Write (6,*) 'iShell,iNQ=',iShell,iNQ
+               Write (6,*) 'ValExp,iExp=',ValExp,iExp
+               Write (6,*) 'RMax_NQ=',RMax_NQ
+               Write (6,*) 'RMax_Exp=',
+     &                      Eval_RMax(ValExp,iAng,Threshold)
+               Write (6,*) 'RMax=',RMax
+               Write (6,*) 'R2_Trial(iNQ),RMax**2=',
+     &                      R2_Trial(iNQ),RMax**2
 #endif
                If (R2_Trial(iNQ).gt.RMax**2) Go To 99
                nExpTmp=nExpTmp+1
@@ -262,34 +238,29 @@ cGLM     &       F_xca(mGrid),F_xcb(mGrid),
                list_s(1,ilist_s)=iShell
                list_s(2,ilist_s)=iSym
                list_exp(ilist_s)=nExpTmp
-*              Write (6,*) 'iShell,NrExp,nExpTmp=',
-*    &                      iShell,NrExp,nExpTm
 *
 *              Examine if contracted basis functions can be ignored.
 *              This will be the case for segmented basis sets.
 *
-c              list_bas(1,ilist_s)=NrBas ! temporary full shell!
-c              write (6,*) 'ilist_s,NrBas=',ilist_s,NrBas
-c              crite (*,*) 'ilist_s,NrBas=',ilist_s,NrBas
-               list_bas(1,ilist_s)=nBas_Eff(NrExp,NrBas,Work(ip_Exp),
-     &                                   Work(ip_Cff),list_exp(ilist_s))
-C              If (list_bas(1,ilist_s).ne.NrBas) Then
-C                 Write (6,*) 'x,y=',list_bas(1,ilist_s),NrBas,'*'
-C                 Call RecPrt('Exponents',' ',Work(ip_Exp),1,
-C    &                        list_exp(1,ilist_s))
-C                 Call RecPrt('Cff',' ',Work(ip_Cff),NrExp,NrBas)
-C              Else
-C                 Write (6,*) 'x,y=',list_bas(1,ilist_s),NrBas
-C              End If
+               list_bas(1,ilist_s)=nBas_Eff(NrExp,NrBas,
+     &                                      Shells(iShll)%Exp,
+     &                                      Shells(iShll)%pCff,
+     &                                      list_exp(ilist_s))
+#ifdef _ANALYSIS_
+               Write (6,*) ' Shell is included, ilist_s: ',ilist_s
+               Write (6,*) ' nExpTmp=',nExpTmp
+               Write (6,*) 'R2_Trial(iNQ),RMax**2=',
+     &                      R2_Trial(iNQ),RMax**2
+#endif
             End If
  20         Continue
          End Do ! iSym
       End Do    ! iShell
       nlist_s=ilist_s
-#ifdef _DEBUG_
-      If (Debug) Write (6,*) 'nList_s,nList_p=',nList_s,nList_p
+#ifdef _DEBUGPRINT_
+      Write (6,*) 'nList_s,nList_p=',nList_s,nList_p
 #endif
-      If (nList_s*nList_p.eq.0) Go To 999
+      If (nList_s*nList_p.eq.0) return
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -305,7 +276,7 @@ C              End If
          nIndex=nIndex + NrBas_Eff*iCmp
       End Do
 *
-      Call GetMem('Index','Allo','Inte',ipIndex,nIndex)
+      Call mma_allocate(Index,nIndex,Label='Index')
 *
       iIndex=1
       nAOs=0
@@ -318,47 +289,38 @@ C              End If
          nAOs=nAOs+NrBas*iCmp
          nAOs_Eff=nAOs_Eff+NrBas_Eff*iCmp
          list_bas(2,ilist_s)=iIndex
-         Call Do_Index(iWork(ipIndex-1+iIndex),NrBas,NrBas_Eff,iCmp)
+         Call Do_Index(Index(iIndex),NrBas,NrBas_Eff,iCmp)
          iIndex=iIndex + NrBas_Eff*iCmp
       End Do
-C     Write (6,*) 'nAOs**2,nAOs_Eff**2=',nAOs**2,nAOs_Eff**2
-C     Write (6,*) 'Reduction=',DBLE(nAOs_Eff**2)/DBLE(nAOs**2)
 *                                                                      *
 ************************************************************************
 *                                                                      *
-*
-#ifdef _DEBUG_
-      If (Debug) Then
-         write(6,*) 'Contribution to the subblock :'
-         write(6,*) 'NQ :',(list_p(ilist_p)  ,ilist_p=1,nlist_p)
-         write(6,*) 'Sh :',(list_s(1,ilist_s),ilist_s=1,nlist_s)
-         write(6,*) '   :',(list_s(2,ilist_s),ilist_s=1,nlist_s)
-         write(6,*) 'Exp:',(list_exp(ilist_s),ilist_s=1,nlist_s)
-      End If
+#ifdef _DEBUGPRINT_
+      write(6,*) 'Contribution to the subblock :'
+      write(6,*) 'NQ :',(list_p(ilist_p)  ,ilist_p=1,nlist_p)
+      write(6,*) 'Sh :',(list_s(1,ilist_s),ilist_s=1,nlist_s)
+      write(6,*) '   :',(list_s(2,ilist_s),ilist_s=1,nlist_s)
+      write(6,*) 'Exp:',(list_exp(ilist_s),ilist_s=1,nlist_s)
 #endif
 *
-      kTabAO=0
+      nBfn=0
       Do iList_s = 1, nList_s
-         iSkal = list_s(1,ilist_s)
+         iSkal    =list_s(1,ilist_s)
+         NrBas_Eff=list_bas(1,ilist_s)
          iCmp  = iSD( 2,iSkal)
-         iBas  = iSD( 3,iSkal)
-         mTabAO=iBas*iCmp
-         kTabAO = kTabAO + mAO * mTabAO
+         nBfn=nBfn+NrBas_Eff*iCmp
       End Do
 *
-      nTabAO = mGrid * kTabAO
-      Call Allocate_Work(ip_TabAO,nTabAO)
-      Call Allocate_iWork(ipTabAO,2*(nlist_s+1))
 *
-      If ((Functional_Type.eq.CASDFT_Type).or.Do_MO.or.DO_TwoEl) Then
+      If (Do_MO) Then
          nTabMO=mAO*nMOs*mGrid
-         Call Allocate_Work(ipTabMO,nTabMO)
          nTabSO=mAO*nMOs*mGrid
-         Call Allocate_Work(ipTabSO,nTabSO)
       Else
-         ipTabMO=ip_Dummy
-         ipTabSO=ip_Dummy
+         nTabMO=1
+         nTabSO=1
       End If
+      Call mma_allocate(TabMO,nTabMO,Label='TabMO')
+      Call mma_allocate(TabSO,nTabSO,Label='TabSO')
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -368,20 +330,16 @@ C     Write (6,*) 'Reduction=',DBLE(nAOs_Eff**2)/DBLE(nAOs**2)
       nGrad_Eff=0
       If (Do_Grad) Then
          Call ICopy(3*nShell*nSym,[0],0,List_G,1)
-         lCar(1)=.False.
-         lCar(2)=.False.
-         lCar(3)=.False.
          Do ilist_s = 1, nlist_s
             iShell=list_s(1,ilist_s)
             iSym  =list_s(2,ilist_s)
             mdci  =iSD(10,iShell)
-            iNQ = Maps2p(iShell,NrOpr(iSym,iOper,nSym))
+            iNQ = Maps2p(iShell,NrOpr(iSym))
             Do iCar=0,2
                If ((iSD(16+iCar,iShell).ne.0 .or.
      &              iSD(12,iShell).eq.1) .and.
      &             List_G(1+iCar,ilist_s).eq.0) Then
                   nGrad_Eff=nGrad_Eff+1
-                  lCar(iCar+1)=.True.
 *
 *                 For pseudo centers note that there will not be a
 *                 gradient computed for this center.
@@ -396,15 +354,15 @@ C     Write (6,*) 'Reduction=',DBLE(nAOs_Eff**2)/DBLE(nAOs**2)
                   iTab(1,nGrad_Eff)=iCar+1
                   iTab(3,nGrad_Eff)=iNQ
                   kNQ=Maps2p(iShell,0)
-                  Xref=Work(ip_Coor(kNQ)+iCar)
-                  X   =Work(ip_Coor(iNQ)+iCar)
+                  Xref=NQ_Data(kNQ)%Coor(iCar+1)
+                  X   =NQ_Data(iNQ)%Coor(iCar+1)
                   If (X.eq.Xref) Then
-                     iTab(4,nGrad_Eff)=nStab(mdci)
+                     iTab(4,nGrad_Eff)=dc(mdci)%nStab
                   Else
-                     iTab(4,nGrad_Eff)=-nStab(mdci)
+                     iTab(4,nGrad_Eff)=-dc(mdci)%nStab
                   End If
 *
-*---------------- Find all other shells which contibute to the same
+*---------------- Find all other shells which contribute to the same
 *                 gradient.
 *
                   Do jlist_s = ilist_s+1, nlist_s
@@ -430,15 +388,15 @@ C     Write (6,*) 'Reduction=',DBLE(nAOs_Eff**2)/DBLE(nAOs**2)
                        List_G(1+iCar,ilist_s)=nGrad_Eff
                        iTab(1,nGrad_Eff)=iCar+1
                        iTab(3,nGrad_Eff)=iNQ
-                       iTab(4,nGrad_Eff)=nStab(mdci)
+                       iTab(4,nGrad_Eff)=dc(mdci)%nStab
 *
-*--------------------- Find all other shells which contibute to the same
+*--------------------- Find all other shells which contribute to the same
 *                      gradient.
 *
                        Do jlist_s = ilist_s+1, nlist_s
                           jShell=list_s(1,jlist_s)
                           jSym  =list_s(2,jlist_s)
-                          jNQ = Maps2p(jShell,NrOpr(jSym,iOper,nSym))
+                          jNQ = Maps2p(jShell,NrOpr(jSym))
                           If (iNQ.eq.jNQ) Then
                              List_G(1+iCar,jlist_s)=nGrad_Eff
                           End If
@@ -446,26 +404,12 @@ C     Write (6,*) 'Reduction=',DBLE(nAOs_Eff**2)/DBLE(nAOs**2)
                End If
             End Do
          End Do
-         n_dRho_dR=Max(mdRho_dR*mGrid*nGrad_Eff,1)
-         Call Allocate_Work(ip_dRho_dR,n_dRho_dR)
 *
          If (Grid_Type.eq.Moving_Grid) Then
-            ndW_dR=nGrad_Eff*mGrid
-            Call GetMem('dW_dR','Allo','Real',ip_dW_dR,ndW_dR)
-            ndW_Temp=3*nlist_p
-            Call GetMem('dW_Temp','Allo','Real',ip_dW_Temp,ndW_Temp)
-            ndPB=3*nlist_p**2
-            Call GetMem('dPB','Allo','Real',ip_dPB,ndPB)
-         Else
-            ip_dW_dR  =ip_Dummy
-            ip_dW_Temp=ip_Dummy
-            ip_dPB    =ip_Dummy
+            Call mma_allocate(dW_dR,nGrad_Eff,mGrid,Label='dW_dR')
+            Call mma_allocate(dW_Temp,3,nList_P,Label='dW_Temp')
+            Call mma_allocate(dPB,3,nlist_p,nlist_p,Label='dPB')
          End If
-      Else
-         ip_dRho_dR=ip_Dummy
-         ip_dW_dR  =ip_Dummy
-         ip_dW_Temp=ip_Dummy
-         ip_dPB    =ip_Dummy
       End If
       If (Do_Grad.and.nGrad_Eff.eq.0) Go To 998
       If (Grid_Status.eq.Use_Old) Go To 997
@@ -483,14 +427,14 @@ C     Write (6,*) 'Reduction=',DBLE(nAOs_Eff**2)/DBLE(nAOs**2)
       nBatch = 0
       Do ilist_p=1,nlist_p
          iNQ=list_p(ilist_p)
-#ifdef _DEBUG_
-         If (Debug) Write (6,*) 'ilist_p=',ilist_p
-         If (Debug) Write (6,*) 'Get_SubBlock: iNQ=',iNQ
+#ifdef _DEBUGPRINT_
+         Write (6,*) 'ilist_p=',ilist_p
+         Write (6,*) 'Get_SubBlock: iNQ=',iNQ
 #endif
 *
 *------- Select which gradient contributions that should be computed.
 *        For basis functions which have the center common with the grid
-*        do not compute any contibution.
+*        do not compute any contribution.
 *
          If (Do_Grad) Then
             Call ICopy(nGrad_Eff,[On],0,iTab(2,1),4)
@@ -500,28 +444,26 @@ C     Write (6,*) 'Reduction=',DBLE(nAOs_Eff**2)/DBLE(nAOs**2)
                   If (iNQ.eq.jNQ) iTab(2,iGrad)=Off
                End Do
             End If
-#ifdef _DEBUG_
-            If (Debug) Then
-             Write (6,*)
-             Write (6,'(A,24I3)') '       i =',(       i ,i=1,nGrad_Eff)
-             Write (6,'(A,24I3)') 'iTab(1,i)=',(iTab(1,i),i=1,nGrad_Eff)
-             Write (6,'(A,24I3)') 'iTab(2,i)=',(iTab(2,i),i=1,nGrad_Eff)
-             Write (6,'(A,24I3)') 'iTab(3,i)=',(iTab(3,i),i=1,nGrad_Eff)
-             Write (6,'(A,24I3)') 'iTab(4,i)=',(iTab(4,i),i=1,nGrad_Eff)
-             Write (6,*) 'IndGrd=',IndGrd
-             Write (6,*)
-            End If
+#ifdef _DEBUGPRINT_
+            Write (6,*)
+            Write (6,'(A,24I3)') '       i =',(       i ,i=1,nGrad_Eff)
+            Write (6,'(A,24I3)') 'iTab(1,i)=',(iTab(1,i),i=1,nGrad_Eff)
+            Write (6,'(A,24I3)') 'iTab(2,i)=',(iTab(2,i),i=1,nGrad_Eff)
+            Write (6,'(A,24I3)') 'iTab(3,i)=',(iTab(3,i),i=1,nGrad_Eff)
+            Write (6,'(A,24I3)') 'iTab(4,i)=',(iTab(4,i),i=1,nGrad_Eff)
+            Write (6,*) 'IndGrd=',IndGrd
+            Write (6,*)
 #endif
 *
          End If
 *
 *--------Get the coordinates of the partition
-         x_NQ =Work(ip_Coor(iNQ)  )
-         y_NQ =Work(ip_Coor(iNQ)+1)
-         z_NQ =Work(ip_Coor(iNQ)+2)
+         x_NQ =NQ_Data(iNQ)%Coor(1)
+         y_NQ =NQ_Data(iNQ)%Coor(2)
+         z_NQ =NQ_Data(iNQ)%Coor(3)
 *--------Get the maximum radius on which we have to integrate for the
 *        partition
-         RMax=Work(ip_R_Max(iNQ))
+         RMax=NQ_Data(iNQ)%R_Max
 *
          Call Box_On_Sphere(x_Min_-x_NQ,x_Max_-x_NQ, y_Min_-y_NQ,
      &                      y_Max_-y_NQ, z_Min_-z_NQ,z_Max_-z_NQ,
@@ -595,8 +537,8 @@ C     Write (6,*) 'Reduction=',DBLE(nAOs_Eff**2)/DBLE(nAOs**2)
 *                                                                      *
 ************************************************************************
 *                                                                      *
-#ifdef _DEBUG_
-         If (Debug) write(6,*) 'Get_Subblock ----> Subblock'
+#ifdef _DEBUGPRINT_
+        write(6,*) 'Get_Subblock ----> Subblock'
 #endif
 c
 c        Note that in gradient calculations we process the grid points
@@ -605,22 +547,19 @@ c        translational invariance on the atomic contributions to the
 c        gradient.
 c
          nTotGP_Save = nTotGP
-         ip_iA=ip_of_iWork_d(Work(ip_Angular(iNQ)))
-         ip_A=iWork(ip_iA)
-         nR_Eff=iWork(ip_nR_eff-1+iNQ)
          Call Subblock(iNQ,x_NQ,y_NQ,z_NQ,InBox(iNQ),
      &                 x_min_,x_max_, y_min_,y_max_, z_min_,z_max_,
      &                 list_p,nlist_p,Grid,Weights,mGrid,.True.,
      &                 number_of_grid_points,R_Box_Min,R_Box_Max,
-     &                 iList_p,xyz0,iWork(ip_A),nR_Eff)
+     &                 iList_p,xyz0,NQ_Data(iNQ)%Angular,nR_Eff(iNQ))
          nTotGP = nTotGP_Save
 *
-#ifdef _DEBUG_
-         If (Debug) write(6,*) 'Subblock ----> Get_Subblock'
+#ifdef _DEBUGPRINT_
+        write(6,*) 'Subblock ----> Get_Subblock'
 #endif
       End Do
-      iWork(ip_GridInfo+(ixyz-1)*2)=iDisk_Grid
-      iWork(ip_GridInfo+(ixyz-1)*2+1)=nBatch
+      GridInfo(1,ixyz)=iDisk_Grid
+      GridInfo(2,ixyz)=nBatch
       Call iDaFile(Lu_Grid,1,iBatchInfo,3*nBatch,iDisk_Grid)
 *                                                                      *
 ************************************************************************
@@ -629,8 +568,8 @@ c
 *
  997  Continue
 *
-      iDisk_Grid =iGridInfo(1,ixyz)
-      nBatch=iGridInfo(2,ixyz)
+      iDisk_Grid =GridInfo(1,ixyz)
+      nBatch=GridInfo(2,ixyz)
       Call iDaFile(Lu_Grid,2,iBatchInfo,3*nBatch,iDisk_Grid)
 *
       iBatch = 0
@@ -643,12 +582,10 @@ c
          number_of_grid_points=iBatchInfo(2,iBatch)
 *
          iNQ=                  iBatchInfo(3,iBatch)
-#ifdef _DEBUG_
-         If (Debug) Then
-            Write (6,*)
-            Write (6,*)  'iNQ=',iNQ
-            Write (6,*)
-         End If
+#ifdef _DEBUGPRINT_
+         Write (6,*)
+         Write (6,*)  'iNQ=',iNQ
+         Write (6,*)
 #endif
          ilist_p=-1
          Do klist_p = 1, nlist_p
@@ -686,37 +623,35 @@ c
 *              if needed.
 *
                Call dWdR(Grid,ilist_p,Weights,list_p,nlist_p,
-     &                   Work(ip_dW_dR),nGrad_Eff,iTab,Work(ip_dW_Temp),
-     &                   Work(ip_dPB),number_of_grid_points)
+     &                   dW_dR,nGrad_Eff,iTab,dW_Temp,
+     &                   dPB,number_of_grid_points)
             End If
          End If
 *
-         Call Do_Batch(Kernel,Func,Grid,Weights,Rho,
-     &                 nogp,nRho,
-     &                 list_s,nlist_s,List_Exp,List_Bas,
-     &                 iWork(ipIndex),nIndex,AOInt,nAOInt,
-     &                 FckInt,nFckDim,nFckInt,
-     &                 SOTemp,nSOTemp,
-     &                 Work(ip_TabAO),iWork(ipTabAO),mAO,
-     &                 nTabAO,
-     &                 nSym,Dens,nDens,nD,
-     &                 ndF_dRho,nP2_ontop,ndF_dP2ontop,
-     &                 nShell,
-     &                 Do_Mo,Do_TwoEl,l_Xhol,
-     &                 TmpPUVX,nTmpPUVX,
-     &                 Work(ipTabMO),Work(ipTabSO),
-     &                 nMOs,CMOs,nCMO,DoIt,
-     &                 P2mo,np2act,D1mo,nd1mo,P2_ontop,
-     &                 Do_Grad,Grad,nGrad,
-     &                 Work(ip_dRho_dR),mdRho_dR,nGrad_Eff,
-     &                 list_g,IndGrd,iTab,Temp,F_xc,
-cGLM     &                 list_g,IndGrd,iTab,Temp,F_xc,F_xca,F_xcb,
-     &                 Work(ip_dW_dR),iNQ,
-     &                 Maps2p,dF_dRho,dF_dP2ontop,
-     &                 DFTFOCK,LOE_DB,LTEG_DB)
+         Call mma_Allocate(TabAO,mAO,nogp,nBfn,Label='TabAO')
+         If (Do_Grad) Call mma_Allocate(TabAO_Short,kAO,nogp,nBfn,
+     &                                  Label='TabAO_Short')
+         TabAO_Pack(1:mAO*nogp*nBfn) => TabAO(:,:,:)
+         If (Do_Grad) Then
+           Call mma_allocate(dRho_dR,mdRho_dR,nogp,
+     &                                  nGrad_eff,Label='dRho_dR')
+         Else
+           Call mma_allocate(dRho_dR,1,1,1,Label='dRho_dR')
+         End If
+
+         Call Do_Batch(Kernel,Func,nogp,list_s,nlist_s,List_Exp,
+     &                 List_Bas,Index,nIndex,FckInt,nFckDim,nFckInt,
+     &                 mAO,nD,nP2_ontop,Do_Mo,TabMO,TabSO,nMOs,
+     &                 Do_Grad,Grad,nGrad,mdRho_dR,nGrad_Eff,iNQ,
+     &                 EG_OT,nTmpPUVX,PDFTPot1,PDFTFocI,PDFTFocA)
 *
+         If (Allocated(dRho_dR)) Call mma_deallocate(dRho_dR)
+         If (Allocated(TabAO_Short)) Call mma_deallocate(TabAO_Short)
+         TabAO_Pack => Null()
+         Call mma_deallocate(TabAO)
+
          nTotGP=nTotGP+nogp
-* update the "LuGridFile":
+*        update the "LuGridFile":
          do i=1,nogp
          write(LuGridFile,'(3ES24.14,1x,ES24.14)')
      &               (Grid(l,i),l=1,3), Weights(i)
@@ -734,23 +669,15 @@ cGLM     &                 list_g,IndGrd,iTab,Temp,F_xc,F_xca,F_xcb,
 *                                                                      *
 ************************************************************************
 *                                                                      *
-      Call GetMem('Index','Free','Real',ipIndex,nIndex)
-      Call Free_iWork(ipTabAO)
-      Call Free_Work(ip_TabAO)
-      If (Do_Grad) Call Free_Work(ip_dRho_dR)
-      If (ipTabMO.ne.ip_Dummy) Call Free_Work(ipTabMO)
-      If (ipTabSO.ne.ip_Dummy) Call Free_Work(ipTabSO)
+      Call mma_deAllocate(Index)
+      If (Allocated(TabMO)) Call mma_deallocate(TabMO)
+      If (Allocated(TabSO)) Call mma_deallocate(TabSO)
       If (Do_Grad.and.Grid_Type.eq.Moving_Grid) Then
-         Call GetMem('dPB','Free','Real',ip_dPB,ndPB)
-         Call GetMem('dW_Temp','Free','Real',ip_dW_Temp,ndW_Temp)
-         Call GetMem('dW_dR','Free','Real',ip_dW_dR,ndW_dR)
+         Call mma_deAllocate(dPB)
+         Call mma_deAllocate(dW_Temp)
+         Call mma_deAllocate(dW_dR)
       End If
 *                                                                      *
 ************************************************************************
 *                                                                      *
- 999  Continue
-#ifdef _DEBUG_
-      Call QExit('Get_Subblock')
-#endif
-      Return
       End

@@ -31,15 +31,13 @@
 #include "Molcas.fh"
 #include "real.fh"
 #include "WrkSpc.fh"
-      COMMON /LovCAS3/ STrA, STrF, STrX
-*
       Integer nBas(nSym),nFro(nSym),nIsh(nSym),nAsh(nSym),nSsh(nSym),
      &        nDel(nSym)
       Integer irc,nUniqAt,IFQCAN
       Real*8  Thrs, EMP2
       Logical DoMP2, DoEnv, all_Vir
-      Character(LENIN8) NAME(*)
-      Character(LENIN) blank, NamAct(mxAtom)
+      Character(Len=LENIN8) NAME(*)
+      Character(Len=LENIN) blank, NamAct(mxAtom)
       Logical ortho
       Real*8  TrA(8), TrF(8), TrX(8)
       Integer ns_O(8), ns_V(8)
@@ -158,8 +156,9 @@ C     -----------------------------------------------------------
      &                      Zero,Work(ipZ),nBx)
          jBas=lBas+1
          kBas=lBas+nBas(iSym)
-         Call BasFun_Atom_(iWork(ip_nBas_per_Atom),iWork(ip_nBas_Start),
-     &                     Name,jBas,kBas,nUniqAt,.false.)
+         Call BasFun_Atom_Sym(iWork(ip_nBas_per_Atom),
+     &                        iWork(ip_nBas_Start),
+     &                        Name,jBas,kBas,nUniqAt,.false.)
          Do ik=0,nAsh(iSym)-1
             nAk=nUniqAt*ik
             nBk=nBas(iSym)*ik
@@ -525,9 +524,9 @@ c         Write(6,*)
      &            ip_nBas_Start,l_nBas_Start)
       Return
       End
-***********************************************************************
-*                                                                     *
-***********************************************************************
+************************************************************************
+*                                                                      *
+************************************************************************
       Subroutine get_Saa(nSym,nBas,nOrb,Smn,Xmo,Saa)
       Implicit Real*8 (a-h,o-z)
       Integer nSym, nBas(nSym), nOrb(nSym)
@@ -565,9 +564,9 @@ c         Write(6,*)
 *
       Return
       End
-***********************************************************************
-*                                                                     *
-***********************************************************************
+************************************************************************
+*                                                                      *
+************************************************************************
       SubRoutine LovCASPT2_putInf(mSym,lnOrb,lnOcc,lnFro,lnDel,lnVir,
      &                            ip_X,ip_Y,isFNO)
 C
@@ -672,6 +671,8 @@ C
          koff=koff+nSsh(iSym)
       End Do
 *
+      iDummy=0
+      jDummy=0
       Call LovCASPT2_putInf(nSym,lnOrb,lnOcc,lnFro,lnDel,lnVir,iDummy,
      &                           jDummy,.false.)
       Call GetMem('CMON','Allo','Real',iCMO,nBB)

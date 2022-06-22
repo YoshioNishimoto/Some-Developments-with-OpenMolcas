@@ -37,10 +37,9 @@
 *     global definitions
 
 #include "rasdim.fh"
-#include "warnings.fh"
+#include "warnings.h"
 #include "general.fh"
 #include "output_ras.fh"
-      Parameter (ROUTINE='GUESS   ')
 #include "rasscf.fh"
 #include "WrkSpc.fh"
 

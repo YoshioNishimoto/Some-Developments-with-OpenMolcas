@@ -8,7 +8,8 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
 c  *********************************************************************
 c  *                                                                   *
@@ -17,41 +18,40 @@ c  *                                                                   *
 c  *********************************************************************
       subroutine cnfprt_cvb(iconfs,nconf1,nel1)
       implicit real*8 (a-h,o-z)
-#include "ext_cvb.fh"
 #include "main_cvb.fh"
 #include "optze_cvb.fh"
 #include "files_cvb.fh"
 #include "print_cvb.fh"
 
 
-#include "malloc_cvb.fh"
+#include "WrkSpc.fh"
       dimension iconfs(noe,nconf1)
 
       i1 = mstacki_cvb(noe)
 c  Main loop over configurations :
       do 100 iconf=1,nconf1
-c  Prepare iw(i1) for print
+c  Prepare iwork(i1) for print
       ioffs=i1-1
       do 200 iorb=1,norb
       if(iconfs(iorb,iconf).eq.2)then
-        iw(1+ioffs)=iorb
-        iw(2+ioffs)=iorb
+        iwork(1+ioffs)=iorb
+        iwork(2+ioffs)=iorb
         ioffs=ioffs+2
       endif
 200   continue
       do 300 iorb=1,norb
       if(iconfs(iorb,iconf).eq.1)then
-        iw(1+ioffs)=iorb
+        iwork(1+ioffs)=iorb
         ioffs=ioffs+1
       endif
 300   continue
-100   write(6,'(i8,a,20i3)')iconf,'   =>  ',(iw(ii+i1-1),ii=1,nel1)
+      write(6,'(i8,a,20i3)')iconf,'   =>  ',(iwork(ii+i1-1),ii=1,nel1)
+100   continue
       call mfreei_cvb(i1)
       return
       end
       function nvb_cvb(kbasis_loc)
       implicit real*8 (a-h,o-z)
-#include "ext_cvb.fh"
 #include "main_cvb.fh"
 #include "optze_cvb.fh"
 #include "files_cvb.fh"
@@ -75,7 +75,8 @@ c  Prepare iw(i1) for print
       endif
       ndetvb=ndetvb+ndetvb_fr(ifrag)
       ndetvb2=ndetvb2+ndetvb2_fr(ifrag)
-100   nvbr=nvbr+nvbr_fr(ifrag)
+      nvbr=nvbr+nvbr_fr(ifrag)
+100   continue
 
       if(kbasis_loc.ne.6)then
         nvb_loc=nvbr

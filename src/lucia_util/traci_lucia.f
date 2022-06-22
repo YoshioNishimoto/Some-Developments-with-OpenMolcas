@@ -23,7 +23,7 @@
 * The input CI vector is on LUCIN and the transformed CI vector
 * will be delivered on LUCOUT.
 *
-* Transformation as conceived by Per-Aake Malmquist
+* Transformation as conceived by Per-AAke Malmquist
 * (I.J.Q.C. vol XXX, p479 ,1986 (OCTOBER ISSUE ))
 *
 *  Jeppe Olsen 1988
@@ -41,14 +41,11 @@
 #include "lucinp.fh"
 #include "clunit.fh"
 *. Common block for communicating with sigma
-      COMMON/CANDS/ICSM,ISSM,ICSPC,ISSPC
+#include "cands.fh"
 *
       DIMENSION X(*),VEC1(*),VEC2(*)
 * Some dummy initializations
       IOFF = 0 ! jwk-cleanup
-*
-      CALL QENTER('TRACI')
-      IDUM=0
 *
       NTEST = 0
       IF(NTEST.GE.5) THEN
@@ -87,7 +84,6 @@
       CALL GETMEM('TMAT  ','FREE','REAL',KLT,NTOOB**2)
       CALL GETMEM('KLSCR ','FREE','REAL',KLSCR,LSCR)
 *
-      CALL QEXIT('TRACI')
 *
       RETURN
       END

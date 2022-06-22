@@ -12,6 +12,10 @@
 ************************************************************************
       module mspt2_eigenvectors
 
+#ifdef _HDF5_
+        use mh5, only: mh5_put_dset
+#endif
+
         implicit none
 
         type mspt2evc
@@ -61,6 +65,7 @@
      &                                         jstate,
      &                                         ntdmzz,
      &                                         addr,
+     &                                         iempty,
      &                                         lu,
      &                                         put_so_data,
      &                                         put_h5_data
@@ -72,13 +77,17 @@
         integer, intent(in)    :: jstate
         integer, intent(in)    :: ntdmzz
         integer, intent(in)    :: addr
+        integer, intent(in)    :: iempty
         integer, intent(in)    :: lu
         logical, intent(in)    :: put_so_data
         logical, intent(in)    :: put_h5_data
-        real*8,  intent(in)    :: rtdm(ntdmzz)
-        real*8,  intent(in)    :: stdm(ntdmzz)
-        real*8,  intent(in)    :: wetdm(ntdmzz)
+        real*8,  intent(inout) :: rtdm(ntdmzz)
+        real*8,  intent(inout) :: stdm(ntdmzz)
+        real*8,  intent(inout) :: wetdm(ntdmzz)
         real*8,  intent(inout) :: prop(nstate,nstate,nprop)
+        integer                   iOpt
+        integer                   iGo
+        integer                   iaddr
 #include "rassiwfn.fh"
 
 
@@ -87,28 +96,36 @@
 
           !> put data to file
           if(put_so_data)then
+            iOpt=1
+            iGo=7
+            iaddr=addr
             call dens2file(
      &                     rtdm,
      &                     stdm,
      &                     wetdm,
      &                     ntdmzz,
      &                     lu,
-     &                     addr
+     &                     iaddr,
+     &                     iempty,
+     &                     iOpt,
+     &                     iGo,
+     &                     iState,
+     &                     jState
      &                     )
           end if
 
           if(put_h5_data.or.put_so_data)then
 #ifdef _HDF5_
-            call mh5_put_dset_array_real(wfn_sfs_tdm,
-     &                                   rtdm, [NTDMZZ,1,1],
-     &                                   [0,ISTATE-1,JSTATE-1])
-            call mh5_put_dset_array_real(wfn_sfs_tsdm,
-     &                                   stdm, [NTDMZZ,1,1],
-     &                                   [0,ISTATE-1,JSTATE-1])
+            call mh5_put_dset(wfn_sfs_tdm,
+     &                        rtdm, [NTDMZZ,1,1],
+     &                        [0,ISTATE-1,JSTATE-1])
+            call mh5_put_dset(wfn_sfs_tsdm,
+     &                        stdm, [NTDMZZ,1,1],
+     &                        [0,ISTATE-1,JSTATE-1])
             if(put_so_data)then
-              call mh5_put_dset_array_real(wfn_sfs_wetdm,
-     &                                     wetdm, [NTDMZZ,1,1],
-     &                                     [0,ISTATE-1,JSTATE-1])
+              call mh5_put_dset(wfn_sfs_wetdm,
+     &                          wetdm, [NTDMZZ,1,1],
+     &                          [0,ISTATE-1,JSTATE-1])
             end if
 #endif
 

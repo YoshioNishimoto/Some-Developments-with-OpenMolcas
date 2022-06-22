@@ -23,7 +23,7 @@
 /*    history: Initial revision                                               */
 /*                                                                            */
 /******************************************************************************/
-#ifdef  _DEBUG_MEM_
+#ifdef  _DEBUGPRINT_MEM_
 #define _MEMORY_TRACE_
 #endif
 #ifdef  _CYGWIN_
@@ -44,10 +44,6 @@
 #ifdef _MEMORY_TRACE_
 #include <mcheck.h>
 #endif
-#ifdef _GARBLE_
-#include <limits.h>
-#include <float.h>
-#endif
 #ifdef _OPENMP
 #include <omp.h>
 #endif
@@ -63,13 +59,13 @@
 #define SYS_ATIME      0
 #define ALLOC_FLD     -2
 #define MINMEMPTR -577777000306848070
-#ifdef _DEBUG_MEM_
+#ifdef _DEBUGPRINT_MEM_
 #define MAXREC    32768
 #else
 #define MAXREC    32768 /* 8192 */
 #endif
 
-#if defined (_MEM_PROF_) || defined (_GARBLE_)
+#ifdef _MEM_PROF_
 
 #define FCNST 133679
 #define MEM_THRSHLD 1
@@ -189,7 +185,7 @@ INT testmem(INT *MOLCASMEM) {
         free(twrkspc);
     } else {
         rc=-1;
-#ifdef _DEBUG_MEM_
+#ifdef _DEBUGPRINT_MEM_
         printf("MOLCAS cannot get %ld bytes of memory !\n",LIFMT(*MOLCASMEM));
 #endif
     }
@@ -198,7 +194,7 @@ INT testmem(INT *MOLCASMEM) {
 }
 
 
-INT allocmem(double ref[],char cref[],INT *intof,INT *dblof,INT *sglof, INT *chrof,INT *size) {
+INT allocmem(double ref[],INT *intof,INT *dblof,INT *chrof,INT *size) {
     INT     rc,MOLCASMEM,MAXMEM;
     char c;
     char *ptr;
@@ -240,7 +236,7 @@ INT allocmem(double ref[],char cref[],INT *intof,INT *dblof,INT *sglof, INT *chr
          mcheck_pedantic(NULL);
          mtrace();
 #endif
-#ifdef _DEBUG_MEM_
+#ifdef _DEBUGPRINT_MEM_
          printf("MOLCAS_MEM=%ld byte\n",LIFMT(MOLCASMEM));
 #endif
     }
@@ -256,12 +252,12 @@ INT allocmem(double ref[],char cref[],INT *intof,INT *dblof,INT *sglof, INT *chr
 
     *size=MOLCASMEM/sizeof(double);
 
-    *dblof=*sglof=*intof=*chrof=1;
+    *dblof=*intof=*chrof=1;
 
      dptr=          ref;
      sptr=(float *) ref;
      iptr=(INT *)   ref;
-     cptr=(char *) cref;
+     cptr=(char *)  ref;
 
      MlM.avmem=MOLCASMEM;
      MlM.totmem=MOLCASMEM;
@@ -273,7 +269,7 @@ INT allocmem(double ref[],char cref[],INT *intof,INT *dblof,INT *sglof, INT *chr
      memsize=getenvc("MOLCAS_MAXMEM");
 #endif
      if(memsize==NULL) {
-#ifdef _DEBUG_MEM_
+#ifdef _DEBUGPRINT_MEM_
          printf("WARNING: MOLCAS_MAXMEM is not defined!\n");
 #endif
      } else {
@@ -295,7 +291,7 @@ INT allocmem(double ref[],char cref[],INT *intof,INT *dblof,INT *sglof, INT *chr
            }
          MAXMEM=strtol(memsize,NULL,10);
          MAXMEM*=MB*factor;
-#ifdef _DEBUG_MEM_
+#ifdef _DEBUGPRINT_MEM_
          printf("MOLCAS_MAXMEM=%ld byte\n",LIFMT(MAXMEM));
 #endif
          MlM.mxmem=MAXMEM-MOLCASMEM;
@@ -307,9 +303,8 @@ INT allocmem(double ref[],char cref[],INT *intof,INT *dblof,INT *sglof, INT *chr
          free(memsize);
 #endif
      }
-#ifdef _DEBUG_MEM_
-     printf("ref=%p\n",ref);
-     printf("cref=%p\n",cref);
+#ifdef _DEBUGPRINT_MEM_
+     printf("ref=%p\n",(void*)ref);
      setvbuf(stdout, NULL, _IOLBF,0);
 #endif
 #ifdef _OPENMP
@@ -336,7 +331,7 @@ INT dsize(char datatype[]) {
             bsize=sizeof(char);
             break;
         default: printf("MMA: not supported datatype '%s'\n",datatype);
-#ifdef _DEBUG_MEM_
+#ifdef _DEBUGPRINT_MEM_
                  abort();
 #endif
     }
@@ -399,17 +394,17 @@ void dump_mentry(char *tag, mentry *curr) {
 /*-----------------------------------------------------------------------------*/
 INT find_mentry(mentry mentries[], mentry *tmp) {
     INT i;
-#ifdef _DEBUG_MEM_
+#ifdef _DEBUGPRINT_MEM_
     mentry *tgt=NULL;
 #endif
     for (i=0;i<MAXREC;i++) if(mentries[i].offset==tmp->offset) break;
-#ifdef _DEBUG_MEM_
+#ifdef _DEBUGPRINT_MEM_
     printf("#i=%ld\n",LIFMT(i));
     if(mentries[i].offset==tmp->offset)  tgt=&mentries[i];
     dump_mentry("TARGET",tgt);
 #endif
 
-#ifdef _DEBUG_MEM_
+#ifdef _DEBUGPRINT_MEM_
     if(tgt) {
         if(strcmp(tgt->elbl,tmp->elbl)!=0) printf("WARNING: Data  labels    are not matching: %s (stored) and %s (requested)\n", tgt->elbl, tmp->elbl);
         if(strcmp(tgt->etyp,tmp->etyp)!=0) printf("WARNING: Data  types     are not matching: %s (stored) and %s (requested)\n", tgt->etyp, tmp->etyp);
@@ -421,7 +416,7 @@ INT find_mentry(mentry mentries[], mentry *tmp) {
 /*-----------------------------------------------------------------------------*/
 INT ismax_mentry(INT i) {
     if(i==MAXREC) {
-#ifdef _DEBUG_MEM_
+#ifdef _DEBUGPRINT_MEM_
         abort();
 #else
         return(1);
@@ -491,22 +486,13 @@ INT add_mentry(mstat *MM, mentry mentries[], mentry *tmp) {
     INT    flIcnst=(INT)    FCNST;
     double flRcnst=(double) FCNST;
     float  flScnst=(float)  FCNST;
-#elif defined (_GARBLE_)
-    INT    n,incx=0,incy=1;
-#ifdef _I8_
-    INT    flIcnst=(INT) LONG_MAX;
-#else
-    INT    flIcnst=(INT) INT_MAX;
-#endif
-    double flRcnst= DBL_MAX;
-    float  flScnst= FLT_MAX;
 #endif
 #ifdef _DARWIN_
 #else
     int    rc;
 #endif
 
-#ifdef _DEBUG_MEM_
+#ifdef _DEBUGPRINT_MEM_
     printf("++++++++ Adding new entry %s of type = %s with length=%ld\n",tmp->elbl,tmp->etyp,LIFMT(tmp->len));
 #endif
 
@@ -518,7 +504,7 @@ INT add_mentry(mstat *MM, mentry mentries[], mentry *tmp) {
     if(newe->atime) newe->atime=MM->naccess;
 
     if(tmp->len==0) {
-#ifdef _DEBUG_MEM_
+#ifdef _DEBUGPRINT_MEM_
        printf("Request for a zero allocation detected!\n");
 #endif
        newe->offset=MINMEMPTR+MM->naccess;
@@ -534,7 +520,7 @@ INT add_mentry(mstat *MM, mentry mentries[], mentry *tmp) {
        rc=posix_memalign((void **) &wrkspc, (size_t) sysconf(_SC_PAGESIZE), (size_t) tmp->len);
        (void)rc;
 #endif
-#ifdef _DEBUG_MEM_
+#ifdef _DEBUGPRINT_MEM_
        if(mlock((void *) wrkspc, (size_t) tmp->len)) dump_mentry("Cannot lock memory:",tmp);
 #else
        mlock((void *) wrkspc, (size_t) tmp->len);
@@ -544,30 +530,30 @@ INT add_mentry(mstat *MM, mentry mentries[], mentry *tmp) {
 
     MM->avmem-=tmp->len;
 
-#ifdef _DEBUG_MEM_
+#ifdef _DEBUGPRINT_MEM_
     bzero((void *) wrkspc, (size_t) tmp->len);
 #endif
     newe->addr=(void *) wrkspc;
 
-#if defined (_MEM_PROF_) || defined (_GARBLE_)
+#ifdef _MEM_PROF_
     n=tmp->len/dsize(tmp->etyp);
 #endif
     switch (tmp->etyp[0]) {
         case 'R':
             dist=(double *) wrkspc-dptr;
-#if defined (_MEM_PROF_) || defined (_GARBLE_)
+#ifdef _MEM_PROF_
             dcopy(&n,&flRcnst,&incx,(double *) wrkspc,&incy);
 #endif
             break;
         case 'S':
             dist=(float *)  wrkspc-sptr;
-#if defined (_MEM_PROF_) || defined (_GARBLE_)
+#ifdef _MEM_PROF_
             scopy(&n,&flScnst,&incx,(float *) wrkspc,&incy);
 #endif
             break;
         case 'I':
             dist=(INT *)    wrkspc-iptr;
-#if defined (_MEM_PROF_) || defined (_GARBLE_)
+#ifdef _MEM_PROF_
             icopy(&n,&flIcnst,&incx,(INT *) wrkspc,&incy);
 #endif
             break;
@@ -576,12 +562,12 @@ INT add_mentry(mstat *MM, mentry mentries[], mentry *tmp) {
             break;
         default: printf("MMA: not supported datatype %s\n",tmp->etyp);
     }
-#ifdef _DEBUG_MEM_
+#ifdef _DEBUGPRINT_MEM_
     printf("dist=%ld\n",LIFMT(dist));
     printf("entry %s has been allocated at %p\n",newe->elbl,newe->addr);
 #endif
     newe->offset=(INT) dist;
-#ifdef _DEBUG_MEM_
+#ifdef _DEBUGPRINT_MEM_
     dump_mentry("NEW ENTRY", newe);
 #endif
     return(newe->offset);
@@ -590,7 +576,7 @@ INT add_mentry(mstat *MM, mentry mentries[], mentry *tmp) {
 /*-----------------------------------------------------------------------------*/
 INT reg_mentry(mstat *MM, mentry mentries[], mentry *tmp) {
     mentry *newe;
-#ifdef _DEBUG_MEM_
+#ifdef _DEBUGPRINT_MEM_
     printf("++++++++ Registering new entry %s of type = %s with length=%ld\n",tmp->elbl,tmp->etyp,LIFMT(tmp->len));
 #endif
 
@@ -606,7 +592,7 @@ INT reg_mentry(mstat *MM, mentry mentries[], mentry *tmp) {
     newe->addr=woff2cptr(tmp->etyp, tmp->offset);
     newe->atime=MM->naccess;
 
-#ifdef _DEBUG_MEM_
+#ifdef _DEBUGPRINT_MEM_
     dump_mentry("NEW ENTRY HAS BEEN REGISTERED", newe);
 #endif
     return(newe->atime);
@@ -618,14 +604,14 @@ INT del_mentry(mstat *MM, mentry mentries[], mentry *tmp, INT i) {
     char   *wrkspc=NULL;
     mentry *tgt,*lst;
 
-#ifdef _DEBUG_MEM_
+#ifdef _DEBUGPRINT_MEM_
     printf("-------- Deleting entry '%9s' of type = '%9s' with length=%12ld (offset=%12ld)\n",tmp->elbl,tmp->etyp,LIFMT(tmp->len),LIFMT(tmp->offset));
 #endif
 
     if(i==0) i=find_mentry(mentries,tmp);
 
     if(ismax_mentry(i))
-#ifdef _DEBUG_MEM_
+#ifdef _DEBUGPRINT_MEM_
     {
        abort();
     }
@@ -637,7 +623,7 @@ INT del_mentry(mstat *MM, mentry mentries[], mentry *tmp, INT i) {
     tgt=&mentries[i];
     lst=&mentries[--MM->nmentry];
 
-#ifdef _DEBUG_MEM_
+#ifdef _DEBUGPRINT_MEM_
     dump_mentry("DELETING ENTRY",tgt);
 #endif
 
@@ -648,7 +634,7 @@ INT del_mentry(mstat *MM, mentry mentries[], mentry *tmp, INT i) {
     MM->avmem+=tgt->len;
 
     wrkspc=tgt->addr;
-#ifdef _DEBUG_MEM_
+#ifdef _DEBUGPRINT_MEM_
     printf("Deallocating memory %s at adress %p\n",tgt->elbl, wrkspc);
 #endif
 
@@ -670,7 +656,7 @@ INT exc_mentry(mstat *MM, mentry mentries[], mentry *tmp) {
     INT     i;
     mentry *tgt,*lst;
 
-#ifdef _DEBUG_MEM_
+#ifdef _DEBUGPRINT_MEM_
     printf("-------- Deleting entry '%9s' of type = '%9s' with length=%12ld (offset=%12ld)\n",tmp->elbl,tmp->etyp,LIFMT(tmp->len),LIFMT(tmp->offset));
 #endif
 
@@ -681,7 +667,7 @@ INT exc_mentry(mstat *MM, mentry mentries[], mentry *tmp) {
     tgt=&mentries[i];
     lst=&mentries[--MM->nmentry];
 
-#ifdef _DEBUG_MEM_
+#ifdef _DEBUGPRINT_MEM_
     dump_mentry("REMOVING ENTRY",tgt);
 #endif
 
@@ -703,7 +689,7 @@ void flushMM(mstat *MM, mentry mentries[], mentry *tmp) {
     if(MM->nmentry==0) return;
 
     i=find_mentry(mentries,tmp);
-#ifdef _DEBUG_MEM_
+#ifdef _DEBUGPRINT_MEM_
     if((ismax_mentry(i))||(mentries[i].len==EMPTYE)) {
        printf("It should never happen!\n");
        abort();
@@ -714,11 +700,18 @@ void flushMM(mstat *MM, mentry mentries[], mentry *tmp) {
     tgt=&mentries[i];
     latime=tgt->atime;
 
-#ifdef _DEBUG_MEM_
+#ifdef _DEBUGPRINT_MEM_
     dump_mentry("FLUSH", tgt);
 #endif
-#ifdef _DEBUG_MEM_
+#ifdef _DEBUGPRINT_MEM_
     printf("Going to delete all memory entries older than atime=%ld\n",LIFMT(latime));
+#endif
+#ifdef _DEBUGPRINT_FLUSH_
+    printf("---------------------------------------------------------------------------------------------\n");
+    printf("  Nr.\t Label\t\tType\t\tOffset\t\tLength\t   Atime\t  Address\n");
+    printf("---------------------------------------------------------------------------------------------\n");
+    for(i=MM->nmentry-1;i>0;i--) if(mentries[i].atime>latime) printf("%3ld\t%-12s\t%4s\t%14ld\t%12ld   %9ld\t[%p]\n", LIFMT(i+1),mentries[i].elbl,mentries[i].etyp,LIFMT(mentries[i].offset),LIFMT(mentries[i].len),LIFMT(mentries[i].atime),mentries[i].addr);
+    printf("---------------------------------------------------------------------------------------------\n");
 #endif
     for(i=MM->nmentry-1;i>0;i--) if(mentries[i].atime>latime) del_mentry( MM, mentries, &mentries[i], i);
 
@@ -793,7 +786,7 @@ INT c_getmem_kern(INT *op, mentry *tmp, INT *offset, INT *len) {
                 printf("MEMORY ERROR: The suggested MOLCAS_MEM=%ld !\n",LIFMT((tmp->len-MlM.avmem+MlM.totmem)/MB+1));
                 return(-4);
               } else {
-#ifdef _DEBUG_MEM_
+#ifdef _DEBUGPRINT_MEM_
                 printf("MEMORY WARNING: MOLCAS_MEM has been increased by MOLCAS_MAXMEM (%ld) !\n",LIFMT(MlM.mxmem));
 #endif
                 MlM.avmem+=tmp->len;
@@ -818,7 +811,7 @@ INT c_getmem_kern(INT *op, mentry *tmp, INT *offset, INT *len) {
 
             break;
         case MAX:
-#ifdef _DEBUG_MEM_
+#ifdef _DEBUGPRINT_MEM_
             printf("MOLCAS_MEM=%ld byte \n",LIFMT(SFCTR(MlM.avmem)));
 #endif
             maxMM=SFCTR(MlM.avmem);
@@ -829,7 +822,7 @@ INT c_getmem_kern(INT *op, mentry *tmp, INT *offset, INT *len) {
 #ifndef _MALLOC_INTERCEPT_
             while(maxMM>0 && testmem(&maxMM)<0) maxMM=SFCTR(maxMM);
 #endif
-#ifdef _DEBUG_MEM_
+#ifdef _DEBUGPRINT_MEM_
             if(maxMM!=SFCTR(MlM.avmem)) printf("MOLCAS MAXMEM: initial = %ld, allocatable =%ld\n",LIFMT(SFCTR(MlM.avmem)),LIFMT(maxMM));
 #endif
             if(maxMM<=0) {
@@ -862,9 +855,9 @@ INT c_getmem_kern(INT *op, mentry *tmp, INT *offset, INT *len) {
             if(MlM.nmentry==0) {
                break;
             } else {
-#if defined(_DEBUG_MEM_) || defined(_BIGOT_)
+#if defined(_DEBUGPRINT_MEM_) || !defined(_DEVEL_)
                printf("MEMORY ERROR: some memory allocations are not released!\n");
-               abort();
+               rc=-1;
 #else
                printf("MEMORY WARNING: some memory allocations are not released!\n");
 #endif
@@ -892,7 +885,7 @@ INT c_getmem_kern(INT *op, mentry *tmp, INT *offset, INT *len) {
 #endif
         default: rc=-1;printf("Unsupported memory operation !\n");
     }
-#ifdef _DEBUG_MEM_
+#ifdef _DEBUGPRINT_MEM_
     list_MlM(&MlM,MDATA);
     if(MlM.avmem<0)  {
       printf("Integer Overflow has been detected!\n");
@@ -942,7 +935,7 @@ INT c_getmem(char *name, char* Op, char *dtyp, INT *offset, INT *len) {
     string2UC(Op,action);
 
     op=memop(action);
-#ifdef _DEBUG_MEM_
+#ifdef _DEBUGPRINT_MEM_
     print_params("C_GetMem", name, Op, dtyp, offset,len);
     printf("Op=%s (%ld)\n",Op,LIFMT(memop(Op)));
 #endif
@@ -975,7 +968,7 @@ char *allomblck(char *name,  INT *len) {
 
       op=memop(Op);
       string2UC(name,e_name);
-#ifdef _DEBUG_MEM_
+#ifdef _DEBUGPRINT_MEM_
       print_params("C_GetMem", name, Op, ctyp, &offset,len);
       printf("Op=%s (%ld)\n",Op,LIFMT(memop(Op)));
 #endif

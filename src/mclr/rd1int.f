@@ -24,10 +24,8 @@
       Implicit Real*8 (A-H,O-Z)
 #include "Input.fh"
 #include "Pointers.fh"
-#include "WrkSpc.fh"
       Character*8 Method
 *
-      Call QEnter('Rd1Int_MCLR')
 *----------------------------------------------------------------------*
 *     Start                                                            *
 *----------------------------------------------------------------------*
@@ -47,6 +45,8 @@
       Else If ( Method.eq.'MBPT2   ' ) then
        iMethod=4
       Else If ( Method.eq.'MCPDFT  ' ) then
+       iMethod=2
+      Else If ( Method.eq.'MSPDFT  ' ) then
        iMethod=2
       End If
 *---  read file header  -----------------------------------------------*
@@ -80,6 +80,5 @@
 *----------------------------------------------------------------------*
 *     Exit                                                             *
 *----------------------------------------------------------------------*
-      Call QExit('Rd1Int_MCLR')
       Return
       End

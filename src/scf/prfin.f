@@ -44,6 +44,7 @@
 *     history: UHF - V.Veryazov, 2003                                  *
 *                                                                      *
 ************************************************************************
+      use SpinAV, only: Do_SpinAV
       Implicit Real*8 (a-h,o-z)
       External EFP_ON
 *
@@ -58,8 +59,6 @@
 #include "stdalloc.fh"
 #include "rctfld.fh"
 #include "oneswi.fh"
-      Logical Do_SpinAV
-      COMMON  / SPAVE_L  / Do_SpinAV
 *
 *---- Define local variables
       Character Fmt*60
@@ -97,10 +96,7 @@ cnf
 *
 *----------------------------------------------------------------------*
 *
-#ifdef _DEBUG_
-      Call qEnter('PrFin')
-#endif
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       Debug=.true.
 #else
       Debug=.false.
@@ -327,13 +323,5 @@ c         print *,'Elumo',Elumo
          Call mma_deallocate(Scr2)
 *
       End If
-#ifdef _DEBUG_
-      Call qExit('PrFin')
-#endif
-*
-*----------------------------------------------------------------------*
-*     Exit                                                             *
-*----------------------------------------------------------------------*
-*
-      Return
-      End
+
+      End subroutine PrFin

@@ -8,25 +8,25 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine o12sb_cvb(nparm1,
      >  dxnrm,grdnrm,close2conv)
       implicit real*8 (a-h,o-z)
       logical close2conv
-#include "ext_cvb.fh"
 #include "main_cvb.fh"
 #include "optze_cvb.fh"
 #include "files_cvb.fh"
 #include "print_cvb.fh"
 
 #include "opt2_cvb.fh"
-#include "malloc_cvb.fh"
+#include "WrkSpc.fh"
 
-      call o12sb2_cvb(w(lv(1)),w(lv(2)),nparm1,nvb,
+      call o12sb2_cvb(work(lv(1)),work(lv(2)),nparm1,nvb,
      >  nfrorb,
-     >  w(lw(4)),w(lw(5)),w(lw(6)),
-     >  w(ix(1)),
+     >  work(lw(4)),work(lw(5)),work(lw(6)),
+     >  work(ix(1)),
      >  dxnrm,grdnrm,close2conv,strucopt)
       return
       end

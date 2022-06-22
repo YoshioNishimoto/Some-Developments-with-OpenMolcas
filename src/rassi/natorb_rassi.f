@@ -9,6 +9,7 @@
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
       SUBROUTINE NATORB_RASSI(DMAT,TDMZZ,VNAT,OCC,EIGVEC)
+      use rassi_aux, only : iDisk_TDM
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "SysDef.fh"
 #include "Molcas.fh"
@@ -26,7 +27,6 @@
       EXTERNAL DDOT_
       DIMENSION Dummy(1),iDummy(7,8)
 
-      Call qEnter('NATORB')
 C ALLOCATE WORKSPACE AREAS.
       NSZZ=NBTRI
       NVEC=NBSQ
@@ -92,10 +92,16 @@ C HOWEVER, WE ARE LOOPING TRIANGULARLY AND WILL RESTORE SYMMETRY BY
 C ADDING TRANSPOSE AFTER DMAT HAS BEEN FINISHED, SO I=J IS SPECIAL CASE:
             X=EIGVEC(I,KEIG)*EIGVEC(J,KEIG)
             IF(ABS(X).GT.1.0D-12) THEN
-              IDISK=iWork(lIDTDM+(I-1)*NSTATE+J-1)
-              CALL DDAFILE(LUTDM,2,TDMZZ,NTDMZZ,IDISK)
-              IF(I.EQ.J) X=0.5D00*X
-              CALL DAXPY_(NTDMZZ,X,TDMZZ,1,DMAT,1)
+              iEmpty=iDisk_TDM(I,J,2)
+              If (IAND(iEmpty,1).ne.0) Then
+                 IDISK=iDisk_TDM(I,J,1)
+                 iOpt=2
+                 iGo=1
+                 CALL dens2file(TDMZZ,TDMZZ,TDMZZ,nTDMZZ,
+     &                          LUTDM,IDISK,iEmpty,iOpt,iGo,I,J)
+                 IF(I.EQ.J) X=0.5D00*X
+                 CALL DAXPY_(NTDMZZ,X,TDMZZ,1,DMAT,1)
+              End If
             END IF
           END DO
         END DO
@@ -180,7 +186,6 @@ C SIORB.1, SIORB.2, ...
           ENDIF
           ISTOCC=ISTOCC+NB
         END DO
-        IFOCC=1
         LuxxVec=50
         LuxxVec=isfreeunit(LuxxVec)
         CALL WRVEC(FNAME,LUXXVEC,'CO',NSYM,NBASF,NBASF,
@@ -197,6 +202,5 @@ C End of very long loop over eigenstates KEIG.
       CALL GETMEM('VEC2  ','FREE','REAL',LVEC2,NVEC2)
       CALL GETMEM('SCR   ','FREE','REAL',LSCR,NSCR)
       CALL GETMEM('EIG   ','FREE','REAL',LEIG,NEIG)
-      Call qExit('NATORB')
       RETURN
       END

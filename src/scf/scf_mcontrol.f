@@ -11,17 +11,13 @@
 
       SUBROUTINE Scf_Mcontrol(id_call)
 
+      Use Para_Info, Only: MyRank
       Implicit Real*8 (a-h,o-z)
 #include "mxdm.fh"
 #include "infscf.fh"
-#include "para_info.fh"
 *
-      Integer ALGO,NSCREEN
-      Logical REORD,DECO,timings
-      Real*8  dmpk,dFKmat
-*
-      Common /CHOSCF / REORD,DECO,dmpk,dFKmat,ALGO,NSCREEN
-      COMMON /CHOTIME / timings
+#include "choscf.fh"
+#include "chotime.fh"
 *
       Integer id_call
       Character*512 List

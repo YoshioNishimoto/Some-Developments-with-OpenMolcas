@@ -8,7 +8,8 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine hess_evb1_cvb(orbs,
      >   civbh,citmp,civb,
@@ -20,7 +21,6 @@
      >   hessinp,hessout)
       implicit real*8 (a-h,o-z)
       logical orbopt2,strucopt2
-#include "ext_cvb.fh"
 #include "main_cvb.fh"
 #include "optze_cvb.fh"
 #include "files_cvb.fh"
@@ -28,7 +28,7 @@
 
 #include "frag_cvb.fh"
 #include "fx_cvb.fh"
-#include "malloc_cvb.fh"
+#include "WrkSpc.fh"
       dimension orbs(norb,norb)
       dimension civbh(ndet),citmp(ndet),civb(ndet)
       dimension sorbs(norb,norb),owrk(norb,norb)
@@ -88,9 +88,9 @@ c  2nd-order term for structure coefficients
           call str2vbf_cvb(hessinp(1+nprorb),dvbdet)
           i1 = mstackr_cvb(ndetvb)
           i2 = mstackr_cvb(nvb)
-          call ci2ordr_cvb(civbh,dvbdet,w(i1))
-          call vb2strg_cvb(w(i1),w(i2))
-          call daxpy_(nvb,f1,w(i2),1,hessout(1+nprorb),1)
+          call ci2ordr_cvb(civbh,dvbdet,work(i1))
+          call vb2strg_cvb(work(i1),work(i2))
+          call daxpy_(nvb,f1,work(i2),1,hessout(1+nprorb),1)
           call mfreer_cvb(i1)
         endif
       else
@@ -116,8 +116,9 @@ c  Non-linear correction for orthogonality constraints :
         if(korb.gt.jorb)kj=kj-1
         if(korb.ne.iorb)corr1=corr1+owrk(jorb,korb)*
      >    (f1*grad2(ki)+f2*grad1(ki))
-200     if(korb.ne.jorb)corr1=corr1+owrk(iorb,korb)*
+        if(korb.ne.jorb)corr1=corr1+owrk(iorb,korb)*
      >    (f1*grad2(kj)+f2*grad1(kj))
+200     continue
         corr1=-.5d0*corr1
         do 300 korb=1,norb
         if(korb.eq.iorb)goto 300

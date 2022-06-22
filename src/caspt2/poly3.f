@@ -16,7 +16,8 @@
 * UNIVERSITY OF LUND                         *
 * SWEDEN                                     *
 *--------------------------------------------*
-      SUBROUTINE POLY3(IFF,CI)
+      SUBROUTINE POLY3(IFF)
+      use output_caspt2, only:iPrGlb,verbose
       IMPLICIT NONE
 C  IBM TEST VERSION 0, 1988-06-23.
 C  NEW VERSION 1991-02-23, FOR USE WITH RASSCF IN MOLCAS PACKAGE.
@@ -38,23 +39,25 @@ C PROGRAM ASSUMES THE JOBIPH IS PRODUCED BY THE RASSCF PROGRAM.
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "pt2_guga.fh"
 #include "SysDef.fh"
+#include "stdalloc.fh"
 
       INTEGER IFF
-      REAL*8 CI(NCONF)
 
       INTEGER ILEV
-      INTEGER NG3MAX,IPAD,LIDXG3
+      INTEGER NG3MAX
       INTEGER ILUID
 
+      INTEGER IDCI
+      INTEGER J
+
       INTEGER IPARDIV
+      INTEGER*1, ALLOCATABLE :: idxG3(:,:)
 
-      CALL QENTER('POLY3')
 
-      IF(IFF.EQ.1) THEN
+      IF (IFF.EQ.1) THEN
 C ORBITAL ENERGIES IN CI-COUPLING ORDER:
         DO ILEV=1,NLEV
           ETA(ILEV)=EPSA(L2ACT(ILEV))
@@ -69,15 +72,15 @@ C-SVC20100831: recompute approximate max NG3 size needed
 
 C-SVC20100831: allocate local G3 matrices
       CALL GETMEM('G3','ALLO','REAL',LG3,NG3MAX)
-      iPad=ItoB-MOD(6*NG3MAX,ItoB)
-      CALL GETMEM('idxG3','ALLO','CHAR',LidxG3,6*NG3MAX+iPad)
+
+      CALL mma_allocate(idxG3,6,NG3MAX,label='idxG3')
 
       WORK(LG1)=0.0D0
       WORK(LG2)=0.0D0
       WORK(LG3)=0.0D0
 
 C ALLOCATE SPACE FOR CORRESPONDING COMBINATIONS WITH H0:
-      IF(IFF.EQ.1) THEN
+      IF (IFF.EQ.1) THEN
         CALL GETMEM('LF1','ALLO','REAL',LF1,NG1)
         CALL GETMEM('LF2','ALLO','REAL',LF2,NG2)
         CALL GETMEM('LF3','ALLO','REAL',LF3,NG3MAX)
@@ -87,34 +90,61 @@ C ALLOCATE SPACE FOR CORRESPONDING COMBINATIONS WITH H0:
         LF3=LG3
       END IF
 
+* NG3 will change inside subroutine MKFG3 to the actual
+* number of nonzero elements, that is why here we allocate
+* with NG3MAX, but we only store (PT2_PUT) the first NG3
+* elements of the G3 and F3
       NG3=NG3MAX
 
-      IF(ISCF.NE.0.AND.NACTEL.NE.0) THEN
+      CALL GETMEM('LCI','ALLO','REAL',LCI,NCONF)
+
+      IF (.NOT.DoCumulant.AND.ISCF.EQ.0) THEN
+        IDCI=IDTCEX
+        DO J=1,JSTATE-1
+          CALL DDAFILE(LUCIEX,0,WORK(LCI),NCONF,IDCI)
+        END DO
+        CALL DDAFILE(LUCIEX,2,WORK(LCI),NCONF,IDCI)
+        IF (IPRGLB.GE.VERBOSE) THEN
+          WRITE(6,*)
+          IF (NSTATE.GT.1) THEN
+            WRITE(6,'(A,I4)')
+     &      ' With new orbitals, the CI array of state ',MSTATE(JSTATE)
+          ELSE
+            WRITE(6,*)' With new orbitals, the CI array is:'
+          END IF
+          CALL PRWF_CP2(STSYM,NCONF,WORK(LCI),CITHR)
+        END IF
+      ELSE
+        WORK(LCI)=1.0D0
+      END IF
+
+      IF (ISCF.NE.0.AND.NACTEL.NE.0) THEN
         CALL SPECIAL( WORK(LG1),WORK(LG2),WORK(LG3),
      &                WORK(LF1),WORK(LF2),WORK(LF3),
-     &                i1WORK(LidxG3))
+     &                idxG3)
       ELSE IF (ISCF.EQ.0) THEN
 C-SVC20100903: during mkfg3, NG3 is set to the actual value
 #if defined _ENABLE_BLOCK_DMRG_ || defined _ENABLE_CHEMPS2_DMRG_
-        IF(.NOT.DoCumulant) THEN
+        IF (.NOT.DoCumulant) THEN
 #endif
-          CALL MKFG3(IFF,CI,WORK(LG1),WORK(LF1),WORK(LG2),WORK(LF2),
-     &                      WORK(LG3),WORK(LF3),i1WORK(LidxG3))
+          CALL MKFG3(IFF,WORK(LCI),WORK(LG1),WORK(LF1),WORK(LG2),
+     &               WORK(LF2),WORK(LG3),WORK(LF3),idxG3)
 #if defined _ENABLE_BLOCK_DMRG_ || defined _ENABLE_CHEMPS2_DMRG_
         ELSE
           CALL MKFG3DM(IFF,WORK(LG1),WORK(LF1),WORK(LG2),WORK(LF2),
-     &                      WORK(LG3),WORK(LF3),i1WORK(LidxG3))
+     &                       WORK(LG3),WORK(LF3),idxG3)
         END IF
 #endif
       END IF
+
+      CALL GETMEM('LCI','FREE','REAL',LCI,NCONF)
 
       IF(NLEV.GT.0) THEN
         CALL PT2_PUT(NG1,' GAMMA1',WORK(LG1))
         CALL PT2_PUT(NG2,' GAMMA2',WORK(LG2))
         CALL PT2_PUT(NG3,' GAMMA3',WORK(LG3))
         iLUID=0
-        iPad=ItoB-MOD(6*NG3,ItoB)
-        CALL CDAFILE(LUSOLV,1,cWORK(LidxG3),6*NG3+iPad,iLUID)
+        CALL I1DAFILE(LUSOLV,1,idxG3,6*NG3,iLUID)
         IF(IFF.EQ.1) THEN
           CALL PT2_PUT(NG1,' DELTA1',WORK(LF1))
           CALL PT2_PUT(NG2,' DELTA2',WORK(LF2))
@@ -126,8 +156,7 @@ C-SVC20100903: during mkfg3, NG3 is set to the actual value
         CALL GETMEM('LG1','FREE','REAL',LG1,NG1)
         CALL GETMEM('LG2','FREE','REAL',LG2,NG2)
         CALL GETMEM('LG3','FREE','REAL',LG3,NG3MAX)
-        iPad=ItoB-MOD(6*NG3MAX,ItoB)
-        CALL GETMEM('idxG3','FREE','CHAR',LidxG3,6*NG3MAX+iPad)
+        CALL mma_deallocate(idxG3)
         IF(IFF.EQ.1) THEN
           CALL GETMEM('LF1','FREE','REAL',LF1,NG1)
           CALL GETMEM('LF2','FREE','REAL',LF2,NG2)
@@ -135,7 +164,6 @@ C-SVC20100903: during mkfg3, NG3 is set to the actual value
         END IF
       END IF
 
-      CALL QEXIT('POLY3')
 
       RETURN
       END

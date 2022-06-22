@@ -8,13 +8,9 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
-#ifdef _HDF5_
-#include "mh5.fh"
-#endif
-
       integer                 wfn_fileid,
      $        wfn_mocoef, wfn_occnum, wfn_dens, wfn_spindens,
-     $        wfn_transdens,
+     $        wfn_transdens, wfn_transsdens,
      $        wfn_supsym, wfn_basfns, wfn_ovlmat,
      $        wfn_cicoef, wfn_orbene, wfn_energy, wfn_iter
 #ifdef _DMRG_
@@ -23,7 +19,7 @@
 
       common /raswfn_handles/ wfn_fileid,
      $        wfn_mocoef, wfn_occnum, wfn_dens, wfn_spindens,
-     $        wfn_transdens,
+     $        wfn_transdens, wfn_transsdens,
      $        wfn_supsym, wfn_basfns, wfn_ovlmat,
      $        wfn_cicoef, wfn_orbene, wfn_energy, wfn_iter
 #ifdef _DMRG_

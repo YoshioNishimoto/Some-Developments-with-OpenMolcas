@@ -9,17 +9,16 @@
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
       SUBROUTINE GETDPREF(DREF,PREF)
+      use output_caspt2, only:iPrGlb,debug
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
 #include "pt2_guga.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "intgrl.fh"
       REAL*8 DREF(NDREF)
       REAL*8 PREF(NPREF)
 
-      CALL QENTER('GETDPREF')
 * Get active 1-density and 2-density matrices GAMMA1 and
 * GAMMA2, and construct DREF and PREF which are in a tringular
 * storage.
@@ -91,6 +90,5 @@ C CONSTRUCT PREF, 2-ELECTRON DENSITY MATRIX:
 
   99  CONTINUE
 
-      CALL QEXIT('GETDPREF')
       RETURN
       END

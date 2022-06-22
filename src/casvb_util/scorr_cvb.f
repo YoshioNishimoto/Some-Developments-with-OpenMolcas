@@ -8,25 +8,25 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine scorr_cvb(cvbdet,dvbdet,evbdet)
       implicit real*8 (a-h,o-z)
-#include "ext_cvb.fh"
 #include "main_cvb.fh"
 #include "optze_cvb.fh"
 #include "files_cvb.fh"
 #include "print_cvb.fh"
 
 
-#include "malloc_cvb.fh"
+#include "WrkSpc.fh"
       dimension cvbdet(ndetvb),dvbdet(ndetvb),evbdet(ndetvb)
 
       k1 = mstackr_cvb(norb*norb)
       k2 = mstackr_cvb(ndetvb)
       k3 = mstacki_cvb(norb)
       call scorr2_cvb(cvbdet,dvbdet,evbdet,
-     >      w(k1),w(k2),iw(k3))
+     >      work(k1),work(k2),iwork(k3))
       call mfreer_cvb(k1)
       return
       end

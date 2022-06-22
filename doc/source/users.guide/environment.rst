@@ -129,7 +129,7 @@ The following is an example of a shell script. ::
 
 The file :file:`$ThisDir/$Project.input` contains the ordered sequence
 of |molcas| inputs and the EMIL interpreter will call the appropriate
-programs. See section :ref:`UG:sec:EMIL` for an explanation of the
+programs. See :numref:`UG:sec:EMIL` for an explanation of the
 additional tools available in the EMIL interpreter.
 
 The following is an example of a shell script to be submitted for batch
@@ -368,13 +368,13 @@ The complete list of |molcas|-related environment variables:
               </KEYWORD>
 
 :variable:`MOLCAS_FIM`
-  Activates the Files In Memory I/O layer. See section :ref:`MT:sec:fim` for more details.
+  Activates the Files In Memory I/O layer. See :numref:`MT:sec:fim` for more details.
   *Note that this setting is available only in MOLCAS compiled without Global
   Arrays.*
 
   .. warning::
 
-     This feature is not available in OpenMolcas.
+     This feature is not available in |openmolcas|.
 
   .. xmldoc:: <KEYWORD MODULE="ENVIRONMENT" NAME="MOLCAS_FIM" APPEAR="FiM" KIND="CHOICE" LIST="----,YES" LEVEL="ADVANCED">
               %%Keyword: MOLCAS_FIM <advanced>
@@ -399,13 +399,15 @@ The complete list of |molcas|-related environment variables:
 :variable:`MOLCAS_KEEP_WORKDIR`
   If set to NO |molcas| will remove scratch area after a calculation.
   This setting can be overwritten by running :command:`molcas` with flag :command:`-clean`.
+  Note that this does not work in a parallel environment.
 
   .. xmldoc:: <KEYWORD MODULE="ENVIRONMENT" NAME="MOLCAS_KEEP_WORKDIR" APPEAR="Keep WorkDir" KIND="CHOICE" LIST="NO" LEVEL="BASIC">
               %%Keyword: MOLCAS_KEEP_WORKDIR <basic>
               <HELP>
               If set to NO molcas will remove scratch area after a calculation.
               This setting can be overwritten by running molcas with flag -clean:
-              || molcas -clean input
+
+                molcas -clean input
               </HELP>
               </KEYWORD>
 
@@ -477,17 +479,32 @@ The complete list of |molcas|-related environment variables:
               </HELP>
               </KEYWORD>
 
+:variable:`MOLCAS_NEW_DEFAULTS`
+  If set to ``YES`` (case insensitive), some new default values will be activated:
+
+  * :kword:`RICD` will be enabled by default in :program:`GATEWAY`, it can be disabled with :kword:`NOCD`.
+  * The default IPEA shift in :program:`CASPT2` is set to 0.0, other values can be specified normally with the :kword:`IPEA` keyword.
+
+  .. xmldoc:: <KEYWORD MODULE="ENVIRONMENT" NAME="MOLCAS_NEW_DEFAULTS" APPEAR="New defaults" KIND="CHOICE" LIST="YES,NO" LEVEL="ADVANCED">
+              %%Keyword: MOLCAS_NEW_DEFAULTS <advanced>
+              <HELP>
+              If set to 'YES', activates new defaults (e.g. RICD, IPEA=0.0)
+              </HELP>
+              </KEYWORD>
+
 :variable:`MOLCAS_NEW_WORKDIR`
   If set to YES |molcas| will never reuse files in scratch area.
   This setting can be overwritten by running :command:`molcas` with flag :command:`-old`:
-  :command:`molcas -old input`
+  :command:`molcas -old input`.
+  Note that this does not work in a parallel environment.
 
   .. xmldoc:: <KEYWORD MODULE="ENVIRONMENT" NAME="MOLCAS_NEW_WORKDIR" APPEAR="Use new WorkDir" KIND="CHOICE" LIST="YES" LEVEL="BASIC">
               %%Keyword: MOLCAS_NEW_WORKDIR <basic>
               <HELP>
               If set to YES molcas will never reuse files in scratch area.
               This setting can be overwritten by running molcas with flag -old:
-              || molcas -old input
+
+                molcas -old input
               </HELP>
               </KEYWORD>
 
@@ -558,6 +575,16 @@ The complete list of |molcas|-related environment variables:
               </HELP>
               </KEYWORD>
 
+:variable:`MOLCAS_RANDOM_SEED`
+  Set to an integer to provide a fixed seed for operations that use a random number.
+
+  .. xmldoc:: <KEYWORD MODULE="ENVIRONMENT" NAME="MOLCAS_RANDOM_SEED" APPEAR="Random number seed" KIND="INT" LEVEL="ADVANCED">
+              %%Keyword: MOLCAS_RANDOM_SEED <advanced>
+              <HELP>
+              Set to an integer to provide a fixed seed for operations that use a random number.
+              </HELP>
+              </KEYWORD>
+
 :variable:`MOLCAS_REDUCE_PRT`
   If set to NO, print level in DO WHILE loop is not reduced.
 
@@ -609,28 +636,44 @@ The complete list of |molcas|-related environment variables:
               </KEYWORD>
 
 :variable:`MOLCAS_TIMELIM`
-  Set up a timelimit for each module (in minutes). By default, the maximum
+  Set up a timelimit for each module (in seconds). By default, the maximum
   execution time is set to unlimited. *Note that this setting is available only
   in MOLCAS compiled without Global Arrays.*
 
   .. xmldoc:: <KEYWORD MODULE="ENVIRONMENT" NAME="MOLCAS_TIMELIM" APPEAR="Time Limit" KIND="INT" LEVEL="ADVANCED">
               %%Keyword: MOLCAS_TIMELIM <advanced>
               <HELP>
-              Set up a timelimit for each module (in minutes). By default, the maximum
+              Set up a timelimit for each module (in seconds). By default, the maximum
               execution time is set to unlimited. Note that this setting is available only
               in MOLCAS compiled without Global Arrays.
               </HELP>
               </KEYWORD>
 
 :variable:`MOLCAS_TRAP`
-  If MOLCAS_TRAP set to ``OFF`` |molcas| modules will continue to be executed,
+  If set to OFF |molcas| modules will continue to be executed,
   even if a non-zero return code was produced.
 
   .. xmldoc:: <KEYWORD MODULE="ENVIRONMENT" NAME="MOLCAS_TRAP" APPEAR="Trap on Error" KIND="CHOICE" LIST="----,OFF" LEVEL="ADVANCED">
               %%Keyword: MOLCAS_TRAP <advanced>
               <HELP>
-              If MOLCAS_TRAP set to 'OFF' molcas modules will continue to be executed,
+              If set to OFF molcas modules will continue to be executed,
               even if a non-zero return code was produced.
+              </HELP>
+              </KEYWORD>
+
+:variable:`MOLCAS_VALIDATE`
+  If set to YES, the input for each module will be validated against the documented syntax,
+  and the calculation will stop if it does not pass. If set to CHECK, the input will be
+  validated, but the calculation will continue, although the program itself may stop.
+  If set to FIRST, the whole input file will be validated prior to the calculation.
+
+  .. xmldoc:: <KEYWORD MODULE="ENVIRONMENT" NAME="MOLCAS_VALIDATE" APPEAR="Validate input" KIND="CHOICE" LIST="----,YES,CHECK,FIRST" LEVEL="BASIC">
+              %%Keyword: MOLCAS_VALIDATE <basic>
+              <HELP>
+              If set to YES, the input for each module will be validated against the documented syntax,
+              and the calculation will stop if it does not pass. If set to CHECK, the input will be
+              validated, but the calculation will continue, although the program itself may stop.
+              If set to FIRST, the whole input file will be validated prior to the calculation.
               </HELP>
               </KEYWORD>
 
@@ -669,7 +712,3 @@ Example:
   echo Running module $MOLCAS_CURRENT_PROGRAM at $WorkDir
 
 .. xmldoc:: </MODULE>
-
-.. xmldoc:: <MODULE NAME="COMMENT" LEVEL="HIDDEN">
-               <KEYWORD MODULE="COMMENT" NAME="UNDEFINED" APPEAR="Unrecognized Content" KIND="STRINGS" LEVEL="BASIC" />
-            </MODULE>

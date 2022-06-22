@@ -8,13 +8,13 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine input2_cvb(
      >  iorbrel,mxdimrel,ifxorb,
      >  iorts,irots,izeta,orbs,irdorbs)
       implicit real*8 (a-h,o-z)
-#include "ext_cvb.fh"
 #include "main_cvb.fh"
 #include "optze_cvb.fh"
 #include "files_cvb.fh"
@@ -23,7 +23,7 @@
 #include "inpmod_cvb.fh"
 #include "spinb_cvb.fh"
 #include "frag_cvb.fh"
-#include "malloc_cvb.fh"
+#include "WrkSpc.fh"
       dimension iorbrel(mxdimrel),ifxorb(mxorb)
       dimension iorts(2,*),irots(2,*),izeta(*)
       dimension orbs(mxaobf,mxorb),irdorbs(mxorb)
@@ -72,8 +72,9 @@ c  ... Work out NORB, NEL, S ...
         call casinfoset_cvb()
 c  ... Do ICONFS before others to get NVB and related info ...
         do 100 iconf=1,nconf
-100     call imove_cvb(iw((iconf-1)*noe1+ip_iconfs),
-     >    iw((iconf-1)*noe+ip_iconfs),noe)
+        call imove_cvb(iwork((iconf-1)*noe1+ip_iconfs),
+     >    iwork((iconf-1)*noe+ip_iconfs),noe)
+100     continue
         call mrealloci_cvb(ip_iconfs,noe*nconf)
 
         if(nfrag.le.1)then
@@ -116,24 +117,28 @@ c  ... Do ICONFS before others to get NVB and related info ...
           nconf_fr(ifrag)=1
           call mrealloci_cvb(ip_iconfs,noe*nconf)
           do jconf=nconf,iconf_add+2,-1
-          call imove_cvb(iw((jconf-2)*noe+ip_iconfs),
-     >      iw((jconf-1)*noe+ip_iconfs),noe)
+          call imove_cvb(iwork((jconf-2)*noe+ip_iconfs),
+     >      iwork((jconf-1)*noe+ip_iconfs),noe)
           enddo
-          call izero(iw(iconf_add*noe+ip_iconfs),noe)
+          call izero(iwork(iconf_add*noe+ip_iconfs),noe)
           do 1201 i=1,min(nel_fr(ifrag),norb)
-1201      iw(i+iconf_add*noe+ip_iconfs-1)=1
+          iwork(i+iconf_add*noe+ip_iconfs-1)=1
+1201      continue
           do 1301 i=1,nel_fr(ifrag)-norb
-1301      iw(i+iconf_add*noe+ip_iconfs-1)=2
+          iwork(i+iconf_add*noe+ip_iconfs-1)=2
+1301      continue
         endif
-        call cnfcheck_cvb(iw(iconf_add*noe+ip_iconfs),nconf_fr(ifrag),
+        call cnfcheck_cvb(iwork(iconf_add*noe+ip_iconfs),
+     >    nconf_fr(ifrag),
      >    nel_fr(ifrag))
-        call cnfini_cvb(iw(iconf_add*noe+ip_iconfs),nconf_fr(ifrag),
+        call cnfini_cvb(iwork(iconf_add*noe+ip_iconfs),nconf_fr(ifrag),
      >    nel_fr(ifrag),
      >    nS_fr(ifrag),i2s_fr(1,ifrag),
      >    nMs_fr(ifrag),nalf_fr(1,ifrag),nbet_fr(1,ifrag),
      >    nvbr_fr(ifrag),ndetvb_fr(ifrag),ndetvb2_fr(ifrag),
      >    mnion_fr(ifrag),mxion_fr(ifrag),nconfion_fr(0,ifrag),ifsc)
-1001    iconf_add=iconf_add+nconf_fr(ifrag)
+        iconf_add=iconf_add+nconf_fr(ifrag)
+1001    continue
         ndetvb=0
         ndetvb2=0
         nvbr=0
@@ -157,7 +162,6 @@ c  Set absym and use just lowest spin value if spinbas=determinants :
         i2s_min=nel_fr(ifrag)
         do iS=1,nS_fr(ifrag)
         if(i2s_fr(iS,ifrag).ne.0)absym(1)=.false.
-        is2_min=min(i2s_min,i2s_fr(iS,ifrag))
         enddo
         if(kbasis.eq.6)then
           nS_fr(ifrag)=1
@@ -180,10 +184,13 @@ c  SYMELM
         ip_to=ip_symelm
         do 400 isyme=1,nsyme
         do 500 iorb=1,norb
-        if(ip_from.ne.ip_to)call fmove_cvb(w(ip_from),w(ip_to),norb)
+        if(ip_from.ne.ip_to)call fmove_cvb(work(ip_from),work(ip_to),
+     >                                     norb)
         ip_from=ip_from+mxorb
-500     ip_to=ip_to+norb
-400     ip_from=ip_from+(mxorb-norb)*mxorb
+        ip_to=ip_to+norb
+500     continue
+        ip_from=ip_from+(mxorb-norb)*mxorb
+400     continue
 c  IORBREL
         ifrom=1
         ito=1
@@ -204,18 +211,18 @@ c  IORBREL
 c  IFXSTR
         ito=0
         do 700 ifrom=1,nfxvb
-        if(iw(ifrom+ifxstr-1).le.nvb)then
+        if(iwork(ifrom+ifxstr-1).le.nvb)then
           ito=ito+1
-          iw(ito+ifxstr-1)=iw(ifrom+ifxstr-1)
+          iwork(ito+ifxstr-1)=iwork(ifrom+ifxstr-1)
         endif
 700     continue
         nfxvb=ito
 c  IDELSTR
         ito=0
         do 800 ifrom=1,nzrvb
-        if(iw(ifrom+idelstr-1).le.nvb)then
+        if(iwork(ifrom+idelstr-1).le.nvb)then
           ito=ito+1
-          iw(ito+idelstr-1)=iw(ifrom+idelstr-1)
+          iwork(ito+idelstr-1)=iwork(ifrom+idelstr-1)
         endif
 800     continue
         nzrvb=ito
@@ -273,15 +280,15 @@ c Try for new record
         call wrioff_cvb(3,recinp,ioffs)
         call wris_cvb([kbasiscvb_inp],1,recinp,ioffs)
         call wrioff_cvb(4,recinp,ioffs)
-        call wris_cvb(iw(ip_iconfs),noe*nconf,recinp,ioffs)
+        call wris_cvb(iwork(ip_iconfs),noe*nconf,recinp,ioffs)
         call wrioff_cvb(5,recinp,ioffs)
         call wrrs_cvb(orbs,mxaobf*norb,recinp,ioffs)
         call wrioff_cvb(6,recinp,ioffs)
         call wris_cvb(irdorbs,norb,recinp,ioffs)
         call wrioff_cvb(7,recinp,ioffs)
-        call wrrs_cvb(w(ip_cvb),nvbinp,recinp,ioffs)
+        call wrrs_cvb(work(ip_cvb),nvbinp,recinp,ioffs)
         call wrioff_cvb(8,recinp,ioffs)
-        call wrrs_cvb(w(ip_symelm),nsyme*norb*norb,recinp,ioffs)
+        call wrrs_cvb(work(ip_symelm),nsyme*norb*norb,recinp,ioffs)
         call wrioff_cvb(9,recinp,ioffs)
 
         call dset_cvb(iorbrel,ifxorb,ifxstr,

@@ -34,7 +34,6 @@
 #include "rasdim.fh"
 #include "general.fh"
 #include "output_ras.fh"
-      Parameter (ROUTINE='CASDFT_Terms')
 #include "rasscf.fh"
 #include "WrkSpc.fh"
 #include "rctfld.fh"
@@ -47,7 +46,6 @@
       Logical First, Dff, Do_DFT
       Parameter ( Zero=0.0d0 , One=1.0d0 )
 
-      Call qEnter('CASDFT_Terms')
 
 ***********************************************************
 C Local print level (if any)
@@ -125,7 +123,6 @@ c      IPRLEV=100
          Write(LF,*) 'CASDFT_Terms: iRc from Call RdOne not 0'
          Write(LF,*) 'Label = ',Label
          Write(LF,*) 'iRc = ',iRc
-         Call QTrace
          Call Abend
       Endif
       Call GetMem('Ovrlp','Free','Real',iTmp0,nTot1+4)
@@ -156,7 +153,6 @@ c      IPRLEV=100
          Write(LF,*) 'CASDFT_Terms: iRc from Call RdOne not 0'
          Write(LF,*) 'Label = ',Label
          Write(LF,*) 'iRc = ',iRc
-         Call QTrace
          Call Abend
       Endif
       If ( IPRLEV.ge.DEBUG ) then
@@ -398,7 +394,6 @@ c iTmp5 and iTmp6 are not updated in DrvXV...
         Call TriPrt(' ',' ',F,NAC)
       End If
 
-      Call qExit('CASDFT_terms')
 
       Return
       End

@@ -32,11 +32,11 @@
 *                                                                      *
 ************************************************************************
 *
+      Use InfSO
       Implicit Real*8 (a-h,o-z)
 #include "real.fh"
 #include "mxdm.fh"
 #include "infscf.fh"
-#include "infso.fh"
 #include "twoswi.fh"
 #include "file.fh"
 *
@@ -141,7 +141,6 @@ c       Call xSet_ThrInt(ThrInt_o*1.0D+04)
  9999 Continue
       Write (6,*) 'SwiOpt: Error reading ONEINT'
       Write (6,'(A,A)') 'Label=',Label
-      Call QTrace
       Call Abend()
 *
       End

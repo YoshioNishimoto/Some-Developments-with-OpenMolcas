@@ -28,7 +28,6 @@
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
       DIMENSION DUMMY(1)
 
@@ -59,14 +58,13 @@ C update the disk address in IOFFRHS
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 
       REAL*8 :: FP(8)
       CHARACTER(LEN=*) :: CTYPE
 
 C-SVC: print out DNRM2 of the all RHS components
-      IDISK=0
+      NROW=0 ! dummy initialize
       DO ICASE=1,13
         DO ISYM=1,NSYM
 
@@ -102,11 +100,9 @@ C-SVC: print out DNRM2 of the all RHS components
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 
 C-SVC: zero out the entire RHS vector on IVEC
-      IDISK=0
       DO ICASE=1,13
         DO ISYM=1,NSYM
 
@@ -127,10 +123,11 @@ C-SVC: zero out the entire RHS vector on IVEC
 
 *||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*
       SUBROUTINE RHS_ALLO (NAS,NIS,lg_W)
+#ifdef _MOLCAS_MPP_
+      USE Para_Info, ONLY: Is_Real_Par
+#endif
       IMPLICIT REAL*8 (A-H,O-Z)
-#include "output.fh"
 #include "WrkSpc.fh"
-#include "para_info.fh"
 #ifdef _MOLCAS_MPP_
 #include "global.fh"
 #include "mafdecls.fh"
@@ -153,10 +150,11 @@ C-SVC: zero out the entire RHS vector on IVEC
 *||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*
       SUBROUTINE RHS_FREE (NAS,NIS,lg_W)
 CSVC: this routine writes the RHS array to disk
+#ifdef _MOLCAS_MPP_
+      USE Para_Info, ONLY: Is_Real_Par
+#endif
       IMPLICIT REAL*8 (A-H,O-Z)
-#include "output.fh"
 #include "WrkSpc.fh"
-#include "para_info.fh"
 #ifdef _MOLCAS_MPP_
 #include "global.fh"
 #include "mafdecls.fh"
@@ -180,10 +178,11 @@ CSVC: Destroy the global array
 
 *||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*
       SUBROUTINE RHS_DISTRIBUTION (NAS,NIS,iLo,iHi,jLo,jHi)
+#ifdef _MOLCAS_MPP_
+      USE Para_Info, ONLY: Is_Real_Par
+#endif
       IMPLICIT REAL*8 (A-H,O-Z)
-#include "output.fh"
 #include "WrkSpc.fh"
-#include "para_info.fh"
 #ifdef _MOLCAS_MPP_
 #include "global.fh"
 #include "mafdecls.fh"
@@ -220,10 +219,11 @@ CSVC: Destroy the global array
 CSVC: this routine gives a pointer to the process-local part of the RHS
 C     If there is no valid local block, then the routine returns 0 for
 C     iLo and jLo, and -1 for iHi and jHi. This way, loops from lower
+#ifdef _MOLCAS_MPP_
+      USE Para_Info, ONLY: Is_Real_Par
+#endif
       IMPLICIT REAL*8 (A-H,O-Z)
-#include "output.fh"
 #include "WrkSpc.fh"
-#include "para_info.fh"
 #ifdef _MOLCAS_MPP_
 #include "global.fh"
 #include "mafdecls.fh"
@@ -271,10 +271,11 @@ C     iLo and jLo, and -1 for iHi and jHi. This way, loops from lower
 *||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*
       SUBROUTINE RHS_RELEASE (lg_W,iLo,iHi,jLo,jHi)
 CSVC: this routine releases a local block back to the global array
+#ifdef _MOLCAS_MPP_
+      USE Para_Info, ONLY: Is_Real_Par
+#endif
       IMPLICIT REAL*8 (A-H,O-Z)
-#include "output.fh"
 #include "WrkSpc.fh"
-#include "para_info.fh"
 #ifdef _MOLCAS_MPP_
 #include "global.fh"
 #include "mafdecls.fh"
@@ -302,10 +303,11 @@ C Avoid unused argument warnings
       SUBROUTINE RHS_RELEASE_UPDATE (lg_W,iLo,iHi,jLo,jHi)
 CSVC: this routine releases a local block that was written to back to
 C the global array
+#ifdef _MOLCAS_MPP_
+      USE Para_Info, ONLY: Is_Real_Par
+#endif
       IMPLICIT REAL*8 (A-H,O-Z)
-#include "output.fh"
 #include "WrkSpc.fh"
-#include "para_info.fh"
 #ifdef _MOLCAS_MPP_
 #include "global.fh"
 #include "mafdecls.fh"
@@ -332,11 +334,12 @@ C Avoid unused argument warnings
 *||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*
       SUBROUTINE RHS_GET (NAS,NIS,lg_W,W)
 CSVC: this routine copies a global array to a local buffer
+#ifdef _MOLCAS_MPP_
+      USE Para_Info, ONLY: Is_Real_Par
+#endif
       IMPLICIT REAL*8 (A-H,O-Z)
-#include "output.fh"
 #include "WrkSpc.fh"
       DIMENSION W(NAS*NIS)
-#include "para_info.fh"
 #ifdef _MOLCAS_MPP_
 #include "global.fh"
 #include "mafdecls.fh"
@@ -375,11 +378,12 @@ C GA_Get in batches smaller than 2**31-1 bytes (I took 2**30).
 *||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*
       SUBROUTINE RHS_PUT (NAS,NIS,lg_W,W)
 CSVC: this routine copies a local buffer to a global array
+#ifdef _MOLCAS_MPP_
+      USE Para_Info, ONLY: Is_Real_Par, King
+#endif
       IMPLICIT REAL*8 (A-H,O-Z)
-#include "output.fh"
 #include "WrkSpc.fh"
       DIMENSION W(NAS*NIS)
-#include "para_info.fh"
 #ifdef _MOLCAS_MPP_
 #include "global.fh"
 #include "mafdecls.fh"
@@ -423,11 +427,12 @@ C which is 2**30 bytes).
       SUBROUTINE RHS_ADD (NAS,NIS,lg_W,W)
 CSVC: this routine adds to the local part of a global RHS array the
 Cmatching part of a replicate array.
+#ifdef _MOLCAS_MPP_
+      USE Para_Info, ONLY: Is_Real_Par
+#endif
       IMPLICIT REAL*8 (A-H,O-Z)
-#include "output.fh"
 #include "WrkSpc.fh"
       DIMENSION W(NAS,*)
-#include "para_info.fh"
 #ifdef _MOLCAS_MPP_
 #include "global.fh"
 #include "mafdecls.fh"
@@ -475,13 +480,14 @@ Cmatching part of a replicate array.
 *||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*
       SUBROUTINE RHS_READ (NIN,NIS,lg_W,iCASE,iSYM,iVEC)
 CSVC: this routine reads an RHS array in SR format from disk
+#ifdef _MOLCAS_MPP_
+      USE Para_Info, ONLY: Is_Real_Par
+#endif
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
-#include "para_info.fh"
 #ifdef _MOLCAS_MPP_
 #include "global.fh"
 #include "mafdecls.fh"
@@ -540,13 +546,14 @@ CSVC: this routine reads an RHS array in SR format from disk
 *||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*
       SUBROUTINE RHS_SAVE (NIN,NIS,lg_W,iCASE,iSYM,iVEC)
 CSVC: this routine reads an RHS array in SR format from disk
+#ifdef _MOLCAS_MPP_
+      USE Para_Info, ONLY: Is_Real_Par
+#endif
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
-#include "para_info.fh"
 #ifdef _MOLCAS_MPP_
 #include "global.fh"
 #include "mafdecls.fh"
@@ -586,10 +593,12 @@ CSVC: this routine reads an RHS array in SR format from disk
       SUBROUTINE RHS_SCATTER (LDW,lg_W,Buff,idxW,nBuff)
 CSVC: this routine scatters + adds values of a buffer array into the RHS
 C     array at positions given by the buffer index array.
+#ifdef _MOLCAS_MPP_
+      USE Para_Info, ONLY: Is_Real_Par
+#endif
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "WrkSpc.fh"
       DIMENSION Buff(nBuff),idxW(nBuff)
-#include "para_info.fh"
 #ifdef _MOLCAS_MPP_
 #include "global.fh"
 #include "mafdecls.fh"
@@ -634,15 +643,16 @@ C Avoid unused argument warnings
 *||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*
       SUBROUTINE DRA2SOLV (NAS,NIS,iCASE,iSYM,iVEC)
 CSVC: FIXME: this temporary routine copies the RHS arrays from DRAs to
-C     LUSOLV and should be removed once the full paralellization is in
+C     LUSOLV and should be removed once the full parallelization is in
 C     place and transition is no longer needed.
+#ifdef _MOLCAS_MPP_
+      USE Para_Info, ONLY: Is_Real_Par, King
+#endif
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
-#include "output.fh"
-#include "para_info.fh"
 #ifdef _MOLCAS_MPP_
 #include "global.fh"
 #include "mafdecls.fh"
@@ -702,15 +712,16 @@ CSVC: Destroy the global array
 *||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*
       SUBROUTINE SOLV2DRA (NAS,NIS,iCASE,iSYM,iVEC)
 CSVC: FIXME: this temporary routine copies the RHS arrays from DRAs to
-C     LUSOLV and should be removed once the full paralellization is in
+C     LUSOLV and should be removed once the full parallelization is in
 C     place and transition is no longer needed.
+#ifdef _MOLCAS_MPP_
+      USE Para_Info, ONLY: Is_Real_Par, King
+#endif
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
-#include "output.fh"
-#include "para_info.fh"
 #ifdef _MOLCAS_MPP_
 #include "global.fh"
 #include "mafdecls.fh"
@@ -768,9 +779,11 @@ CSVC: Destroy the global array
 *||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*
       SUBROUTINE RHS_SCAL (NAS,NIS,lg_W,FACT)
 CSVC: this routine multiplies the RHS array with FACT
+#ifdef _MOLCAS_MPP_
+      USE Para_Info, ONLY: Is_Real_Par
+#endif
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "WrkSpc.fh"
-#include "para_info.fh"
 #ifdef _MOLCAS_MPP_
 #include "global.fh"
 #include "mafdecls.fh"
@@ -787,7 +800,7 @@ C          CALL GA_Fill (lg_W,0.0D0)
           END IF
         END IF
       ELSE
-        IF(FACT.EQ.0.0D00) THEN
+        IF(FACT.EQ.0.0D0) THEN
             CALL DCOPY_(NAS*NIS,[0.0D0],0,WORK(lg_W),1)
         ELSE
           IF(FACT.NE.1.0D00) THEN
@@ -796,7 +809,7 @@ C          CALL GA_Fill (lg_W,0.0D0)
         END IF
       END IF
 #else
-      IF(FACT.EQ.0.0D00) THEN
+      IF(FACT.EQ.0.0D0) THEN
           CALL DCOPY_(NAS*NIS,[0.0D0],0,WORK(lg_W),1)
       ELSE
         IF(FACT.NE.1.0D00) THEN
@@ -813,13 +826,14 @@ CSVC: this routine transforms the RHS arrays from SR format (V1) to C
 C     format (V2) (IREV=0) and back (IREV=1), with ITYP specifying if
 C     only the T matrix is used (ITYP=0) or the product of S and T
 C     (ITYP=1).
+#ifdef _MOLCAS_MPP_
+      USE Para_Info, ONLY: Is_Real_Par
+#endif
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
-#include "output.fh"
-#include "para_info.fh"
 #ifdef _MOLCAS_MPP_
 #include "global.fh"
 #include "mafdecls.fh"
@@ -1005,13 +1019,14 @@ C-SVC: get the local vertical stripes of the V1 and V2 vectors
       SUBROUTINE RHS_STRANS (NAS,NIS,ALPHA,lg_V1,lg_V2,ICASE,ISYM)
 CSVC: this routine transforms RHS array V1 by multiplying on the left
 C     with the S matrix and adds the result in V2: V2 <- V2 + alpha S*V1
+#ifdef _MOLCAS_MPP_
+      USE Para_Info, ONLY: Is_Real_Par
+#endif
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
-#include "output.fh"
-#include "para_info.fh"
 #ifdef _MOLCAS_MPP_
 #include "global.fh"
 #include "mafdecls.fh"
@@ -1131,9 +1146,11 @@ C-SVC: get the local vertical stripes of the V1 and V2 vectors
 *||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*
       REAL*8 FUNCTION RHS_DDOT(NAS,NIS,lg_V1,lg_V2)
 CSVC: this routine computes the DDOT of the RHS arrays V1 and V2
+#ifdef _MOLCAS_MPP_
+      USE Para_Info, ONLY: Is_Real_Par
+#endif
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "WrkSpc.fh"
-#include "para_info.fh"
 #ifdef _MOLCAS_MPP_
 #include "global.fh"
 #include "mafdecls.fh"
@@ -1192,9 +1209,11 @@ CSVC: this routine computes the DDOT of the RHS arrays V1 and V2
 *||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*
       SUBROUTINE RHS_DAXPY (NAS,NIS,ALPHA,lg_V1,lg_V2)
 CSVC: this routine computes product ALPHA * V1 and adds to V2
+#ifdef _MOLCAS_MPP_
+      USE Para_Info, ONLY: Is_Real_Par
+#endif
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "WrkSpc.fh"
-#include "para_info.fh"
 #ifdef _MOLCAS_MPP_
 #include "global.fh"
 #include "mafdecls.fh"
@@ -1208,7 +1227,7 @@ CSVC: this routine computes product ALPHA * V1 and adds to V2
         IF (iLoV1.NE.0.AND.iLoV2.NE.0) THEN
           NV1=(iHiV1-iLoV1+1)*(jHiV1-jLoV1+1)
           NV2=(iHiV2-iLoV2+1)*(jHiV2-jLoV2+1)
-          IF (NV1.NE.NV2) CALL AbEnd('RHS_DAXPY: Error: NV1 != NV2')
+          IF (NV1.NE.NV2) CALL AbEnd()
           CALL GA_Access (lg_V1,iLoV1,iHiV1,jLoV1,jHiV1,mV1,LDV1)
           CALL GA_Access (lg_V2,iLoV2,iHiV2,jLoV2,jHiV2,mV2,LDV2)
           ! V2 <- alpha*V1 + V2
@@ -1227,18 +1246,19 @@ CSVC: this routine computes product ALPHA * V1 and adds to V2
 
 *||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*
       SUBROUTINE RHS_RESDIA(NIN,NIS,lg_W,DIN,DIS,DOVL)
+#ifdef _MOLCAS_MPP_
+      USE Para_Info, ONLY: Is_Real_Par
+#endif
       IMPLICIT REAL*8 (A-H,O-Z)
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
       DIMENSION DIN(*),DIS(*)
 
 C Apply the resolvent of the diagonal part of H0 to an RHS array
 
-#include "para_info.fh"
 #ifdef _MOLCAS_MPP_
 #include "global.fh"
 #include "mafdecls.fh"
@@ -1255,35 +1275,38 @@ C-SVC: get the local vertical stripes of the lg_W vector
           NROW=iHi-iLo+1
           NCOL=jHi-jLo+1
           CALL GA_Access (lg_W,iLo,iHi,jLo,jHi,mW,LDW)
-          CALL RESDIA(NROW,NCOL,DBL_MB(mW),LDW,
-     &                DIN(iLo),DIS(jLo),SHIFT,SHIFTI,DOVL)
+          CALL RESDIA(NROW,NCOL,DBL_MB(mW),LDW,DIN(iLo),
+     &                DIS(jLo),SHIFT,SHIFTI,DOVL)
           CALL GA_Release_Update (lg_W,iLo,iHi,jLo,jHi)
         END IF
         CALL GA_Sync()
         CALL GAdSUM_SCAL(DOVL)
       ELSE
-        CALL RESDIA(NIN,NIS,WORK(lg_W),NIN,DIN,DIS,SHIFT,SHIFTI,DOVL)
+        CALL RESDIA(NIN,NIS,WORK(lg_W),NIN,DIN,DIS,
+     &                   SHIFT,SHIFTI,DOVL)
       END IF
 #else
-      CALL RESDIA(NIN,NIS,WORK(lg_W),NIN,DIN,DIS,SHIFT,SHIFTI,DOVL)
+      CALL RESDIA(NIN,NIS,WORK(lg_W),NIN,DIN,DIS,
+     &                 SHIFT,SHIFTI,DOVL)
 #endif
 
       END
 
 *||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*
       SUBROUTINE RHS_SGMDIA(NIN,NIS,lg_W,DIN,DIS)
+#ifdef _MOLCAS_MPP_
+      USE Para_Info, ONLY: Is_Real_Par
+#endif
       IMPLICIT REAL*8 (A-H,O-Z)
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
       DIMENSION DIN(*),DIS(*)
 
 C Apply the resolvent of the diagonal part of H0 to an RHS array
 
-#include "para_info.fh"
 #ifdef _MOLCAS_MPP_
 #include "global.fh"
 #include "mafdecls.fh"
@@ -1314,7 +1337,8 @@ C-SVC: get the local vertical stripes of the lg_W vector
       END
 
 *||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*
-      SUBROUTINE RESDIA(NROW,NCOL,W,LDW,DIN,DIS,SHIFT,SHIFTI,DOVL)
+      SUBROUTINE RESDIA(NROW,NCOL,W,LDW,DIN,DIS,
+     &                  SHIFT,SHIFTI,DOVL)
       IMPLICIT REAL*8 (A-H,O-Z)
 
       DIMENSION W(LDW,*),DIN(*),DIS(*)

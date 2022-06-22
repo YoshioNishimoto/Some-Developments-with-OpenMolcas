@@ -18,12 +18,13 @@
 *     Datasets:
 *       AO_OVERLAP_MATRIX
 
+      use mh5, only: mh5_init_attr, mh5_create_dset_real, mh5_put_dset,
+     &               mh5_close_dset
       implicit none
       integer :: fileid
       integer :: nsym, nbas(*)
 #  include "Molcas.fh"
 #  include "stdalloc.fh"
-#  include "mh5.fh"
 
       integer :: isym
       integer :: nb, nbast, nbast1, nbast2
@@ -31,7 +32,7 @@
       real*8, allocatable :: SAO(:), Scr(:)
 
       integer :: iRc, iOpt, iComp, iSyLbl
-      character(8) :: Label
+      character(len=8) :: Label
 
       integer :: iOff1, iOff2
 
@@ -50,7 +51,7 @@
 *     atomic orbital overlap matrix
       dsetid = mh5_create_dset_real(fileid,
      $        'AO_OVERLAP_MATRIX', 1, [NBAST2])
-      call mh5_init_attr(dsetid, 'description',
+      call mh5_init_attr(dsetid, 'DESCRIPTION',
      $        'Overlap matrix of the atomic orbitals, '//
      $        'arranged as blocks of size [NBAS(i)**2], i=1,#irreps')
 
@@ -89,12 +90,13 @@
 *     Datasets:
 *       AO_FOCKINT_MATRIX
 
+      use mh5, only: mh5_init_attr, mh5_create_dset_real, mh5_put_dset,
+     &               mh5_close_dset
       implicit none
       integer :: fileid
       integer :: nsym, nbas(*)
 #  include "Molcas.fh"
 #  include "stdalloc.fh"
-#  include "mh5.fh"
 
       integer :: isym
       integer :: nb, nbast, nbast1, nbast2
@@ -102,7 +104,7 @@
       real*8, allocatable :: SAO(:), Scr(:)
 
       integer :: iRc, iOpt, iComp, iSyLbl
-      character(8) :: Label
+      character(len=8) :: Label
 
       integer :: iOff1, iOff2
 
@@ -121,7 +123,7 @@
 *     atomic orbital Fock matrix
       dsetid = mh5_create_dset_real(fileid,
      $        'AO_FOCKINT_MATRIX', 1, [NBAST2])
-      call mh5_init_attr(dsetid, 'description',
+      call mh5_init_attr(dsetid, 'DESCRIPTION',
      $        'Fock matrix of the atomic orbitals, '//
      $        'arranged as blocks of size [NBAS(i)**2], i=1,#irreps')
 
@@ -163,12 +165,14 @@
 *       MLTPL_XX, MLTPL_YY, MLTPL_ZZ, MLTPL_XY, MLTPL_YZ, MLTPL_XZ
 *       MLTPL_ORIG
 
+      use Symmetry_Info, only: Mul
+      use mh5, only: mh5_init_attr, mh5_create_dset_real, mh5_put_dset,
+     &               mh5_close_dset
       implicit none
       integer :: fileid
       integer :: nsym, nbas(*)
 #  include "Molcas.fh"
 #  include "stdalloc.fh"
-#  include "mh5.fh"
 
       integer :: isym, jsym, msym
       integer :: nb, nbast, nB1, nB2
@@ -177,16 +181,14 @@
       real*8, dimension(3,3) :: mp_orig
 
       integer :: iRc, iOpt, iComp, iSyMsk
-      character(8) :: Label
+      character(len=8) :: Label
 
-      character(1) :: mltpl1_comp(3) = ['X','Y','Z']
-      character(2) :: mltpl2_comp(6) = ['XX','XY','XZ','YY','YZ','ZZ']
+      character(len=1)::mltpl1_comp(3) = ['X','Y','Z']
+      character(len=2)::mltpl2_comp(6) = ['XX','XY','XZ','YY','YZ','ZZ']
 
       integer :: i, j, iOff, jOff, iScrOff, iBas, jBas
 
       integer :: dsetid
-
-      integer, external :: symmetry
 
       nbast=0
       do isym=1,nsym
@@ -213,7 +215,7 @@
         jOff = 0
         nB1 = nBas(iSym)
         Do jSym = 1,iSym
-          mSym = symmetry(iSym,jSym)
+          mSym = Mul(iSym,jSym)
           nB2 = nBas(jSym)
           If (IAND(2**(mSym-1),iSyMsk).ne.0) Then
             If (iSym.eq.jSym) Then
@@ -230,7 +232,7 @@
                 jBas = jOff + j
                 Do i=1,nB1
                   iBas = iOff + i
-                  MLTPL(iBas,jBas) = Scratch(1+iScrOff)
+                  MLTPL(jBas,iBas) = Scratch(1+iScrOff)
                   iScrOff = iScrOff + 1
                 End Do
               End Do
@@ -247,10 +249,10 @@
       End Do
       dsetid = mh5_create_dset_real(fileid,
      $        'AO_MLTPL_'//mltpl1_comp(icomp), 2, [NBAST,NBAST])
-      call mh5_init_attr(dsetid, 'description',
+      call mh5_init_attr(dsetid, 'DESCRIPTION',
      $        '1st-order multipole matrix of the atomic orbitals, '//
      $        'arranged as matrix of size [NBAST,NBAST]')
-      call mh5_put_dset_array_real(dsetid,MLTPL)
+      call mh5_put_dset(dsetid,MLTPL)
       call mh5_close_dset(dsetid)
       end do
 
@@ -270,7 +272,7 @@
         jOff = 0
         nB1 = nBas(iSym)
         Do jSym = 1,iSym
-          mSym = symmetry(iSym,jSym)
+          mSym = Mul(iSym,jSym)
           nB2 = nBas(jSym)
           If (IAND(2**(mSym-1),iSyMsk).ne.0) Then
             If (iSym.eq.jSym) Then
@@ -287,7 +289,7 @@
                 jBas = jOff + j
                 Do i=1,nB1
                   iBas = iOff + i
-                  MLTPL(iBas,jBas) = Scratch(1+iScrOff)
+                  MLTPL(jBas,iBas) = Scratch(1+iScrOff)
                   iScrOff = iScrOff + 1
                 End Do
               End Do
@@ -304,10 +306,10 @@
       End Do
       dsetid = mh5_create_dset_real(fileid,
      $        'AO_MLTPL_'//mltpl2_comp(icomp), 2, [NBAST,NBAST])
-      call mh5_init_attr(dsetid, 'description',
+      call mh5_init_attr(dsetid, 'DESCRIPTION',
      $        '2nd-order multipole matrix of the atomic orbitals, '//
      $        'arranged as matrix of size [NBAST,NBAST]')
-      call mh5_put_dset_array_real(dsetid,MLTPL)
+      call mh5_put_dset(dsetid,MLTPL)
       call mh5_close_dset(dsetid)
       end do
 
@@ -318,10 +320,10 @@
 
       dsetid = mh5_create_dset_real(fileid,
      $        'MLTPL_ORIG', 2, [3,3])
-      call mh5_init_attr(dsetid, 'description',
+      call mh5_init_attr(dsetid, 'DESCRIPTION',
      $        'Origin used for the multipole moment operators: '//
      $        'arranged as overlap, dipole, quadrupole')
-      call mh5_put_dset_array_real(dsetid,mp_orig,[3,3],[0,0])
+      call mh5_put_dset(dsetid,mp_orig,[3,3],[0,0])
       call mh5_close_dset(dsetid)
 
       end

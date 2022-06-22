@@ -17,16 +17,17 @@
 * SWEDEN                                     *
 *--------------------------------------------*
       SUBROUTINE SBDIAG()
+      use output_caspt2, only:iPrGlb,usual,verbose
+#ifdef _MOLCAS_MPP_
+      USE Para_Info, ONLY: Is_Real_Par
+#endif
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
-#include "para_info.fh"
 
-      CALL QENTER('SBDIAG')
 
       IF(IPRGLB.GE.VERBOSE) THEN
         WRITE(6,*)
@@ -96,17 +97,16 @@ C usually print info on the total number of parameters
         WRITE(6,'(a,i12)')'   After  reduction:',IPAR1
       ENDIF
 
-      CALL QEXIT('SBDIAG')
 
       RETURN
       END
 
       SUBROUTINE SBDIAG_SER(ISYM,ICASE,CONDNR,CPU)
+      use output_caspt2, only:iPrGlb,insane
       IMPLICIT REAL*8 (A-H,O-Z)
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 
@@ -183,7 +183,7 @@ C Extremely small values give scale factor exactly zero.
 * Small variations of the scale factor were beneficial
           WORK(LSCA-1+I)=(1.0D00+DBLE(I)*3.0D-6)/SQRT(SD)
         ELSE
-          WORK(LSCA-1+I)=0.0D00
+          WORK(LSCA-1+I)=0.0D0
         END IF
       END DO
       IJ=0
@@ -350,7 +350,7 @@ C TRANSFORM B. NEW B WILL OVERWRITE AND DESTROY WORK(LVEC)
       CALL GETMEM('LXBX','ALLO','REAL',LXBX,NAS)
       DO J=NIN,1,-1
         LVSTA=LVEC+NAS*(J-1)
-        CALL DCOPY_(NAS,[0.0D00],0,WORK(LBX),1)
+        CALL DCOPY_(NAS,[0.0D0],0,WORK(LBX),1)
 #ifdef _CRAY_C90_
         CALL SSPMV('U',NAS,1.0D+00,WORK(LB),WORK(LVSTA),1,
      &                           1.0D+00,WORK(LBX),1)
@@ -361,7 +361,7 @@ C TRANSFORM B. NEW B WILL OVERWRITE AND DESTROY WORK(LVEC)
      &                           1.0D+00,WORK(LBX),1)
 #endif
 C WORK(LBX): B * Vector number J.
-        CALL DCOPY_(J,[0.0D00],0,WORK(LXBX),1)
+        CALL DCOPY_(J,[0.0D0],0,WORK(LXBX),1)
         CALL DGEMM_('T','N',
      &              J,1,NAS,
      &              1.0d0,WORK(LVEC),NAS,
@@ -400,7 +400,6 @@ C - Alt 0: Use diagonal approxim., if allowed:
           WORK(LEIG-1+I)=WORK(LB-1+IDIAG)/SD
         END DO
       ELSE
-        NBB=(NIN*(NIN+1))/2
         IJ=0
         DO J=1,NIN
           DO I=1,J
@@ -478,7 +477,7 @@ C      utilities.
       IDS=IDSMAT(ISYM,ICASE)
       CALL DDAFILE(LUSBT,2,WORK(LS),NS,IDS)
       CALL GETMEM('LST','ALLO','REAL',LST,NAS*NIN)
-      CALL DCOPY_(NAS*NIN,[0.0D00],0,WORK(LST),1)
+      CALL DCOPY_(NAS*NIN,[0.0D0],0,WORK(LST),1)
       CALL TRIMUL(NAS,NIN,1.0D00,WORK(LS),WORK(LTRANS),
      &            NAS,WORK(LST),NAS)
       CALL GETMEM('LS','FREE','REAL',LS,NS)
@@ -502,10 +501,13 @@ C batch mode.  However, unlike in the replicate routine, this amount is
 C divided over processors.
 #ifdef _MOLCAS_MPP_
       SUBROUTINE SBDIAG_MPP(ISYM,ICASE,CONDNR,CPU)
+      use output_caspt2, only:iPrGlb,insane
+#ifdef _MOLCAS_MPP_
+      USE Para_Info, ONLY: King
+#endif
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
@@ -513,12 +515,11 @@ C divided over processors.
 C-SVC20100902: global arrays header files
 #include "global.fh"
 #include "mafdecls.fh"
-#ifndef SCALAPACK
+#ifndef _SCALAPACK_
       DIMENSION WGRONK(2)
 #endif
       LOGICAL bSTAT
-      CHARACTER(2) cSYM,cCASE
-      LOGICAL KING
+      CHARACTER(LEN=2) cSYM,cCASE
 
 C On entry, the DRA metafiles contain the matrices S and B for cases A
 C (iCASE=1) en C (iCASE=4).  These symmetric matrices are stored on disk
@@ -584,7 +585,7 @@ C full parallelization of use of S matrices is achieved.
 C Save the diagonal elements from the S matrix for easy access later on.
 C FIXME: nicer way to do this?
       CALL GETMEM('SD','ALLO','REAL',LSD,NAS)
-      CALL DCOPY_(NAS,[0.0D00],0,WORK(LSD),1)
+      CALL DCOPY_(NAS,[0.0D0],0,WORK(LSD),1)
       myRank = GA_NodeID()
       call GA_Distribution (lg_S, myRank, iLo, iHi, jLo, jHi)
       ISTA=MAX(ILO,JLO)
@@ -605,7 +606,7 @@ C Calculate the scaling factors and store them in array LSCA.
         IF(SD.GT.THRSHN) THEN
           WORK(LSCA-1+I)=(1.0D00+DBLE(I)*3.0D-6)/SQRT(SD)
         ELSE
-          WORK(LSCA-1+I)=0.0D00
+          WORK(LSCA-1+I)=0.0D0
         END IF
       END DO
 
@@ -632,7 +633,7 @@ C performance recommend PDSYEVX or PDSYEVR as fastest methods if
 C eigenvectors are needed (FIXME: should time this).  For the linear
 C dependence removal, split eigenvectors in horizontal stripes so that
 C each processor has a row window of all column vectors
-#ifdef SCALAPACK
+#ifdef _SCALAPACK_
       CALL PSBMAT_GETMEM('VMAT',lg_V,NAS)
       CALL GA_PDSYEVX_ (lg_S, lg_V, WORK(LEIG), 0)
       bSTAT = GA_Destroy (lg_S)
@@ -684,7 +685,7 @@ C eigenvectors back to a global array.  Then distribute the eigenvalues.
       CPU=CPU+CPU2-CPU1
 
       CALL GETMEM('COND','ALLO','REAL',LCOND,NIN)
-      CALL DCOPY_(NIN,[0.0D00],0,WORK(LCOND),1)
+      CALL DCOPY_(NIN,[0.0D0],0,WORK(LCOND),1)
 C Form orthonormal transformation vectors by scaling the eigenvectors.
       call GA_Sync()
       myRank = GA_NodeID()
@@ -769,7 +770,7 @@ C eigenvalues would go in ordinary CASPT2.
         CALL PSBMAT_GETMEM ('B',lg_B,NAS)
         CALL PSBMAT_READ ('B',iCase,iSym,lg_B,NAS)
         CALL GETMEM('BD','ALLO','REAL',LBD,NAS)
-        CALL DCOPY_(NAS,[0.0D00],0,WORK(LBD),1)
+        CALL DCOPY_(NAS,[0.0D0],0,WORK(LBD),1)
         myRank = GA_NodeID()
         call GA_Distribution (lg_B, myRank, iLo, iHi, jLo, jHi)
         ISTA=MAX(ILO,JLO)
@@ -890,7 +891,7 @@ C FIXME: this original code seemed wrong, using uninitialized SD?
         WRITE(6,*) 'GLOB_SBDIAG: option not implemented'
         call AbEnd()
       ELSE
-#ifdef SCALAPACK
+#ifdef _SCALAPACK_
         CALL GA_CREATE_STRIPED ('H',NIN,NIN,'VMAT',lg_V)
         CALL GA_PDSYEVX_ (lg_B, lg_V, WORK(LEIG), 0)
         bStat = GA_Destroy (lg_B)
@@ -1015,7 +1016,6 @@ C replicate array.  FIXME: Should be removed later.
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
@@ -1031,7 +1031,6 @@ C replicate array.  FIXME: Should be removed later.
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"

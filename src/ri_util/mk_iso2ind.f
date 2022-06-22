@@ -9,18 +9,20 @@
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
       Subroutine Mk_iSO2Ind(iSO2Sh,iSO2Ind,nSO,nShell)
-#include "WrkSpc.fh"
+#include "stdalloc.fh"
       Integer iSO2Sh(nSO), iSO2Ind(nSO)
 *
-      Call Allocate_iWork(ipTemp,nShell)
-      Call Mk_iSO2Ind_(iSO2Sh,iSO2Ind,nSO,iWork(ipTemp),nShell)
-      Call Free_iWork(ipTemp)
+      Integer, Allocatable :: nTemp(:)
+
+      Call mma_allocate(nTemp,nShell,Label='nTemp')
+      Call Mk_iSO2Ind_(iSO2Sh,iSO2Ind,nSO,nTemp,nShell)
+      Call mma_deallocate(nTemp)
 *
       Return
       End
       Subroutine Mk_iSO2Ind_(iSO2Sh,iSO2Ind,nSO,nTemp,nShell)
-#include "itmax.fh"
-#include "info.fh"
+      use Basis_Info, only: nBas_Aux
+      use Symmetry_Info, only: nIrrep
       Integer iSO2Sh(nSO), iSO2Ind(nSO), nTemp(nShell)
 *
       iSO = 0

@@ -11,16 +11,16 @@
 * Copyright (C) Francesco Aquilante                                    *
 ************************************************************************
       SUBROUTINE Restore_mat(n,m,lu_A0,lu_A,iD_A,Scr,lScr,Add0s)
-***********************************************************************
+************************************************************************
 *
 *     Author:  F. Aquilante
 *
-***********************************************************************
+************************************************************************
       Implicit Real*8 (a-h,o-z)
       Integer n, m, lu_A0, lu_A, iD_A(n), lScr
       Real*8  Scr(lScr)
       Logical Add0s
-#include "warnings.fh"
+#include "warnings.h"
 
       lmax=lScr-n
       If (lmax .lt. n) Then

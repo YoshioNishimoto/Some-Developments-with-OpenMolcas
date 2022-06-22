@@ -9,7 +9,7 @@
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
       SUBROUTINE TSHop(CI1,CI2)
-C   . |  1    .    2    .    3    .    4    .    5    .    6    .    7 |  .    8
+      use rassi_global_arrays, only: JBNUM, LROOT
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "prgm.fh"
       CHARACTER*16 ROUTINE
@@ -28,7 +28,6 @@ C   . |  1    .    2    .    3    .    4    .    5    .    6    .    7 |  .    8
       DIMENSION    IADR3(3)
       LOGICAL      lMaxHop,lAllowHop,fexist,lHopped
 *
-      CALL QENTER(ROUTINE)
 *
 C Skip the test if a hop has occurred
 C  (this should happen when testing for state n+1
@@ -54,14 +53,14 @@ C
 C Get the CI coefficients for current state
 C
 C Open JOBIPH file:
-      JOB1=iWork(lJBNUM+ISTATE1-1)
+      JOB1=JBNUM(ISTATE1)
       CALL DANAME(LUIPH,JBNAME(JOB1))
 C Read table of contents on this JOBIPH file:
       IAD=0
       CALL IDAFILE(LUIPH,2,ITOC15,15,IAD)
 C Read CI coefficients from interface.
       IDISK=ITOC15(4)
-      LROOT1=iWork(lLROOT+ISTATE1-1)
+      LROOT1=LROOT(ISTATE1)
       DO I=1,LROOT1-1
          CALL DDAFILE(LUIPH,0,CI1,NCI1,IDISK)
       END DO
@@ -71,14 +70,14 @@ C
 C Get the CI coefficients for state2
 C
 C Open JOBIPH file:
-      JOB2=iWork(lJBNUM+ISTATE2-1)
+      JOB2=JBNUM(ISTATE2)
       CALL DANAME(LUIPH,JBNAME(JOB2))
 C Read table of contents on this JOBIPH file:
       IAD=0
       CALL IDAFILE(LUIPH,2,ITOC15,15,IAD)
 C Read CI coefficients from interface.
       IDISK=ITOC15(4)
-      LROOT1=iWork(lLROOT+ISTATE2-1)
+      LROOT1=LROOT(ISTATE2)
       DO I=1,LROOT1-1
          CALL DDAFILE(LUIPH,0,CI2,NCI2,IDISK)
       END DO
@@ -110,7 +109,7 @@ C
       IF (fexist) THEN
          CALL DANAME(file,filnam)
          IF (IPGLOB.GE.VERBOSE)
-     &      WRITE(6,*) filnam(:mylen(filnam))//' file exists.'
+     &      WRITE(6,*) trim(filnam)//' file exists.'
       ELSE
 C If the file does not exist, create a new one with the
 C current vectors
@@ -131,7 +130,7 @@ C Write the real table of contents
          IAD3=0
          CALL IDAFILE(file,1,IADR3,3,IAD3)
          IF (IPGLOB.GE.VERBOSE)
-     &      WRITE(6,*) filnam(:mylen(filnam))//' file created.'
+     &      WRITE(6,*) trim(filnam)//' file created.'
       ENDIF
 C
 C Check for surface hop if the energy difference is smaller than
@@ -272,7 +271,6 @@ C Write the CI-vectors normally if no hop occurred
          CALL DACLOS(file)
       ENDIF
 *
-      CALL QEXIT(ROUTINE)
       RETURN
 3000  FORMAT(6X,A,F7.2)
 *

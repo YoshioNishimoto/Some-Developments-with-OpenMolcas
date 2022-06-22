@@ -8,20 +8,6 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
-c
-c     this file contains folloeing routines:
-c     add
-c     add10
-c     add21
-c     add22
-c     add32
-c     add41
-c     add42
-c     add43
-c     add44
-c
-c     -----------------------------------
-c
        subroutine cct3_add (wrk,wrksize,
      & ninda,nindb,nindext,typext,u,v,ssu,ssv,factor,
      & mapda,ssa,mapdb,mapib,ssb,rc)
@@ -92,9 +78,9 @@ c
 c
 c     help variables
 c
-       integer sa1,sa2,sa3,sa4,ssp,ssq,pq
-       integer nhelp1,nhelp2,nhelp3,nhelp4,nhelp5
-       integer nhelp6,nhelp7,nhelp8,nhelp9,nhelp10
+       integer sa1,sa2,sa3,ssp,ssq,pq
+       integer :: nhelp1=0,nhelp2=0,nhelp3=0,nhelp4=0,nhelp5=0
+       integer :: nhelp6=0,nhelp7=0,nhelp8=0,nhelp9=0,nhelp10=0
        integer ia,ib,ibm
        integer typa,typb,p,q
        real*8 fact
@@ -190,11 +176,10 @@ c
        sa1=mapda(ia,3)
        sa2=mapda(ia,4)
        sa3=mapda(ia,5)
-       sa4=mapda(ia,6)
 c
        ib=mapib(sa1,sa2,sa3)
 c
-c     def lenght
+c     def length
        nhelp1=mapda(ia,2)
        if (nhelp1.eq.0) goto 400
 c
@@ -230,7 +215,7 @@ c
 c
        ib=mapib(ssu,sa1,sa2)
 c
-c     def lenght
+c     def length
        nhelp1=mapda(ia,2)
        if (nhelp1.eq.0) goto 4110
 c
@@ -272,7 +257,7 @@ c
        ib=mapib(ssu,sa1,sa2)
        ibm=mapib(sa1,ssu,sa2)
 c
-c     def lenght
+c     def length
        nhelp1=mapda(ia,2)
        if (nhelp1.eq.0) goto 4114
 c
@@ -376,7 +361,7 @@ c
 c
        ib=mapib(sa1,ssu,sa2)
 c
-c     def lenght
+c     def length
        nhelp1=mapda(ia,2)
        if (nhelp1.eq.0) goto 4120
 c
@@ -419,7 +404,7 @@ c
        ib=mapib(sa1,ssu,sa2)
        ibm=mapib(ssu,sa1,sa2)
 c
-c     def lenght
+c     def length
        nhelp1=mapda(ia,2)
        if (nhelp1.eq.0) goto 4124
 c
@@ -525,7 +510,7 @@ c
 c
        ib=mapib(sa1,sa2,ssu)
 c
-c     def lenght
+c     def length
        nhelp1=mapda(ia,2)
        if (nhelp1.eq.0) goto 4130
 c
@@ -569,7 +554,7 @@ c
        ib=mapib(sa1,sa2,ssu)
        ibm=mapib(sa1,sa2,sa3)
 c
-c     def lenght
+c     def length
        nhelp1=mapda(ia,2)
        if (nhelp1.eq.0) goto 4134
 c
@@ -645,7 +630,7 @@ c
 c
        ib=mapib(sa1,sa2,sa3)
 c
-c     def lenght
+c     def length
        nhelp1=mapda(ia,2)
        if (nhelp1.eq.0) goto 4140
 c
@@ -689,7 +674,7 @@ c
        ib=mapib(sa1,sa2,sa3)
        ibm=mapib(sa1,sa2,ssu)
 c
-c     def lenght
+c     def length
        nhelp1=mapda(ia,2)
        if (nhelp1.eq.0) goto 4144
 c
@@ -782,7 +767,7 @@ c@@
 c
        ib=mapib(ssu,ssv,sa1)
 c
-c     def lenght
+c     def length
        nhelp1=mapda(ia,2)
        if (nhelp1.eq.0) goto 4250
 c
@@ -799,7 +784,7 @@ c
 c     calc joined pq index
        pq=(v-1)*nhelp4+u
 c
-c     calc fictive lenghts
+c     calc fictive lengths
        nhelp9=nhelp6*nhelp7
        nhelp10=nhelp4*nhelp5
 c
@@ -835,7 +820,7 @@ c@
 c@@
        ib=mapib(ssp,ssq,sa1)
 c
-c     def lenght
+c     def length
        nhelp1=mapda(ia,2)
        if (nhelp1.eq.0) goto 4254
 c
@@ -849,7 +834,7 @@ c     def dimp,dimq,dimr,dims
        nhelp6=dimm(mapdb(0,3),mapdb(ib,5))
        nhelp7=dimm(mapdb(0,4),mapdb(ib,6))
 c
-c     calc joined pq index and fictive lenght of pq pair
+c     calc joined pq index and fictive length of pq pair
        if (ssp.eq.ssq) then
        pq=(p-1)*(p-2)/2+q
        nhelp10=nhelp4*(nhelp4-1)/2
@@ -858,7 +843,7 @@ c     calc joined pq index and fictive lenght of pq pair
        nhelp10=nhelp4*nhelp5
        end if
 c
-c     calc fictive lenghts
+c     calc fictive lengths
        if (sa1.eq.sa2) then
        nhelp9=nhelp6*(nhelp6-1)/2
        else
@@ -919,7 +904,7 @@ c
 c
        ib=mapib(sa1,sa2,1)
 c
-c     def lenght
+c     def length
        nhelp1=mapda(ia,2)
        if (nhelp1.eq.0) goto 300
 c
@@ -948,7 +933,7 @@ c
 c
        ib=mapib(ssu,sa1,1)
 c
-c     def lenght
+c     def length
        nhelp1=mapda(ia,2)
        if (nhelp1.eq.0) goto 311
 c
@@ -987,7 +972,7 @@ c
 c
        ib=mapib(sa1,ssu,1)
 c
-c     def lenght
+c     def length
        nhelp1=mapda(ia,2)
        if (nhelp1.eq.0) goto 312
 c
@@ -1024,7 +1009,7 @@ c
 c
        ib=mapib(sa1,sa2,1)
 c
-c     def lenght
+c     def length
        nhelp1=mapda(ia,2)
        if (nhelp1.eq.0) goto 313
 c
@@ -1077,7 +1062,7 @@ c
 c
        ib=mapib(sa1,1,1)
 c
-c     def lenght
+c     def length
        nhelp1=mapda(ia,2)
        if (nhelp1.eq.0) goto 200
 c
@@ -1101,7 +1086,7 @@ c
 c
        ib=mapib(ssu,1,1)
 c
-c     def lenght
+c     def length
        nhelp1=mapda(ia,2)
        if (nhelp1.eq.0) goto 211
 c
@@ -1134,7 +1119,7 @@ c
        sa1=mapda(ia,3)
        ib=mapib(sa1,1,1)
 c
-c     def lenght
+c     def length
        nhelp1=mapda(ia,2)
        if (nhelp1.eq.0) goto 212
 c
@@ -1176,277 +1161,3 @@ c     RC=34: nindb less then 2 (NCI/Stup)
 c
        return
        end
-c
-c     -------------------------
-c
-       subroutine cct3_add10 (a,b,dimp,fact)
-c
-c     this routine do:
-c     B(p) <-- fact * A(p)
-c
-       integer dimp
-       real*8 fact
-       real*8 b(1:dimp)
-       real*8 a(1:dimp)
-c
-c     help variable
-c
-       integer p
-c
-       do 100 p=1,dimp
-       b(p)=b(p)+fact*a(p)
- 100    continue
-c
-       return
-       end
-c
-c     -------------------------
-c
-       subroutine cct3_add21 (a,b,p,dimp,dimq,fact)
-c
-c     this routine do:
-c     B(p,q) <-- fact * A(q) for given p
-c
-       integer dimp,dimq,p
-       real*8 fact
-       real*8 b(1:dimp,1:dimq)
-       real*8 a(1:dimq)
-c
-c     help variable
-c
-       integer q
-c
-       do 100 q=1,dimq
-       b(p,q)=b(p,q)+fact*a(q)
- 100    continue
-c
-       return
-       end
-c
-c     -------------------------
-c
-       subroutine cct3_add22 (a,b,q,dimp,dimq,fact)
-c
-c     this routine do:
-c     B(p,q) <-- fact * A(p) for given q
-c
-       integer dimp,dimq,q
-       real*8 fact
-       real*8 b(1:dimp,1:dimq)
-       real*8 a(1:dimp)
-c
-c     help variable
-c
-       integer p
-c
-       do 100 p=1,dimp
-       b(p,q)=b(p,q)+fact*a(p)
- 100    continue
-c
-       return
-       end
-c
-c     -------------------------
-c
-       subroutine cct3_add32 (a,b,q,dimp,dimq,dimr,fact)
-c
-c     this routine do:
-c     B(p,q,r) <-- fact * A(p,r) for given q
-c
-       integer dimp,dimq,dimr,q
-       real*8 fact
-       real*8 b(1:dimp,1:dimq,1:dimr)
-       real*8 a(1:dimp,1:dimr)
-c
-c     help variable
-c
-       integer p,r
-c
-       do 100 r=1,dimr
-       do 100 p=1,dimp
-       b(p,q,r)=b(p,q,r)+fact*a(p,r)
- 100    continue
-c
-       return
-       end
-c
-c     -------------------------
-c
-       subroutine cct3_add41 (a,b,p,dimp,dimpq,dimr,fact)
-
-c     this routine do:
-c     B(pq,r) <-- fact * A(q,r) for given p
-c
-#include "t31.fh"
-       integer dimp,dimpq,dimr,p
-       real*8 fact
-       real*8 b(1:dimpq,1:dimr)
-       real*8 a(1:dimp,1:dimr)
-c
-c     help variable
-c
-       integer q,r,pq,qp
-c
-       if (p.eq.1) goto 101
-c
-       do 100 r=1,dimr
-       pq=nshf(p)
-c
-       do 50 q=1,p-1
-       pq=pq+1
-       b(pq,r)=b(pq,r)+fact*a(q,r)
- 50     continue
-c
- 100    continue
-c
- 101    if (p.eq.dimp) then
-       return
-       end if
-c
-       do 200 r=1,dimr
-c
-       do 150 q=p+1,dimp
-       qp=nshf(q)+p
-       b(qp,r)=b(qp,r)-fact*a(q,r)
- 150    continue
-c
- 200    continue
-c
-       return
-       end
-c
-c     -------------------------
-c
-       subroutine cct3_add42 (a,b,q,dimq,dimpq,dimr,fact)
-
-c     this routine do:
-c     B(pq,r) <-- fact * A(p,r) for given q
-c
-#include "t31.fh"
-       integer dimq,dimpq,dimr,q
-       real*8 fact
-       real*8 b(1:dimpq,1:dimr)
-       real*8 a(1:dimq,1:dimr)
-c
-c     help variable
-c
-       integer pq,qp,r,p
-c
-       if (q.eq.1) goto 101
-c
-       do 100 r=1,dimr
-       qp=nshf(q)
-c
-       do 50 p=1,q-1
-       qp=qp+1
-       b(qp,r)=b(qp,r)-fact*a(p,r)
- 50     continue
-c
- 100    continue
-c
- 101    if (q.eq.dimq) then
-       return
-       end if
-c
-       do 200 r=1,dimr
-c
-       do 150 p=q+1,dimq
-       pq=nshf(p)+q
-       b(pq,r)=b(pq,r)+fact*a(p,r)
- 150    continue
-c
- 200    continue
-c
-       return
-       end
-c
-c     -------------------------
-c
-       subroutine cct3_add43 (a,b,q,dimp,dimqr,dimr,fact)
-
-c     this routine do:
-c     B(p,qr) <-- fact * A(p,r) for given q
-c
-#include "t31.fh"
-       integer dimp,dimqr,dimr,q
-       real*8 fact
-       real*8 b(1:dimp,1:dimqr)
-       real*8 a(1:dimp,1:dimr)
-c
-c     help variable
-c
-       integer p,qr,rq,r
-c
-       if (q.eq.1) goto 101
-c
-       qr=nshf(q)
-       do 100 r=1,q-1
-       qr=qr+1
-c
-       do 50 p=1,dimp
-       b(p,qr)=b(p,qr)+fact*a(p,r)
- 50     continue
-c
- 100    continue
-c
- 101    if (q.eq.dimr) then
-       return
-       end if
-c
-c
-       do 200 r=q+1,dimr
-       rq=nshf(r)+q
-       do 150 p=1,dimp
-       b(p,rq)=b(p,rq)-fact*a(p,r)
- 150    continue
-c
- 200    continue
-c
-       return
-       end
-c
-c     -------------------------
-c
-       subroutine cct3_add44 (a,b,r,dimp,dimqr,dimq,fact)
-
-c     this routine do:
-c     B(p,qr) <-- fact * A(p,q) for given r
-c
-#include "t31.fh"
-       integer dimp,dimqr,dimq,r
-       real*8 fact
-       real*8 b(1:dimp,1:dimqr)
-       real*8 a(1:dimp,1:dimq)
-c
-c     help variable
-c
-       integer p,qr,rq,q
-c
-       if (r.eq.1) goto 101
-c
-       rq=nshf(r)
-       do 100 q=1,r-1
-       rq=rq+1
-c
-       do 50 p=1,dimp
-       b(p,rq)=b(p,rq)-fact*a(p,q)
- 50     continue
-c
- 100    continue
-c
- 101    if (r.eq.dimq) then
-       return
-       end if
-c
-c
-       do 200 q=r+1,dimq
-       qr=nshf(q)+r
-       do 150 p=1,dimp
-       b(p,qr)=b(p,qr)+fact*a(p,q)
- 150    continue
-c
- 200    continue
-c
-       return
-       end
-c

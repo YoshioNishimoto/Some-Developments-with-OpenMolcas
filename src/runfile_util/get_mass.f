@@ -19,8 +19,8 @@
 *> @details
 *> Place atomic masses (in a.u.) into array \p Mass_All(*).
 *>
-*> @param[out] Mass_All   Array of masses
-*> @param[in]  nAtoms_All Number of atoms
+*> @param[out] Mass   Array of masses
+*> @param[in]  nAtoms Number of atoms
 ************************************************************************
       Subroutine Get_Mass(Mass,nAtoms)
       Implicit None
@@ -36,7 +36,6 @@
         Write (6,*) 'Get_Mass: mAtoms.ne.nAtoms'
         Write (6,*) 'mAtoms=',mAtoms
         Write (6,*) 'nAtoms=',nAtoms
-        Call QTrace()
         Call Abend()
       End If
       Call mma_allocate(AtoB,nAtoms)
@@ -44,7 +43,6 @@
       Call Qpg_dArray('Isotopes',Found,nCent)
       If (.not.Found) Then
         Write (6,*) 'Get_Mass: Isotopes array not found'
-        Call QTrace()
         Call Abend()
       End If
       Call mma_allocate(CentMass,nCent)

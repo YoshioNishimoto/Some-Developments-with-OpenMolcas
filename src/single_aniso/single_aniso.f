@@ -16,7 +16,7 @@
       Integer ::  i, input_to_read, nH, nT, nTempMagn
       Integer ::  nDir, nDirZee, nMult
       Logical ::  ifrestart,GRAD
-      Character(180) :: input_file_name
+      Character(Len=180) :: input_file_name
       Logical :: dbg
 
 C----------------------------------------------------------------------
@@ -32,7 +32,7 @@ C*  initializations
       nMult    =0
       nss      =0
       nstate   =0
-      dbg = .false.
+      dbg      =.false.
 
       ! check for the "restart" option:
       If(dbg) Write(6,*) 'Enter restart_check'
@@ -88,67 +88,65 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
      &                         Ifrestart,IReturn,GRAD)
 
       Implicit None
-      Integer, Parameter :: wp=selected_real_kind(p=15,r=307)
-#include "cntrl.fh"
+      Integer, Parameter            :: wp=kind(0.d0)
+#include "cntrl_sa.fh"
 #include "stdalloc.fh"
-      Integer                   :: mem,RtoB,CtoB,ItoB
-      Integer, intent(in)       :: nss,nstate
-      Integer                   :: i,j,iReturn
-      Integer                   :: idim,Ifunct,imltpl,iprint
-      Integer                   :: axisoption
-      Integer                   :: ndimcf,ldimcf
-      Integer                   :: input_to_read,nK,MG,nm
-      Integer                   :: encut_definition
-      Integer                   :: ncut,nDirTot
-      Integer                   :: nBlock
-      Integer                   :: imanIfold
-      Integer                   :: i1,i2,ldim2,lDIM
-      Integer                   :: AngPoints
-      Integer                   :: nlanth
-      Real(kind=wp)             :: zmagn(3,3)
-      Real(kind=wp)             :: rdiff(nstate)
-      Real(kind=wp)             :: a(6),HMIN,HMAX
-      Real(kind=wp)             :: cryst(6),coord(3)
-      Real(kind=wp)             :: encut_rate,em,Boltz_k,mu_Bohr
-      Real(kind=wp)             :: zJ, thrs
-      Integer, allocatable      :: multiplicity(:)
+      Integer                  :: mem,RtoB,CtoB,ItoB
+      Integer, intent(in)      :: nss,nstate
+      Integer                  :: i,j,iReturn
+      Integer                  :: idim,Ifunct,imltpl,iprint
+      Integer                  :: axisoption
+      Integer                  :: ndimcf,ldimcf
+      Integer                  :: input_to_read,nK,MG,nm
+      Integer                  :: encut_definition
+      Integer                  :: ncut,nDirTot
+      Integer                  :: nBlock
+      Integer                  :: imanIfold
+      Integer                  :: i1,i2,ldim2,lDIM
+      Integer                  :: AngPoints
+      Integer                  :: nlanth
+      Real(kind=8)             :: zmagn(3,3)
+      Real(kind=8)             :: rdiff(nstate)
+      Real(kind=8)             :: HMIN,HMAX
+      Real(kind=8)             :: cryst(6),coord(3)
+      Real(kind=8)             :: encut_rate,em
+      Real(kind=8)             :: zJ, thrs
+      Integer, allocatable     :: multiplicity(:)
       !---g-tens-------------------
-      Integer, intent(in)        :: nMult
-      Integer, allocatable       :: ndim(:)
-      Real(kind=wp), allocatable :: gtens(:,:), maxes(:,:,:)
+      Integer, intent(in)       :: nMult
+      Integer, allocatable      :: ndim(:)
+      Real(kind=8), allocatable :: gtens(:,:), maxes(:,:,:)
       !---M-------------------
       Integer       :: nH, nTempMagn
       !---MVEC and ZEEM-------------------
       Integer       :: nDir, nDirZee
       Integer, allocatable :: LuZee(:)
-      Real(kind=wp), allocatable :: dir_weight(:,:)
-      Real(kind=wp), allocatable :: dirX(:), dirY(:), dirZ(:)
+      Real(kind=8), allocatable :: dir_weight(:,:)
+      Real(kind=8), allocatable :: dirX(:), dirY(:), dirZ(:)
       !---XT-------------------
       Integer       :: nT
-      Real(kind=wp), allocatable :: Texp(:)
-      Real(kind=wp), allocatable :: chit_exp(:)
-      Real(kind=wp) :: xfield
-      Real(kind=wp) :: tmin, tmax
+      Real(kind=8), allocatable :: Texp(:)
+      Real(kind=8), allocatable :: chit_exp(:)
+      Real(kind=8) :: xfield
+      Real(kind=8) :: tmin, tmax
       !---Oscillator strength----------
-c      Real(kind=wp) :: F, Fx,Fy,Fz, AT, Ax,Ay,Az, AF, dnrm, dE
-      Real(kind=wp) :: DZNRM2
-      External      :: DZNRM2
-      Real(kind=wp) :: H_torq, T_torq
+c      Real(kind=8) :: F, Fx,Fy,Fz, AT, Ax,Ay,Az, AF, dnrm, dE
+      Real(kind=8) :: H_torq, T_torq
       !----BIG ARRAYS------------------
-      Real(kind=wp), allocatable :: eso(:)
-      Real(kind=wp), allocatable :: esfs(:)
-      Real(kind=wp), allocatable :: t(:)
-      Real(kind=wp), allocatable :: XTexp(:)
-      Real(kind=wp), allocatable :: XT_no_field(:)
-      Real(kind=wp), allocatable :: hexp(:)
-      Real(kind=wp), allocatable :: magn_exp(:,:)
-      Real(kind=wp), allocatable :: angmom(:,:,:)
-      Real(kind=wp), allocatable ::  eDmom(:,:,:)
-      Real(kind=wp), allocatable ::   amfi(:,:,:)
-      Real(kind=wp), allocatable :: TempMagn(:)
-      Complex(kind=wp), allocatable :: MM(:,:,:), MS(:,:,:), HSO(:,:),
+      Real(kind=8), allocatable :: eso(:), eso_au(:)
+      Real(kind=8), allocatable :: esfs(:), esfs_au(:)
+      Real(kind=8), allocatable :: t(:)
+      Real(kind=8), allocatable :: XTexp(:)
+      Real(kind=8), allocatable :: XT_no_field(:)
+      Real(kind=8), allocatable :: hexp(:)
+      Real(kind=8), allocatable :: magn_exp(:,:)
+      Real(kind=8), allocatable :: angmom(:,:,:)
+      Real(kind=8), allocatable ::  eDmom(:,:,:)
+      Real(kind=8), allocatable ::   amfi(:,:,:)
+      Real(kind=8), allocatable :: TempMagn(:)
+      Complex(kind=8), allocatable :: MM(:,:,:), MS(:,:,:), HSO(:,:),
      &                                 ML(:,:,:), DM(:,:,:), U(:,:)
-      Character(180), intent(in) :: input_file_name
+      Character(Len=180), intent(in) :: input_file_name
 
       Logical :: poly_file
       Logical :: ifrestart
@@ -167,13 +165,9 @@ c      Real(kind=wp) :: F, Fx,Fy,Fz, AT, Ax,Ay,Az, AF, dnrm, dE
       Logical :: DoPlot
       Logical :: DBG
       Integer :: l
-      Integer                   :: nss2,nstate2
+      Integer :: nss2,nstate2
 
-      Call qEnter('SA_main1')
       DBG=.false.
-
-      Boltz_k=0.6950356_wp                    !   in cm-1*K-1
-      mu_Bohr=0.466864374_wp                  !   in cm-1*T-1
 
 c---------------------------------------------------------------------
       ! Allocate memory for all arrays:
@@ -195,150 +189,156 @@ c---------------------------------------------------------------------
       CtoB=16
       ItoB=8
 
-      If(nstate>0) Then
-         ! spin free energies
-         Call mma_allocate(esfs,nstate,'esfs')
-         Call dcopy_(nstate,[0.0_wp],0,ESFS,1)
-         mem=mem+nstate*RtoB
-         ! angular momentum
-         Call mma_allocate(ANGMOM,3,nstate,nstate,'angmom')
-         Call dcopy_(3*nstate*nstate,[0.0_wp],0,ANGMOM,1)
-         mem=mem+3*nstate*nstate*RtoB
-         ! electric dipole moment
-         Call mma_allocate( EDMOM,3,nstate,nstate,'edmom')
-         Call dcopy_(3*nstate*nstate,[0.0_wp],0, EDMOM,1)
-         mem=mem+3*nstate*nstate*RtoB
-         ! amfi integrals
-         Call mma_allocate( AMFI,3,nstate,nstate,'amfi')
-         Call dcopy_(3*nstate*nstate,[0.0_wp],0, AMFI,1)
-         mem=mem+3*nstate*nstate*RtoB
-         ! multiplicity of each state
-         Call mma_allocate(multiplicity,nstate,'multiplicity')
-         Call icopy(nstate,[0],0,multiplicity,1)
-         mem=mem+nstate*ItoB
-         ! allocated memory counter
-         If(dbg) Write(6,'(A,I16)') 'mem 1 =',mem
-      End If
+      ! spin free energies
+      Call mma_allocate(esfs,nstate,'esfs')
+      Call mma_allocate(esfs_au,nstate,'esfs_au')
+      Call dcopy_(nstate,[0.0_wp],0,ESFS,1)
+      Call dcopy_(nstate,[0.0_wp],0,ESFS_AU,1)
+      mem=mem+2*nstate*RtoB
+      ! angular momentum
+      Call mma_allocate(ANGMOM,3,nstate,nstate,'angmom')
+      Call dcopy_(3*nstate*nstate,[0.0_wp],0,ANGMOM,1)
+      mem=mem+3*nstate*nstate*RtoB
+      ! electric dipole moment
+      Call mma_allocate( EDMOM,3,nstate,nstate,'edmom')
+      Call dcopy_(3*nstate*nstate,[0.0_wp],0, EDMOM,1)
+      mem=mem+3*nstate*nstate*RtoB
+      ! amfi integrals
+      Call mma_allocate( AMFI,3,nstate,nstate,'amfi')
+      Call dcopy_(3*nstate*nstate,[0.0_wp],0, AMFI,1)
+      mem=mem+3*nstate*nstate*RtoB
+      ! multiplicity of each state
+      Call mma_allocate(multiplicity,nstate,'multiplicity')
+      Call icopy(nstate,[0],0,multiplicity,1)
+      mem=mem+nstate*ItoB
+      ! allocated memory counter
+      If(dbg) Write(6,'(A,I16)') 'mem 1 =',mem
+      ! spin orbit energies
+      Call mma_allocate(eso,nss,'eso')
+      Call mma_allocate(eso_au,nss,'eso_au')
+      Call dcopy_(nss,[0.0_wp],0,eso,1)
+      Call dcopy_(nss,[0.0_wp],0,eso_au,1)
+      mem=mem+2*nss*RtoB
+      ! spin orbit eigenstates
+      Call mma_allocate(U,nss,nss,'U')
+      Call zcopy_(nss*nss,[(0.0_wp,0.0_wp)],0,U,1)
+      mem=mem+nss*nss*CtoB
+      ! spin orbit hamiltonian
+      Call mma_allocate(HSO,nss,nss,'HSO')
+      Call zcopy_(nss*nss,[(0.0_wp,0.0_wp)],0,HSO,1)
+      mem=mem+nss*nss*CtoB
+      ! magnetic moment
+      Call mma_allocate(MM,3,nss,nss,'MM')
+      Call zcopy_(3*nss*nss,[(0.0_wp,0.0_wp)],0,MM,1)
+      mem=mem+3*nss*nss*CtoB
+      ! spin moment
+      Call mma_allocate(MS,3,nss,nss,'MS')
+      Call zcopy_(3*nss*nss,[(0.0_wp,0.0_wp)],0,MS,1)
+      mem=mem+3*nss*nss*CtoB
+      ! orbital mooment
+      Call mma_allocate(ML,3,nss,nss,'ML')
+      Call zcopy_(3*nss*nss,[(0.0_wp,0.0_wp)],0,ML,1)
+      mem=mem+3*nss*nss*CtoB
+      ! electric dipole moment
+      Call mma_allocate(DM,3,nss,nss,'DM')
+      Call zcopy_(3*nss*nss,[(0.0_wp,0.0_wp)],0,DM,1)
+      mem=mem+3*nss*nss*CtoB
+      ! allocated memory counter
+      If(dbg) Write(6,'(A,I16)') 'mem 2 =',mem
+      ! experimental magnetic field points
+      Call mma_allocate(Hexp,nH,'Hexp')
+      Call dcopy_(nH,[0.0_wp],0,Hexp,1)
+      mem=mem+nH*RtoB
+      ! experiemental magnetization
+      Call mma_allocate(magn_exp,nH,nTempMagn,'magn_exp')
+      Call dcopy_(nH*nTempMagn,[0.0_wp],0,magn_exp,1)
+      mem=mem+nH*nTempMagn*RtoB
+      ! temperature points for magnetization
+      Call mma_allocate(TempMagn,nTempMagn,'TempMagn')
+      Call dcopy_(nTempMagn,[0.0_wp],0,TempMagn,1)
+      mem=mem+nTempMagn*RtoB
+      ! allocated memory counter
+      !If(dbg) Write(6,'(A,I16)') 'mem 3 =',mem
+      !Call mma_allocate(Hexp,nH,'Hexp')
+      !mem=mem+nH*RtoB
+      !Call dcopy_(nH,[0.0_wp],0,Hexp,1)
+      !Call mma_allocate(magn_exp,nH,0,'magn_exp')
+      !Call mma_allocate(TempMagn,0,'TempMagn')
+      ! allocated memory counter
+      !If(dbg) Write(6,'(A,I16)') 'mem 3 =',mem
+      !Call mma_allocate(Hexp,0,'Hexp')
+      !Call mma_allocate(magn_exp,0,nTempMagn,'magn_exp')
+      !Call mma_allocate(TempMagn,nTempMagn,'TempMagn')
+      !Call dcopy_(nTempMagn,[0.0_wp],0,TempMagn,1)
+      !mem=mem+nTempMagn*RtoB
+      ! allocated memory counter
+      !If(dbg) Write(6,'(A,I16)') 'mem 3 =',mem
+      !Call mma_allocate(Hexp,0,'Hexp')
+      !Call mma_allocate(magn_exp,0,0,'magn_exp')
+      !Call mma_allocate(TempMagn,0,'TempMagn')
 
-      If(nss>0) Then
-         ! spin orbit energies
-         Call mma_allocate(eso,nss,'eso')
-         Call dcopy_(nss,[0.0_wp],0,eso,1)
-         mem=mem+nss*RtoB
-         ! spin orbit eigenstates
-         Call mma_allocate(U,nss,nss,'U')
-         Call zcopy_(nss*nss,[(0.0_wp,0.0_wp)],0,U,1)
-         mem=mem+nss*nss*CtoB
-         ! spin orbit hamiltonian
-         Call mma_allocate(HSO,nss,nss,'HSO')
-         Call zcopy_(nss*nss,[(0.0_wp,0.0_wp)],0,HSO,1)
-         mem=mem+nss*nss*CtoB
-         ! magnetic moment
-         Call mma_allocate(MM,3,nss,nss,'MM')
-         Call zcopy_(3*nss*nss,[(0.0_wp,0.0_wp)],0,MM,1)
-         mem=mem+3*nss*nss*CtoB
-         ! spin moment
-         Call mma_allocate(MS,3,nss,nss,'MS')
-         Call zcopy_(3*nss*nss,[(0.0_wp,0.0_wp)],0,MS,1)
-         mem=mem+3*nss*nss*CtoB
-         ! orbital mooment
-         Call mma_allocate(ML,3,nss,nss,'ML')
-         Call zcopy_(3*nss*nss,[(0.0_wp,0.0_wp)],0,ML,1)
-         mem=mem+3*nss*nss*CtoB
-         ! electric dipole moment
-         Call mma_allocate(DM,3,nss,nss,'DM')
-         Call zcopy_(3*nss*nss,[(0.0_wp,0.0_wp)],0,DM,1)
-         mem=mem+3*nss*nss*CtoB
-         ! allocated memory counter
-         If(dbg) Write(6,'(A,I16)') 'mem 2 =',mem
-      End If
+      ! dimensions of pseudospins
+      Call mma_allocate(ndim,nMult,'ndim')
+      Call icopy(nMult,[0],0,ndim,1)
+      mem=mem+nMult*ItoB
+      ! temperature points for magnetization
+      Call mma_allocate(gtens,nMult,3,'gtens')
+      Call dcopy_(3*nMult,[0.0_wp],0,gtens,1)
+      mem=mem+3*nMult*RtoB
+      ! temperature points for magnetization
+      Call mma_allocate(maxes,nMult,3,3,'maxes')
+      Call dcopy_(3*3*nMult,[0.0_wp],0,maxes,1)
+      mem=mem+3*3*nMult*RtoB
+      ! allocated memory counter
+      If(dbg) Write(6,'(A,I16)') 'mem 4 =',mem
+      Call mma_allocate(T,(nT+nTempMagn),'Temperature')
+      Call dcopy_((nT+nTempMagn),[0.0_wp],0,T,1)
+      mem=mem+(nT+nTempMagn)*RtoB
+      Call mma_allocate(XTexp,(nT+nTempMagn),'XTexp')
+      Call dcopy_((nT+nTempMagn),[0.0_wp],0,XTexp,1)
+      mem=mem+(nT+nTempMagn)*RtoB
+      Call mma_allocate(XT_no_field,(nT+nTempMagn),'XT_no_field')
+      Call dcopy_((nT+nTempMagn),[0.0_wp],0,XT_no_field,1)
+      mem=mem+(nT+nTempMagn)*RtoB
+      ! allocated memory counter
+      If(dbg) Write(6,'(A,I16)') 'mem 5 =',mem
 
-      If( (nH>0).and.(nTempMagn>0) ) Then
-         ! experimental magnetic field points
-         Call mma_allocate(Hexp,nH,'Hexp')
-         Call dcopy_(nH,[0.0_wp],0,Hexp,1)
-         mem=mem+nH*RtoB
-         ! experiemental magnetization
-         Call mma_allocate(magn_exp,nH,nTempMagn,'magn_exp')
-         Call dcopy_(nH*nTempMagn,[0.0_wp],0,magn_exp,1)
-         mem=mem+nH*nTempMagn*RtoB
-         ! temperature points for magnetization
-         Call mma_allocate(TempMagn,nTempMagn,'TempMagn')
-         Call dcopy_(nTempMagn,[0.0_wp],0,TempMagn,1)
-         mem=mem+nTempMagn*RtoB
-         ! allocated memory counter
-         If(dbg) Write(6,'(A,I16)') 'mem 3 =',mem
-      End If
+      ! unit numbers for the files with Zeeman energies
+      Call mma_allocate(LuZee,nDirZee,'LUZee')
+      Call icopy(nDirZee,[0],0,LuZee,1)
+      mem=mem+nDirZee*ItoB
+      ! directions for applied field for Zeeman states
+      Call mma_allocate(dir_weight,nDirZee,3,'dir_weight')
+      Call dcopy_(3*nDirZee,[0.0_wp],0,dir_weight,1)
+      mem=mem+3*nDirZee*RtoB
+      ! allocated memory counter
+      !If(dbg) Write(6,'(A,I16)') 'mem 6 =',mem
+      !Call mma_allocate(LuZee,0,'LUZee')
+      !Call mma_allocate(dir_weight,0,3,'dir_weight')
 
-      If(nMult>0) Then
-         ! dimensions of pseudospins
-         Call mma_allocate(ndim,nMult,'ndim')
-         Call icopy(nMult,[0],0,ndim,1)
-         mem=mem+nMult*ItoB
-         ! temperature points for magnetization
-         Call mma_allocate(gtens,nMult,3,'gtens')
-         Call dcopy_(3*nMult,[0.0_wp],0,gtens,1)
-         mem=mem+3*nMult*RtoB
-         ! temperature points for magnetization
-         Call mma_allocate(maxes,nMult,3,3,'maxes')
-         Call dcopy_(3*3*nMult,[0.0_wp],0,maxes,1)
-         mem=mem+3*3*nMult*RtoB
-         ! allocated memory counter
-         If(dbg) Write(6,'(A,I16)') 'mem 4 =',mem
-      End If
-
-      If((nT+nTempMagn)>0) Then
-         Call mma_allocate(T,(nT+nTempMagn),'Temperature')
-         Call dcopy_((nT+nTempMagn),[0.0_wp],0,T,1)
-         mem=mem+(nT+nTempMagn)*RtoB
-         Call mma_allocate(XTexp,(nT+nTempMagn),'XTexp')
-         Call dcopy_((nT+nTempMagn),[0.0_wp],0,XTexp,1)
-         mem=mem+(nT+nTempMagn)*RtoB
-         Call mma_allocate(XT_no_field,(nT+nTempMagn),'XT_no_field')
-         Call dcopy_((nT+nTempMagn),[0.0_wp],0,XT_no_field,1)
-         mem=mem+(nT+nTempMagn)*RtoB
-         ! allocated memory counter
-         If(dbg) Write(6,'(A,I16)') 'mem 5 =',mem
-      End If
-
-      If(nDirZee>0) Then
-         ! unit numbers for the files with Zeeman energies
-         Call mma_allocate(LuZee,nDirZee,'LUZee')
-         Call icopy(nDirZee,[0],0,LuZee,1)
-         mem=mem+nDirZee*ItoB
-         ! directions for applied field for Zeeman states
-         Call mma_allocate(dir_weight,nDirZee,3,'dir_weight')
-         Call dcopy_(3*nDirZee,[0.0_wp],0,dir_weight,1)
-         mem=mem+3*nDirZee*RtoB
-         ! allocated memory counter
-         If(dbg) Write(6,'(A,I16)') 'mem 6 =',mem
-      End If
-
-      If(nDir>0) Then
-         ! magnetization vectors
-         Call mma_allocate(dirX,nDir,'dirX')
-         Call mma_allocate(dirY,nDir,'dirY')
-         Call mma_allocate(dirZ,nDir,'dirZ')
-         mem=mem+3*nDir*RtoB
-         Call dcopy_(nDir,[0.0_wp],0,dirX,1)
-         Call dcopy_(nDir,[0.0_wp],0,dirY,1)
-         Call dcopy_(nDir,[0.0_wp],0,dirZ,1)
-         ! allocated memory counter
-         If(dbg) Write(6,'(A,I16)') 'mem 7 =',mem
-      End If
-
-      If(nT>0) Then
-        ! T expeirimental given by user in the input
-        Call mma_allocate(Texp,nT,'Texp')
-        Call dcopy_(nT,[0.0_wp],0,Texp,1)
-        mem=mem+nT*RtoB
-        ! XT expeirimental given by user in the input
-        Call mma_allocate(chit_exp,nT,'chit_exp')
-        Call dcopy_(nT,[0.0_wp],0,chit_exp,1)
-        mem=mem+nT*RtoB
-         ! allocated memory counter
-         If(dbg) Write(6,'(A,I16)') 'mem 8 =',mem
-      End If
+      ! magnetization vectors
+      Call mma_allocate(dirX,nDir,'dirX')
+      Call mma_allocate(dirY,nDir,'dirY')
+      Call mma_allocate(dirZ,nDir,'dirZ')
+      mem=mem+3*nDir*RtoB
+      Call dcopy_(nDir,[0.0_wp],0,dirX,1)
+      Call dcopy_(nDir,[0.0_wp],0,dirY,1)
+      Call dcopy_(nDir,[0.0_wp],0,dirZ,1)
+      ! allocated memory counter
+      !If(dbg) Write(6,'(A,I16)') 'mem 7 =',mem
+      !Call mma_allocate(dirX,0,'dirX')
+      !Call mma_allocate(dirY,0,'dirY')
+      !Call mma_allocate(dirZ,0,'dirZ')
+      ! T expeirimental given by user in the input
+      Call mma_allocate(Texp,nT,'Texp')
+      Call dcopy_(nT,[0.0_wp],0,Texp,1)
+      mem=mem+nT*RtoB
+      ! XT expeirimental given by user in the input
+      Call mma_allocate(chit_exp,nT,'chit_exp')
+      Call dcopy_(nT,[0.0_wp],0,chit_exp,1)
+      mem=mem+nT*RtoB
+      ! allocated memory counter
+      If(dbg) Write(6,'(A,I16)') 'mem 8 =',mem
 
       Write(6,'(A,I16,A)') 'The code allocated initially:',mem,
      &                     ' bytes of memory for this run.'
@@ -355,7 +355,6 @@ c---------------------------------------------------------------------
       axisoption=1
       nDIMcf=1
       lDIMcf=1
-      a(:)=0.0_wp
       H_torq=0.1_wp ! in Tesla
       T_torq=2.0_wp ! in K
 C  read the input
@@ -378,7 +377,7 @@ C  read the input
          If ( input_to_read .eq. 1 ) Then
             Call read_binary_aniso( nss, nstate, multiplicity, eso,
      &                              esfs, U, MM, MS, ML, DM, ANGMOM,
-     &                              EDMOM )
+     &                              EDMOM, AMFI, HSO )
 
          Else If ( input_to_read .eq. 2 ) Then
             ! get the information from formatted aniso.input file:
@@ -389,7 +388,8 @@ C  read the input
             nstate2=nstate
             Call read_formatted_aniso( input_file_name, nss2, nstate2,
      &                                 multiplicity, eso, esfs, U, MM,
-     &                                 MS, ML, DM, ANGMOM, EDMOM )
+     &                                 MS, ML, DM, ANGMOM, EDMOM,
+     &                                 AMFI, HSO )
             IF(DBG) Write(6,*) 'SINGLE_ANISO2::  Exit  '//
      &                         'read_formatted_aniso'
 
@@ -414,13 +414,28 @@ C  read the input
             nstate2=nstate
             Call read_formatted_aniso_old( input_file_name,nss2,nstate2,
      &                                multiplicity, eso, MM, MS, ML )
+
+         Else If ( input_to_read .eq. 6 ) Then !  using DATA keyword
+
+            IF(DBG) Write(6,*) 'SA:',input_file_name
+            ! get the information from formatted new aniso-data file:
+            nss2=nss
+            nstate2=nstate
+            Call read_formatted_new_aniso(
+     &                                input_file_name, nss2, nstate2,
+     &                                multiplicity, eso, esfs,
+     &                                U, MM, MS, ML, DM, ANGMOM, EDMOM,
+     &                                AMFI, HSO, eso_au, esfs_au )
          End If ! input_to_read
 
       Else
          ! ifrestart = .false., i.e. usual S-A calculation
-         Call fetch_data_RunFile_all( nss, nstate, multiplicity, eso,
-     &                                esfs, U, MM, MS, ML, DM,
-     &                                ANGMOM, EDMOM, AMFI, HSO )
+         Call fetch_data_RunFile_all(nss, nstate, multiplicity, eso,
+     &                               esfs, U, MM, MS, ML, DM,
+     &                               ANGMOM, EDMOM, AMFI, HSO,
+     &                               eso_au, esfs_au )
+         WRITE(6,'(A)') 'AFTER fetch_data_RunFile_all'
+         Call xFlush(6)
          If (DBG) Then
             Write(6,'(A)') 'SA: ANGMOM(x,y,z)'
             Do i=1,nstate
@@ -458,39 +473,50 @@ C  read the input
 
       ! print some input data in the beginning of the output:
       ! so that the user knows which ws the input ...
-          Write(6,'(A)') 'LOW-LYING SPIN-ORBIT ENERGIES:'
-          Do i=1,nss
-            Write(6,'(A,I4,A,F25.14)')
-     &               'ENERGY OF THE SPIN-ORBIT STATE (',i,') =',ESO(i)
-          End Do
-          Write(6,'(A)') 'LOW-LYING SPIN-FREE ENERGIES:'
-          Do i=1,nstate
-            Write(6,'(A,I4,A,F25.14)')
-     &               'ENERGY OF THE SPIN-FREE STATE  (',i,') =',ESFS(i)
-          End Do
-          rdiff=0.0_wp
-          lDIM2=1 ! the same as the defult for lDIM
-          Do i=2,nstate
-            rdiff(i)=ABS(ESFS(i)-ESFS(i-1))
-            If( rdiff(i) < 20.0_wp ) Then
-              lDIM2=lDIM2+1
-            Else
-            goto 107
-            End If
-          End Do
-107       Continue
-          ! set the lDIM:
-          If (lDIM2>lDIM) lDIM=lDIM2
+      Write(6,'(A)') 'LOW-LYING SPIN-ORBIT ENERGIES:'
+      Do i=1,nss
+        Write(6,'(A,I4,A,F25.14)')
+     &           'ENERGY OF THE SPIN-ORBIT STATE (',i,') =',ESO(i)
+      End Do
+      Write(6,'(A)') 'LOW-LYING SPIN-FREE ENERGIES:'
+      Do i=1,nstate
+        Write(6,'(A,I4,A,F25.14)')
+     &           'ENERGY OF THE SPIN-FREE STATE  (',i,') =',ESFS(i)
+      End Do
+      rdiff=0.0_wp
+      lDIM2=1 ! the same as the defult for lDIM
+      Do i=2,nstate
+        rdiff(i)=ABS(ESFS(i)-ESFS(i-1))
+        If( rdiff(i) < 20.0_wp ) Then
+          lDIM2=lDIM2+1
+        Else
+        goto 107
+        End If
+      End Do
+107   Continue
+      ! set the lDIM:
+      If (lDIM2>lDIM) lDIM=lDIM2
 
 
 !----- input processing finished -----
 ! save some important data, regardless of the following execution
       ! -- binary $Project.aniso
       Call write_binary_aniso( nss, nstate, multiplicity, eso,
-     &                         esfs, U, MM, MS, DM, ANGMOM, EDMOM )
+     &                         esfs, U, MM, MS, DM, ANGMOM, EDMOM, AMFI,
+     &                         HSO )
       ! ASCII -- anisoinput:
-      Call write_formatted_aniso( nss, nstate, multiplicity, eso,
-     &                            esfs, U, MM, MS, DM, ANGMOM, EDMOM )
+      Call write_formatted_aniso(
+     &                         nss, nstate, multiplicity, eso,
+     &                         esfs, U, MM, MS, DM, ANGMOM, EDMOM, AMFI,
+     &                         HSO )
+
+      IF (.not.ifrestart) THEN
+      ! ASCII -- new_aniso file format:
+      Call write_new_formatted_aniso(
+     &                         nss, nstate, multiplicity, eso_au,
+     &                         esfs_au, U, MM, MS, DM, ANGMOM, EDMOM,
+     &                         AMFI, HSO )
+      END IF
 !
 !----- compute various properties ----------|
 ! calculation of magnetic Hamiltonians:
@@ -523,6 +549,7 @@ C  read the input
      &                     gtens(imltpl,1:3), maxes(imltpl,1:3,1:3),
      &                     iprint )
               IF(DBG) Write(6,*) 'SINGLE_ANISO2::  Exit g_high',IMLTPL
+              Call Add_Info('GTENS_MAIN', gtens(imltpl,1:3), 3, 4)
            End If
 10         Continue
 
@@ -593,18 +620,17 @@ C  read the input
           IF(DBG) Write(6,*) 'SINGLE_ANISO2::  Enter barrier',nBlock
           Call  BARRIER( nBlock, MM(1:3,1:nBlock,1:nBlock),
      &                   eso(1:nBlock), imanIfold, nMult, nDim,
-     &                   iPrint )
+     &                   doplot, iPrint )
           IF(DBG) Write(6,*) 'SINGLE_ANISO2::  Exit barrier',nBlock
 
         Else
            Write(6,'(A)') 'nBlock parameter is not defined. '
            Write(6,'(A)') 'Did you specify the MLTP keyword in the '//
      &                    'input?'
-           Write(6,'(A)') 'If the problem persists,please, '//
+           Write(6,'(A)') 'If the problem persists, please, '//
      &                    'submit a bug report.'
         End If
       End If
-
 
 !----------------------------------------------------------------------|
 
@@ -635,9 +661,11 @@ C  read the input
 
       If (Xfield .ne. 0.0_wp ) Then
          IF(DBG) Write(6,*) 'SINGLE_ANISO2::  Enter XT_dMoverdH_single'
-         Call XT_dMoverdH_single( nss, nTempMagn, nT, nM, Tmin, Tmax,
+         ! nM = nss
+         Call XT_dMoverdH_single( nss, nTempMagn, nT, nss, Tmin, Tmax,
      &                            XTexp, ESO, T, zJ, Xfield, EM, MM, MS,
-     &                            XT_no_field, tinput, smagn, mem )
+     &                            XT_no_field, tinput, smagn, mem,
+     &                            DoPlot )
          IF(DBG) Write(6,*) 'SINGLE_ANISO2::  Exit XT_dMoverdH_single'
       End If
 !----------------------------------------------------------------------|
@@ -645,8 +673,9 @@ C  read the input
       If( compute_torque ) Then
 
         IF(DBG) Write(6,*) 'SINGLE_ANISO2::  Enter TORQUE'
-        Call torque( Nss, NM, AngPoints, EM, eso, mm, ms, zJ, thrs, mem,
-     &                  m_paranoid, smagn, H_torq, T_torq, zmagn, dbg)
+         ! nM = nss
+        Call torque( Nss, Nss, AngPoints, EM, eso, mm, ms, zJ, thrs,
+     &               mem, m_paranoid, smagn, H_torq, T_torq, zmagn, dbg)
         IF(DBG) Write(6,*) 'SINGLE_ANISO2::  Exit TORQUE'
 
       End If
@@ -675,59 +704,43 @@ C  read the input
 c---------------------------------------------------------------------
       ! Deallocate memory for all arrays:
 c---------------------------------------------------------------------
-      If(nstate>0) Then
-         Call mma_deallocate(esfs)
-         Call mma_deallocate(ANGMOM)
-         Call mma_deallocate( EDMOM)
-         Call mma_deallocate(  AMFI)
-         Call mma_deallocate(multiplicity)
-      End If
+      Call mma_deallocate(esfs)
+      Call mma_deallocate(esfs_au)
+      Call mma_deallocate(ANGMOM)
+      Call mma_deallocate( EDMOM)
+      Call mma_deallocate(  AMFI)
+      Call mma_deallocate(multiplicity)
 
-      If(nss>0) Then
-         Call mma_deallocate(eso)
-         Call mma_deallocate(U)
-         Call mma_deallocate(HSO)
-         Call mma_deallocate(MM)
-         Call mma_deallocate(MS)
-         Call mma_deallocate(ML)
-         Call mma_deallocate(DM)
-      End If
+      Call mma_deallocate(eso)
+      Call mma_deallocate(eso_au)
+      Call mma_deallocate(U)
+      Call mma_deallocate(HSO)
+      Call mma_deallocate(MM)
+      Call mma_deallocate(MS)
+      Call mma_deallocate(ML)
+      Call mma_deallocate(DM)
 
-      If( (nH>0).and.(nTempMagn>0) ) Then
-         Call mma_deallocate(Hexp)
-         Call mma_deallocate(magn_exp)
-         Call mma_deallocate(TempMagn)
-      End If
+      Call mma_deallocate(Hexp)
+      Call mma_deallocate(magn_exp)
+      Call mma_deallocate(TempMagn)
 
-      If(nMult>0) Then
-         Call mma_deallocate(ndim)
-         Call mma_deallocate(gtens)
-         Call mma_deallocate(maxes)
-      End If
+      Call mma_deallocate(ndim)
+      Call mma_deallocate(gtens)
+      Call mma_deallocate(maxes)
+      Call mma_deallocate(T)
+      Call mma_deallocate(XTexp)
+      Call mma_deallocate(XT_no_field)
 
-      If((nT+nTempMagn)>0) Then
-         Call mma_deallocate(T)
-         Call mma_deallocate(XTexp)
-         Call mma_deallocate(XT_no_field)
-      End If
+      Call mma_deallocate(LuZee)
+      Call mma_deallocate(dir_weight)
 
-      If(nDirZee>0) Then
-         Call mma_deallocate(LuZee)
-         Call mma_deallocate(dir_weight)
-      End If
+      Call mma_deallocate(dirX)
+      Call mma_deallocate(dirY)
+      Call mma_deallocate(dirZ)
 
-      If(nDir>0) Then
-         Call mma_deallocate(dirX)
-         Call mma_deallocate(dirY)
-         Call mma_deallocate(dirZ)
-      End If
+      Call mma_deallocate(Texp)
+      Call mma_deallocate(chit_exp)
 
-      If(nT>0) Then
-         Call mma_deallocate(Texp)
-         Call mma_deallocate(chit_exp)
-      End If
-
-      Call qExit('SA_main1')
 
       Return
       End

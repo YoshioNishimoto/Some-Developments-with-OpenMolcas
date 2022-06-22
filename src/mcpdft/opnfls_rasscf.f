@@ -31,14 +31,11 @@
 #include "rasscf.fh"
 #include "general.fh"
 #include "output_ras.fh"
-      Parameter (ROUTINE='OPNFLS  ')
-#include "davctl.fh"
-#include "qnctl.fh"
+#include "qnctl_mcpdft.fh"
       Logical DSCF,test,DoCholesky
 *----------------------------------------------------------------------*
 *     Start                                                            *
 *----------------------------------------------------------------------*
-      Call qEnter('OpnFls')
 *---  define logical unit numbers -------------------------------------*
 *...  Molecular orbital input file  this variable is not used
 *...  File is opened and closed i.e. around calls to rdvec.
@@ -93,7 +90,7 @@
 *---  open the file carrying the transfromed two-electron integrals ---*
       Call DaName(LUINTM,'TRAINT')
 *---  open the DAVID file carrying temporary CI and sigma vectros -----*
-*     Note the unit number is defined in the davctl.fh file
+*     Note the unit number is defined in the general.fh file
       Call DaName(LuDavid,'TEMP01')
 *---  open the file carrying the hessian update vectors ---------------*
       Call DaName(LuQune,'TEMP02')
@@ -107,6 +104,5 @@ c     &     File='CIITER')
 *----------------------------------------------------------------------*
 *     Exit                                                             *
 *----------------------------------------------------------------------*
-      Call qExit('OpnFls')
       Return
       End

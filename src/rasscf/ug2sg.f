@@ -30,7 +30,6 @@ C
 C
 #include "rasdim.fh"
 #include "output_ras.fh"
-      Parameter (ROUTINE='UG2SD   ')
 #include "strnum.fh"
 #include "ciinfo.fh"
 #include "spinfo.fh"
@@ -47,7 +46,6 @@ C
 C     JCJ IS A TEMPORARY COPY OF ICI AND WILL OBTAIN THE SELECTED REFERENCE
 C     NUMBERS IN THE SYMMETRIC GROUP NUMBERING
 C
-      Call QENTER(ROUTINE)
 
       IF( IPRINT.GE.5 ) THEN
         Write(LF,*)

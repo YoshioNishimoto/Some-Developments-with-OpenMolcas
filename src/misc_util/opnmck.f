@@ -46,11 +46,7 @@
       Implicit Integer (A-Z)
 *
 #include "FileIDs.fh"
-#include "MckRc.fh"
-#include "MckFlags.fh"
-#include "SysDef.fh"
 #include "MckDat.fh"
-
 *
       Character*(*) Name
       Character*8   FnMCK
@@ -60,7 +56,6 @@
 *---------------------------------------------------------------------*
 *     Start procedure:                                                *
 *---------------------------------------------------------------------*
-*      If ( Query ) Call qEnter(TheName)
       NewToc=iAnd(option,sNew).ne.0
       rc=rc0000
 *---------------------------------------------------------------------*
@@ -126,6 +121,5 @@
 *----------------------------------------------------------------------*
 *     normal end                                                       *
 *----------------------------------------------------------------------*
-*      If ( Query ) Call qExit(TheName)
       Return
       End

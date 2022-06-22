@@ -11,12 +11,12 @@
 ! Copyright (C) 2014, Giovanni Li Manni                                *
 !               2019, Oskar Weser                                      *
 !***********************************************************************
+#include "macros.fh"
 module fcidump_dump
   use fcidump_tables
   implicit none
   private
   public :: dump_ascii, dump_hdf5
-  save
 contains
 
 !>  @brief
@@ -27,32 +27,34 @@ contains
 !>  @details
 !>  Create an ASCII formatted FCIDUMP with core energy,
 !>  orbital energies, Fock matrix elements and two electron integrals.
-!>  Contains information about \p nAsh, \p nSym, \p nActEl,
-!>  \p iSpin, and \p lSym.
+!>  Contains information about \p nAsh, \p nActEl,
+!>  \p iSpin, and \p stSym.
 !>
+!>  @param[in] path
 !>  @param[in] EMY Core energy
 !>  @param[in] orbital_table Orbital energies with index
 !>  @param[in] fock_table
 !>  @param[in] two_el_table
-  subroutine dump_ascii(EMY, orbital_table, fock_table, two_el_table)
-    use general_data, only : nSym, nActEl, iSpin, lSym, nAsh
+!>  @param[in] orbsym
+  subroutine dump_ascii(path, EMY, orbital_table, fock_table, &
+                        two_el_table, orbsym)
+    use general_data, only : nActEl, iSpin, stSym, nAsh
     implicit none
+    character(len=*), intent(in) :: path
     real*8, intent(in) :: EMY
     type(OrbitalTable), intent(in) :: orbital_table
     type(FockTable), intent(in) :: fock_table
     type(TwoElIntTable), intent(in) :: two_el_table
-    integer :: i, j, ireturn, isFreeUnit, LuFCI
-
-    call qEnter('dump_ascii')
+    integer, intent(in) :: orbsym(:)
+    integer :: i, j, isFreeUnit, LuFCI
 
     LuFCI = isFreeUnit(38)
-    call molcas_open(LuFCI,'FCIDMP')
+    call molcas_open(LuFCI, path)
 
     write(LuFCI,'(1X,A11,I3,A7,I3,A5,I3,A)') ' &FCI NORB=',sum(nAsh), &
        ',NELEC=',nActEl,',MS2=',int((ISPIN-1.0d0)),','
-
-    write(LuFCI,'(A,500(I2,","))')'  ORBSYM=',((j,i=1,nAsh(j)), j=1,nSym)
-    write(LuFCI,'(2X,A5,I1)') 'ISYM=', LSYM -1
+    write(LuFCI,'(A,500(I2,","))')'  ORBSYM=',(orbsym(i),i=1,size(orbsym))
+    write(LuFCI,'(2X,A5,I1)') 'ISYM=', STSYM -1
     write(LuFCI,'(A)') ' &END'
 
     do j = 1, length(two_el_table)
@@ -75,15 +77,17 @@ contains
     close(LuFCI)
 
 ! ========== For testing purposes FROM HERE =============
-    call Add_Info('core energy', [EMY], 1, 8)
-    call Add_Info('Orbital Energy', orbital_table%values(1), 1, 8)
-    call Add_Info('Fock element', fock_table%values(1), 1, 8)
-    call Add_Info('TwoEl Integral element', two_el_table%values(1), 1, 8)
+    if (length(orbital_table) /= 0 .and. length(fock_table) /=0 &
+        .and. length(two_el_table) /= 0) then
+      call Add_Info('core energy', [EMY], 1, 8)
+      call Add_Info('Orbital Energy', orbital_table%values(1), 1, 8)
+      call Add_Info('Fock element', fock_table%values(1), 1, 8)
+      call Add_Info('TwoEl Integral element', two_el_table%values(1), 1, 8)
+    end if
 ! ========== For testing purposes TO HERE ===============
 
     call FastIO('STATUS')
-    ireturn = 0
-    call qExit('dump_ascii')
+
     return
   end subroutine dump_ascii
 
@@ -96,37 +100,38 @@ contains
 !>  Create an FCIDUMP in HDF5-file format with core energy,
 !>  orbital energies, Fock matrix elements and two electron integrals.
 !>  Contains information about \p nAsh, \p nSym, \p nActEl,
-!>  \p iSpin, and \p lSym.
+!>  \p iSpin, and \p stSym.
 !>
+!>  @param[in] path
 !>  @param[in] EMY Core energy
 !>  @param[in] orbital_table Orbital energies with index
 !>  @param[in] fock_table
 !>  @param[in] two_el_table
-  subroutine dump_hdf5(EMY, orbital_table, fock_table, two_el_table)
-    use general_data, only : nSym, nActEl, multiplicity => iSpin, lSym, nAsh
+!>  @param[in] orbsym
+  subroutine dump_hdf5(path, EMY, orbital_table, fock_table, two_el_table, orbsym)
+    use general_data, only : nSym, nActEl, multiplicity => iSpin, stSym, nAsh
     use gas_data, only : iDoGAS
     use gugx_data, only : IfCAS
 #ifdef _HDF5_
     use mh5
 #endif
     implicit none
+    character(len=*), intent(in) :: path
     real*8, intent(in) :: EMY
     type(OrbitalTable), intent(in) :: orbital_table
     type(FockTable), intent(in) :: fock_table
     type(TwoElIntTable), intent(in) :: two_el_table
+    integer, intent(in) :: orbsym(:)
 #ifdef _HDF5_
     integer :: file_id, dset_id
-    integer :: ireturn
     character :: lIrrep(24)
 
-    call qEnter('dump_hdf5')
-
-    file_id = mh5_create_file('H5FCIDMP')
+    file_id = mh5_create_file(path)
 
 !   symmetry information
     call Get_cArray('Irreps', lIrrep, 24)
     call mh5_init_attr(file_id, 'IRREP_LABELS', 1, [nSym], lIrrep, 3)
-    call mh5_init_attr(file_id, 'ORBSYM', 1, [nSym], nAsh)
+    call mh5_init_attr(file_id, 'ORBSYM', 1, [size(orbsym)], orbsym)
     call mh5_init_attr(file_id, 'NORB', sum(nAsh(:nSym)))
 
     ! Set wavefunction type
@@ -142,27 +147,27 @@ contains
     call mh5_init_attr(file_id, 'CORE_ENERGY', EMY)
     call mh5_init_attr(file_id, 'NELEC', nActEl)
     call mh5_init_attr(file_id, 'MULTIPLICITY', multiplicity)
-    call mh5_init_attr(file_id, 'ISYM', lSym - 1)
+    call mh5_init_attr(file_id, 'ISYM', stSym - 1)
 
     dset_id = mh5_create_dset_int(file_id, 'ORBITAL_INDEX', &
       1, [length(orbital_table)])
     call mh5_init_attr(dset_id, 'DESCRIPTION', &
       'Index for the orbitals in active space.')
-    call mh5_put_dset_array_int(dset_id, orbital_table%index)
+    call mh5_put_dset(dset_id, orbital_table%index)
     call mh5_close_dset(dset_id)
 
     dset_id = mh5_create_dset_real(file_id, 'ORBITAL_ENERGIES', &
       1, [length(orbital_table)])
     call mh5_init_attr(dset_id, 'DESCRIPTION', &
       'Energies of orbitals in active space.')
-    call mh5_put_dset_array_real(dset_id, orbital_table%values)
+    call mh5_put_dset(dset_id, orbital_table%values)
     call mh5_close_dset(dset_id)
 
     dset_id = mh5_create_dset_int(file_id, 'FOCK_INDEX', &
       2, [2, length(fock_table)])
     call mh5_init_attr(dset_id, 'DESCRIPTION', &
       'The index i, j for the Fock matrix elements <i| F |j>.')
-    call mh5_put_dset_array_int(dset_id, fock_table%index)
+    call mh5_put_dset(dset_id, fock_table%index)
     call mh5_close_dset(dset_id)
 
     dset_id = mh5_create_dset_real(file_id, 'FOCK_VALUES', &
@@ -170,14 +175,14 @@ contains
     call mh5_init_attr(dset_id, 'DESCRIPTION', &
       'The Fock matrix elements <i| F |j>.')
     call mh5_init_attr(dset_id, 'CUTOFF', fock_table%cutoff)
-    call mh5_put_dset_array_real(dset_id, fock_table%values)
+    call mh5_put_dset(dset_id, fock_table%values)
     call mh5_close_dset(dset_id)
 
     dset_id = mh5_create_dset_int(file_id, 'TWO_EL_INT_INDEX', &
       2, [4, length(two_el_table)])
     call mh5_init_attr(dset_id, 'DESCRIPTION', &
       'The index i, j, k, l for the two electron integrals <i j | 1/r_{12} | k l >.')
-    call mh5_put_dset_array_int(dset_id, two_el_table%index)
+    call mh5_put_dset(dset_id, two_el_table%index)
     call mh5_close_dset(dset_id)
 
     dset_id = mh5_create_dset_real(file_id, 'TWO_EL_INT_VALUES', &
@@ -185,22 +190,16 @@ contains
     call mh5_init_attr(dset_id, 'DESCRIPTION', &
       'The two electron integrals <i j | 1/r_{12} | k l >.')
     call mh5_init_attr(dset_id, 'CUTOFF', two_el_table%cutoff)
-    call mh5_put_dset_array_real(dset_id, two_el_table%values)
+    call mh5_put_dset(dset_id, two_el_table%values)
     call mh5_close_dset(dset_id)
 
     call mh5_close_file(file_id)
 
     call FastIO('STATUS')
-    ireturn = 0
-    call qExit('dump_hdf5')
 #else
-! Avoid unused argument warnings
-    if (.false.) then
-      call unused_real(EMY)
-      call unused(orbital_table)
-      call unused(fock_table)
-      call unused(two_el_table)
-    end if
+    unused_var(EMY); unused_var(path)
+    unused_var(orbital_table); unused_var(fock_table)
+    unused_var(two_el_table); unused_var(orbsym)
 #endif
   end subroutine dump_hdf5
 end module fcidump_dump

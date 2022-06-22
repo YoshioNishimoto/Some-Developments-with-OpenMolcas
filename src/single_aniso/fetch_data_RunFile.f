@@ -15,7 +15,6 @@
       Logical :: FOUND
 
 
-      Call qEnter('SA_fetchRF1')
 
       ! check the presence of the RUNFILE
       FOUND=.false.
@@ -158,7 +157,6 @@
          Write(6,'(5X,A)') 'The DIPMOM array was not found on RUNFILE'
          Write(6,'(5X,A)') 'Absorption intensities will not be computed'
       End If
-      Call qExit('SA_fetchRF1')
       Return
       End Subroutine fetch_data_RunFile_init
 
@@ -168,32 +166,33 @@
       Subroutine fetch_data_RunFile_all( nss, nstate,
      &                                   multiplicity, eso, esfs,
      &                                   U, MM, MS, ML, DM, angmom,
-     &                                   eDmom, amfi, HSO )
+     &                                   eDmom, amfi, HSO,
+     &                                   eso_au, esfs_au )
       Implicit None
-      Integer, Parameter :: wp=selected_real_kind(p=15,r=307)
+      Integer, Parameter            :: wp=kind(0.d0)
 #include "stdalloc.fh"
       Integer :: nss, nstate
       Integer :: multiplicity(nstate)
-      Real(kind=wp) :: eso(nss), esfs(nstate), angmom(3,nstate,nstate),
-     &                 eDmom(3,nstate,nstate), amfi(3,nstate,nstate)
-      Complex(kind=wp) :: MM(3,nss,nss), MS(3,nss,nss), ML(3,nss,nss)
-      Complex(kind=wp) :: DM(3,nss,nss)
-      Complex(kind=wp) :: U(nss,nss), HSO(nss,nss)
+      Real(kind=8) :: eso(nss), esfs(nstate), angmom(3,nstate,nstate),
+     &                 eDmom(3,nstate,nstate), amfi(3,nstate,nstate),
+     &                 eso_au(nss), esfs_au(nstate)
+      Complex(kind=8) :: MM(3,nss,nss), MS(3,nss,nss), ML(3,nss,nss)
+      Complex(kind=8) :: DM(3,nss,nss)
+      Complex(kind=8) :: U(nss,nss), HSO(nss,nss)
       ! local variables:
       Integer              :: njob, mxjob, iss, ibas(nstate,-50:50)
       Integer              :: i, j, i1, j1, ist, jst, mult, multI, multJ
       Integer              :: l, ipar, info
-      Real(kind=wp)        :: g_e, au2cm, thr_deg, diff
+      Real(kind=8)         :: g_e, au2cm, thr_deg, diff
       ! allocatable local arrays:
-      Integer, allocatable :: mltplt(:), jbnum(:) !,lroot(:)
-      Real(kind=wp), allocatable :: tmpR(:,:), tmpI(:,:), W(:)
-      Complex(kind=wp), allocatable :: tmp(:,:)
-      Complex(kind=wp) :: Spin
+      Integer, allocatable :: mltplt(:), jbnum(:), nstat(:) !,lroot(:)
+      Real(kind=8), allocatable :: tmpR(:,:), tmpI(:,:), W(:)
+      Complex(kind=8), allocatable :: tmp(:,:),u1(:,:)
+      Complex(kind=8)  :: Spin
       External         :: Spin
       Logical          :: found_edmom, found_amfi, found_hsor,
      &                    found_hsoi
 
-      Call qEnter('SA_fetchRF2')
       g_e=2.00231930437180_wp
       au2cm=219474.6313702_wp
       ! get basic sizes:
@@ -204,11 +203,14 @@
       ! allocate temporary memory:
       Call mma_allocate(jbnum,nstate,'jbnum')
       Call mma_allocate(mltplt,mxjob,'mltplt')
+      Call mma_allocate(nstat,mxjob,'nstat')
       ! get the information from RUNFILE:
       mltplt=0
       jbnum=0
+      nstat=0
       Call get_iArray('MLTP_SINGLE',MLTPLT,MXJOB)
       Call get_iArray('JBNUM_SINGLE',JBNUM,NSTATE)
+      Call get_iArray('NSTAT_SINGLE',NSTAT,MXJOB)
       ! computing the multiplicity of each state:
       multiplicity=0
       Do i=1,nstate
@@ -216,14 +218,19 @@
       End Do
       Call mma_deallocate(jbnum)
       Call mma_deallocate(mltplt)
+      Call mma_deallocate(nstat)
 
       ! fetch the spin-orbit energies:
       eso=0.0_wp
+      eso_au=0.0_wp
       Call get_dArray('ESO_SINGLE',eso,nss)
+      Call get_dArray('ESO_LOW',eso_au,nss)
 
       ! fetch the spin-free energies:
       esfs=0.0_wp
+      esfs_au=0.0_wp
       Call get_dArray('ESFS_SINGLE',esfs,nstate)
+      Call get_dArray('ESFS_SINGLEAU',esfs_au,nstate)
 
       ! fetch the U matrix:
       Call mma_allocate(tmpR,nss,nss,'tmpR')
@@ -242,11 +249,9 @@
       End Do
 
 
-
       ! fetch the angular momentum integrals:
       angmom=0.0_wp
       Call get_dArray('ANGM_SINGLE',angmom,3*nstate*nstate)
-
 
       ! fetch the electric dipole moment integrals:
       edmom=0.0_wp
@@ -262,7 +267,6 @@
       Call qpg_dArray('AMFI_SINGLE',FOUND_AMFI,3*NSTATE*NSTATE)
       If (found_amfi)
      &  Call get_dArray('AMFI_SINGLE',amfi,3*nstate*nstate)
-
 
       ! fetch the spin-orbit hamiltonian
       FOUND_HSOR=.FALSE.
@@ -283,10 +287,11 @@
 !-----------------------------------------------------------------------
 !       if HSO is found, proceed to diagonalize it
          Call mma_allocate(W,nss,'W')
+         Call mma_allocate(U1,nss,nss,'U1')
          Call dcopy_(nss,[0.0_wp],0,W,1)
-         Call zcopy_(nss*nss,[(0.0_wp,0.0_wp)],0,U,1)
+         Call zcopy_(nss*nss,[(0.0_wp,0.0_wp)],0,U1,1)
          info=0
-         Call diag_c2(hso,nss,info,W,U)
+         Call diag_c2(hso,nss,info,W,U1)
          ! correct for numerical degeneracies:
          thr_deg=0.2D-13 ! a.u. = 0.2D-13*au2cm = 4.38949263E-09 cm-1
          Do i=1,nss-1
@@ -302,7 +307,9 @@
          Do i=1,nss
             ESO(i) = (W(i)-W(1))*au2cm
          End Do
+
          Call mma_deallocate(W)
+         Call mma_deallocate(U1)
 !-----------------------------------------------------------------------
       End If
       Call mma_deallocate(tmpR)
@@ -370,6 +377,7 @@ c----- expand the spin free basis to the spin-orbit basis:
          End Do   ! Jst
       End Do   ! Ist
 
+
       ! calculate the matrix elements of the spin and magnetic moment
       ! in the spin-orbit basis:
       Call mma_allocate(tmp,nss,nss,'tmp')
@@ -420,7 +428,9 @@ c----- expand the spin free basis to the spin-orbit basis:
       End Do !L
       Call mma_deallocate(tmp)
 
-      Call qExit('SA_fetchRF2')
+
+      ! check the commutation rules of spin:
+      Call check_commutation(nss, MS(1:3,1:nss,1:nss), .false.)
 
       Return
       End Subroutine fetch_data_RunFile_all

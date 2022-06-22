@@ -9,6 +9,11 @@
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
       SUBROUTINE READCI(ISTATE,ISGS,ICIS,NCI,CI)
+      use rassi_global_arrays, only: JBNUM, LROOT
+#ifdef _HDF5_
+      USE mh5, ONLY: mh5_is_hdf5, mh5_open_file_r, mh5_exists_attr,
+     &               mh5_fetch_attr, mh5_fetch_dset, mh5_close_file
+#endif
       IMPLICIT NONE
 #include "prgm.fh"
       CHARACTER*16 ROUTINE
@@ -22,7 +27,6 @@
 #include "Struct.fh"
 #include "SysDef.fh"
 #ifdef _HDF5_
-#  include "mh5.fh"
       integer :: refwfn_id
       integer :: root2state(mxroot), IDXCI
 #endif
@@ -34,15 +38,14 @@
 
       INTEGER I, IAD, IDISK, JOB, LROOT1, LSYM
 
-      CALL QENTER(ROUTINE)
 
       IF(ISTATE.LT.1 .OR. ISTATE.GT.NSTATE) THEN
         WRITE(6,*)'RASSI/READCI: Invalid ISTATE parameter.'
         WRITE(6,*)' ISTATE, NSTATE:',ISTATE,NSTATE
         CALL ABEND()
       END IF
-      JOB=iWork(lJBNUM+ISTATE-1)
-      LROOT1=iWork(lLROOT+ISTATE-1)
+      JOB=JBNUM(ISTATE)
+      LROOT1=LROOT(ISTATE)
 
 #ifdef _HDF5_
 ************************************************************************
@@ -62,7 +65,7 @@
           call WarningMessage(2,'Invalid CI array index, abort!')
           call AbEnd
         END IF
-        call mh5_fetch_dset_array_real(refwfn_id,
+        call mh5_fetch_dset(refwfn_id,
      &         'CI_VECTORS',CI,[NCI,1],[0,IDXCI-1])
         call mh5_close_file(refwfn_id)
       Else
@@ -90,7 +93,7 @@
         WRITE(6,*)' READCI called for state ',ISTATE
         WRITE(6,*)' This is on JobIph nr.',JOB
         WRITE(6,*)' JobIph file name:',JBNAME(JOB)
-        WRITE(6,*)' It is root nr.',iWork(lLROOT+ISTATE-1)
+        WRITE(6,*)' It is root nr.',LROOT(ISTATE)
         WRITE(6,*)' Its length NCI=',NCI
         WRITE(6,*)' Its symmetry  =',IRREP(JOB)
         WRITE(6,*)' Spin multiplic=',MLTPLT(JOB)
@@ -98,6 +101,5 @@
         CALL PRWF(ISGS,ICIS,LSYM,CI,CITHR)
       END IF
 
-      CALL QEXIT(ROUTINE)
       RETURN
       END

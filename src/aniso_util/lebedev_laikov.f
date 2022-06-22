@@ -10,13 +10,12 @@
 ************************************************************************
       Subroutine Lebedev_Laikov(nsymm,ngrid,nP,X,Y,Z,W)
       Implicit None
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter         :: wp=kind(0.d0)
       Integer, intent(in)        :: nsymm,ngrid
       Integer, intent(in)        :: nP
       Integer                    :: N
-      Real (kind=wp), intent(out), dimension(nP) :: x, y, z, w
+      Real (kind=8), intent(out), dimension(nP) :: x, y, z, w
 
-      Call qEnter('Lebedev_Laikov')
 
       If(     nsymm .eq. 1 ) Then  ! default :  grid on a half-sphere;
         If(     ngrid .eq.  1 ) Then
@@ -235,7 +234,6 @@
         Write(6,'(a)') 'nsymm parameter can take only 1,2, or 3 values.'
       End If
 
-      Call qExit('Lebedev_Laikov')
       Return
       End
 
@@ -243,12 +241,12 @@
 
       Subroutine gen_oh2(code, num, x, y, z, w, a, b, v)
       Implicit logical(a-z)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp)     :: x(*),y(*),z(*),w(*)
-      Real (kind=wp)     :: a,b,v
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8)     :: x(*),y(*),z(*),w(*)
+      Real (kind=8)     :: a,b,v
       Integer            :: code
       Integer            :: num
-      Real (kind=wp)     :: c
+      Real (kind=8)     :: c
 chvd
 chvd   This Subroutine is part of a set of Subroutines that generate
 chvd   Lebedev grids [1-6] for integration on a sphere. The original
@@ -628,12 +626,12 @@ c
 
       Subroutine gen_oh4(code, num, x, y, z, w, a, b, v)
       Implicit logical(a-z)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: x(*),y(*),z(*),w(*)
-      Real (kind=wp) :: a,b,v
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: x(*),y(*),z(*),w(*)
+      Real (kind=8) :: a,b,v
       Integer code
       Integer        :: Num
-      Real (kind=wp) :: c
+      Real (kind=8) :: c
 chvd
 chvd   This Subroutine is part of a set of Subroutines that generate
 chvd   Lebedev grids [1-6] for integration on a sphere. The original
@@ -895,12 +893,12 @@ c
 
       Subroutine gen_oh8(code, num, x, y, z, w, a, b, v)
       Implicit logical(a-z)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: x(*),y(*),z(*),w(*)
-      Real (kind=wp) :: a,b,v
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: x(*),y(*),z(*),w(*)
+      Real (kind=8) :: a,b,v
       Integer code
       Integer        :: Num
-      Real (kind=wp) :: c
+      Real (kind=8) :: c
 chvd
 chvd   This Subroutine is part of a set of Subroutines that generate
 chvd   Lebedev grids [1-6] for integration on a sphere. The original
@@ -1094,13 +1092,13 @@ c
 
 clu ===  Subroutines for integration on a semi-sphere ===
       Subroutine LD2_0005(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(   5)
-      Real (kind=wp) :: Y(   5)
-      Real (kind=wp) :: Z(   5)
-      Real (kind=wp) :: W(   5)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(   5)
+      Real (kind=8) :: Y(   5)
+      Real (kind=8) :: Z(   5)
+      Real (kind=8) :: W(   5)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV    6-POINT ANGULAR GRID // 5 points on an semi-sphere
 CVW
@@ -1111,13 +1109,13 @@ CVW
       Return
       End
       Subroutine LD2_0009(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(   9)
-      Real (kind=wp) :: Y(   9)
-      Real (kind=wp) :: Z(   9)
-      Real (kind=wp) :: W(   9)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(   9)
+      Real (kind=8) :: Y(   9)
+      Real (kind=8) :: Z(   9)
+      Real (kind=8) :: W(   9)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV   14-POINT ANGULAR GRID // 9 points on a semi-sphere
 CVW
@@ -1130,13 +1128,13 @@ CVW
       Return
       End
       Subroutine LD2_0017(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(  17)
-      Real (kind=wp) :: Y(  17)
-      Real (kind=wp) :: Z(  17)
-      Real (kind=wp) :: W(  17)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(  17)
+      Real (kind=8) :: Y(  17)
+      Real (kind=8) :: Z(  17)
+      Real (kind=8) :: W(  17)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV   26-POINT ANGULAR GRID // 17 points on a semi-sphere
 CVW
@@ -1151,13 +1149,13 @@ CVW
       Return
       End
       Subroutine LD2_0025(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(  25)
-      Real (kind=wp) :: Y(  25)
-      Real (kind=wp) :: Z(  25)
-      Real (kind=wp) :: W(  25)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(  25)
+      Real (kind=8) :: Y(  25)
+      Real (kind=8) :: Z(  25)
+      Real (kind=8) :: W(  25)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV   38-POINT ANGULAR GRID // 25 points on a semi-sphere
 CVW
@@ -1173,13 +1171,13 @@ CVW
       Return
       End
       Subroutine LD2_0029(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(  29)
-      Real (kind=wp) :: Y(  29)
-      Real (kind=wp) :: Z(  29)
-      Real (kind=wp) :: W(  29)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(  29)
+      Real (kind=8) :: Y(  29)
+      Real (kind=8) :: Z(  29)
+      Real (kind=8) :: W(  29)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV   50-POINT ANGULAR GRID // 29 points on a semi-sphere
 CVW
@@ -1197,13 +1195,13 @@ CVW
       Return
       End
       Subroutine LD2_0045(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(  45)
-      Real (kind=wp) :: Y(  45)
-      Real (kind=wp) :: Z(  45)
-      Real (kind=wp) :: W(  45)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(  45)
+      Real (kind=8) :: Y(  45)
+      Real (kind=8) :: Z(  45)
+      Real (kind=8) :: W(  45)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV   74-POINT ANGULAR GRID // 45 poins on a semi-sphere
 CVW
@@ -1224,13 +1222,13 @@ CVW
       Return
       End
       Subroutine LD2_0049(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(  49)
-      Real (kind=wp) :: Y(  49)
-      Real (kind=wp) :: Z(  49)
-      Real (kind=wp) :: W(  49)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(  49)
+      Real (kind=8) :: Y(  49)
+      Real (kind=8) :: Z(  49)
+      Real (kind=8) :: W(  49)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV   86-POINT ANGULAR GRID // 49 points on a semi-sphere
 CVW
@@ -1252,13 +1250,13 @@ CVW
       Return
       End
       Subroutine LD2_0061(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(  61)
-      Real (kind=wp) :: Y(  61)
-      Real (kind=wp) :: Z(  61)
-      Real (kind=wp) :: W(  61)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(  61)
+      Real (kind=8) :: Y(  61)
+      Real (kind=8) :: Z(  61)
+      Real (kind=8) :: W(  61)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV  110-POINT ANGULAR GRID // 61 points on a semi-sphere
 CVW
@@ -1283,13 +1281,13 @@ CVW
       Return
       End
       Subroutine LD2_0077(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(  77)
-      Real (kind=wp) :: Y(  77)
-      Real (kind=wp) :: Z(  77)
-      Real (kind=wp) :: W(  77)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(  77)
+      Real (kind=8) :: Y(  77)
+      Real (kind=8) :: Z(  77)
+      Real (kind=8) :: W(  77)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV  146-POINT ANGULAR GRID // 77 points on a semi-sphere
 CVW
@@ -1317,13 +1315,13 @@ CVW
       Return
       End
       Subroutine LD2_0093(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(  93)
-      Real (kind=wp) :: Y(  93)
-      Real (kind=wp) :: Z(  93)
-      Real (kind=wp) :: W(  93)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(  93)
+      Real (kind=8) :: Y(  93)
+      Real (kind=8) :: Z(  93)
+      Real (kind=8) :: W(  93)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV  170-POINT ANGULAR GRID // 93 points ona semi-sphere
 CVW
@@ -1354,13 +1352,13 @@ CVW
       Return
       End
       Subroutine LD2_0105(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X( 105)
-      Real (kind=wp) :: Y( 105)
-      Real (kind=wp) :: Z( 105)
-      Real (kind=wp) :: W( 105)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X( 105)
+      Real (kind=8) :: Y( 105)
+      Real (kind=8) :: Z( 105)
+      Real (kind=8) :: W( 105)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV  194-POINT ANGULAR GRID // 105 points on a semi-sphere
 CVW
@@ -1394,13 +1392,13 @@ CVW
       Return
       End
       Subroutine LD2_0125(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X( 125)
-      Real (kind=wp) :: Y( 125)
-      Real (kind=wp) :: Z( 125)
-      Real (kind=wp) :: W( 125)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X( 125)
+      Real (kind=8) :: Y( 125)
+      Real (kind=8) :: Z( 125)
+      Real (kind=8) :: W( 125)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV  230-POINT ANGULAR GRID // 125 points on a semi-sphere
 CVW
@@ -1438,13 +1436,13 @@ CVW
       Return
       End
       Subroutine LD2_0141(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X( 141)
-      Real (kind=wp) :: Y( 141)
-      Real (kind=wp) :: Z( 141)
-      Real (kind=wp) :: W( 141)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X( 141)
+      Real (kind=8) :: Y( 141)
+      Real (kind=8) :: Z( 141)
+      Real (kind=8) :: W( 141)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV  266-POINT ANGULAR GRID // 141 points on a semi-sphere
 CVW
@@ -1485,13 +1483,13 @@ CVW
       Return
       End
       Subroutine LD2_0161(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X( 161)
-      Real (kind=wp) :: Y( 161)
-      Real (kind=wp) :: Z( 161)
-      Real (kind=wp) :: W( 161)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X( 161)
+      Real (kind=8) :: Y( 161)
+      Real (kind=8) :: Z( 161)
+      Real (kind=8) :: W( 161)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV  302-POINT ANGULAR GRID // 161 points on a semi-sphere
 CVW
@@ -1536,13 +1534,13 @@ CVW
       Return
       End
       Subroutine LD2_0185(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X( 185)
-      Real (kind=wp) :: Y( 185)
-      Real (kind=wp) :: Z( 185)
-      Real (kind=wp) :: W( 185)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X( 185)
+      Real (kind=8) :: Y( 185)
+      Real (kind=8) :: Z( 185)
+      Real (kind=8) :: W( 185)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV  350-POINT ANGULAR GRID // 185 points on a semi-sphere
 CVW
@@ -1591,13 +1589,13 @@ CVW
       Return
       End
       Subroutine LD2_0229(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X( 229)
-      Real (kind=wp) :: Y( 229)
-      Real (kind=wp) :: Z( 229)
-      Real (kind=wp) :: W( 229)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X( 229)
+      Real (kind=8) :: Y( 229)
+      Real (kind=8) :: Z( 229)
+      Real (kind=8) :: W( 229)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV  434-POINT ANGULAR GRID // 229 points on a semi-sphere
 CVW
@@ -1655,13 +1653,13 @@ CVW
       Return
       End
       Subroutine LD2_0309(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X( 309)
-      Real (kind=wp) :: Y( 309)
-      Real (kind=wp) :: Z( 309)
-      Real (kind=wp) :: W( 309)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X( 309)
+      Real (kind=8) :: Y( 309)
+      Real (kind=8) :: Z( 309)
+      Real (kind=8) :: W( 309)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV  590-POINT ANGULAR GRID // 309 points on a semi-sphere
 CVW
@@ -1734,13 +1732,13 @@ CVW
       Return
       End
       Subroutine LD2_0401(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X( 401)
-      Real (kind=wp) :: Y( 401)
-      Real (kind=wp) :: Z( 401)
-      Real (kind=wp) :: W( 401)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X( 401)
+      Real (kind=8) :: Y( 401)
+      Real (kind=8) :: Z( 401)
+      Real (kind=8) :: W( 401)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV  770-POINT ANGULAR GRID // 401 points on a semi-sphere
 CVW
@@ -1830,13 +1828,13 @@ CVW
       Return
       End
       Subroutine LD2_0505(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X( 505)
-      Real (kind=wp) :: Y( 505)
-      Real (kind=wp) :: Z( 505)
-      Real (kind=wp) :: W( 505)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X( 505)
+      Real (kind=8) :: Y( 505)
+      Real (kind=8) :: Z( 505)
+      Real (kind=8) :: W( 505)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV  974-POINT ANGULAR GRID // 505 points on a semi-sphere
 CVW
@@ -1945,13 +1943,13 @@ CVW
       Return
       End
       Subroutine LD2_0621(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X( 621)
-      Real (kind=wp) :: Y( 621)
-      Real (kind=wp) :: Z( 621)
-      Real (kind=wp) :: W( 621)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X( 621)
+      Real (kind=8) :: Y( 621)
+      Real (kind=8) :: Z( 621)
+      Real (kind=8) :: W( 621)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV 1202-POINT ANGULAR GRID // 621 points on a semi-sphere
 CVW
@@ -2081,13 +2079,13 @@ CVW
       Return
       End
       Subroutine LD2_0749(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X( 749)
-      Real (kind=wp) :: Y( 749)
-      Real (kind=wp) :: Z( 749)
-      Real (kind=wp) :: W( 749)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X( 749)
+      Real (kind=8) :: Y( 749)
+      Real (kind=8) :: Z( 749)
+      Real (kind=8) :: W( 749)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV 1454-POINT ANGULAR GRID // 749 points on a semi-sphere
 CVW
@@ -2240,13 +2238,13 @@ CVW
       Return
       End
       Subroutine LD2_0889(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X( 889)
-      Real (kind=wp) :: Y( 889)
-      Real (kind=wp) :: Z( 889)
-      Real (kind=wp) :: W( 889)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X( 889)
+      Real (kind=8) :: Y( 889)
+      Real (kind=8) :: Z( 889)
+      Real (kind=8) :: W( 889)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV 1730-POINT ANGULAR GRID // 889 points on a semi-sphere
 CVW
@@ -2424,13 +2422,13 @@ CVW
       Return
       End
       Subroutine LD2_1041(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(1041)
-      Real (kind=wp) :: Y(1041)
-      Real (kind=wp) :: Z(1041)
-      Real (kind=wp) :: W(1041)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(1041)
+      Real (kind=8) :: Y(1041)
+      Real (kind=8) :: Z(1041)
+      Real (kind=8) :: W(1041)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV 2030-POINT ANGULAR GRID // 1041 points on a semi-sphere
 CVW
@@ -2635,13 +2633,13 @@ CVW
       Return
       End
       Subroutine LD2_1205(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(1205)
-      Real (kind=wp) :: Y(1205)
-      Real (kind=wp) :: Z(1205)
-      Real (kind=wp) :: W(1205)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(1205)
+      Real (kind=8) :: Y(1205)
+      Real (kind=8) :: Z(1205)
+      Real (kind=8) :: W(1205)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV 2354-POINT ANGULAR GRID // 1205 points on a semi-sphere
 CVW
@@ -2875,13 +2873,13 @@ CVW
       Return
       End
       Subroutine LD2_1381(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(1381)
-      Real (kind=wp) :: Y(1381)
-      Real (kind=wp) :: Z(1381)
-      Real (kind=wp) :: W(1381)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(1381)
+      Real (kind=8) :: Y(1381)
+      Real (kind=8) :: Z(1381)
+      Real (kind=8) :: W(1381)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV 2702-POINT ANGULAR GRID // 1381 points on a semi-sphere
 CVW
@@ -3146,13 +3144,13 @@ CVW
       Return
       End
       Subroutine LD2_1569(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(1569)
-      Real (kind=wp) :: Y(1569)
-      Real (kind=wp) :: Z(1569)
-      Real (kind=wp) :: W(1569)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(1569)
+      Real (kind=8) :: Y(1569)
+      Real (kind=8) :: Z(1569)
+      Real (kind=8) :: W(1569)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV 3074-POINT ANGULAR GRID // 1569 points on a semi-sphere
 CVW
@@ -3450,13 +3448,13 @@ CVW
       Return
       End
       Subroutine LD2_1769(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(1769)
-      Real (kind=wp) :: Y(1769)
-      Real (kind=wp) :: Z(1769)
-      Real (kind=wp) :: W(1769)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(1769)
+      Real (kind=8) :: Y(1769)
+      Real (kind=8) :: Z(1769)
+      Real (kind=8) :: W(1769)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV 3470-POINT ANGULAR GRID // 1769 points on a semi-sphere
 CVW
@@ -3789,13 +3787,13 @@ CVW
       Return
       End
       Subroutine LD2_1981(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(1981)
-      Real (kind=wp) :: Y(1981)
-      Real (kind=wp) :: Z(1981)
-      Real (kind=wp) :: W(1981)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(1981)
+      Real (kind=8) :: Y(1981)
+      Real (kind=8) :: Z(1981)
+      Real (kind=8) :: W(1981)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV 3890-POINT ANGULAR GRID // 1981 points on a semi-sphere
 CVW
@@ -4165,13 +4163,13 @@ CVW
       Return
       End
       Subroutine LD2_2205(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(2205)
-      Real (kind=wp) :: Y(2205)
-      Real (kind=wp) :: Z(2205)
-      Real (kind=wp) :: W(2205)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(2205)
+      Real (kind=8) :: Y(2205)
+      Real (kind=8) :: Z(2205)
+      Real (kind=8) :: W(2205)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV 4334-POINT ANGULAR GRID // 2205 points on a semi-sphere
 CVW
@@ -4580,13 +4578,13 @@ CVW
       Return
       End
       Subroutine LD2_2441(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(2441)
-      Real (kind=wp) :: Y(2441)
-      Real (kind=wp) :: Z(2441)
-      Real (kind=wp) :: W(2441)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(2441)
+      Real (kind=8) :: Y(2441)
+      Real (kind=8) :: Z(2441)
+      Real (kind=8) :: W(2441)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV 4802-POINT ANGULAR GRID // 2441 points on a semi-sphere
 CVW
@@ -5036,13 +5034,13 @@ CVW
       Return
       End
       Subroutine LD2_2689(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(2689)
-      Real (kind=wp) :: Y(2689)
-      Real (kind=wp) :: Z(2689)
-      Real (kind=wp) :: W(2689)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(2689)
+      Real (kind=8) :: Y(2689)
+      Real (kind=8) :: Z(2689)
+      Real (kind=8) :: W(2689)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV 5294-POINT ANGULAR GRID // 2689 points on a semi-sphere
 CVW
@@ -5535,13 +5533,13 @@ CVW
       Return
       End
       Subroutine LD2_2949(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(2949)
-      Real (kind=wp) :: Y(2949)
-      Real (kind=wp) :: Z(2949)
-      Real (kind=wp) :: W(2949)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(2949)
+      Real (kind=8) :: Y(2949)
+      Real (kind=8) :: Z(2949)
+      Real (kind=8) :: W(2949)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV 5810-POINT ANGULAR GRID // 2949 points on a semi-sphere
 CVW
@@ -6088,13 +6086,13 @@ CVW
 
 clu ===  Subroutines for integration on a 4th-of-a-sphere ===
       Subroutine LD4_0004(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(   4)
-      Real (kind=wp) :: Y(   4)
-      Real (kind=wp) :: Z(   4)
-      Real (kind=wp) :: W(   4)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(   4)
+      Real (kind=8) :: Y(   4)
+      Real (kind=8) :: Z(   4)
+      Real (kind=8) :: W(   4)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV    6-POINT ANGULAR GRID // 4 points on an 4th-of-a-sphere
 CVW
@@ -6105,13 +6103,13 @@ CVW
       Return
       End
       Subroutine LD4_0006(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(   6)
-      Real (kind=wp) :: Y(   6)
-      Real (kind=wp) :: Z(   6)
-      Real (kind=wp) :: W(   6)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(   6)
+      Real (kind=8) :: Y(   6)
+      Real (kind=8) :: Z(   6)
+      Real (kind=8) :: W(   6)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV   14-POINT ANGULAR GRID // 6 points on a 4th-of-a-sphere
 CVW
@@ -6124,13 +6122,13 @@ CVW
       Return
       End
       Subroutine LD4_0011(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(  11)
-      Real (kind=wp) :: Y(  11)
-      Real (kind=wp) :: Z(  11)
-      Real (kind=wp) :: W(  11)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(  11)
+      Real (kind=8) :: Y(  11)
+      Real (kind=8) :: Z(  11)
+      Real (kind=8) :: W(  11)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV   26-POINT ANGULAR GRID // 11 points on a 4th-of-a-sphere
 CVW
@@ -6145,13 +6143,13 @@ CVW
       Return
       End
       Subroutine LD4_0016(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(  16)
-      Real (kind=wp) :: Y(  16)
-      Real (kind=wp) :: Z(  16)
-      Real (kind=wp) :: W(  16)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(  16)
+      Real (kind=8) :: Y(  16)
+      Real (kind=8) :: Z(  16)
+      Real (kind=8) :: W(  16)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV   38-POINT ANGULAR GRID // 16 points on a 4th-of-a-sphere
 CVW
@@ -6167,13 +6165,13 @@ CVW
       Return
       End
       Subroutine LD4_0017(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(  17)
-      Real (kind=wp) :: Y(  17)
-      Real (kind=wp) :: Z(  17)
-      Real (kind=wp) :: W(  17)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(  17)
+      Real (kind=8) :: Y(  17)
+      Real (kind=8) :: Z(  17)
+      Real (kind=8) :: W(  17)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV   50-POINT ANGULAR GRID // 17 points on a 4th-of-a-sphere
 CVW
@@ -6191,13 +6189,13 @@ CVW
       Return
       End
       Subroutine LD4_0027(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(  27)
-      Real (kind=wp) :: Y(  27)
-      Real (kind=wp) :: Z(  27)
-      Real (kind=wp) :: W(  27)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(  27)
+      Real (kind=8) :: Y(  27)
+      Real (kind=8) :: Z(  27)
+      Real (kind=8) :: W(  27)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV   74-POINT ANGULAR GRID // 27 poins on a 4th-of-a-sphere
 CVW
@@ -6218,13 +6216,13 @@ CVW
       Return
       End
       Subroutine LD4_0028(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(  28)
-      Real (kind=wp) :: Y(  28)
-      Real (kind=wp) :: Z(  28)
-      Real (kind=wp) :: W(  28)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(  28)
+      Real (kind=8) :: Y(  28)
+      Real (kind=8) :: Z(  28)
+      Real (kind=8) :: W(  28)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV   86-POINT ANGULAR GRID // 28 points on a 4th-of-a-sphere
 CVW
@@ -6246,13 +6244,13 @@ CVW
       Return
       End
       Subroutine LD4_0034(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(  34)
-      Real (kind=wp) :: Y(  34)
-      Real (kind=wp) :: Z(  34)
-      Real (kind=wp) :: W(  34)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(  34)
+      Real (kind=8) :: Y(  34)
+      Real (kind=8) :: Z(  34)
+      Real (kind=8) :: W(  34)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV  110-POINT ANGULAR GRID // 34 points on a 4th-of-a-sphere
 CVW
@@ -6277,13 +6275,13 @@ CVW
       Return
       End
       Subroutine LD4_0041(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(  41)
-      Real (kind=wp) :: Y(  41)
-      Real (kind=wp) :: Z(  41)
-      Real (kind=wp) :: W(  41)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(  41)
+      Real (kind=8) :: Y(  41)
+      Real (kind=8) :: Z(  41)
+      Real (kind=8) :: W(  41)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV  146-POINT ANGULAR GRID // 41 points on a 4th-of-a-sphere
 CVW
@@ -6311,13 +6309,13 @@ CVW
       Return
       End
       Subroutine LD4_0051(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(  51)
-      Real (kind=wp) :: Y(  51)
-      Real (kind=wp) :: Z(  51)
-      Real (kind=wp) :: W(  51)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(  51)
+      Real (kind=8) :: Y(  51)
+      Real (kind=8) :: Z(  51)
+      Real (kind=8) :: W(  51)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV  170-POINT ANGULAR GRID // 51 points on a 4th-of-a-sphere
 CVW
@@ -6348,13 +6346,13 @@ CVW
       Return
       End
       Subroutine LD4_0057(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(  57)
-      Real (kind=wp) :: Y(  57)
-      Real (kind=wp) :: Z(  57)
-      Real (kind=wp) :: W(  57)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(  57)
+      Real (kind=8) :: Y(  57)
+      Real (kind=8) :: Z(  57)
+      Real (kind=8) :: W(  57)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV  194-POINT ANGULAR GRID // 57 points on a 4th-of-a-sphere
 CVW
@@ -6388,13 +6386,13 @@ CVW
       Return
       End
       Subroutine LD4_0068(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(  68)
-      Real (kind=wp) :: Y(  68)
-      Real (kind=wp) :: Z(  68)
-      Real (kind=wp) :: W(  68)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(  68)
+      Real (kind=8) :: Y(  68)
+      Real (kind=8) :: Z(  68)
+      Real (kind=8) :: W(  68)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV  230-POINT ANGULAR GRID // 68 points on a 4th-of-a-sphere
 CVW
@@ -6432,13 +6430,13 @@ CVW
       Return
       End
       Subroutine LD4_0075(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(  75)
-      Real (kind=wp) :: Y(  75)
-      Real (kind=wp) :: Z(  75)
-      Real (kind=wp) :: W(  75)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(  75)
+      Real (kind=8) :: Y(  75)
+      Real (kind=8) :: Z(  75)
+      Real (kind=8) :: W(  75)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV  266-POINT ANGULAR GRID // 75 points on a 4th-of-a-sphere
 CVW
@@ -6479,13 +6477,13 @@ CVW
       Return
       End
       Subroutine LD4_0086(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(  86)
-      Real (kind=wp) :: Y(  86)
-      Real (kind=wp) :: Z(  86)
-      Real (kind=wp) :: W(  86)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(  86)
+      Real (kind=8) :: Y(  86)
+      Real (kind=8) :: Z(  86)
+      Real (kind=8) :: W(  86)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV  302-POINT ANGULAR GRID // 86 points on a 4th-of-a-sphere
 CVW
@@ -6530,13 +6528,13 @@ CVW
       Return
       End
       Subroutine LD4_0098(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(  98)
-      Real (kind=wp) :: Y(  98)
-      Real (kind=wp) :: Z(  98)
-      Real (kind=wp) :: W(  98)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(  98)
+      Real (kind=8) :: Y(  98)
+      Real (kind=8) :: Z(  98)
+      Real (kind=8) :: W(  98)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV  350-POINT ANGULAR GRID // 98 points on a 4th-of-a-sphere
 CVW
@@ -6585,13 +6583,13 @@ CVW
       Return
       End
       Subroutine LD4_0121(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X( 121)
-      Real (kind=wp) :: Y( 121)
-      Real (kind=wp) :: Z( 121)
-      Real (kind=wp) :: W( 121)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X( 121)
+      Real (kind=8) :: Y( 121)
+      Real (kind=8) :: Z( 121)
+      Real (kind=8) :: W( 121)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV  434-POINT ANGULAR GRID // 121 points on a 4th-of-a-sphere
 CVW
@@ -6649,13 +6647,13 @@ CVW
       Return
       End
       Subroutine LD4_0162(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X( 162)
-      Real (kind=wp) :: Y( 162)
-      Real (kind=wp) :: Z( 162)
-      Real (kind=wp) :: W( 162)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X( 162)
+      Real (kind=8) :: Y( 162)
+      Real (kind=8) :: Z( 162)
+      Real (kind=8) :: W( 162)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV  590-POINT ANGULAR GRID // 162 points on a 4th-of-a-sphere
 CVW
@@ -6728,13 +6726,13 @@ CVW
       Return
       End
       Subroutine LD4_0209(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X( 209)
-      Real (kind=wp) :: Y( 209)
-      Real (kind=wp) :: Z( 209)
-      Real (kind=wp) :: W( 209)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X( 209)
+      Real (kind=8) :: Y( 209)
+      Real (kind=8) :: Z( 209)
+      Real (kind=8) :: W( 209)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV  770-POINT ANGULAR GRID // 209 points on a 4th-of-a-sphere
 CVW
@@ -6824,13 +6822,13 @@ CVW
       Return
       End
       Subroutine LD4_0262(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X( 262)
-      Real (kind=wp) :: Y( 262)
-      Real (kind=wp) :: Z( 262)
-      Real (kind=wp) :: W( 262)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X( 262)
+      Real (kind=8) :: Y( 262)
+      Real (kind=8) :: Z( 262)
+      Real (kind=8) :: W( 262)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV  974-POINT ANGULAR GRID // 262 points on a 4th-of-a-sphere
 CVW
@@ -6939,13 +6937,13 @@ CVW
       Return
       End
       Subroutine LD4_0321(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X( 321)
-      Real (kind=wp) :: Y( 321)
-      Real (kind=wp) :: Z( 321)
-      Real (kind=wp) :: W( 321)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X( 321)
+      Real (kind=8) :: Y( 321)
+      Real (kind=8) :: Z( 321)
+      Real (kind=8) :: W( 321)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV 1202-POINT ANGULAR GRID // 321 points on a 4th-of-a-sphere
 CVW
@@ -7075,13 +7073,13 @@ CVW
       Return
       End
       Subroutine LD4_0386(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X( 386)
-      Real (kind=wp) :: Y( 386)
-      Real (kind=wp) :: Z( 386)
-      Real (kind=wp) :: W( 386)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X( 386)
+      Real (kind=8) :: Y( 386)
+      Real (kind=8) :: Z( 386)
+      Real (kind=8) :: W( 386)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV 1454-POINT ANGULAR GRID // 386 points on a 4th-of-a-sphere
 CVW
@@ -7234,13 +7232,13 @@ CVW
       Return
       End
       Subroutine LD4_0457(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X( 457)
-      Real (kind=wp) :: Y( 457)
-      Real (kind=wp) :: Z( 457)
-      Real (kind=wp) :: W( 457)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X( 457)
+      Real (kind=8) :: Y( 457)
+      Real (kind=8) :: Z( 457)
+      Real (kind=8) :: W( 457)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV 1730-POINT ANGULAR GRID // 457 points on a 4th-of-a-sphere
 CVW
@@ -7418,13 +7416,13 @@ CVW
       Return
       End
       Subroutine LD4_0534(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X( 534)
-      Real (kind=wp) :: Y( 534)
-      Real (kind=wp) :: Z( 534)
-      Real (kind=wp) :: W( 534)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X( 534)
+      Real (kind=8) :: Y( 534)
+      Real (kind=8) :: Z( 534)
+      Real (kind=8) :: W( 534)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV 2030-POINT ANGULAR GRID // 534 points on a 4th-of-a-sphere
 CVW
@@ -7629,13 +7627,13 @@ CVW
       Return
       End
       Subroutine LD4_0617(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X( 617)
-      Real (kind=wp) :: Y( 617)
-      Real (kind=wp) :: Z( 617)
-      Real (kind=wp) :: W( 617)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X( 617)
+      Real (kind=8) :: Y( 617)
+      Real (kind=8) :: Z( 617)
+      Real (kind=8) :: W( 617)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV 2354-POINT ANGULAR GRID // 617 points on a 4th-of-a-sphere
 CVW
@@ -7869,13 +7867,13 @@ CVW
       Return
       End
       Subroutine LD4_0706(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X( 706)
-      Real (kind=wp) :: Y( 706)
-      Real (kind=wp) :: Z( 706)
-      Real (kind=wp) :: W( 706)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X( 706)
+      Real (kind=8) :: Y( 706)
+      Real (kind=8) :: Z( 706)
+      Real (kind=8) :: W( 706)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV 2702-POINT ANGULAR GRID // 706 points on a 4th-of-a-sphere
 CVW
@@ -8140,13 +8138,13 @@ CVW
       Return
       End
       Subroutine LD4_0801(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X( 801)
-      Real (kind=wp) :: Y( 801)
-      Real (kind=wp) :: Z( 801)
-      Real (kind=wp) :: W( 801)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X( 801)
+      Real (kind=8) :: Y( 801)
+      Real (kind=8) :: Z( 801)
+      Real (kind=8) :: W( 801)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV 3074-POINT ANGULAR GRID // 801 points on a 4th-of-a-sphere
 CVW
@@ -8444,13 +8442,13 @@ CVW
       Return
       End
       Subroutine LD4_0902(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X( 902)
-      Real (kind=wp) :: Y( 902)
-      Real (kind=wp) :: Z( 902)
-      Real (kind=wp) :: W( 902)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X( 902)
+      Real (kind=8) :: Y( 902)
+      Real (kind=8) :: Z( 902)
+      Real (kind=8) :: W( 902)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV 3470-POINT ANGULAR GRID // 902 points on a 4th-of-a-sphere
 CVW
@@ -8783,13 +8781,13 @@ CVW
       Return
       End
       Subroutine LD4_1009(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(1009)
-      Real (kind=wp) :: Y(1009)
-      Real (kind=wp) :: Z(1009)
-      Real (kind=wp) :: W(1009)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(1009)
+      Real (kind=8) :: Y(1009)
+      Real (kind=8) :: Z(1009)
+      Real (kind=8) :: W(1009)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV 3890-POINT ANGULAR GRID // 1009 points on a 4th-of-a-sphere
 CVW
@@ -9159,13 +9157,13 @@ CVW
       Return
       End
       Subroutine LD4_1122(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(1122)
-      Real (kind=wp) :: Y(1122)
-      Real (kind=wp) :: Z(1122)
-      Real (kind=wp) :: W(1122)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(1122)
+      Real (kind=8) :: Y(1122)
+      Real (kind=8) :: Z(1122)
+      Real (kind=8) :: W(1122)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV 4334-POINT ANGULAR GRID // 1122 points on a 4th-of-a-sphere
 CVW
@@ -9574,13 +9572,13 @@ CVW
       Return
       End
       Subroutine LD4_1241(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(1241)
-      Real (kind=wp) :: Y(1241)
-      Real (kind=wp) :: Z(1241)
-      Real (kind=wp) :: W(1241)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(1241)
+      Real (kind=8) :: Y(1241)
+      Real (kind=8) :: Z(1241)
+      Real (kind=8) :: W(1241)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV 4802-POINT ANGULAR GRID // 1241 points on a 4th-of-a-sphere
 CVW
@@ -10030,13 +10028,13 @@ CVW
       Return
       End
       Subroutine LD4_1366(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(1366)
-      Real (kind=wp) :: Y(1366)
-      Real (kind=wp) :: Z(1366)
-      Real (kind=wp) :: W(1366)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(1366)
+      Real (kind=8) :: Y(1366)
+      Real (kind=8) :: Z(1366)
+      Real (kind=8) :: W(1366)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV 5294-POINT ANGULAR GRID // 1366 points on a 4th-of-a-sphere
 CVW
@@ -10529,13 +10527,13 @@ CVW
       Return
       End
       Subroutine LD4_1497(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(1497)
-      Real (kind=wp) :: Y(1497)
-      Real (kind=wp) :: Z(1497)
-      Real (kind=wp) :: W(1497)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(1497)
+      Real (kind=8) :: Y(1497)
+      Real (kind=8) :: Z(1497)
+      Real (kind=8) :: W(1497)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV 5810-POINT ANGULAR GRID // 1497 points on a 4th-of-a-sphere
 CVW
@@ -11086,13 +11084,13 @@ CVW
 
 clu ===  Subroutines for integration on a 8th-of-a-sphere ===
       Subroutine LD8_0003(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(   3)
-      Real (kind=wp) :: Y(   3)
-      Real (kind=wp) :: Z(   3)
-      Real (kind=wp) :: W(   3)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(   3)
+      Real (kind=8) :: Y(   3)
+      Real (kind=8) :: Z(   3)
+      Real (kind=8) :: W(   3)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV    6-POINT ANGULAR GRID // 3 points on an 8th-of-a-sphere
 CVW
@@ -11103,13 +11101,13 @@ CVW
       Return
       End
       Subroutine LD8_0004(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(   4)
-      Real (kind=wp) :: Y(   4)
-      Real (kind=wp) :: Z(   4)
-      Real (kind=wp) :: W(   4)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(   4)
+      Real (kind=8) :: Y(   4)
+      Real (kind=8) :: Z(   4)
+      Real (kind=8) :: W(   4)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV   14-POINT ANGULAR GRID // 4 points on a 8th-of-a-sphere
 CVW
@@ -11122,13 +11120,13 @@ CVW
       Return
       End
       Subroutine LD8_0007(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(   7)
-      Real (kind=wp) :: Y(   7)
-      Real (kind=wp) :: Z(   7)
-      Real (kind=wp) :: W(   7)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(   7)
+      Real (kind=8) :: Y(   7)
+      Real (kind=8) :: Z(   7)
+      Real (kind=8) :: W(   7)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV   26-POINT ANGULAR GRID // 7 points on a 8th-of-a-sphere
 CVW
@@ -11143,13 +11141,13 @@ CVW
       Return
       End
       Subroutine LD8_0a10(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(  10)
-      Real (kind=wp) :: Y(  10)
-      Real (kind=wp) :: Z(  10)
-      Real (kind=wp) :: W(  10)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(  10)
+      Real (kind=8) :: Y(  10)
+      Real (kind=8) :: Z(  10)
+      Real (kind=8) :: W(  10)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV   38-POINT ANGULAR GRID // 10 points on a 8th-of-a-sphere
 CVW
@@ -11165,13 +11163,13 @@ CVW
       Return
       End
       Subroutine LD8_0b10(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(  10)
-      Real (kind=wp) :: Y(  10)
-      Real (kind=wp) :: Z(  10)
-      Real (kind=wp) :: W(  10)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(  10)
+      Real (kind=8) :: Y(  10)
+      Real (kind=8) :: Z(  10)
+      Real (kind=8) :: W(  10)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV   50-POINT ANGULAR GRID // 10 points on a 8th-of-a-sphere
 CVW
@@ -11189,13 +11187,13 @@ CVW
       Return
       End
       Subroutine LD8_0a16(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(  16)
-      Real (kind=wp) :: Y(  16)
-      Real (kind=wp) :: Z(  16)
-      Real (kind=wp) :: W(  16)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(  16)
+      Real (kind=8) :: Y(  16)
+      Real (kind=8) :: Z(  16)
+      Real (kind=8) :: W(  16)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV   74-POINT ANGULAR GRID // 16 poins on a 8th-of-a-sphere
 CVW
@@ -11216,13 +11214,13 @@ CVW
       Return
       End
       Subroutine LD8_0b16(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(  16)
-      Real (kind=wp) :: Y(  16)
-      Real (kind=wp) :: Z(  16)
-      Real (kind=wp) :: W(  16)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(  16)
+      Real (kind=8) :: Y(  16)
+      Real (kind=8) :: Z(  16)
+      Real (kind=8) :: W(  16)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV   86-POINT ANGULAR GRID // 16 points on a 8th-of-a-sphere
 CVW
@@ -11244,13 +11242,13 @@ CVW
       Return
       End
       Subroutine LD8_0019(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(  19)
-      Real (kind=wp) :: Y(  19)
-      Real (kind=wp) :: Z(  19)
-      Real (kind=wp) :: W(  19)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(  19)
+      Real (kind=8) :: Y(  19)
+      Real (kind=8) :: Z(  19)
+      Real (kind=8) :: W(  19)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV  110-POINT ANGULAR GRID // 19 points on a 8th-of-a-sphere
 CVW
@@ -11275,13 +11273,13 @@ CVW
       Return
       End
       Subroutine LD8_0022(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(  22)
-      Real (kind=wp) :: Y(  22)
-      Real (kind=wp) :: Z(  22)
-      Real (kind=wp) :: W(  22)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(  22)
+      Real (kind=8) :: Y(  22)
+      Real (kind=8) :: Z(  22)
+      Real (kind=8) :: W(  22)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV  146-POINT ANGULAR GRID // 22 points on a 8th-of-a-sphere
 CVW
@@ -11309,13 +11307,13 @@ CVW
       Return
       End
       Subroutine LD8_0028(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(  28)
-      Real (kind=wp) :: Y(  28)
-      Real (kind=wp) :: Z(  28)
-      Real (kind=wp) :: W(  28)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(  28)
+      Real (kind=8) :: Y(  28)
+      Real (kind=8) :: Z(  28)
+      Real (kind=8) :: W(  28)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV  170-POINT ANGULAR GRID // 28 points on a 8th-of-a-sphere
 CVW
@@ -11346,13 +11344,13 @@ CVW
       Return
       End
       Subroutine LD8_0031(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(  31)
-      Real (kind=wp) :: Y(  31)
-      Real (kind=wp) :: Z(  31)
-      Real (kind=wp) :: W(  31)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(  31)
+      Real (kind=8) :: Y(  31)
+      Real (kind=8) :: Z(  31)
+      Real (kind=8) :: W(  31)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV  194-POINT ANGULAR GRID // 31 points on a 8th-of-a-sphere
 CVW
@@ -11386,13 +11384,13 @@ CVW
       Return
       End
       Subroutine LD8_0037(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(  37)
-      Real (kind=wp) :: Y(  37)
-      Real (kind=wp) :: Z(  37)
-      Real (kind=wp) :: W(  37)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(  37)
+      Real (kind=8) :: Y(  37)
+      Real (kind=8) :: Z(  37)
+      Real (kind=8) :: W(  37)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV  230-POINT ANGULAR GRID // 37 points on a 8th-of-a-sphere
 CVW
@@ -11430,13 +11428,13 @@ CVW
       Return
       End
       Subroutine LD8_0040(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(  40)
-      Real (kind=wp) :: Y(  40)
-      Real (kind=wp) :: Z(  40)
-      Real (kind=wp) :: W(  40)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(  40)
+      Real (kind=8) :: Y(  40)
+      Real (kind=8) :: Z(  40)
+      Real (kind=8) :: W(  40)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV  266-POINT ANGULAR GRID // 40 points on a 8th-of-a-sphere
 CVW
@@ -11477,13 +11475,13 @@ CVW
       Return
       End
       Subroutine LD8_0046(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(  46)
-      Real (kind=wp) :: Y(  46)
-      Real (kind=wp) :: Z(  46)
-      Real (kind=wp) :: W(  46)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(  46)
+      Real (kind=8) :: Y(  46)
+      Real (kind=8) :: Z(  46)
+      Real (kind=8) :: W(  46)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV  302-POINT ANGULAR GRID // 46 points on a 8th-of-a-sphere
 CVW
@@ -11528,13 +11526,13 @@ CVW
       Return
       End
       Subroutine LD8_0052(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(  52)
-      Real (kind=wp) :: Y(  52)
-      Real (kind=wp) :: Z(  52)
-      Real (kind=wp) :: W(  52)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(  52)
+      Real (kind=8) :: Y(  52)
+      Real (kind=8) :: Z(  52)
+      Real (kind=8) :: W(  52)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV  350-POINT ANGULAR GRID // 52 points on a 8th-of-a-sphere
 CVW
@@ -11583,13 +11581,13 @@ CVW
       Return
       End
       Subroutine LD8_0064(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(  64)
-      Real (kind=wp) :: Y(  64)
-      Real (kind=wp) :: Z(  64)
-      Real (kind=wp) :: W(  64)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(  64)
+      Real (kind=8) :: Y(  64)
+      Real (kind=8) :: Z(  64)
+      Real (kind=8) :: W(  64)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV  434-POINT ANGULAR GRID // 64 points on a 8th-of-a-sphere
 CVW
@@ -11647,13 +11645,13 @@ CVW
       Return
       End
       Subroutine LD8_0085(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X(  85)
-      Real (kind=wp) :: Y(  85)
-      Real (kind=wp) :: Z(  85)
-      Real (kind=wp) :: W(  85)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X(  85)
+      Real (kind=8) :: Y(  85)
+      Real (kind=8) :: Z(  85)
+      Real (kind=8) :: W(  85)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV  590-POINT ANGULAR GRID // 85 points on a 8th-of-a-sphere
 CVW
@@ -11726,13 +11724,13 @@ CVW
       Return
       End
       Subroutine LD8_0109(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X( 109)
-      Real (kind=wp) :: Y( 109)
-      Real (kind=wp) :: Z( 109)
-      Real (kind=wp) :: W( 109)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X( 109)
+      Real (kind=8) :: Y( 109)
+      Real (kind=8) :: Z( 109)
+      Real (kind=8) :: W( 109)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV  770-POINT ANGULAR GRID // 109 points on a 8th-of-a-sphere
 CVW
@@ -11822,13 +11820,13 @@ CVW
       Return
       End
       Subroutine LD8_0136(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X( 136)
-      Real (kind=wp) :: Y( 136)
-      Real (kind=wp) :: Z( 136)
-      Real (kind=wp) :: W( 136)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X( 136)
+      Real (kind=8) :: Y( 136)
+      Real (kind=8) :: Z( 136)
+      Real (kind=8) :: W( 136)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV  974-POINT ANGULAR GRID // 136 points on a 8th-of-a-sphere
 CVW
@@ -11937,13 +11935,13 @@ CVW
       Return
       End
       Subroutine LD8_0166(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X( 166)
-      Real (kind=wp) :: Y( 166)
-      Real (kind=wp) :: Z( 166)
-      Real (kind=wp) :: W( 166)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X( 166)
+      Real (kind=8) :: Y( 166)
+      Real (kind=8) :: Z( 166)
+      Real (kind=8) :: W( 166)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV 1202-POINT ANGULAR GRID // 166 points on a 8th-of-a-sphere
 CVW
@@ -12073,13 +12071,13 @@ CVW
       Return
       End
       Subroutine LD8_0199(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X( 199)
-      Real (kind=wp) :: Y( 199)
-      Real (kind=wp) :: Z( 199)
-      Real (kind=wp) :: W( 199)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X( 199)
+      Real (kind=8) :: Y( 199)
+      Real (kind=8) :: Z( 199)
+      Real (kind=8) :: W( 199)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV 1454-POINT ANGULAR GRID // 199 points on a 8th-of-a-sphere
 CVW
@@ -12232,13 +12230,13 @@ CVW
       Return
       End
       Subroutine LD8_0235(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X( 235)
-      Real (kind=wp) :: Y( 235)
-      Real (kind=wp) :: Z( 235)
-      Real (kind=wp) :: W( 235)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X( 235)
+      Real (kind=8) :: Y( 235)
+      Real (kind=8) :: Z( 235)
+      Real (kind=8) :: W( 235)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV 1730-POINT ANGULAR GRID // 235 points on a 8th-of-a-sphere
 CVW
@@ -12416,13 +12414,13 @@ CVW
       Return
       End
       Subroutine LD8_0274(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X( 274)
-      Real (kind=wp) :: Y( 274)
-      Real (kind=wp) :: Z( 274)
-      Real (kind=wp) :: W( 274)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X( 274)
+      Real (kind=8) :: Y( 274)
+      Real (kind=8) :: Z( 274)
+      Real (kind=8) :: W( 274)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV 2030-POINT ANGULAR GRID // 274 points on a 8th-of-a-sphere
 CVW
@@ -12627,13 +12625,13 @@ CVW
       Return
       End
       Subroutine LD8_0316(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X( 316)
-      Real (kind=wp) :: Y( 316)
-      Real (kind=wp) :: Z( 316)
-      Real (kind=wp) :: W( 316)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X( 316)
+      Real (kind=8) :: Y( 316)
+      Real (kind=8) :: Z( 316)
+      Real (kind=8) :: W( 316)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV 2354-POINT ANGULAR GRID // 316 points on a 8th-of-a-sphere
 CVW
@@ -12867,13 +12865,13 @@ CVW
       Return
       End
       Subroutine LD8_0361(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X( 361)
-      Real (kind=wp) :: Y( 361)
-      Real (kind=wp) :: Z( 361)
-      Real (kind=wp) :: W( 361)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X( 361)
+      Real (kind=8) :: Y( 361)
+      Real (kind=8) :: Z( 361)
+      Real (kind=8) :: W( 361)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV 2702-POINT ANGULAR GRID // 361 points on a 8th-of-a-sphere
 CVW
@@ -13138,13 +13136,13 @@ CVW
       Return
       End
       Subroutine LD8_0409(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X( 409)
-      Real (kind=wp) :: Y( 409)
-      Real (kind=wp) :: Z( 409)
-      Real (kind=wp) :: W( 409)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X( 409)
+      Real (kind=8) :: Y( 409)
+      Real (kind=8) :: Z( 409)
+      Real (kind=8) :: W( 409)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV 3074-POINT ANGULAR GRID // 409 points on a 8th-of-a-sphere
 CVW
@@ -13442,13 +13440,13 @@ CVW
       Return
       End
       Subroutine LD8_0460(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X( 460)
-      Real (kind=wp) :: Y( 460)
-      Real (kind=wp) :: Z( 460)
-      Real (kind=wp) :: W( 460)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X( 460)
+      Real (kind=8) :: Y( 460)
+      Real (kind=8) :: Z( 460)
+      Real (kind=8) :: W( 460)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV 3470-POINT ANGULAR GRID // 460 points on a 8th-of-a-sphere
 CVW
@@ -13781,13 +13779,13 @@ CVW
       Return
       End
       Subroutine LD8_0514(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X( 514)
-      Real (kind=wp) :: Y( 514)
-      Real (kind=wp) :: Z( 514)
-      Real (kind=wp) :: W( 514)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X( 514)
+      Real (kind=8) :: Y( 514)
+      Real (kind=8) :: Z( 514)
+      Real (kind=8) :: W( 514)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV 3890-POINT ANGULAR GRID // 514 points on a 8th-of-a-sphere
 CVW
@@ -14157,13 +14155,13 @@ CVW
       Return
       End
       Subroutine LD8_0571(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X( 571)
-      Real (kind=wp) :: Y( 571)
-      Real (kind=wp) :: Z( 571)
-      Real (kind=wp) :: W( 571)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X( 571)
+      Real (kind=8) :: Y( 571)
+      Real (kind=8) :: Z( 571)
+      Real (kind=8) :: W( 571)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV 4334-POINT ANGULAR GRID // 571 points on a 8th-of-a-sphere
 CVW
@@ -14572,13 +14570,13 @@ CVW
       Return
       End
       Subroutine LD8_0631(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X( 631)
-      Real (kind=wp) :: Y( 631)
-      Real (kind=wp) :: Z( 631)
-      Real (kind=wp) :: W( 631)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X( 631)
+      Real (kind=8) :: Y( 631)
+      Real (kind=8) :: Z( 631)
+      Real (kind=8) :: W( 631)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV 4802-POINT ANGULAR GRID // 631 points on a 8th-of-a-sphere
 CVW
@@ -15028,13 +15026,13 @@ CVW
       Return
       End
       Subroutine LD8_0694(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X( 694)
-      Real (kind=wp) :: Y( 694)
-      Real (kind=wp) :: Z( 694)
-      Real (kind=wp) :: W( 694)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X( 694)
+      Real (kind=8) :: Y( 694)
+      Real (kind=8) :: Z( 694)
+      Real (kind=8) :: W( 694)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV 5294-POINT ANGULAR GRID // 694 points on a 8th-of-a-sphere
 CVW
@@ -15527,13 +15525,13 @@ CVW
       Return
       End
       Subroutine LD8_0760(X,Y,Z,W,N)
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
-      Real (kind=wp) :: X( 760)
-      Real (kind=wp) :: Y( 760)
-      Real (kind=wp) :: Z( 760)
-      Real (kind=wp) :: W( 760)
+      Integer, parameter         :: wp=kind(0.d0)
+      Real (kind=8) :: X( 760)
+      Real (kind=8) :: Y( 760)
+      Real (kind=8) :: Z( 760)
+      Real (kind=8) :: W( 760)
       Integer        :: N
-      Real (kind=wp) :: A,B,V
+      Real (kind=8) :: A,B,V
 CVW
 CVW    LEBEDEV 5810-POINT ANGULAR GRID // 760 points on a 8th-of-a-sphere
 CVW

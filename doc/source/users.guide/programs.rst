@@ -3,7 +3,7 @@ Programs
 
 .. note::
 
-   Programs marked with |extramark| are *not* available in OpenMolcas.
+   Programs marked with |extramark| are *not* available in |openmolcas|.
 
 .. toctree::
    :maxdepth: 1
@@ -25,6 +25,7 @@ Programs
    programs/expbas
    programs/extf
    programs/falcon
+   programs/false
    programs/ffpt
    programs/gateway
    programs/genano
@@ -47,12 +48,14 @@ Programs
    programs/mrci
    programs/mula
    programs/nemo
+   programs/nevpt2
    programs/numerical_gradient
    programs/poly_aniso
    programs/qmstat
    programs/quater
    programs/rasscf
    programs/rassi
+   programs/rhodyn
    programs/rpa
    programs/scf
    programs/seward

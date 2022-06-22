@@ -10,11 +10,10 @@
 *                                                                      *
 * Copyright (C) 2015, Roland Lindh                                     *
 ************************************************************************
-      SubRoutine EMFInt(Alpha,nAlpha,Beta, nBeta,Zeta,ZInv,rKappa,P,
-     &                  Final,nZeta,nIC,nComp,la,lb,A,RB,nHer,
-     &                  Array,nArr,CCoor,nOrdOp,lOper,iChO,
-     &                  iStabM,nStabM,
-     &                  PtChrg,nGrid,iAddPot)
+      SubRoutine EMFInt(
+#define _CALLING_
+#include "int_interface.fh"
+     &                 )
 ************************************************************************
 *                                                                      *
 * Object: to compute the electromagnetic field radiation integrals     *
@@ -34,17 +33,13 @@
       use Her_RW
       Implicit Real*8 (A-H,O-Z)
 #include "real.fh"
-#include "itmax.fh"
-#include "info.fh"
-#include "WrkSpc.fh"
 #include "print.fh"
-      Real*8 Final(nZeta,(la+1)*(la+2)/2,(lb+1)*(lb+2)/2,nIC),
-     &       Zeta(nZeta), ZInv(nZeta), Alpha(nAlpha), Beta(nBeta),
-     &       rKappa(nZeta), P(nZeta,3), A(3), RB(3),
-     &       Array(nZeta*nArr), CCoor(3)
+
+#include "int_interface.fh"
+
+*     Local variables
       Logical ABeq(3)
-      Integer lOper(nComp), iStabM(0:nStabM-1), iChO(nComp),
-     &        iStabO(0:7), iDCRT(0:7)
+      Integer iStabO(0:7), iDCRT(0:7)
 *
       Call EMFInt_Internal(Array)
       Return
@@ -55,8 +50,7 @@ c Avoid unused argument warnings
          Call Unused_integer_array(lOper)
          Call Unused_integer_array(iChO)
          Call Unused_integer_array(iStabM)
-         Call Unused_real(PtChrg)
-         Call Unused_integer(nGrid)
+         Call Unused_real_array(PtChrg)
          Call Unused_integer(iAddPot)
       End If
 *
@@ -102,7 +96,7 @@ c Avoid unused argument warnings
       End If
       If (nip-1.gt.nArr*nZeta) Then
          Call WarningMessage(2,'EMFInt: nip-1.gt.nArr*nZeta')
-         Write (6,*) ' nArr is Wrong! ', nip,' > ',nArr*nZeta
+         Write (6,*) ' nArr is Wrong! ', nip-1,' > ',nArr*nZeta
          Write (6,*) ' Abend in EMFInt'
          Call Abend()
       End If
@@ -178,13 +172,14 @@ c Avoid unused argument warnings
          Call C_F_Pointer(C_Loc(Array(ipVxyz)),zVxyz,
      &                     [nZeta*3*(la+1)*(lb+1)*2])
          Call CCmbnVe(zQxyz,nZeta,la,lb,Zeta,rKappa,
-     &                Array(ipRes),nComp,zVxyz,CCoor)
+     &                Array(ipRes),nComp,zVxyz,CCoor,P)
          Nullify(zQxyz,zVxyz)
       Else
          Call C_F_Pointer(C_Loc(Array(ipQxyz)),zQxyz,
      &                     [nZeta*3*(la+1)*(lb+1)*(nOrdOp+1)])
          Call CCmbnMP(zQxyz,nZeta,la,lb,nOrdOp,Zeta,
-     &                rKappa,Array(ipRes),nComp)
+     &                rKappa,Array(ipRes),nComp,CCoor,P)
+         Nullify(zQxyz)
       End If
 *
       llOper=lOper(1)
@@ -192,14 +187,13 @@ c Avoid unused argument warnings
          llOper = iOr(llOper,lOper(iComp))
       End Do
       Call SOS(iStabO,nStabO,llOper)
-      Call DCR(LmbdT,iOper,nIrrep,iStabM,nStabM,iStabO,nStabO,
-     &         iDCRT,nDCRT)
+      Call DCR(LmbdT,iStabM,nStabM,iStabO,nStabO,iDCRT,nDCRT)
 *
       Do lDCRT = 0, nDCRT-1
 *
 *--------Accumulate contributions
 *
-         nOp = NrOpr(iDCRT(lDCRT),iOper,nIrrep)
+         nOp = NrOpr(iDCRT(lDCRT))
          Call SymAdO(Array(ipRes),nZeta,la,lb,nComp,Final,nIC,
      &               nOp         ,lOper,iChO,One)
 *

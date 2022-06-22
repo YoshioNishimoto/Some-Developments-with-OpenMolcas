@@ -17,19 +17,20 @@
 * SWEDEN                                     *
 *--------------------------------------------*
       SUBROUTINE MKBMAT()
+      use output_caspt2, only:iPrGlb,verbose,debug
       IMPLICIT REAL*8 (A-H,O-Z)
 C Set up B matrices for cases 1..13.
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
 #include "pt2_guga.fh"
-
 #include "SysDef.fh"
+#include "stdalloc.fh"
+      REAL*8 DUM(1)
+      INTEGER*1, ALLOCATABLE :: idxG3(:,:)
 
-      CALL QENTER('MKBMAT')
 
       IF(IPRGLB.GE.VERBOSE) THEN
         WRITE(6,*)
@@ -58,18 +59,17 @@ C Set up B matrices for cases 1..13.
         WRITE(6,'("DEBUG> ",A)') '==== === ============='
       END IF
 
-      iPad=ItoB-MOD(6*NG3,ItoB)
-      CALL GETMEM('idxG3','ALLO','CHAR',LidxG3,6*NG3+iPad)
+      CALL mma_allocate(idxG3,6,NG3,label='idxG3')
       iLUID=0
-      CALL CDAFILE(LUSOLV,2,cWORK(LidxG3),6*NG3+iPad,iLUID)
+      CALL I1DAFILE(LUSOLV,2,idxG3,6*NG3,iLUID)
 
       CALL MKBA(WORK(LDREF),WORK(LPREF),
-     &          WORK(LFD),WORK(LFP),NG3,WORK(LF3),i1WORK(LidxG3))
+     &          WORK(LFD),WORK(LFP),NG3,WORK(LF3),idxG3)
       CALL MKBC(WORK(LDREF),WORK(LPREF),
-     &          WORK(LFD),WORK(LFP),NG3,WORK(LF3),i1WORK(LidxG3))
+     &          WORK(LFD),WORK(LFP),NG3,WORK(LF3),idxG3)
 
       CALL GETMEM('DELTA3','FREE','REAL',LF3,NG3)
-      CALL GETMEM('idxG3','FREE','CHAR',LidxG3,6*NG3+iPad)
+      CALL mma_deallocate(idxG3)
 
       CALL MKBB(WORK(LDREF),WORK(LPREF),WORK(LFD),WORK(LFP))
       CALL MKBD(WORK(LDREF),WORK(LPREF),WORK(LFD),WORK(LFP))
@@ -84,17 +84,17 @@ C Set up B matrices for cases 1..13.
 C For completeness, even case H has formally S and B
 C matrices. This costs nothing, and saves conditional
 C looping, etc in the rest  of the routines.
+      DUM(1)=0.0D0
       DO ISYM=1,NSYM
         DO ICASE=12,13
           NIN=NINDEP(ISYM,ICASE)
           IF(NIN.GT.0) THEN
             IDISK=IDBMAT(ISYM,ICASE)
-            CALL DDAFILE(LUSBT,1,[0.0D0],1,IDISK)
+            CALL DDAFILE(LUSBT,1,DUM,1,IDISK)
           END IF
         END DO
       END DO
 
-      CALL QEXIT('MKBMAT')
 
       RETURN
       END
@@ -103,15 +103,17 @@ C looping, etc in the rest  of the routines.
 * Case A (ICASE=1)
 ********************************************************************************
       SUBROUTINE MKBA(DREF,PREF,FD,FP,NG3,F3,idxG3)
+      use output_caspt2, only:iPrGlb,debug
       USE SUPERINDEX
+#ifdef _MOLCAS_MPP_
+      USE Para_Info, ONLY: Is_Real_Par
+#endif
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
-#include "para_info.fh"
 #ifdef _MOLCAS_MPP_
 #include "global.fh"
 #include "mafdecls.fh"
@@ -191,7 +193,6 @@ C Similarly, Fvutxyz= Sum(w)(EPSA(w)<Evutxyzww>, etc.
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
@@ -293,7 +294,6 @@ CGG End
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
@@ -470,7 +470,6 @@ C  - F(xvzyut) -> BA(yvx,zut)
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
@@ -495,6 +494,8 @@ C  - F(xvzyut) -> BA(yvx,zut)
       INTEGER, PARAMETER :: I4=KIND(ONE4)
 
       INTEGER, ALLOCATABLE :: IBUF(:)
+
+#include "mpi_interfaces.fh"
 
       ! Since we are stuck with collective calls to MPI_Alltoallv in
       ! order to gather the elements, each process needs to loop over
@@ -928,14 +929,16 @@ c Avoid unused argument warnings
 ********************************************************************************
       SUBROUTINE MKBC(DREF,PREF,FD,FP,NG3,F3,idxG3)
       USE SUPERINDEX
+      use output_caspt2, only:iPrGlb,debug
+#ifdef _MOLCAS_MPP_
+      USE Para_Info, ONLY: Is_Real_Par
+#endif
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
-#include "para_info.fh"
 #ifdef _MOLCAS_MPP_
 #include "global.fh"
 #include "mafdecls.fh"
@@ -1017,7 +1020,6 @@ C Similarly, Fvutxyz= Sum(w)(EPSA(w)<Evutxyzww>, etc.
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
@@ -1103,7 +1105,6 @@ CGG End
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
@@ -1280,7 +1281,6 @@ C  - F(xvzyut) -> BC(zvx,yut)
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
@@ -1305,6 +1305,8 @@ C  - F(xvzyut) -> BC(zvx,yut)
       INTEGER, PARAMETER :: I4=KIND(ONE4)
 
       INTEGER, ALLOCATABLE :: IBUF(:)
+
+#include "mpi_interfaces.fh"
 
       ! Since we are stuck with collective calls to MPI_Alltoallv in
       ! order to gather the elements, each process needs to loop over
@@ -1739,7 +1741,6 @@ c Avoid unused argument warnings
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 
@@ -1761,7 +1762,6 @@ C where A= EASUM= sum over active w of (Ew*Dww).
 C    BBP(tu,xy)=BB(tu,xy)+BB(tu,yx)
 C    BBM(tu,xy)=BB(tu,xy)-BB(tu,yx)
 
-      CALL QENTER('MKBB')
 
 C Loop over superindex symmetry.
       DO ISYM=1,NSYM
@@ -1949,7 +1949,6 @@ CGG End
  1000 CONTINUE
       END DO
 
-      CALL QEXIT('MKBB')
 
       RETURN
       END
@@ -1960,7 +1959,6 @@ CGG End
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 
@@ -1978,7 +1976,6 @@ C    BD(tu2,xy2)=
 C       -Fxtuy - (Ex+Et-A)*Gxtuy + 2*dxt (Fuy + (Ex-A)*Duy)
 C where A=EASUM=Sum(w) of (Ew*Dww)
 
-      CALL QENTER('MKBD')
 
 C Loop over superindex symmetry.
       DO ISYM=1,NSYM
@@ -2071,7 +2068,6 @@ CGG End
  1000 CONTINUE
       END DO
 
-      CALL QEXIT('MKBD')
 
       RETURN
       END
@@ -2081,7 +2077,6 @@ CGG End
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 
@@ -2094,7 +2089,6 @@ C Formula used:
 C    BE(t,x)=-Ftx + (EASUM-Ex-Et)*Dtx
 C            + 2dtx Ex
 
-      CALL QENTER('MKBE')
 
       DO ISYM=1,NSYM
         NINP=NINDEP(ISYM,6)
@@ -2158,7 +2152,6 @@ CGG End
  1000 CONTINUE
       END DO
 
-      CALL QEXIT('MKBE')
 
       RETURN
       END
@@ -2169,7 +2162,6 @@ CGG End
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 
@@ -2183,7 +2175,6 @@ C    BF(tu,xy)= 2*(Ftxuy - EASUM*Gtxuy)
 C    BFP(tu,xy)=BF(tu,xy)+BF(tu,yx)
 C    BFM(tu,xy)=BF(tu,xy)-BF(tu,yx)
 
-      CALL QENTER('MKBF')
 
 C Loop over superindex symmetry.
       DO ISYM=1,NSYM
@@ -2326,7 +2317,6 @@ CGG End
  1000 CONTINUE
       END DO
 
-      CALL QEXIT('MKBF')
 
       RETURN
       END
@@ -2336,7 +2326,6 @@ CGG End
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 
@@ -2348,7 +2337,6 @@ C     Set up the matrix BG(t,x)
 C     Formula used:
 C     BG(t,x)= Ftx -EASUM*Dtx
 
-      CALL QENTER('MKBG')
 
       DO ISYM=1,NSYM
         NINP=NINDEP(ISYM,10)
@@ -2408,7 +2396,6 @@ CGG End
  1000 CONTINUE
       END DO
 
-      CALL QEXIT('MKBG')
 
       RETURN
       END

@@ -40,14 +40,10 @@
 ************************************************************************
       Implicit Integer (A-Z)
 *
-#include "MckRc.fh"
-#include "MckFlags.fh"
-#include "SysDef.fh"
 #include "MckDat.fh"
 *----------------------------------------------------------------------*
 *     Check file status                                                *
 *----------------------------------------------------------------------*
-*     Call qEnter('ClsMCK')
       If( AuxMCK(pOpen).ne.1 ) Then
          rc=rcCL01
       Call SysAbendMsg('ClsMCK',
@@ -75,6 +71,5 @@
 *----------------------------------------------------------------------*
 *     Terminate procedure                                              *
 *----------------------------------------------------------------------*
-*     Call qExit('ClsMCK')
       Return
       End

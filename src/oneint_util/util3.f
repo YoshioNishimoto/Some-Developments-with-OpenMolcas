@@ -14,13 +14,8 @@
       SubRoutine Util3(Beta,nZeta,Final,la,lb,Slalbp,Slalb,Slalbm)
 ************************************************************************
 *                                                                      *
-* Object: to assemble the orbital angular momentum integrals from the  *
-*         derivative integrals dipole integrals.        .              *
-*                                                                      *
-* Called from: OMQInt                                                  *
-*                                                                      *
-* Calling    : QEnter                                                  *
-*              QExit                                                   *
+* Object: to assemble the orbital magnetic quadrupole integrals from   *
+*         the derivative integrals and dipole integrals.               *
 *                                                                      *
 *     Author: Roland Lindh, Lasse Kragh Soerensen                      *
 *             Dept. of Theoretical Chemistry,                          *
@@ -36,26 +31,26 @@
      &        Slalb (nZeta,(la+1)*(la+2)/2,(lb+1)*(lb+2)/2,3),
      &        Slalbm(nZeta,(la+1)*(la+2)/2, lb   *(lb+1)/2,6),
      &        Beta(nZeta)
-*define _DEBUG_
-#ifdef _DEBUG_
+*define _DEBUGPRINT_
+#ifdef _DEBUGPRINT_
       Character*80 Label
 #endif
 !
 ! Notice CmbnMP has just 6 components instead of 9!!! (automatically assumes symmetry) Well fuck you CmbnMP
-! This means Slalbp and Slalbm in reality only has 6 components....
+! This means Slalbp and Slalbm in reality only have 6 components....
 ! XX = 1, XY=YX=2, XZ=ZX=3, YY=4, YZ=ZY=5 and ZZ=6
 ! There are only six components since zy d/di = yz d/di
-! We still keeps the 9 components in final
+! We still keep the 9 components in final
 !
 *
 *     Statement function for cartesian index
 *
       Ind(ixyz,ix,iz) = (ixyz-ix)*(ixyz-ix+1)/2 + iz + 1
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       nElem(ix) = (ix+1)*(ix+2)/2
 #endif
 *
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
        Write (6,*) ' In Util3 la,lb=',la,lb
        Call RecPrt('Beta',' ',Beta,nZeta,1)
        Do ia = 1, nElem(la)
@@ -297,7 +292,7 @@
  11      Continue
  10   Continue
 *
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
           Write (6,*) ' In Util3 la,lb=',la,lb
           Do 300 iElem = 1, nElem(la)
              Do 310 jElem = 1, nElem(lb)

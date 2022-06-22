@@ -45,11 +45,10 @@
       Implicit Real*8 (A-H,O-Z)
 
 #include "rasdim.fh"
-#include "warnings.fh"
+#include "warnings.h"
 #include "rasscf.fh"
 #include "general.fh"
 #include "output_ras.fh"
-      Parameter (ROUTINE='OVLP    ')
 #include "WrkSpc.fh"
 
       Dimension C1(*),C2(*),Smat(*)
@@ -58,7 +57,6 @@
 
 * prologue
 
-      Call qEnter('Ovlp')
 
       zero = 0.0d0
       Call dCopy_(nAc*nAc,[zero],0,Smat,1)
@@ -140,7 +138,6 @@
 
       Call GetMem('OAO','Free','Real',lOAO,nTot1)
 
-      Call qExit('Ovlp')
       Return
 
  900  Write(LF,*)
@@ -152,6 +149,5 @@
       Write(LF,*)' is wrong with the file, or possibly with the'
       Write(LF,*)' program. Please check.'
       Write(LF,*)
-      Call qTrace
       Call Quit(_RC_IO_ERROR_READ_)
       End

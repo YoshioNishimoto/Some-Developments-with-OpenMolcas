@@ -17,26 +17,18 @@
 * Object: Numerical Gauss integrations over the unit sphere by a rule  *
 * with octahedral symmetry.                                            *
 *                                                                      *
-*                                                                      *
-* Called from:                                                         *
-*                                                                      *
-* Calling    : QEnter                                                  *
-*              GetMem                                                  *
-*              QExit                                                   *
-*                                                                      *
 *      Author:Roland Lindh, Department of Chemical Physics, University *
 *             of Lund, SWEDEN.                                         *
 *             Laura Gagliardi, Dipartimento di Chimica G. Ciamician,   *
 *             University of Bologna, ITALY. November 2001              *
-*             This has been readapted fromt he original routine by     *
+*             This has been readapted from the original routine by     *
 *             Bernard Delley, Paul Scherrer Institut, Switzerland      *
 *             Journal of Computational Chemistry 1996, 17, 1152--1155  *
 ************************************************************************
+      use nq_Info
       Implicit Real*8 (a-h,o-z)
-#include "nq_info.fh"
 #include "real.fh"
 #include "debug.fh"
-#include "WrkSpc.fh"
 *
       Integer nscheme5(8),   nscheme7(8), nscheme11(8), nscheme17(8),
      &        nscheme23(8), nscheme29(8), nscheme35(8), nscheme41(8),
@@ -413,9 +405,9 @@ clg      write (*,*) 'End of Lebedev'
 *
 ************************************************************************
       Subroutine AnMesh(  nscheme,    pa,       rPt,   wPt)
+      use nq_Info
       Implicit Real*8 (a-h,o-z)
       Implicit Integer(i-n)
-#include "nq_info.fh"
 #include "real.fh"
 #include "debug.fh"
 #include "WrkSpc.fh"

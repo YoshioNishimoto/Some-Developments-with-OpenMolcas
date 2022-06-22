@@ -8,20 +8,22 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine makecivb_cvb(civec,civb,cvbdet,orbs,cvb,ic)
 c  Construct CIVB and CVBDET :
 c  IC=0 : CIVB will contain full set of structures (if PROJCAS).
 c  IC=1 : CIVB will contain only VB structures.
       implicit real*8 (a-h,o-z)
-#include "ext_cvb.fh"
+c ... Content of CI vectors ...
+      logical, external :: tstcnt_cvb
 #include "main_cvb.fh"
 #include "optze_cvb.fh"
 #include "files_cvb.fh"
 #include "print_cvb.fh"
 
-#include "malloc_cvb.fh"
+#include "WrkSpc.fh"
       dimension orbs(norb,norb),cvb(nvb)
       dimension civec(ndet),civb(ndet)
       dimension cvbdet(ndetvb)
@@ -41,10 +43,10 @@ c  IC=1 : CIVB will contain only VB structures.
         else
           call cird_cvb(civb,61001.2d0)
         endif
-        call fmove_cvb(orbs,w(iorbinv),norb*norb)
-        call mxinv_cvb(w(iorbinv),norb)
-        call gaussj_cvb(w(iorbinv),w(igjorb))
-        call applyt_cvb(civb,w(igjorb))
+        call fmove_cvb(orbs,work(iorbinv),norb*norb)
+        call mxinv_cvb(work(iorbinv),norb)
+        call gaussj_cvb(work(iorbinv),work(igjorb))
+        call applyt_cvb(civb,work(igjorb))
         call ci2vbc_cvb(civb,cvbdet)
         call vb2strc_cvb(cvbdet,cvb)
         if(ic.eq.1)call vb2cic_cvb(cvbdet,civb)

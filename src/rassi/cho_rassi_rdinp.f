@@ -16,23 +16,18 @@
 *             in RASSI
 *
 ************************************************************************
+      Use Fock_util_global, only: Deco, Estimate, PseudoChoMOs, Update
       Implicit Real*8 (A-H,O-Z)
-#include "itmax.fh"
-#include "info.fh"
 #include "rassi.fh"
 #include "print.fh"
       Character*180 KWord, Key, Get_Ln
       External Get_Ln
-      Logical  DFonly,timings
-      Logical  Update,Estimate,Deco,PseudoChoMOs
+      Logical  DFonly
       character*15 SECNAM
       parameter (SECNAM = 'CHO_RASSI_RDINP')
-      Integer  ALGO,Nscreen
-      Real*8   dmpk
 *
-      Common /CHORASSI / ALGO,Nscreen,dmpk
-      COMMON /CHOTIME / timings
-      COMMON /LKSCREEN / Estimate, Update, Deco, PseudoChoMOs
+#include "chorassi.fh"
+#include "chotime.fh"
 *
       iRout=1
       iPrint=nPrint(iRout)
@@ -83,13 +78,6 @@
          dmpk_dfl=1.0d-1
 ************************************************************************
 *                                                                      *
-*                                                                      *
-************************************************************************
-*     Define Blank lines
-*
-      Do i = 1, 80
-         BLine(i:i) = ' '
-      End Do
       iPrint=5
 *                                                                      *
 ************************************************************************
@@ -111,7 +99,7 @@
 *-------------------------------------------------------------------*
 
       If (KWord(1:1).eq.'*')    Go To 1000
-      If (KWord.eq.BLine)       Go To 1000
+      If (KWord.eq.'')       Go To 1000
       If (KWord(1:4).eq.'ALGO') Go To 900
       If (KWord(1:4).eq.'LOCK') Go To 810
       If (KWord(1:4).eq.'NOLK') Go To 811

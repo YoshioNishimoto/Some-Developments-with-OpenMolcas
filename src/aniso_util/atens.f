@@ -11,12 +11,12 @@
       Subroutine atens(moment, dim, gtens, maxes, iprint)
 
       Implicit None
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter         :: wp=kind(0.d0)
 c Calling variables:
       Integer,          intent(in)  :: dim, iprint
-      Complex (kind=wp),intent(in)  :: moment(3,dim,dim)
-      Real (kind=wp),   intent(out) :: gtens(3)
-      Real (kind=wp),   intent(out) :: maxes(3,3)
+      Complex (kind=8),intent(in)  :: moment(3,dim,dim)
+      Real (kind=8),   intent(out) :: gtens(3)
+      Real (kind=8),   intent(out) :: maxes(3,3)
 c----------------------------------------------
 c  dim    -- size of the magnetic moment
 c            dim = muliplicity of the pseuDospin ( 2*S+1, where S is the pseuDospin);
@@ -31,19 +31,18 @@ c            iprint = 3 => print for debug
 c----------------------------------------------
 c local variables
       Integer           :: ic1, ic2, i, j, info
-      Real (kind=wp)    :: A_TENS_TERM(3,3), W(3), MAIN(3), Z(3,3),
+      Real (kind=8)    :: A_TENS_TERM(3,3), W(3), MAIN(3), Z(3,3),
      &                     factor, Det_gtens, diff12, diff23,
      &                     ZR(3,3), dnorm
-      Real (kind=wp)    :: dznrm2, FindDetR
-      Complex (kind=wp) :: AC_TENS(3,3), trace
+      Real (kind=8)    :: dznrm2, FindDetR
+      Complex (kind=8) :: AC_TENS(3,3), trace
       External          :: dznrm2, FindDetR, trace
 
-      Call qEnter('atens')
 
       dnorm=0.0_wp
       dnorm =  dznrm2(3*dim*dim, moment, 1 )
 
-      If ( dnorm.eq.0._wp ) Then
+      If ( dnorm.le.tiny(0.0_wp) ) Then
          Write(6,'(A)') 'Norm of the magnetic moment is zero.'
          Write(6,'(A)') 'Returning the default (dummy) values'
          gtens=0.0_wp
@@ -107,7 +106,8 @@ C
       Call DIAG_R2(A_TENS_TERM(1:3,1:3), 3, info, W(1:3),  Z(1:3,1:3))
 
       If (INFO.ne.0) Go To 199
-      If ((w(1).lt.0._wp).AND.(w(2).lt.0._wp).AND.(w(3).lt.0._wp)) Then
+      If ((w(1).lt.0.0_wp).AND.(w(2).lt.0.0_wp).AND.(w(3).lt.0.0_wp))
+     & Then
       Write(6,'(2x,A)') 'ALL EIGENVALUES OF THE A-TENSOR ARE NEGATIVE'
       Write(6,'(2X,A)') 'THIS IS A VERY UNUSUAL SITUATION. PLEASE'//
      & 'CHECK MANUALLY '
@@ -189,14 +189,14 @@ c set the main Z axis:
          gtens(2)=MAIN(2)
          gtens(1)=MAIN(3)
 
-         If (Z(3,1).ge.0._wp) Then
+         If (Z(3,1).ge.0.0_wp) Then
             Do i=1,3
             maxes(i,3)=Z(i,1)
             maxes(i,1)=Z(i,3)
             End Do
-         Else If (Z(3,1).lt.0._wp) Then
+         Else If (Z(3,1).lt.0.0_wp) Then
             Do i=1,3
-            maxes(i,3)=-1._wp*Z(i,1)
+            maxes(i,3)=-1.0_wp*Z(i,1)
             maxes(i,1)=Z(i,3)
             End Do
          End If
@@ -210,7 +210,7 @@ c set the main Z axis:
          gtens(2)=MAIN(2)
          gtens(1)=MAIN(1)
 
-         If (Z(3,3).ge.0._wp) Then
+         If (Z(3,3).ge.0.0_wp) Then
             Do i=1,3
             maxes(i,3)=Z(i,3)
             maxes(i,1)=Z(i,1)
@@ -270,11 +270,9 @@ c     &                                      (maxes(j,3),j=1,3),'|'
      &       ' gZ = ',gtens(3),' | Zm |',(maxes(j,3),j=1,3),'|'
          Write(6,'(65a)') ('-',i=1,56),'|'
 
-         Call Add_Info('GTENS_MAIN',gtens,3,4)
       End If
 
  199  Continue
-      Call qExit('atens')
 
       Return
       End Subroutine atens

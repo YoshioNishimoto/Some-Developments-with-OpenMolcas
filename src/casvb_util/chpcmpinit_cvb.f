@@ -8,14 +8,16 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine chpcmpinit_cvb()
       implicit real*8 (a-h,o-z)
 #include "lstprm_cvb.fh"
 
       do 100 i=1,mxprm
-100   lstprm(i)=iunset
+      lstprm(i)=iunset
+100   continue
       iprm=0
       return
       entry chpcmp0_cvb()
@@ -34,13 +36,14 @@
       function recinpcmp_cvb(ifield)
       implicit real*8 (a-h,o-z)
       logical recinpcmp_cvb
-#include "ext_cvb.fh"
+c ... Files/Hamiltonian available ...
+      logical, external :: valid_cvb
 #include "main_cvb.fh"
 #include "optze_cvb.fh"
 #include "files_cvb.fh"
 #include "print_cvb.fh"
 
-#include "malloc_cvb.fh"
+#include "WrkSpc.fh"
 
       if(.not.valid_cvb(recinp_old))then
         recinpcmp_cvb=.true.
@@ -54,10 +57,10 @@
         else
           i1=mstackr_cvb(ioff2-ioff1)
           j1=mstackr_cvb(joff2-joff1)
-          call rdr_cvb(w(i1),ioff2-ioff1,recinp,ioff1)
-          call rdr_cvb(w(j1),joff2-joff1,recinp_old,joff1)
+          call rdr_cvb(work(i1),ioff2-ioff1,recinp,ioff1)
+          call rdr_cvb(work(j1),joff2-joff1,recinp_old,joff1)
           do 100 i=0,ioff2-ioff1-1
-          if(w(i+i1).ne.w(i+j1))then
+          if(work(i+i1).ne.work(i+j1))then
             recinpcmp_cvb=.true.
             goto 200
           endif

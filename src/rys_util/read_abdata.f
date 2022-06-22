@@ -12,17 +12,17 @@
       implicit none
 #include "SysDef.fh"
 #include "abtab.fh"
-      character(*), parameter :: ABDATA_NAME = 'ABDATA'
+      character(len=*), parameter :: ABDATA_NAME = 'ABDATA'
       integer, parameter :: lu_abdata = 22
       logical :: found_abdata
 *
-      character(8) :: key
+      character(len=8) :: key
       integer :: i, itab, ipos, k, nerr
 *
       call f_Inquire(ABDATA_NAME,found_abdata)
       if (.not.found_abdata) then
         call warningmessage(2,
-     &              ' the abdata.ascii file does not exist.')
+     &              ' the abdata file does not exist.')
         call abend()
       end if
       call molcas_open(lu_abdata,ABDATA_NAME)
@@ -55,4 +55,8 @@
       end do
 *
       close (lu_abdata)
+      return
+#ifdef _WARNING_WORKAROUND_
+      if (.false.) call Unused_integer(itab)
+#endif
       end

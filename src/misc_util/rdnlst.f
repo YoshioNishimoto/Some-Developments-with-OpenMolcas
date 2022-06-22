@@ -50,12 +50,11 @@
       Character*80 Line
       Integer StrnLn
       Logical No_Input_OK
-      common /igetline/igetline,myunit
+#include "igetline.fh"
         igetline=0
 *----------------------------------------------------------------------*
 *     push the entry name on the calling stack                         *
 *----------------------------------------------------------------------*
-*     Call qEnter('RdNlst')
 *----------------------------------------------------------------------*
 *     convert the Name to internal standard format.                    *
 *----------------------------------------------------------------------*
@@ -65,10 +64,9 @@
 *     read until an input Line is located which starts with            *
 *     the string, Name, not before the second column                   *
 *----------------------------------------------------------------------*
-      lLine=LEN(Line)
 100   Read(iUnit,'(A)',End=900) Line
-      Call LeftAd(Line)
       Call UpCase(Line)
+      Line = adjustl(Line)
       If ( Line(1:1).eq.'&' .and.
      &     Line(2:lStdNam+1).eq.StdNam(1:lStdNam) ) then
          Return
@@ -83,6 +81,5 @@
       EndIf
       Write (6,*) 'RdNLst: Input section not found in input file'
       Write (6,*) '        Looking for:',StdNam(1:lStdNam)
-      Call QTrace()
       Call Quit_OnUserError()
       End

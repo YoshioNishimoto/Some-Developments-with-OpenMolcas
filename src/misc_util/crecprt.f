@@ -10,7 +10,6 @@
 *                                                                      *
 * Copyright (C) 1992, Markus P. Fuelscher                              *
 ************************************************************************
-      Subroutine CRecPrt(Title,FmtIn,A,nRow,nCol,Type)
 ************************************************************************
 * CRecPrt
 *
@@ -29,7 +28,9 @@
 *> @param[in] A       A matrix
 *> @param[in] nRow    number of rows of \p A
 *> @param[in] nCol    number of columns of \p A
+*> @param[in] Type
 ************************************************************************
+      Subroutine CRecPrt(Title,FmtIn,A,nRow,nCol,Type)
       Implicit Real*8 (A-H,O-Z)
 #include "standard_iounits.fh"
       Character*(*) Title
@@ -42,7 +43,7 @@
       Character*20 FMT
 *----------------------------------------------------------------------*
       If (nRow*nCol.eq.0) Return
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
 C     Call CTrcPrt(Title,FmtIn,A,nRow,nCol,'R')
 C     Call CTrcPrt(Title,FmtIn,A,nRow,nCol,'I')
       Return

@@ -12,13 +12,13 @@
       Implicit Real*8 (A-H,O-Z)
       Dimension CMO1(*),CMO2(*)
 #include "rasdim.fh"
-#include "warnings.fh"
+#include "warnings.h"
 #include "rasscf.fh"
 #include "general.fh"
 #include "output_ras.fh"
+      Character*16 ROUTINE
       Parameter (ROUTINE='ONCMO   ')
 #include "WrkSpc.fh"
-      Call qEnter('ONCMO')
 
 C Local print level (if any)
       IPRLEV=IPRLOC(1)
@@ -159,7 +159,6 @@ C Local print level (if any)
       IF(IPRLEV.ge.DEBUG) THEN
         WRITE(LF,*)' Leaving ',ROUTINE
       END IF
-      Call qExit('ONCMO')
 *
       Return
       End

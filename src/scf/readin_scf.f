@@ -39,19 +39,16 @@
 *                                                                      *
 ************************************************************************
 *
+      use InfSO
       Implicit Real*8 (a-h,o-z)
 *
 #include "mxdm.fh"
 #include "infscf.fh"
-#include "infso.fh"
 *
       Real*8 SIntTh
       Logical PkMode
 *
       Call Timing(Cpu1,Tim1,Tim2,Tim3)
-#ifdef _DEBUG_
-      Call qEnter('ReadIn')
-#endif
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -114,24 +111,16 @@
 *                                                                      *
 ************************************************************************
 *                                                                      *
-#ifdef _DEBUG_
-      Call qExit('ReadIn')
-#endif
       Call Timing(Cpu2,Tim1,Tim2,Tim3)
       TimFld( 1) = TimFld( 1) + (Cpu2 - Cpu1)
-*
-*----------------------------------------------------------------------*
-*     Exit                                                             *
-*----------------------------------------------------------------------*
-*
-      Return
-      End
+      End subroutine ReadIn_SCF
+
+
+
       Subroutine Ini_PkR8(PkMode)
-#include "itmax.fh"
-#include "info.fh"
+      use Gateway_Info, only: PkAcc
       Logical PkMode
 *
       Call inipkr8(PkAcc,PkMode)
 *
-      Return
       End

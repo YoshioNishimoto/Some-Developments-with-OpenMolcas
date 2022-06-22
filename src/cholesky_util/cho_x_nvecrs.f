@@ -34,11 +34,10 @@
 *> @param[out] nVec Number of vectors in red. set \p iRed, sym. \p iSym
 ************************************************************************
       SubRoutine Cho_X_nVecRS(iRed,iSym,iVec,nVec)
+      use ChoSwp, only: InfVec
       Implicit None
       Integer iRed, iSym, iVec, nVec
 #include "cholesky.fh"
-#include "choptr.fh"
-#include "WrkSpc.fh"
 
       Character*12 SecNam
       Parameter (SecNam = 'Cho_X_nVecRS')
@@ -46,12 +45,6 @@
       Logical Found
 
       Integer irc, LastRed, jVec, jRed
-
-      Integer InfVec, i, j, k
-      Integer N2
-      Parameter (N2 = InfVec_N2)
-
-      InfVec(i,j,k)=iWork(ip_InfVec-1+MaxVec*N2*(k-1)+MaxVec*(j-1)+i)
 
 C     Check input.
 C     ------------
@@ -62,6 +55,11 @@ C     ------------
       End If
       If (NumCho(iSym).lt.0 .or. NumCho(iSym).gt.MaxVec) Then
          irc = -2
+      End If
+      If (NumCho(iSym)==0) Then
+         iVec = 0
+         nVec = 0
+         Return
       End If
       LastRed = InfVec(NumCho(iSym),2,iSym)
       If (LastRed .lt. 1) Then
@@ -80,6 +78,7 @@ C     ------------
          nVec = 0
          Return
       End If
+      nVec=0
 
 C     Find first vector in reduced set iRed.
 C     --------------------------------------
@@ -121,7 +120,7 @@ C     --------------------------------------------
          End If
       End Do
 
-#if defined (_DEBUG_)
+#if defined (_DEBUGPRINT_)
 C     Debug: print result.
 C     --------------------
 

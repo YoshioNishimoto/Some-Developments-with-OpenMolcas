@@ -11,12 +11,12 @@
       Subroutine fetch_init_const( nneq, neqv, nmax, exch, nLoc,
      &                             nCenter, nT, nH, nTempMagn, nDir,
      &                             nDirZee, nMult, nPair, MxRank1,
-     &                             MxRank2, iReturn )
+     &                             MxRank2, old_aniso_format, iReturn )
 c  this routine looks into the file "single_aniso.input" for the "RESTart" keyword
 c
       Implicit None
-      Integer, parameter        :: wp=SELECTED_REAL_KIND(p=15,r=307)
-#include "warnings.fh"
+      Integer, parameter        :: wp=kind(0.d0)
+#include "warnings.h"
       Integer, intent(out) :: nneq, neqv, nmax, exch, nLoc,
      &                        nCenter, nT, nH, nTempMagn, nDir,
      &                        nDirZee, nMult, nPair, MxRank1, MxRank2,
@@ -32,20 +32,21 @@ c local variables:
       Integer :: imaxrank(NMAXC,2)
       Integer :: idummy
       Integer :: irank1, irank2, iline
-      Real(kind=wp):: rdummy
-      Real(kind=wp):: TempMagn(NMAXC)
+      Real(kind=8):: rdummy
+      Real(kind=8):: TempMagn(NMAXC)
       Logical :: ab_initio_all
-      Logical :: KeyCoor, KeyPair, KeyHEXP, KeyTEXP, KeyHINT, KeyTINT,
-     &           KeyTMAG, KeyMLTP, KeyMVEC, KeyNNEQ, KeyZEEM, KeyITOJ
+      Logical :: KeyCoor, KeyPair, KeyHEXP, KeyTEXP
+c     Logical :: KeyHINT, KeyTINT,
+c    &           KeyTMAG, KeyMLTP, KeyMVEC, KeyNNEQ, KeyZEEM, KeyITOJ
       Integer :: LUANISO, Isfreeunit
-      Character(1)   :: itype(NMAXC)
-      Character(280) :: line
-      Character(180)  :: namefile_aniso
+      Character(Len=1)   :: itype(NMAXC)
+      Character(Len=280) :: line
+      Character(Len=180)  :: namefile_aniso
       Logical :: ifHDF
       Logical :: DBG
       External Isfreeunit
+      Logical, intent(in) :: old_aniso_format
 
-      Call qEnter('PA_fetch')
 
       iReturn=0
       nH=0
@@ -79,19 +80,18 @@ c      namefile_aniso='              '
 
       DBG=.false.
 
-
-      KeyNNEQ=.false.
+c     KeyNNEQ=.false.
       KeyPair=.false.
       KeyCoor=.false.
       KeyHEXP=.false.
       KeyTEXP=.false.
-      KeyTMAG=.false.
-      KeyTINT=.false.
-      KeyHINT=.false.
-      KeyMLTP=.false.
-      KeyMVEC=.false.
-      KeyZEEM=.false.
-      KeyITOJ=.false.
+c     KeyTMAG=.false.
+c     KeyTINT=.false.
+c     KeyHINT=.false.
+c     KeyMLTP=.false.
+c     KeyMVEC=.false.
+c     KeyZEEM=.false.
+c     KeyITOJ=.false.
       nH_HEXP=0
       nH_HINT=0
       nT_TEXP=0
@@ -118,11 +118,12 @@ C=========== End of default settings====================================
      &   (LINE(1:4).ne.'LIN3').AND.(LINE(1:4).ne.'LIN9').AND.
      &   (LINE(1:4).ne.'PAIR').AND.(LINE(1:4).ne.'ALIN').AND.
      &   (LINE(1:4).ne.'COOR').AND.(LINE(1:4).ne.'ITOJ')) Go To 100
-      If((LINE(1:4).eq.'END ').OR.(LINE(1:4).eq.'    '))  Go To 200
+      If((LINE(1:4).eq.'END ').OR.(LINE(1:4).eq.'    ' )) Go To 200
+
 
       If (line(1:4).eq.'NNEQ') Then
 
-         KeyNNEQ=.true.
+c        KeyNNEQ=.true.
          READ(Input,*) nneq, ab_initio_all, ifHDF
 
          If(DBG) WRITE(6,*) nneq, ab_initio_all, ifHDF
@@ -236,12 +237,21 @@ C=========== End of default settings====================================
      &                       CHAR(48+mod( int( i     ),10)),'.input'
                 End If
                 LUANISO = Isfreeunit(20)
-                Call molcas_open( LUANISO, NAMEFILE_ANISO)
-                READ( LUANISO,*) sfs_check(I), sos_check(I)
-                If (DBG) Write(6,*) ' sfs(I) ',sfs_check(I),
-     &                              ' sos(I) ',sos_check(I)
+                Call molcas_open( LUANISO, NAMEFILE_ANISO )
+
+                If(old_aniso_format) Then
+                   READ( LUANISO,*) sfs_check(I), sos_check(I)
+                   If (DBG) Write(6,*) ' sfs(I) ',sfs_check(I),
+     &                                 ' sos(I) ',sos_check(I)
+                Else
+                   Call read_nss ( LUANISO, sos_check(i), dbg)
+                   Call read_nstate ( LUANISO, sfs_check(i), dbg)
+                   If (DBG) Write(6,*) ' sfs(I) ',sfs_check(I),
+     &                                 ' sos(I) ',sos_check(I)
+                End If
                 CLOSE(LUANISO)
              End If ! ifHDF
+
            Else If((itype(i).eq.'B').OR.(itype(i).eq.'C')) Then
              sfs_check(I)=1
              sos_check(I)=NexchA(i)
@@ -305,7 +315,7 @@ C=========== End of default settings====================================
 
       If (line(1:4).eq.'HINT') Then
 
-          KeyHINT=.true.
+c         KeyHINT=.true.
           READ(Input,*) rdummy, rdummy, nH_HINT
 
           If ( nH_HINT<=0 ) Then
@@ -323,7 +333,7 @@ C=========== End of default settings====================================
 
       If (line(1:4).eq.'TINT') Then
 
-          KeyTINT=.true.
+c         KeyTINT=.true.
           READ(Input,*) rdummy, rdummy, nT_TINT
 
           If ( nT_TINT<=0 ) Then
@@ -342,7 +352,7 @@ C=========== End of default settings====================================
 
       If (line(1:4).eq.'TMAG') Then
 
-          KeyTMAG=.true.
+c         KeyTMAG=.true.
           READ(Input,*) nTempMagn_TMAG
 
           If ( nTempMagn_TMAG<=0 ) Then
@@ -360,7 +370,7 @@ C=========== End of default settings====================================
 
       If (line(1:4).eq.'MVEC') Then
 
-          KeyMVEC=.true.
+c         KeyMVEC=.true.
           READ(Input,*) nDir
 
           If ( nDir<=0 ) Then
@@ -377,7 +387,7 @@ C=========== End of default settings====================================
 
 
       If (line(1:4).eq.'ZEEM') Then
-          KeyZEEM=.false.
+c         KeyZEEM=.false.
           READ(Input,*) nDirZee
 
           If ( nDirZee<=0 ) Then
@@ -395,7 +405,7 @@ C=========== End of default settings====================================
 
       If (line(1:4).eq.'MLTP') Then
 
-          KeyMLTP=.true.
+c         KeyMLTP=.true.
           READ(Input,*) nMult
 
           If ( nMult<=0 ) Then
@@ -514,6 +524,12 @@ C------ errors ------------------------------
 
 
 190   Continue
-      Call qExit('PA_fetch')
       Return
+#ifdef _WARNING_WORKAROUND_
+      If (.False.) Then
+         Call Unused_integer(idummy)
+         Call Unused_real(rdummy)
+         Call Unused_real_array(TempMagn)
+      End If
+#endif
       End

@@ -39,14 +39,11 @@
 ************************************************************************
       Implicit Integer (A-Z)
 *
-#include "TwoRc.fh"
-#include "TwoFlags.fh"
 #include "Molcas.fh"
 #include "TwoDat.fh"
 *----------------------------------------------------------------------*
 *     Start procedure:                                                 *
 *----------------------------------------------------------------------*
-*     Call qEnter('ClsOrd')
       rc=rc0000
 *----------------------------------------------------------------------*
 *     Check the file status                                            *
@@ -67,14 +64,10 @@
       AuxTwo(isStat) = iNoNum
       AuxTwo(isDaDa) = iNoNum
 *
-      If (RAMD) Then
-         Call GetMem('RAMD','Free','Real',ip_RAMD,RAMD_size)
-         RAMD=.False.
-      End If
+      If (RAMD) RAMD=.False.
 *----------------------------------------------------------------------*
 *     Terminate procedure                                              *
 *----------------------------------------------------------------------*
-*     Call qExit('ClsOrd')
       Return
 c Avoid unused argument warnings
       If (.False.) Call Unused_integer(option)

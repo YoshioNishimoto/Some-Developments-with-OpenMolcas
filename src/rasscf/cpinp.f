@@ -20,7 +20,7 @@
 #endif
       Character*100 ProgName
 
-#include "warnings.fh"
+#include "warnings.h"
       iRc=_RC_ALL_IS_WELL_
 * The following code will open, and return the unit number LUSpool,
 * of an ASCII file with a copy of the presently used input.
@@ -57,7 +57,7 @@
       write(LUnit,'(A180)') line
   10  continue
       read(luspool,'(A180)',err=9910,end=9910) line
-      call leftad(line)
+      line = adjustl(line)
 #ifdef _DMRG_
       if(ProgName(1:5) .eq.'dmrgs')then
         line2 = line

@@ -21,7 +21,6 @@
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
       DIMENSION DMAT(*),CMO(*),OCC(*),CNAT(*)
 C Given DMAT, symmetry-blocked array of triangular
@@ -30,7 +29,6 @@ C array CMO of MO coefficients, return array of
 C natural occupation numbers and MO coefficients of
 C natural orbitals.
 
-      CALL QENTER('NATORB')
 
       IDMAT=0
       IOCC=0
@@ -54,7 +52,7 @@ C Inactive, active, and secondary orbitals:
           CALL DCOPY_(NB*NO,CMO(ICMO+1),1,CNAT(ICMO+1),1)
 C For correct order, change sign.
           CALL DYAX(NTMP,-1.0D0,DMAT(IDMAT+1),1,WORK(LTMP),1)
-          CALL NIDiag(WORK(LTMP),CNAT(ICMO+1),NO,NB,0)
+          CALL NIDiag(WORK(LTMP),CNAT(ICMO+1),NO,NB)
           CALL JACORD(WORK(LTMP),CNAT(ICMO+1),NO,NB)
           CALL VEIG(NO,WORK(LTMP),OCC(IOCC+1))
 C Change back to positive sign.
@@ -66,14 +64,13 @@ C Change back to positive sign.
         END IF
 C Deleted orbitals:
         IF(ND.GT.0) THEN
-          CALL DCOPY_(ND,[0.0D00],0,OCC(IOCC+1),1)
+          CALL DCOPY_(ND,[0.0D0],0,OCC(IOCC+1),1)
           IOCC=IOCC+ND
           CALL DCOPY_(NB*ND,CMO(ICMO+1),1,CNAT(ICMO+1),1)
           ICMO=ICMO+NB*ND
         END IF
       END DO
 
-      CALL QEXIT('NATORB')
 
       RETURN
       END

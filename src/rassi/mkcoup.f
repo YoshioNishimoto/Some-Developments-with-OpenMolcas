@@ -18,8 +18,7 @@
       CHARACTER*16 ROUTINE
       PARAMETER (ROUTINE='MKCOUP')
 #include "symmul.fh"
-      COMMON /SEGTAB/ IC1(26),IC2(26),ITVPT(26),IBVPT(26),ISVC(26),
-     *                NIVR,LIVR,NSGMNT,LSGMNT
+#include "segtab.fh"
 C Purpose: Compute and return the table ICOUP(1..3,ICOP).
 C The number of coupling coeffs is obtained from NOCP, the offset to
 C the ICOP numbering is given by IOCP. The numbers ICOUP(1..3,ICOP) are
@@ -61,7 +60,6 @@ C SCRATCH CALL PARAMETERS:
 
 
 
-      CALL QENTER(ROUTINE)
 
       nIpWlk=1+(MidLev-1)/15
       nIpWlk=max(nIpWlk,1+(nLev-MidLev-1)/15)
@@ -396,6 +394,5 @@ C RENUMBER THE COUPLING COEFFICIENT INDICES BY LUND SCHEME:
       WRITE(6,*)' TOTAL CONVENTIONAL COUPLING COEFFS:',NRC
       END IF
 
-      CALL QEXIT(ROUTINE)
       RETURN
       END

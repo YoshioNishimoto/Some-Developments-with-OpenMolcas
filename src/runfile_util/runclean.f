@@ -29,13 +29,23 @@
        end
 
        subroutine fin_run_use
+       use Definitions, only: iwp
 #include "run_use_common.fh"
-       Logical isFalcon
-       Common /lFalcon/ isFalcon
        parameter (MakeWarn=40)
 c       parameter (MakeErr=100)
        Character*16 Label
        Character*60 Line
+       logical(kind=iwp), external :: Reduce_Prt
+#ifdef _HAVE_EXTRA_
+c FIXME: This include file should be created,
+c        as it contains a shared common block
+c#include "lfalcon.fh"
+#else
+       Logical isFalcon
+       isFalcon = .false.
+#endif
+
+       if (Reduce_Prt()) return
 c       need_abend=0
        do i=1,nTocCA
          if(i_run_CA_used(i).gt.MakeWarn.and..not.isFalcon) then

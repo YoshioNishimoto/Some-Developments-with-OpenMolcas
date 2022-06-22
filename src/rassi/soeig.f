@@ -10,7 +10,15 @@
 ************************************************************************
       SUBROUTINE SOEIG(PROP,USOR,USOI,ENSOR,NSS,ENERGY)
       !> module dependencies
+      use rassi_global_arrays, only: JBNUM
+      use sorting, only : argsort
+      use sorting_funcs, only : leq_r
+#ifdef _HDF5_
+      use Dens2HDF5
+      use mh5, only: mh5_put_dset
+#endif
 #ifdef _DMRG_
+      use rasscf_data, only: doDMRG
       use qcmaquis_interface_cfg
 #endif
       IMPLICIT NONE
@@ -34,7 +42,7 @@
       REAL*8 PROP(NSTATE,NSTATE,NPROP),ENERGY(NSTATE)
 
       INTEGER I,N
-      INTEGER ITOL
+      INTEGER ITOL,IDX
       INTEGER JOB
       INTEGER IPROP
       INTEGER IAMFIX,IAMFIY,IAMFIZ,IAMX,IAMY,IAMZ
@@ -42,14 +50,13 @@
       INTEGER LHTOTI,LHTOTR
       INTEGER LJ2I,LJ2R,LJXI,LJXR,LJYI,LJYR,LJZI,LJZR,LLXI,LLYI,LLZI
       INTEGER LMAPMS,LMAPSP,LMAPST,LOMGI,LOMGR
-      INTEGER LOWEST
       INTEGER MAGN
       INTEGER MPLET,MPLET1,MPLET2,MSPROJ,MSPROJ1,MSPROJ2
 
       REAL*8 AU2EV,AU2CM
       REAL*8 AMFIX,AMFIY,AMFIZ
       REAL*8 CG0,CGM,CGP,CGX,CGY
-      REAL*8 E,E0,E1,E2,E3,E_TMP,FACT,FRAC
+      REAL*8 E,E0,E1,E2,E3,E_TMP,FACT,FRAC,EI,EPSH,EPSS,ERMS,V2SUM
       REAL*8 HSOI,HSOR,HSOTOT
       REAL*8 OMEGA
       REAL*8 S1,S2,SM1,SM2
@@ -62,6 +69,7 @@
       real*8    , allocatable :: rwork(:)
       integer                 :: lcwork, info
 #endif
+      Integer, Allocatable :: IndexE(:)
 
       REAL*8, EXTERNAL :: DCLEBS
 
@@ -72,16 +80,8 @@
 
 
 
-      Call qEnter(ROUTINE)
 
 C CONSTANTS:
-#ifndef CONV_AU_TO_EV_
-#define CONV_AU_TO_EV_ 27.21138450d0
-#endif
-#ifndef CONV_AU_TO_CM1_
-#define CONV_AU_TO_CM1_ 2.194746313705d5
-#endif
-
       AU2EV=CONV_AU_TO_EV_
       AU2CM=CONV_AU_TO_CM1_
       lOMG=.False.
@@ -109,7 +109,7 @@ C Mapping from spin states to spin-free state and to spin:
       CALL GETMEM('MAPMS','ALLO','INTE',LMAPMS,NSS)
       ISS=0
       DO ISTATE=1,NSTATE
-       JOB=iWork(lJBNUM+ISTATE-1)
+       JOB=JBNUM(ISTATE)
        MPLET=MLTPLT(JOB)
        DO MSPROJ=-MPLET+1,MPLET-1,2
         ISS=ISS+1
@@ -189,6 +189,14 @@ C SPIN-ORBIT HAMILTONIAN MATRIX ELEMENTS:
 
         END DO
       END DO
+
+* VKochetov 2021 put SOC matrix elements to hdf5:
+#ifdef _HDF5_
+      if (rhodyn) then
+        call mh5_put_dset(wfn_sos_vsor, work(LHTOTR))
+        call mh5_put_dset(wfn_sos_vsoi, work(LHTOTI))
+      endif
+#endif
 
 * Perhaps write out large spin-orbit coupling elements:
       IF(NSOTHR_PRT.GT.0) THEN
@@ -282,8 +290,8 @@ C SPIN-ORBIT HAMILTONIAN MATRIX ELEMENTS:
       call put_darray('HAMSOR_SINGLE',HAMSOR,NSS*NSS)
       call put_darray('HAMSOI_SINGLE',HAMSOI,NSS*NSS)
 #ifdef _HDF5_
-      call mh5_put_dset_array_real(wfn_sos_hsor,HAMSOR)
-      call mh5_put_dset_array_real(wfn_sos_hsoi,HAMSOI)
+      call mh5_put_dset(wfn_sos_hsor,HAMSOR)
+      call mh5_put_dset(wfn_sos_hsoi,HAMSOI)
 #endif
 
       !> use complex matrix diagonalization
@@ -359,8 +367,8 @@ C SPIN-ORBIT HAMILTONIAN MATRIX ELEMENTS:
 
 #ifdef _HDF5_
       call mh5_put_dset(wfn_sos_energy, ENSOR)
-      call mh5_put_dset_array_real(wfn_sos_coefr,USOR)
-      call mh5_put_dset_array_real(wfn_sos_coefi,USOI)
+      call mh5_put_dset(wfn_sos_coefr,USOR)
+      call mh5_put_dset(wfn_sos_coefi,USOI)
 #endif
       !> free memory for H_SO - do not use it below!
       !> eigenvalues are stored in ENSOR!
@@ -397,12 +405,9 @@ C Complex matrix elements of Jx, Jy, and/or Jz over spin states:
       CALL DCOPY_(NSS**2,[0.0D0],0,WORK(LLYI),1)
       CALL GETMEM('LZI','ALLO','REAL',LLZI,NSS**2)
       CALL DCOPY_(NSS**2,[0.0D0],0,WORK(LLZI),1)
-      IF(IAMX.GT.0)
-     &     CALL SMMAT(PROP,WORK(LLXI),NSS,PNAME(IAMX),ICOMP(IAMX))
-      IF(IAMY.GT.0)
-     &     CALL SMMAT(PROP,WORK(LLYI),NSS,PNAME(IAMY),ICOMP(IAMY))
-      IF(IAMZ.GT.0)
-     &     CALL SMMAT(PROP,WORK(LLZI),NSS,PNAME(IAMZ),ICOMP(IAMZ))
+      IF(IAMX.GT.0) CALL SMMAT(PROP,WORK(LLXI),NSS,IAMX,0)
+      IF(IAMY.GT.0) CALL SMMAT(PROP,WORK(LLYI),NSS,IAMY,0)
+      IF(IAMZ.GT.0) CALL SMMAT(PROP,WORK(LLZI),NSS,IAMZ,0)
 
       CALL GETMEM('JXR','ALLO','REAL',LJXR,NSS**2)
       CALL GETMEM('JXI','ALLO','REAL',LJXI,NSS**2)
@@ -417,9 +422,9 @@ C Complex matrix elements of Jx, Jy, and/or Jz over spin states:
       CALL DCOPY_(NSS**2,[0.0D0],0,WORK(LJZR),1)
       CALL DCOPY_(NSS**2,[0.0D0],0,WORK(LJZI),1)
 
-      CALL SMMAT(PROP,WORK(LJXR),NSS,'SPIN    ',1)
-      CALL SMMAT(PROP,WORK(LJYI),NSS,'SPIN    ',2)
-      CALL SMMAT(PROP,WORK(LJZR),NSS,'SPIN    ',3)
+      CALL SMMAT(PROP,WORK(LJXR),NSS,0,1)
+      CALL SMMAT(PROP,WORK(LJYI),NSS,0,2)
+      CALL SMMAT(PROP,WORK(LJZR),NSS,0,3)
 
       CALL DAXPY_(NSS**2,1.0D0,WORK(LLXI),1,WORK(LJXI),1)
       CALL DAXPY_(NSS**2,1.0D0,WORK(LLYI),1,WORK(LJYI),1)
@@ -485,19 +490,17 @@ C910  CONTINUE
        WRITE(6,'(6X,A)')' Total energies including SO-coupling:'
        DO ISS=1,NSS
        E_tmp=ENSOR(ISS)+EMIN
-       Call PrintResult(6, '(6x,A,I5,5X,A,F16.8)',
+       Call PrintResult(6, '(6x,A,I5,5X,A,F23.14)',
      &  'SO-RASSI State',ISS,'Total energy:',[E_tmp],1)
        END DO
       END IF
 
 * Find E0=lowest energy, to use for printing table:
       IF(IPGLOB.GE.TERSE) THEN
-       LOWEST=1
        E0=ENSOR(1)
        DO ISS=2,NSS
          E=ENSOR(ISS)
         IF(E.LT.E0) THEN
-         LOWEST=ISS
          E0=E
         END IF
        END DO
@@ -505,48 +508,22 @@ C910  CONTINUE
        WRITE(6,*)
        WRITE(6,*)'  Eigenvalues of complex Hamiltonian:'
        WRITE(6,*)'  -----------------------------------'
+       IF(EMIN.NE.0.0D0)
+     &  WRITE(6,'(1X,A,F22.10,A1)')' (Shifted by EMIN (a.u.) =',EMIN,')'
        WRITE(6,*)
-       IF(EVAC.NE.0.0D0) THEN
-        if(ifj2.ne.0.and.ifjz.ne.0) then
-         WRITE(6,'(1X,A,F20.9,A1)')' (Shifted by EVAC (a.u.) =',EMIN,')'
-         WRITE(6,*)
-         WRITE(6,*) '         Relative EVac(au)    Rel lowest'//
-     &              ' level(eV)    D:o, cm**(-1)    J-value, Omega'
-        else if(ifj2.ne.0.and.ifjz.eq.0) then
-         WRITE(6,'(1X,A,F20.9,A1)')' (Shifted by EVAC (a.u.) =',EMIN,')'
-         WRITE(6,*)
-         WRITE(6,*) '         Relative EVac(au)    Rel lowest'//
-     &              ' level(eV)    D:o, cm**(-1)    J-value'
-        else if(ifj2.eq.0.and.ifjz.ne.0) then
-         WRITE(6,'(1X,A,F20.9,A1)')' (Shifted by EVAC (a.u.) =',EMIN,')'
-         WRITE(6,*)
-         WRITE(6,*) '         Relative EVac(au)    Rel lowest'//
-     &              ' level(eV)    D:o, cm**(-1)  Omega'
-        else if(ifj2.eq.0.and.ifjz.eq.0) then
-         WRITE(6,'(1X,A,F20.9,A1)')' (Shifted by EVAC (a.u.) =',EMIN,')'
-         WRITE(6,*)
-         WRITE(6,*) '         Relative EVac(au)    Rel lowest'//
-     &              ' level(eV)    D:o, cm**(-1)'
-        endif
-       ELSE
-        if(ifj2.ne.0.and.ifjz.ne.0) then
-         WRITE(6,*)
-         WRITE(6,*) '         Total energy (au)    Rel lowest'//
-     &              ' level(eV)    D:o, cm**(-1)    J-value, Omega'
-        else if(ifj2.ne.0.and.ifjz.eq.0) then
-         WRITE(6,*)
-         WRITE(6,*) '         Total energy (au)    Rel lowest'//
-     &              ' level(eV)    D:o, cm**(-1)    J-value'
-        else if(ifj2.eq.0.and.ifjz.ne.0) then
-         WRITE(6,*)
-         WRITE(6,*) '         Total energy (au)    Rel lowest'//
-     &              ' level(eV)    D:o, cm**(-1)   Omega'
-        else if(ifj2.eq.0.and.ifjz.eq.0) then
-         WRITE(6,*)
-         WRITE(6,*) '         Total energy (au)    Rel lowest'//
-     &              ' level(eV)    D:o, cm**(-1)'
-        endif
-       END IF
+       if(ifj2.ne.0.and.ifjz.ne.0) then
+        WRITE(6,*)'SO State       Relative EMIN(au)   Rel lowest'//
+     &          ' level(eV)    D:o, cm**(-1)     J-value  Omega'
+       else if(ifj2.ne.0.and.ifjz.eq.0) then
+        WRITE(6,*)'SO State       Relative EMIN(au)   Rel lowest'//
+     &          ' level(eV)    D:o, cm**(-1)     J-value'
+       else if(ifj2.eq.0.and.ifjz.ne.0) then
+        WRITE(6,*)'SO State       Relative EMIN(au)   Rel lowest'//
+     &          ' level(eV)    D:o, cm**(-1)      Omega'
+       else if(ifj2.eq.0.and.ifjz.eq.0) then
+        WRITE(6,*)'SO State       Relative EMIN(au)   Rel lowest'//
+     &          ' level(eV)    D:o, cm**(-1)'
+       endif
        WRITE(6,*)
        E0=ENSOR(1)
        DO ISS=1,NSS
@@ -568,18 +545,17 @@ C910  CONTINUE
 C Added by Ungur Liviu on 04.11.2009
 C Saving the SO energies in ESO array.
         ESO(ISS)=E3
-
         if(ifj2.ne.0.and.ifjz.ne.0) then
-          WRITE(6,'(1X,I5,F20.10,2X,F20.10,2X,F18.4,4x,2F6.1)')
+          WRITE(6,'(1X,I5,7X,2(F18.10,2X),F18.4,4X,2(2X,F6.1))')
      &        ISS,E1,E2,E3,XJEFF,OMEGA
         else if(ifj2.ne.0.and.ifjz.eq.0) then
-          WRITE(6,'(1X,I5,F20.10,2X,F20.10,2X,F18.4,4x,F6.1)')
+          WRITE(6,'(1X,I5,7X,2(F18.10,2X),F18.4,6X,F6.1)')
      &        ISS,E1,E2,E3,XJEFF
         else if(ifj2.eq.0.and.ifjz.ne.0) then
-          WRITE(6,'(1X,I5,F20.10,2X,F20.10,2X,F18.4,4x,F6.1)')
+          WRITE(6,'(1X,I5,7X,2(F18.10,2X),F18.4,6X,F6.1)')
      &        ISS,E1,E2,E3,OMEGA
         else if(ifj2.eq.0.and.ifjz.eq.0) then
-          WRITE(6,'(1X,I5,F20.10,2X,F20.10,2X,F18.4)')
+          WRITE(6,'(1X,I5,7X,2(F18.10,2X),F18.4)')
      &      ISS,E1,E2,E3
         endif
        ENDDO
@@ -588,6 +564,7 @@ C Added by Ungur Liviu on 04.11.2009
 C Saving the ESO array in the RunFile.
        CALL Put_iscalar('NSS_SINGLE',NSS)
        CALL Put_dArray( 'ESO_SINGLE',ESO,NSS)
+       CALL Put_dArray( 'ESO_LOW'   ,ENSOR+EMIN,NSS)
        CALL MMA_DEALLOCATE(ESO)
       END IF
 
@@ -601,8 +578,20 @@ C Saving the ESO array in the RunFile.
       END IF
 
 C Put energy onto info file for automatic verification runs:
-      iTol=cho_x_gettol(8) ! reset thr iff Cholesky
-      Call Add_Info('ESO_LOW',ENSOR+EMIN-EVAC,NSS,iTol)
+      EPSS=5.0D-11
+      EPSH=MAX(5.0D-10,ABS(ENSOR(1)+EMIN)*EPSS)
+      IDX=100
+      DO ISS=1,NSS
+       EI=(ENSOR(ISS)+EMIN)*EPSS
+       V2SUM=0.0D0
+       DO JSS=1,NSS
+        V2SUM=V2SUM+USOR(JSS,ISS)**2+USOI(JSS,ISS)**2
+       END DO
+       ERMS=SQRT(EPSH**2+EI**2)*V2SUM
+       IDX=MIN(IDX,INT(-LOG10(ERMS)))
+      END DO
+      iTol=cho_x_gettol(IDX) ! reset thr iff Cholesky
+      Call Add_Info('ESO_LOW',ENSOR+EMIN,NSS,iTol)
 
       IF(IPGLOB.GE.VERBOSE) THEN
        WRITE(6,*)
@@ -618,69 +607,31 @@ C Put energy onto info file for automatic verification runs:
       END IF
        CALL PRCEVC(NSS,FRAC,ENSOR,IWORK(LMAPST),IWORK(LMAPSP),
      &            IWORK(LMAPMS),USOR,USOI)
+
+C Update LoopDivide (SUBSets keyword)
+C Assume the SO "ground states" are mostly formed by the SF "ground states"
+      If (ReduceLoop) Then
+        Call mma_Allocate(IndexE,nState,Label='IndexE')
+        IndexE(:)=ArgSort(Energy, leq_r)
+        n=0
+        Do iState=1,LoopDivide
+          Job=JbNum(IndexE(iState))
+          n=n+Mltplt(Job)
+        End Do
+        LoopDivide=n
+#ifdef _HDF5_
+        If (IFTRD1.or.IFTRD2)
+     &    Call UpdateIdx(IndexE,nSS,USOR,USOI,iWork(lMapSt))
+#endif
+        Call mma_deAllocate(IndexE)
+      End If
+
       CALL GETMEM('MAPST','FREE','INTE',LMAPST,NSS)
       CALL GETMEM('MAPSP','FREE','INTE',LMAPSP,NSS)
       CALL GETMEM('MAPMS','FREE','INTE',LMAPMS,NSS)
 
       call mma_deallocate(HAMSOR)
       call mma_deallocate(HAMSOI)
-      Call qExit(ROUTINE)
       RETURN
-      END
-      SUBROUTINE ZTRNSF(N,UR,UI,AR,AI)
-      IMPLICIT REAL*8 (A-H,O-Z)
-      DIMENSION UR(N,N),UI(N,N)
-      DIMENSION AR(N,N),AI(N,N)
-#include "WrkSpc.fh"
 
-      CALL GETMEM('TMPREAL','ALLO','REAL',LCR,N**2)
-      CALL GETMEM('TMPIMAG','ALLO','REAL',LCI,N**2)
-      CALL DGEMM_('N','N',N,N,N, 1.0D0,AR,N,UR,N,0.0D0,WORK(LCR),N)
-      CALL DGEMM_('N','N',N,N,N,-1.0D0,AI,N,UI,N,1.0D0,WORK(LCR),N)
-      CALL DGEMM_('N','N',N,N,N, 1.0D0,AR,N,UI,N,0.0D0,WORK(LCI),N)
-      CALL DGEMM_('N','N',N,N,N, 1.0D0,AI,N,UR,N,1.0D0,WORK(LCI),N)
-      CALL DGEMM_('T','N',N,N,N, 1.0D0,UR,N,WORK(LCR),N,0.0D0,AR,N)
-      CALL DGEMM_('T','N',N,N,N, 1.0D0,UI,N,WORK(LCI),N,1.0D0,AR,N)
-      CALL DGEMM_('T','N',N,N,N, 1.0D0,UR,N,WORK(LCI),N,0.0D0,AI,N)
-      CALL DGEMM_('T','N',N,N,N,-1.0D0,UI,N,WORK(LCR),N,1.0D0,AI,N)
-      CALL GETMEM('TMPREAL','FREE','REAL',LCR,N**2)
-      CALL GETMEM('TMPIMAG','FREE','REAL',LCI,N**2)
-
-      RETURN
       END
-      SUBROUTINE ZTRNSF_IJ(N,UR,UI,AR,AI,CX,TX,I,J)
-      IMPLICIT REAL*8 (A-H,O-Z)
-      DIMENSION UR(N,N),UI(N,N)
-      DIMENSION AR(N,N),AI(N,N)
-      DIMENSION CX(N,2)
-      COMPLEX*16 TX
-      Call FZero(CX,N*2)
-*
-      CALL DGEMV_('N',N,N,
-     &            1.0D0,AR,N,
-     &                  UR(1,J),1,
-     &            0.0D0,CX(1,1),1)
-      CALL DGEMV_('N',N,N,
-     &           -1.0D0,AI,N,
-     &                  UI(1,J),1,
-     &            1.0D0,CX(1,1),1)
-*
-      CALL DGEMV_('N',N,N,
-     &            1.0D0,AR,N,
-     &                  UI(1,J),1,
-     &            0.0D0,CX(1,2),1)
-      CALL DGEMV_('N',N,N,
-     &            1.0D0,AI,N,
-     &                  UR(1,J),1,
-     &            1.0D0,CX(1,2),1)
-*
-      PR = DDOT_(N,CX(1,1),1,UR(1,I),1)
-     &   + DDOT_(N,CX(1,2),1,UI(1,I),1)
-      PI = DDOT_(N,CX(1,2),1,UR(1,I),1)
-     &   - DDOT_(N,CX(1,1),1,UI(1,I),1)
-*
-      TX=DCMPLX(PR,PI)
-*
-      RETURN
-      END
-

@@ -42,11 +42,12 @@ C
       use fciqmc, only : DoNECI
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
-#include "warnings.fh"
+#include "warnings.h"
 #include "rasrc.fh"
 #include "WrkSpc.fh"
 #include "wadr.fh"
 #include "output_ras.fh"
+      Character*16 ROUTINE
       Parameter (ROUTINE='DAVCRE  ')
       CHARACTER*4 IOUTW,IOUTX
       DIMENSION C((NROOT+NSXS)*NROOT*(ITMAX+1))
@@ -65,7 +66,6 @@ cvv   Thrld2 changed to 1.D-14 to avoid numerial unstabillity
       DATA THRA/1.D-13/,THRLD2/5.D-14/,THRQ/1.D-07/,THRZ/1.D-06/,
      &     THRLD1/1.D-08/
 C
-      Call qEnter('DAVCRE')
 C Local print level (if any)
       IPRLEV=IPRLOC(1)
       IF(IPRLEV.ge.DEBUG) THEN
@@ -291,7 +291,7 @@ C
         SC(K)=EI-HD(K)
         IF(ABS(SC(K)).LT.THRZ) SC(K)=1.0d0
        END DO
-       CALL VDIV(SC,1,Q(IST+NDIM),1,Q(IST),1,NDIM)
+       Q(IST:IST+NDIM-1) = Q(IST+NDIM:IST+2*NDIM-1)/SC(1:NDIM)
        IST=IST+NDIM
       END DO
 C Remove any unwanted components. These are signalled by
@@ -392,7 +392,6 @@ C Acceptable, only if it is very close to zero. Else, quit.
          Write(LF,*)' of the rasscf program. Please issue a bug report.'
          Write(LF,*)
          if (.not. DoNECI) then
-           Call qTrace
            Call Quit(_RC_GENERAL_ERROR_)
          else
            Write(LF,*)' non positive-semi definite matrix occurred.'
@@ -569,6 +568,5 @@ C
       CALL GETMEM('XXXX','FREE','REAL',LC1,NSXS)
       CALL GETMEM('XXXX','FREE','REAL',LC2,NSXS)
       CALL GETMEM('XXXX','FREE','REAL',LX,NSXS)
-      CALL QEXIT('DAVCRE')
       RETURN
       END

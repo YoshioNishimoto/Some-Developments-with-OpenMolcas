@@ -85,6 +85,12 @@
 *     history: none                                                    *
 *                                                                      *
 ************************************************************************
+#ifdef _MSYM_
+      Use, Intrinsic :: iso_c_binding, only: c_ptr
+#endif
+      Use Interfaces_SCF, Only: TraClc_i
+      use LnkLst, only: SCF_V
+      use InfSO
       Implicit Real*8 (a-h,o-z)
       External Seconds
       Real*8 Seconds
@@ -96,14 +102,12 @@
 #include "real.fh"
 #include "mxdm.fh"
 #include "infscf.fh"
-#include "infso.fh"
-#include "WrkSpc.fh"
 #include "stdalloc.fh"
 #include "file.fh"
 #include "llists.fh"
 #include "twoswi.fh"
 #include "ldfscf.fh"
-#include "warnings.fh"
+#include "warnings.h"
       Real*8, Dimension(:),   Allocatable:: D1Sao
       Real*8, Dimension(:,:), Allocatable:: Grd1, Disp, Xnp1
 
@@ -113,17 +117,17 @@
 
 *---  Define local variables
       Logical QNR1st,FstItr
-      Character Meth*(*)
+      Character Meth*(*), Meth_*10
       Character*72 Note
       Logical AufBau_Done, Diis_Save, Reset, Reset_Thresh, AllowFlip
       Logical ScramNeworb
       Integer iAufOK, Ind(MxOptm)
       Character*128 OrbName
 #ifdef _MSYM_
-      Real*8 msym_ctx
+      Type(c_ptr) msym_ctx
 #endif
-#include "interfaces_scf.fh"
       Dimension Dummy(1),iDummy(7,8)
+      External DNRM2_
 *
 *----------------------------------------------------------------------*
 *     Start                                                            *
@@ -136,6 +140,11 @@
       Call Put_D1Sao(D1Sao,nBT)
       Call mma_deallocate(D1Sao)
 *
+      If (Len_Trim(Meth) > Len(Meth_)) Then
+        Meth_ = '[...]'
+      Else
+        Meth_ = Trim(Meth)
+      End If
       iTerm=0
       iDMin = - 1
 *---  Choose between normal and minimized differences
@@ -222,8 +231,7 @@
 *
 *---  Print header to iterations
 *
-      If(KSDFT.eq.'SCF'.or.One_Grid) Call PrBeg(Meth)
-      Temsav=RTemp
+      If(KSDFT.eq.'SCF'.or.One_Grid) Call PrBeg(Meth_)
       AufBau_Done=.False.
 *                                                                      *
 *======================================================================*
@@ -248,7 +256,7 @@
          If(KSDFT.ne.'SCF'.and..Not.One_Grid) Then
             Reset=.True.
             Call Modify_NQ_Grid()
-            Call PrBeg(Meth)
+            Call PrBeg(Meth_)
          End If
 *
       End If
@@ -300,7 +308,8 @@
 *                                                                      *
 *======================================================================*
 *                                                                      *
-      Do 100 iter = iterSt+1, iterSt+nIter(nIterP)
+      Do 100 iter_ = iterSt+1, iterSt+nIter(nIterP)
+         iter = iter_
          IterX=IterX+1
          WarnCfg=.false.
 *
@@ -473,7 +482,7 @@
             Call SCF_Energy(FstItr,E1V,E2V,EneV)
 *
             Call TraClc_x(kOptim,iOpt.eq.2,FrstDs,.FALSE.,CInter,nCI,nD,
-     &                    nOV,Lux,iter,memRsv,LLx)
+     &                    nOV,iter,LLx)
 *
             Call DIIS_x(nD,CInter,nCI,iOpt.eq.2,HDiag,mOV,Ind)
 *
@@ -526,7 +535,7 @@
             Call SCF_Energy(FstItr,E1V,E2V,EneV)
 *
             Call TraClc_x(kOptim,iOpt.eq.2,FrstDs,QNR1st,CInter,nCI,
-     &                    nD,nOV,Lux,iter,memRsv,LLx)
+     &                    nD,nOV,iter,LLx)
 *
             Call dGrd()
 *
@@ -560,30 +569,30 @@
 *-------    compute new displacement vector delta
 *           dX(n) = -H(-1)*grd'(n), grd'(n): extrapolated gradient
 *
-            Call SOrUpV(MemRsv,Grd1,HDiag,nOV*nD,Disp,'DISP','BFGS')
+            Call SOrUpV(Grd1,HDiag,nOV*nD,Disp,'DISP','BFGS')
 *
 *           from this, compute new orb rot parameter X(n+1)
 *
 *           X(n+1) = X(n) -H(-1)grd'(X(n))
 *
             Call Daxpy_(nOV*nD,-One,Disp,1,Xnp1,1)
-            Call PutVec(Xnp1,nOV*nD,Lux,iter+1,MemRsv,'NOOP',LLx)
+            Call PutVec(Xnp1,nOV*nD,iter+1,'NOOP',LLx)
 *
 *           get address of actual X(n) in corresponding LList
 *
-            jpXn=LstPtr(Lux,iter,LLx)
+            jpXn=LstPtr(iter,LLx)
 *
 *           and compute actual displacement dX(n)=X(n+1)-X(n)
 *
-            Call DZAXPY(nOV*nD,-One,Work(jpXn),1,Xnp1,1,Disp,1)
+            Call DZAXPY(nOV*nD,-One,SCF_V(jpXn)%A,1,Xnp1,1,Disp,1)
 *
 *           store dX(n) vector from Disp to LList
 *
-            Call PutVec(Disp,nOV*nD,LuDel,iter,MemRsv,'NOOP',LLDelt)
+            Call PutVec(Disp,nOV*nD,iter,'NOOP',LLDelt)
 *
 *           compute Norm of dX(n)
 *
-            DltNrm=DBLE(nD)*DNORM2(nOV*nD,Disp,1)
+            DltNrm=DBLE(nD)*DNRM2_(nOV*nD,Disp,1)
 
 *           Generate the CMOs, rotate MOs accordingly to new point
 *
@@ -626,7 +635,7 @@
             Call SCF_Energy(FstItr,E1V,E2V,EneV)
 *
             Call TraClc_x(kOptim,iOpt.ge.2,FrstDs,QNR1st,CInter,nCI,
-     &                    nD,nOV,Lux,iter,memRsv,LLx)
+     &                    nD,nOV,iter,LLx)
 *
             Call dGrd()
 *
@@ -653,8 +662,8 @@
 *
 *           get last gradient grad(n) from LList
 *
-            Call GetVec(LuGrd,iter,LLGrad,inode,Grd1,nOV*nD)
-#ifdef _DEBUG_
+            Call GetVec(iter,LLGrad,inode,Grd1,nOV*nD)
+#ifdef _DEBUGPRINT_
             Call RecPrt('Wfctl: g(n)',' ',Grd1,1,nOV*nD)
 #endif
 *
@@ -663,12 +672,12 @@
 *
             StepMax=0.3D0
             Call rs_rfo_scf(HDiag,Grd1,nOV*nD,Disp,AccCon(1:6),dqdq,
-     &                      dqHdq,StepMax,AccCon(9:9),MemRsv)
+     &                      dqHdq,StepMax,AccCon(9:9))
 *
 *           store dX(n) vector from Disp to LList
 *
-            Call PutVec(Disp,nOV*nD,LuDel,iter,MemRsv,'NOOP',LLDelt)
-#ifdef _DEBUG_
+            Call PutVec(Disp,nOV*nD,iter,'NOOP',LLDelt)
+#ifdef _DEBUGPRINT_
             Write (6,*) 'LuDel,LLDelt:',LuDel,LLDelt
             Call RecPrt('Wfctl: dX(n)',' ',Disp,1,nOV*nD)
 #endif
@@ -736,11 +745,6 @@
          If(iUHF.eq.0) Then
             OrbName='SCFORB'
             Note='*  intermediate SCF orbitals'
-            If(KSDFT.eq.'SCF') Then
-               iWFtype=2
-            Else
-               iWFtype=3
-            End If
 
             Call WrVec_(OrbName,LuOut,'CO',iUHF,nSym,nBas,nBas,
      &                  TrM(1,1), Dummy,OccNo(1,1), Dummy,
@@ -753,11 +757,6 @@
          Else
             OrbName='UHFORB'
             Note='*  intermediate UHF orbitals'
-            If(KSDFT.eq.'SCF') Then
-               iWFtype=4
-            Else
-               iWFtype=5
-            End If
             Call WrVec_(OrbName,LuOut,'CO',iUHF,nSym,nBas,nBas,
      &                  TrM(1,1), TrM(1,2),OccNo(1,1),OccNo(1,2),
      &                  Dummy,Dummy, iDummy,Note,3)
@@ -863,7 +862,7 @@
 *                                                                      *
 *------- Perform another iteration if necessary
 *
-*        Convergence criterions are
+*        Convergence criteria are
 *
 *        Either,
 *
@@ -872,17 +871,18 @@
 *        3) the absolute Fock matrix change is smaller than FThr
 *        4) the absolute density matrix change is smaller than DThr,
 *           and
-*        5) it step is NOT a Quasi NR step
+*        5) step is NOT a Quasi NR step
 *
 *        or
 *
-*        1) it step is a Quasi NR step, and
+*        1) step is a Quasi NR step, and
 *        2) DltNrm.le.DltNth
 *
 *        or
 *
 *        EmConv is true.
 *
+         If (EDiff>0.0.and..Not.Reset) EDiff=Ten*EThr
          If (iter.ne.1             .AND.
      &       (Abs(EDiff).le.EThr)  .AND.
      &       (Abs(FMOMax).le.FThr) .AND.
@@ -1029,7 +1029,7 @@
             If (.Not.One_Grid) Then
                iterX=0
                Call Reset_NQ_grid()
-*              Call PrBeg(Meth)
+*              Call PrBeg(Meth_)
             End If
             If ( iOpt.eq.0 ) kOptim=1
          End If
@@ -1039,7 +1039,7 @@
 *                                                                      *
 *     End of iteration loop
 *
- 100  Continue ! iter
+ 100  Continue ! iter_
 *                                                                      *
 *======================================================================*
 *                                                                      *

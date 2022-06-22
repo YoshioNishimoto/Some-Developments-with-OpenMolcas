@@ -8,20 +8,19 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine defs_cvb()
       implicit real*8 (a-h,o-z)
       parameter (iunset=-1357924680,unset=-1357924680d0)
-#include "ext_cvb.fh"
 #include "main_cvb.fh"
 #include "optze_cvb.fh"
 #include "files_cvb.fh"
 #include "print_cvb.fh"
 
 #include "frag_cvb.fh"
-      logical ifploc
-      common /ifploc_complc/ifploc
+      logical :: ifploc = .false.
       dimension ifxorb(mxorb)
 
 c  Default settings :
@@ -49,7 +48,8 @@ c  +1=CHIRGWIN +2=LOWDIN +4=INVERSE
       anyslater=.false.
       service=.false.
       do 50 i=1,10
-50    ip(i)=1
+      ip(i)=1
+50    continue
 
       call tunedefs_cvb()
       if(variat)then

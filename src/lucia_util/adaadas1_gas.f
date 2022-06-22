@@ -50,7 +50,7 @@
 *.Output
       INTEGER I1(LI1,*)
       DIMENSION XI1S(LI1,*)
-*. Local scratch, atmost 1000 orbitals in a given TS block)
+*. Local scratch, at most 1000 orbitals in a given TS block)
       DIMENSION ISCR(1000)
 *PAM2009 Array of values, replacing expressions such as ''DBLE((-1)**INT8)'':
       DIMENSION SGNARR(0:63)
@@ -83,8 +83,6 @@ C      CALL IWRTMA(KSTR,NKEL,NKSTR,NKEL,NKSTR)
 *
       JORBMIN = JORB
       JORBMAX = JORB + NJORB - 1
-*
-      NIJ = NIORB*NJORB
 *
       KEND = MIN(NKSTR,KMAX)
       IF(KEND.LT.NKSTR) THEN
@@ -520,12 +518,10 @@ C?   &                      IEL,IIORB,JEL,JJORB
         IF(NK.NE.0) THEN
           IJ = 0
           DO  JJORB = JORB,JORB+NJORB-1
-            JJORBR = JJORB-JORB+1
             DO  IIORB = IORB, IORB + NIORB - 1
               IJ = IJ + 1
 C?            WRITE(6,*) ' IJ = ', IJ
 C?            IF(IIORB.GT.JJORB) THEN
-                IIORBR = IIORB - IORB + 1
                 WRITE(6,*)
      &          ' Info for orbitals (iorb,jorb) ', IIORB,JJORB
                 WRITE(6,*) ' Excited strings and sign '

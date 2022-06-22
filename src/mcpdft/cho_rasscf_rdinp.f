@@ -16,29 +16,21 @@
 *             in RASSCF                                                *
 *                                                                      *
 ************************************************************************
+      Use Fock_util_global, only: ALGO, Deco, DensityCheck, dmpk,
+     &                            DoLock, Estimate, Nscreen, Update
       Implicit Real*8 (A-H,O-Z)
-#include "itmax.fh"
-#include "info.fh"
 #include "real.fh"
 #include "print.fh"
 #include "output_ras.fh"
-      Parameter (ROUTINE='CHO_RASS')
 #include "WrkSpc.fh"
       Character*180 KWord, Key, Get_Ln
       External Get_Ln
-      Logical  DFonly,DensityCheck,timings,DoLock,Deco
-      Logical  DoCholesky,Estimate,Update
+      Logical  DFonly
       character*16 SECNAM
       parameter (SECNAM = 'CHO_RASSCF_RDINP')
-      Integer  ALGO,Nscreen
-      Real*8   dmpk
 *
-      Common /CHLCAS / DoCholesky,ALGO
-      COMMON /CHODENSITY/ DensityCheck
-      COMMON /CHOTIME / timings
-      Common /CHOLK / DoLocK,Deco,dmpk,Nscreen
-      COMMON /CHOSCREEN/ Estimate,Update
-      COMMON /CHOPAR/ ChFracMem
+#include "chotime.fh"
+#include "chopar.fh"
 
 *
 *
@@ -85,13 +77,6 @@
       dmpk_dfl=1.0d-1
 ************************************************************************
 *                                                                      *
-*                                                                      *
-************************************************************************
-*     Define Blank lines
-*
-      Do i = 1, 80
-         BLine(i:i) = ' '
-      End Do
       iPrint=5
 *                                                                      *
 ************************************************************************
@@ -113,7 +98,7 @@
 *-------------------------------------------------------------------*
 
       If (KWord(1:1).eq.'*')    Go To 1000
-      If (KWord.eq.BLine)       Go To 1000
+      If (KWord.eq.'')       Go To 1000
       If (KWord(1:4).eq.'ALGO') Go To 900
       If (KWord(1:4).eq.'LOCK') Go To 910
       If (KWord(1:4).eq.'LK  ') Go To 910

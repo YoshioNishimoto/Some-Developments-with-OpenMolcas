@@ -13,23 +13,19 @@
 * ------------------------------------------------------------
 * Scan input lines after the '&MCPDFT' marker and until
 * finding keyword 'END ' or the end of file.
-* Keywords are identified according to file 'input_ras.fh'
-* Logical flags in 'input_ras.fh' are set according to input.
+* Keywords are identified according to file 'input_ras_mcpdft.fh'
+* Logical flags in 'input_ras_mcpdft.fh' are set according to input.
 * Return codes are _RC_ALL_IS_WELL_ or _RC_INPUT_ERROR_
 * ------------------------------------------------------------
 #include "rasdim.fh"
-#include "warnings.fh"
+#include "warnings.h"
 #include "WrkSpc.fh"
-#include "input_ras.fh"
+#include "input_ras_mcpdft.fh"
 #include "output_ras.fh"
-      Parameter(ROUTINE='Scan_Inp')
 *
       Character*4 Command
       Character*180  Line
-      Character*180 Get_LN
-      External Get_LN
 *
-      Call qEnter('Scan_Inp')
 
 * If the return code is already set to indicate an error, there will
 * be an error trace written out.
@@ -110,6 +106,5 @@
       GOTO 9990
 *----------------------------------------------------
 9990  CONTINUE
-      Call qExit('Scan_Inp')
       Return
       End

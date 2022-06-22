@@ -9,35 +9,86 @@
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
 * Copyright (C) 2014, Giovanni Li Manni                                *
-*               2019, Oskar Weser                                      *
+*               2019-2021, Oskar Weser                                 *
+*               2021, Werner Dobrautz                                  *
+*               2021,2022, Arta Safari                                 *
 ************************************************************************
+#include "macros.fh"
       module fciqmc
 #ifdef _MOLCAS_MPP_
-      use MPI
+      use mpi
+      use definitions, only: MPIInt
+      use Para_Info, only: Is_Real_Par
 #endif
-      use filesystem, only : chdir_, getcwd_, get_errno_, strerror_
-      use fortran_strings, only : str
-      use stdalloc, only : mma_allocate, mma_deallocate
+      use definitions, only: wp
+      use Para_Info, only: MyRank
+#ifdef _NECI_
+      use filesystem, only: chdir_
+      use stdalloc, only: mxMem
+      use fortran_strings, only: str
+#endif
+      use filesystem, only: getcwd_, get_errno_, strerror_,
+     &    real_path, basename
+      use linalg_mod, only: abort_
+      use stdalloc, only: mma_allocate, mma_deallocate
 
-      use rasscf_data, only : iter, lRoots, nRoots, S, KSDFT, NAC, EMY,
-     &    rotmax, ener, iAdr15, iRoot, Weight, nacpr2, nacpar
-      use general_data, only : nSym, nBas, iSpin, nAsh, LuInta, nactel,
-     &    jobIph, ntot, ntot1, ntot2
-      use gugx_data, only : IfCAS
-      use gas_data, only : ngssh, iDoGas
+      use rasscf_data, only: nAcPar, nAcPr2, nroots
+      use general_data, only: nSym, nConf
 
-      use fcidump_reorder, only : get_P_GAS, get_P_inp,ReOrFlag,ReOrInp
-      use fcidump, only : make_fcidumps, transform
-      use fciqmc_make_inp, only : make_inp
-      use fciqmc_read_RDM, only : read_neci_RDM
+      use CI_solver_util, only: wait_and_read
+
+      use generic_CI, only: CI_solver_t
+      use fciqmc_read_RDM, only: read_neci_RDM
+      use definitions, only: u6
+
       implicit none
+      save  ! preserves values when modules go out of scope, legacy.
       private
-      public :: FCIQMC_CTL, DoNECI, DoEmbdNECI
-      logical ::
-     &  DoEmbdNECI = .false.,
-     &  DoNECI = .false.
-      save
+      public :: DoNECI, DoEmbdNECI, fciqmc_solver_t, tGUGA_in
+
+      logical :: DoEmbdNECI = .false., DoNECI = .false.,
+     &  tGUGA_in  = .false.
+
+#ifdef _NECI_
+      interface
+        subroutine NECImain(fcidmp, input_name, MemSize, NECIen)
+          use, intrinsic :: iso_fortran_env, only: int64
+          import :: wp, nroots
+          implicit none
+          character(len=*), intent(in) :: fcidmp, input_name
+          integer(int64), intent(in) :: MemSize
+          real(wp), intent (out) :: NECIen(nroots)
+        end subroutine
+      end interface
+#endif
+
+      type, extends(CI_solver_t) :: fciqmc_solver_t
+        private
+        logical :: tGUGA
       contains
+        private
+        procedure, public :: run => fciqmc_ctl
+        procedure, public :: cleanup
+      end type
+
+      interface fciqmc_solver_t
+        module procedure construct_FciqmcSolver_t
+      end interface
+
+      contains
+
+      function construct_FciqmcSolver_t(tGUGA) result(res)
+        logical, intent(in) :: tGUGA
+        type(fciqmc_solver_t) :: res
+        res%tGUGA = tGUGA
+        write(u6,*)
+     &      ' NECI activated. List of Confs might get lengthy.'
+        write(u6,*)
+     &      ' Number of Configurations computed by GUGA: ', nConf
+        write(u6,*)
+     &      ' nConf variable is set to zero to avoid JOBIPH i/o'
+        nConf= 0
+      end function
 
 !>  @brief
 !>    Start and control FCIQMC.
@@ -45,8 +96,6 @@
 !>  @author Giovanni Li Manni, Oskar Weser
 !>
 !>  @details
-!>  For meaning of global variables NTOT1, NTOT2, NACPAR
-!>  and NACPR2, see src/Include/general.inc and src/Include/rasscf.inc.
 !>  This routine will replace CICTL in FCIQMC regime.
 !>  Density matrices are generated via double-run procedure in NECI.
 !>  They are then dumped on arrays DMAT, DSPN, PSMAT, PAMAT to replace
@@ -55,262 +104,231 @@
 !>  only two-electron terms as computed in TRA_CTL2.
 !>  In output it contains also the one-electron contribution
 !>
-!>  @paramin[in] CMO MO coefficients
-!>  @paramin[in] DIAF DIAGONAL of Fock matrix useful for NECI
-!>  @paramin[in] D1I_MO Inactive 1-dens matrix
-!>  @paramin[in] TUVX Active 2-el integrals
-!>  @paramin[inout] F_In Fock matrix from inactive density
-!>  @paramin[inout] D1S_MO Average spin 1-dens matrix
-!>  @paramin[out] DMAT Average 1 body density matrix
-!>  @paramin[out] PSMAT Average symm. 2-dens matrix
-!>  @paramin[out] PAMAT Average antisymm. 2-dens matrix
-      subroutine FCIQMC_Ctl(CMO, DIAF, D1I_AO, D1A_AO, TUVX, F_IN,
-     &                      D1S_MO, DMAT, PSMAT, PAMAT)
-      implicit none
-#include "output_ras.fh"
+!>  @param[in] this
+!>  @param[in] actual_iter The actual iteration number starting at 0.
+!>      This means 0 is 1A, 1 is 1B, 2 is 2 and so on.
+!>  @param[in] ifinal
+!>  @param[in] iroot
+!>  @param[in] weight
+!>  @param[in] CMO MO coefficients
+!>  @param[in] DIAF Diagonal of Fock matrix useful for NECI
+!>  @param[in] D1I_AO Inactive 1-dens matrix
+!>  @param[in] D1A_AO
+!>  @param[in] TUVX Active 2-el integrals
+!>  @param[in,out] F_In Fock matrix from inactive density
+!>  @param[in,out] D1S_MO Average spin 1-dens matrix
+!>  @param[out] DMAT Average 1 body density matrix
+!>  @param[out] PSMAT Average symm. 2-dens matrix
+!>  @param[out] PAMAT Average antisymm. 2-dens matrix
+      subroutine fciqmc_ctl(
+     &    this, actual_iter, ifinal, iroot, weight, CMO, DIAF, D1I_AO,
+     &    D1A_AO, TUVX, F_IN, D1S_MO, DMAT, PSMAT, PAMAT
+     &    )
+
+          use general_data, only : iSpin, ntot, ntot1, ntot2, nAsh
+          use rasscf_data, only : iter, nroots, lRoots,
+     &                            S, KSDFT, EMY, rotmax, Ener, Nac,
+     &                            nAcPar, nAcpr2
+          use gas_data, only : ngssh, iDoGas, nGAS, iGSOCCX
+          use fcidump_reorder, only : get_P_GAS, get_P_inp,ReOrFlag,
+     &                                ReOrInp
+          use fcidump, only : make_fcidumps, transform
 #include "rctfld.fh"
-#include "timers.fh"
-#include "para_info.fh"
+
+          class(fciqmc_solver_t), intent(in) :: this
+          integer, intent(in) :: actual_iter, iroot(nroots), ifinal
+          real(wp), intent(in) :: weight(nroots), CMO(nTot2),
+     &                            DIAF(nTot), D1I_AO(nTot2),
+     &                            D1A_AO(nTot2), TUVX(nAcpr2)
+          real(wp), intent(inout) :: F_In(nTot1), D1S_MO(nAcPar)
+          real(wp), intent(out) :: DMAT(nAcpar), PSMAT(nAcpr2),
+     &                             PAMAT(nAcpr2)
+          integer, allocatable :: permutation(:), GAS_spaces(:, :),
+     &                            GAS_particles(:, :)
+          real(wp) :: NECIen(nroots), orbital_E(nTot),
+     &                folded_Fock(nAcPar)
 #ifdef _MOLCAS_MPP_
-#include "global.fh"
-#include "mafdecls.fh"
-      integer(kind=4) :: ierror
+          integer(MPIInt) :: error
 #endif
-      real*8, intent(in) ::
-     &    CMO(nTot2), DIAF(nTot),
-     &    D1I_AO(nTot2), D1A_AO(nTot2), TUVX(nAcpr2)
-      real*8, intent(inout) :: F_In(nTot1), D1S_MO(nAcPar)
-      real*8, intent(out) :: DMAT(nAcpar),
-     &    PSMAT(nAcpr2), PAMAT(nAcpr2)
-      logical :: Do_ESPF, WaitForNECI
-      real*8 :: NECIen, Scal
-      integer :: LuNewC, iPRLEV, iOff, iSym, iBas, i, j,
-     &    jRoot, iDisk, jDisk, kRoot, permutation(sum(nAsh(:nSym)))
-      real*8 :: orbital_E(nTot), folded_Fock(nAcPar)
-      real*8, allocatable :: DTMP(:), Ptmp(:), PAtmp(:), DStmp(:)
-      integer :: err, L
-      character(1024) :: h5fcidmp, fcidmp, fcinp, newcycle, WorkDir
+          character(len=*), parameter ::
+     &      ascii_fcidmp = 'FCIDUMP', h5_fcidmp = 'H5FCIDUMP'
 
-      parameter(ROUTINE = 'FCIQMC_clt')
-      call qEnter(routine)
-
-! Local print level (if any)
-      iprlev = iprloc(1)
-      if(iprlev.ge.debug) then
-        write(lf,*)
-        write(lf,*) ' ===================='
-        write(lf,*) ' Entering FCIQMC_Ctl'
-        write(lf,*) ' ===================='
-        write(lf,*)
-        write(lf,*) ' iteration count =', ITER
-        write(lf,*) ' IFCAS value     =', IFCAS
-        write(lf,*) ' lroots,nroots   =', lroots,nroots
-        write(lf,*)
-      end if
-! set up flag 'IFCAS' for GAS option, which is set up in gugatcl originally.
-! IFCAS = 0: This is a CAS calculation
-! IFCAS = 1: This is a RAS calculation
-! IFCAS = 2: This is a GAS calculation
-      if(iprlev.ge.debug) then
-        write(lf,*)
-        write(lf,*) ' CMO in FCIQMC_CTL'
-        write(lf,*) ' ---------------------'
-        write(lf,*)
-        ioff=1
-        do isym = 1,nsym
-          ibas = nbas(isym)
-          if(ibas.ne.0) then
-            write(6,*) 'Sym =', isym
-            do i= 1,ibas
-              write(6,*) (cmo(ioff+ibas*(i-1)+j),j=0,ibas-1)
-            end do
-            ioff = ioff + (ibas*ibas)
+!         ! SOME DIRTY SETUPS
+          S = 0.5_wp * dble(iSpin - 1)
+          call check_options(lRf, KSDFT)
+          ! Produce a working FCIDUMP file
+          if (ReOrFlag /= 0) then
+            allocate(permutation(sum(nAsh(:nSym))))
+            if (ReOrFlag >= 2) permutation(:) = get_P_inp(ReOrInp)
+            if (ReOrFlag == -1) permutation(:) = get_P_GAS(nGSSH)
           end if
-        end do
-      end if
 
-! SOME DIRTY SETUPS
-      S = 0.5D0 * DBLE(ISPIN-1)
+!         ! This call is not side effect free, sets EMY and modifies
+!         ! F_IN
+          call transform(actual_iter, CMO, DIAF, D1I_AO, D1A_AO, D1S_MO,
+     &                   F_IN, orbital_E, folded_Fock)
 
-! FCIQMC not interfaced to State Average CAS
-      if (lroots > 1) then
-        write(6,*)' FCIQMC does not support State Average yet!'
-        write(6,*)' See you later ;)'
-        call QTrace()
-        call Abend()
-      end if
-
-! Reaction Field calculation
-      call DecideOnESPF(Do_ESPF)
-      if ( lRf .or. KSDFT /= 'SCF' .or. Do_ESPF) then
-        write(6,*) ' FCIQMC does not support Reaction Field yet!'
-        write(6,*) ' See you later ;).'
-        call QTrace()
-        call Abend()
-      end if
-
-! Produce a working FCIDUMP file
-      select case (ReOrFlag)
-        case (2:)
-          permutation = get_P_inp(ReOrInp)
-          call mma_deallocate(ReOrInp)
-        case (-1)
-          permutation = get_P_GAS(nGSSH)
-      end select
-
-! This call is not side effect free and sets EMY
-      call transform(iter, CMO, DIAF, D1I_AO, D1A_AO, D1S_MO,
-     &      F_IN, orbital_E, folded_Fock)
-
-      if (ReOrFlag /= 0) then
-        call make_fcidumps(orbital_E, folded_Fock, TUVX, EMY,
-     &                      permutation)
-      else
-        call make_fcidumps(orbital_E, folded_Fock, TUVX, EMY)
-      end if
-
-! Produce an INPUT file for NECI
-       call make_inp()
+!         ! Fortran Standard 2008 12.5.2.12:
+!         ! Allocatable actual arguments that are passed to
+!         ! non-allocatable, optional dummy arguments are **not**
+!         ! present.
+          call make_fcidumps(
+     &        ascii_fcidmp, h5_fcidmp, orbital_E, folded_Fock, TUVX,
+     &        EMY, permutation
+     &    )
 
 ! Run NECI
-      call Timing(Rado_1, Swatch, Swatch, Swatch)
 #ifdef _MOLCAS_MPP_
-      IF (Is_Real_Par()) THEN
-        call MPI_Barrier(MPI_COMM_WORLD, ierror)
-      END IF
+          if (is_real_par()) call MPI_Barrier(MPI_COMM_WORLD, error)
 #endif
 
-      if(DoEmbdNECI) then
+          if (iDoGAS) then
+            call mma_allocate(GAS_spaces, nGAS, nSym)
+            GAS_spaces(:, :) = nGSSH(: nGAS, : nSym)
+            call mma_allocate(GAS_particles, nGAS, nGAS)
+            GAS_particles(:, :) = iGSOCCX(: nGAS, : nGAS)
+          end if
+
+          call run_neci(DoEmbdNECI,
+     &      fake_run=actual_iter == 1 .or. ifinal == 2,
+     &      ascii_fcidmp=ascii_fcidmp, h5_fcidmp=h5_fcidmp,
+     &      GAS_spaces=GAS_spaces, GAS_particles=GAS_particles,
+     &      reuse_pops=actual_iter >= 5 .and. abs(rotmax) < 1d-2,
+     &      NECIen=NECIen, iroot=iroot, weight=weight,
+     &      D1S_MO=D1S_MO, DMAT=DMAT, PSMAT=PSMAT, PAMAT=PAMAT,
+     &      tGUGA=this%tGUGA, ifinal=ifinal)
+          ENER(1 : lRoots, iter) = NECIen
+
+          if (nAsh(1) /= nac) call dblock(dmat)
+          if (allocated(GAS_spaces)) then
+              call mma_deallocate(GAS_spaces)
+              call mma_deallocate(GAS_particles)
+          end if
+      end subroutine fciqmc_ctl
+
+
+      subroutine run_neci(DoEmbdNECI, fake_run,
+     &      ascii_fcidmp, h5_fcidmp,
+     &      reuse_pops,
+     &      NECIen, iroot, weight,
+     &      D1S_MO, DMAT, PSMAT, PAMAT,
+     &      GAS_spaces, GAS_particles, tGUGA, ifinal)
+        use fciqmc_make_inp, only: make_inp
+        logical, intent(in) :: DoEmbdNECI, fake_run, reuse_pops
+        character(len=*), intent(in) :: ascii_fcidmp, h5_fcidmp
+        real(wp), intent(out) :: NECIen(nroots),
+     &      D1S_MO(nAcPar), DMAT(nAcpar), PSMAT(nAcpr2), PAMAT(nAcpr2)
+        logical, intent(in) :: tGUGA
+        integer, intent(in) :: iroot(nroots), ifinal
+        real(wp), intent(in) :: weight(nroots)
+        integer, intent(in), optional ::
+     &      GAS_spaces(:, :), GAS_particles(:, :)
+        real(wp), allocatable, save :: previous_NECIen(:)
+        character(len=*), parameter :: input_name = 'FCINP',
+     &    energy_file = 'NEWCYCLE'
+
+#ifdef _WARNING_WORKAROUND_
+        ! there are wrong maybe-unitialized warnings otherwise.
+        ! (unitialized codepaths lead to abortion).
+        NECIen = huge(NECIen)
+#endif
+        if (.not. allocated(previous_NECIen)) then
+            allocate(previous_NECIen(nroots))
+            previous_NECIen(:) = 0.0_wp
+        end if
+        if (fake_run) then
+          NECIen(:) = previous_NECIen(:)
+        else if (DoEmbdNECI) then
+            call make_inp(input_name, readpops=reuse_pops, tGUGA=tGUGA,
+     &          GAS_spaces=GAS_spaces, GAS_particles=GAS_particles)
 #ifdef _NECI_
-        write(6,*) 'NECI called automatically within Molcas!'
-        if (myrank /= 0) call chdir_('..')
-        call necimain(NECIen)
-        if (myrank /= 0) call chdir_('tmp_'//str(myrank))
+            write(u6,*) 'NECI called automatically within Molcas!'
+            if (myrank /= 0) call chdir_('..')
+            call necimain(real_path(ascii_fcidmp),
+     &                    real_path(input_name),
+     &                    MxMem, NECIen)
+            if (myrank /= 0) call chdir_('tmp_'//str(myrank))
 #else
-        call WarningMessage(2, 'EmbdNECI is given in input, '//
+            call WarningMessage(2, 'EmbdNECI is given in input, '//
      &'so the embedded NECI should be used. Unfortunately MOLCAS was '//
      &'not compiled with embedded NECI. Please use -DNECI=ON '//
      &'for compiling or use an external NECI.')
 #endif
-      else
-        if (myrank == 0) then
-          call getcwd_(WorkDir, err)
-          if (err /= 0) write(6, *) strerror_(get_errno_())
-          call prgmtranslate_master('H5FCIDMP', h5fcidmp, L)
-          call prgmtranslate_master('FCIDMP', fcidmp, L)
-          call prgmtranslate_master('FCINP', fcinp, L)
-          call prgmtranslate_master('NEWCYCLE', newcycle, L)
-          call write_ExNECI_message(
-     &        fcinp, fcidmp, h5fcidmp, WorkDir, newcycle)
+        else
+            call make_inp(input_name, readpops=.false., tGUGA=tGUGA,
+     &              FCIDUMP_name=basename(real_path(ascii_fcidmp)),
+     &              GAS_spaces=GAS_spaces, GAS_particles=GAS_particles)
+            if (myrank == 0) then
+              call write_ExNECI_message(input_name, ascii_fcidmp,
+     &                                  h5_fcidmp, energy_file, tGUGA)
+            end if
+
+            call wait_and_read(energy_file, NECIen)
         end if
-        waitForNECI = .false.
-        do while(.not. waitForNECI)
-          call sleep(1)
-          call f_Inquire('NEWCYCLE', waitForNECI)
-        end do
-        write(6, *) 'NEWCYCLE file found. Proceding with SuperCI'
-        LuNewC = 12
-        call molcas_open(LuNewC, 'NEWCYCLE')
-        read(LuNewC,*) NECIen
-        write(6,*) 'I read the following energy:'
-        write(6,*) NECIen
-        close (LuNewC, status='delete')
-      end if
-! NECIen so far is only the energy for the GS.
-! Next step it will be an array containing energies for all the optimized states.
-      do jRoot = 1, lRoots
-        ENER(jRoot, ITER) = NECIen
-      end do
+        previous_NECIen(:) = NECIen(:)
+        call read_neci_RDM(iroot, weight, tGUGA, ifinal,
+     &                     DMAT, D1S_MO, PSMAT, PAMAT)
+      end subroutine run_neci
 
-! Generate density matrices for Molcas
-!   Neci density matrices are stored in Files TwoRDM_**** (in spacial orbital basis).
-!   I will be reading them from those formatted files for the time being.
-!   Next it will be nice if NECI prints them out already in Molcas format.
-! ONE-BODY DENSITY
-      call mma_allocate(DTMP, nAcPar, label='Dtmp ')
-! ONE-BODY SPIN DENSITY
-      call mma_allocate(DStmp, nAcPar, label='DStmp')
-! SYMMETRIC TWO-BODY DENSITY
-      call mma_allocate(Ptmp, nAcPr2, label='Ptmp ')
-! ANTISYMMETRIC TWO-BODY DENSITY
-      call mma_allocate(PAtmp, nAcPr2, label='PAtmp')
+      subroutine cleanup(this)
+        use fciqmc_make_inp, only: make_inp_cleanup => cleanup
+        use fciqmc_read_RDM, only: read_RDM_cleanup => cleanup
+        use fcidump, only : fcidump_cleanup => cleanup
+        class(fciqmc_solver_t), intent(inout) :: this
+        unused_var(this)
+        call make_inp_cleanup()
+        call read_RDM_cleanup()
+        call fcidump_cleanup()
+      end subroutine cleanup
 
-#ifdef _MOLCAS_MPP_
-      if (Is_Real_Par()) call MPI_Barrier(MPI_COMM_WORLD, ierror)
-#endif
-      call read_neci_RDM(DTMP, DStmp, Ptmp, PAtmp)
-#ifdef _MOLCAS_MPP_
-      if (Is_Real_Par()) call MPI_Barrier(MPI_COMM_WORLD, ierror)
-#endif
-! COMPUTE AVERAGE DENSITY MATRICES
-      do jRoot = 1, lRoots
-        Scal = 0.0d0
-        do kRoot = 1, nRoots
-          if (iRoot(kRoot) == jRoot) Scal = Weight(kRoot)
-        end do
-        DMAT(:) = SCAL * DTMP(:)
-        D1S_MO(:) = SCAL * PSMAT(:)
-        PSMAT(:) = SCAL * Ptmp(:)
-        PAMAT(:) = SCAL * PAtmp(:)
-! Put it on the RUNFILE
-        call Put_D1MO(DTMP,NACPAR)
-        call Put_P2MO(Ptmp,NACPR2)
-! Save density matrices on disk
-        iDisk = IADR15(4)
-        jDisk = IADR15(3)
-        call DDafile(JOBIPH, 1, DTMP, NACPAR, jDisk)
-        call DDafile(JOBIPH, 1, DStmp, NACPAR, jDisk)
-        call DDafile(JOBIPH, 1, Ptmp, NACPR2, jDisk)
-        call DDafile(JOBIPH, 1, PAtmp, NACPR2, jDisk)
-      end do
+      subroutine check_options(lRf, KSDFT)
+        logical, intent(in) :: lRf
+        character(len=*), intent(in) :: KSDFT
+        logical :: Do_ESPF
+        call DecideOnESPF(Do_ESPF)
+        if ( lRf .or. KSDFT /= 'SCF' .or. Do_ESPF) then
+          call abort_('FCIQMC does not support Reaction Field yet!')
+        end if
+      end subroutine check_options
 
-      call mma_deallocate(DTMP)
-      call mma_deallocate(DStmp)
-      call mma_deallocate(Ptmp)
-      call mma_deallocate(PAtmp)
+      subroutine write_ExNECI_message(
+     &      input_name, ascii_fcidmp, h5_fcidmp, energy_file, tGUGA)
+        character(len=*), intent(in) :: input_name, ascii_fcidmp,
+     &          h5_fcidmp, energy_file
+        logical, intent(in) :: tGUGA
+        character(len=1024) :: WorkDir
+        integer :: err
 
-! print matrices
-      if (IPRLEV >= DEBUG) then
-        call TRIPRT('Averaged one-body density matrix, DMAT',
-     &              ' ',DMAT,NAC)
-        call TRIPRT('Averaged one-body spin density matrix, DS',
-     &              ' ',D1S_MO,NAC)
-        call TRIPRT('Averaged two-body density matrix, P',
-     &              ' ',PSMAT,NACPAR)
-        call TRIPRT('Averaged antisymmetric two-body density matrix,PA',
-     &              ' ',PAMAT,NACPAR)
-      end if
+        call getcwd_(WorkDir, err)
+        if (err /= 0) write(u6, *) strerror_(get_errno_())
 
-      if (nAsh(1) /= nac) call dblock(dmat)
-      call Timing(Rado_2, Swatch, Swatch, Swatch)
-      Rado_2 = Rado_2 - Rado_1
-      Rado_3 = Rado_3 + Rado_2
-
-      call qExit('FCIQMC_CTL')
-
-      contains
-
-      subroutine write_ExNECI_message(fcinp, fcidmp, h5fcidmp,
-     &          WorkDir, newcycle)
-        character(*), intent(in) :: fcinp, fcidmp, h5fcidmp,
-     &    WorkDir, newcycle
-        write(6,'(A)')'Run NECI externally.'
-        write(6,'(A)')'Get the (example) NECI input:'
-        write(6,'(4x, A, 1x, A, 1x,  A)')
-     &    'cp', trim(fcinp), '$NECI_RUN_DIR'
-        write(6,'(A)')'Get the ASCII formatted FCIDUMP:'
-        write(6,'(4x, A, 1x, A, 1x,  A)')
-     &    'cp', trim(fcidmp), '$NECI_RUN_DIR/FCIDUMP'
-        write(6,'(A)')'Or the HDF5 FCIDUMP:'
-        write(6,'(4x, A, 1x, A, 1x,  A)')
-     &    'cp', trim(h5fcidmp), '$NECI_RUN_DIR'
-        write(6, *)
-        write(6,'(A)') "When finished do:"
-        write(6,'(4x, A)')
-     &    'cp TwoRDM_aaaa.1 TwoRDM_abab.1 TwoRDM_abba.1 '//
-     &    'TwoRDM_bbbb.1 TwoRDM_baba.1 TwoRDM_baab.1 '//trim(WorkDir)
-        write(6,'(4x, A)')'echo $your_RDM_Energy > '//trim(newcycle)
+        if (tGUGA) then
+            write(u6,'(A)')'Run spin-free GUGA NECI externally.'
+        else
+            write(u6,'(A)')'Run NECI externally.'
+        end if
+        write(u6,'(A)')'Get the (example) NECI input:'
+        write(u6,'(4x, A, 1x, A, 1x, A)')
+     &    'cp', real_path(input_name), '$NECI_RUN_DIR'
+        write(u6,'(A)')'Get the ASCII formatted FCIDUMP:'
+        write(u6,'(4x, A, 1x, A, 1x, A)')
+     &    'cp', real_path(ascii_fcidmp), '$NECI_RUN_DIR'
+        write(u6,'(A)')'Or the HDF5 FCIDUMP:'
+        write(u6,'(4x, A, 1x, A, 1x, A)')
+     &    'cp', real_path(h5_fcidmp), '$NECI_RUN_DIR'
+        write(u6, *)
+        write(u6,'(A)') "When finished do:"
+        if (tGUGA) then
+          write(u6,'(4x, A)') 'cp PSMAT.* PAMAT.* DMAT.* '//
+     &          trim(WorkDir)
+        else
+          write(u6,'(4x, A)')
+     &      'cp TwoRDM_* '//trim(WorkDir)
+        end if
+        write(u6,'(4x, A)')
+     &    'echo $your_RDM_Energy > '//real_path(energy_file)
         call xflush(6)
-      end subroutine
-      end subroutine fciqmc_ctl
+      end subroutine write_ExNECI_message
+
       end module fciqmc
+

@@ -8,7 +8,8 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
 c  ************************************************
 c  ** Subroutines to deal with CASSCF CI vectors **
@@ -18,13 +19,12 @@ c  ** Routines involving CI only **
 c  ********************************
       subroutine cird_cvb(cvec,recn)
       implicit real*8(a-h,o-z)
-#include "ext_cvb.fh"
 #include "main_cvb.fh"
 #include "optze_cvb.fh"
 #include "files_cvb.fh"
 #include "print_cvb.fh"
 
-#include "malloc_cvb.fh"
+#include "WrkSpc.fh"
       dimension cvec(*)
       dimension idum(1)
 c  *********************************************************************
@@ -45,7 +45,7 @@ c  *********************************************************************
           call abend_cvb()
         endif
         call rdis_cvb(icnt_ci(ivec),1,recn,ioffs)
-        call rdrs_cvb(w(iaddr_ci(ivec)),ndet,recn,ioffs)
+        call rdrs_cvb(work(iaddr_ci(ivec)),ndet,recn,ioffs)
       else
         write(6,*)' Unsupported format in CIRD :',iformat
         call abend_cvb()

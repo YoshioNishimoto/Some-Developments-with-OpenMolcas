@@ -16,14 +16,15 @@
 *     purpose: set up parameters that has to be predefined in SCF      *
 *                                                                      *
 ************************************************************************
+      Use InfSO
       Implicit Real*8 (a-h,o-z)
 *
 #include "mxdm.fh"
 #include "file.fh"
 #include "infscf.fh"
-#include "infso.fh"
 #include "llists.fh"
 #include "twoswi.fh"
+#include "hfc_logical.fh"
 *
       Logical  Found, Reduce_Prt
       External Reduce_Prt
@@ -131,6 +132,7 @@ C     FThr   =  0.5d-6
       iPrOrb = 1
       kIvo   = 0
       iUHF   = 0
+      UHF_HFC   = .False.
       iROHF  = 0
       iCoCo = 0
       jVOut = 2

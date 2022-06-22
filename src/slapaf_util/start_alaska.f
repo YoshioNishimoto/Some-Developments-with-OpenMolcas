@@ -9,14 +9,14 @@
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
       Subroutine Start_Alaska()
+      use Slapaf_Parameters, only: Request_Alaska, Request_RASSI, iState
       Implicit Real*8 (a-h,o-z)
 #include "print.fh"
-#include "info_slapaf.fh"
-#include "nadc.fh"
       Character*100 ProgName, Get_ProgName
       Character*128 FileName
       Character*16 StdIn, JOB1, JOB2
       Character*8 Method
+      Character(LEN=180):: Line
       Logical Exists
 *                                                                      *
 ************************************************************************
@@ -25,7 +25,7 @@
 *
       ProgName=Get_ProgName()
       Call Upcase(ProgName)
-      Call LeftAd(ProgName)
+      ProgName = adjustl(ProgName)
 *
       iEnd = 1
  99   If (ProgName(iEnd:iEnd).ne.' ') Then

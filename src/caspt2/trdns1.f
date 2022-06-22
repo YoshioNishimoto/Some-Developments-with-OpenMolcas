@@ -17,22 +17,22 @@
 * SWEDEN                                     *
 *--------------------------------------------*
       SUBROUTINE TRDNS1(IVEC,DPT1)
+#ifdef _MOLCAS_MPP_
+      USE Para_Info, ONLY: Is_Real_Par, King
+#endif
       IMPLICIT REAL*8 (A-H,O-Z)
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "sigma.fh"
       DIMENSION DPT1(*)
-#include "para_info.fh"
 #ifdef _MOLCAS_MPP_
 #include "global.fh"
 #include "mafdecls.fh"
 #endif
 
-      CALL QENTER('TRDNS1')
 C Add to the transition density matrix DPT1,
 C    DPT1(p,q) = Add <IVEC| E(p,q) |0>.
 C where IVEC stands for the 1st-order perturbed CASPT2
@@ -61,7 +61,7 @@ C Transform to standard representation, covariant form.
       IMLTOP=1
       IF(NWTI.EQ.0) GOTO 110
       CALL GETMEM('WTI','ALLO','REAL',LWTI,NWTI)
-      CALL DCOPY_(NWTI,[0.0D00],0,WORK(LWTI),1)
+      CALL DCOPY_(NWTI,[0.0D0],0,WORK(LWTI),1)
       ICASE=1
       IWOFF=0
       DO 100 ISYM=1,NSYM
@@ -100,7 +100,7 @@ C Transform to standard representation, covariant form.
 
       IF(NWAT.EQ.0) GOTO 210
       CALL GETMEM('WAT','ALLO','REAL',LWAT,NWAT)
-      CALL DCOPY_(NWAT,[0.0D00],0,WORK(LWAT),1)
+      CALL DCOPY_(NWAT,[0.0D0],0,WORK(LWAT),1)
       ICASE=4
       IWOFF=0
       DO 200 ISYM=1,NSYM
@@ -139,7 +139,7 @@ C Transform to standard representation, covariant form.
 
       IF(NWAI.EQ.0) GOTO 300
       CALL GETMEM('WAI','ALLO','REAL',LWAI,NWAI)
-      CALL DCOPY_(NWAI,[0.0D00],0,WORK(LWAI),1)
+      CALL DCOPY_(NWAI,[0.0D0],0,WORK(LWAI),1)
       ICASE=5
       ISYM=1
       IF(NINDEP(ISYM,ICASE).EQ.0) GOTO 300
@@ -224,6 +224,5 @@ C proper positions, as subdiagonal matrices in DPT1:
       IF(NWAI.GT.0)CALL GETMEM('WAI','FREE','REAL',LWAI,NWAI)
       IF(NWAT.GT.0)CALL GETMEM('WAT','FREE','REAL',LWAT,NWAT)
 
-      CALL QEXIT('TRDNS1')
       RETURN
       END

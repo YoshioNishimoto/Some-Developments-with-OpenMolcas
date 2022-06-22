@@ -14,20 +14,15 @@
 #ifdef _EFP_
       use EFP_Module
 #endif
+      use OFembed, only: Do_OFemb, OFE_KSDFT
+      use nq_Info
       Implicit Real*8 (a-h,o-z)
 #include "real.fh"
-#include "WrkSpc.fh"
-#include "nq_info.fh"
 #include "debug.fh"
       Real*8 h1(nh1), TwoHam(nh1), D(nh1,2)
       Real*8 D1I(nD1),D1A(nD1)
       Logical First, Dff, lRF, NonEq, Do_Grad, Do_DFT
       Dimension Grad(1),RN(1)
-*
-      Logical Do_OFemb,KEonly,OFE_first
-      COMMON  / OFembed_L / Do_OFemb,KEonly,OFE_first
-      Character*16  OFE_KSDFT
-      COMMON  / OFembed_C / OFE_KSDFT
 *
       Logical Do_ESPF
 #ifdef _EFP_
@@ -101,8 +96,8 @@ cnf
       Grad=Zero
       nGrad=1
       If (KSDFT.ne.'SCF'.and.Do_DFT)
-     &   Call DrvDFT(h1,TwoHam,D,RepNuc,nh1,First,Dff,lRF,KSDFT,ExFac,
-     &               Do_Grad,Grad,nGrad,iSpin,D1I,D1A,nD1,DFTFOCK)
+     &   Call DrvDFT(h1,nh1,KSDFT,ExFac,
+     &               Do_Grad,Grad,nGrad,iSpin,DFTFOCK)
 *
 ************************************************************************
 *                                                                      *
@@ -111,8 +106,7 @@ cnf
 ************************************************************************
 *                                                                      *
       If (Do_OFemb)
-     &   Call DrvEMB(h1,D,RepNuc,nh1,OFE_KSDFT,ExFac,
-     &               Do_Grad,Grad,nGrad,D1I,D1A,nD1,DFTFOCK)
+     &   Call DrvEMB(nh1,OFE_KSDFT,Do_Grad,Grad,nGrad,DFTFOCK)
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -124,4 +118,9 @@ cnf
 ************************************************************************
 *                                                                      *
       Return
+* Avoid unused argument warnings
+      If (.False.) then
+         Call Unused_real_array(D1I)
+         Call Unused_real_array(D1A)
+      End If
       End

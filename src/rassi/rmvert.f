@@ -20,9 +20,8 @@
       DIMENSION NLIM(NLEV)
 C Purpose: Remove vertices from a DRT table.
 
+      Logical Test
 
-
-      CALL QENTER(ROUTINE)
 
       CALL GETMEM('Conn','Allo','Inte',LCONN,NVERT)
 C KILL VERTICES THAT DO NOT OBEY RESTRICTIONS.
@@ -78,7 +77,11 @@ C ALSO CHECK ON CONNECTIONS FROM ABOVE:
         IF(NWVERT(IV).EQ.1) THEN
           DO IC=0,3
             ID=IDOWN(IV,IC)
-            IF(ID.GT.0 .AND. NWVERT(ID).EQ.1) THEN
+            Test = ID.GT.0
+            If (Test) Then
+               Test = NWVERT(ID).EQ.1
+            End If
+            IF(Test) THEN
                 IWORK(LCONN-1+ID)=1
             END IF
           END DO
@@ -119,6 +122,5 @@ C FINITE NUMBER WE STARTED WITH.
       NVERT=NV
 
 
-      CALL QEXIT(ROUTINE)
       RETURN
       END

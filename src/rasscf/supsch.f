@@ -28,11 +28,9 @@ C
 #include "general.fh"
 #include "rasscf.fh"
 #include "output_ras.fh"
-      Parameter (ROUTINE='SUPSCH  ')
 #include "WrkSpc.fh"
       Real*8 CMOO(*),CMON(*),SMAT(*)
 *
-      Call qEnter(ROUTINE)
 *
       nOrbMX=0
       nOrb_tot=0
@@ -52,7 +50,6 @@ C
       Call GetMem('Temp2','Free','Real',ipTemp2,nOrbMX*nOrbMX)
       Call GetMem('Temp1','Free','Real',ipTemp1,nOrbMX*nOrbMX)
 *
-      CALL QExit('SUPSCH')
 *
       Return
       End
@@ -71,13 +68,13 @@ C     University of Lund, Sweden, 1997
 C     **** Molcas-4 *** Release 97 04 01 **********
 C
       IMPLICIT REAL*8 (A-H,O-Z)
-
 #include "rasdim.fh"
-#include "warnings.fh"
+#include "warnings.h"
 #include "general.fh"
-#include "output_ras.fh"
-      Parameter (ROUTINE='SUPSCH_ ')
 #include "rasscf.fh"
+#include "output_ras.fh"
+      Character*16 ROUTINE
+      Parameter (ROUTINE='SUPSCH_ ')
 
       DIMENSION CMOO(*),CMON(*),SMAT(*)
 

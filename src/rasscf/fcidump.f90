@@ -17,7 +17,7 @@
 !>    Master module for fcidump.
 module fcidump
   use rasscf_data, only : nacpar
-  use general_data, only : nAsh, nTot, nTot1, nTot2
+  use general_data, only : nTot, nTot1, nTot2
   use fcidump_tables, only : OrbitalTable, FockTable, TwoElIntTable,&
     mma_allocate, mma_deallocate, fill_orbitals, fill_fock, fill_2ElInt
   use fcidump_transformations, only : get_orbital_E, fold_Fock
@@ -25,18 +25,21 @@ module fcidump
   use fcidump_dump, only : dump_ascii, dump_hdf5
   implicit none
   private
-  public :: make_fcidumps, transform, DumpOnly
+  public :: make_fcidumps, transform, DumpOnly, cleanup
   logical :: DumpOnly = .false.
   save
 contains
 
-  subroutine make_fcidumps(orbital_energies, folded_Fock, TUVX, core_energy, permutation)
-    implicit none
+  subroutine make_fcidumps(ascii_path, h5_path, orbital_energies, folded_Fock,&
+                           TUVX, core_energy, permutation)
+    use general_data, only : nSym, nAsh
+    character(len=*), intent(in) :: ascii_path, h5_path
     real*8, intent(in) :: orbital_energies(:), folded_Fock(:), TUVX(:), core_energy
     integer, intent(in), optional :: permutation(:)
     type(OrbitalTable) :: orbital_table
     type(FockTable) :: fock_table
     type(TwoElIntTable) :: two_el_table
+    integer :: orbsym(sum(nAsh(:nSym))), n, j
 
     call mma_allocate(fock_table, nacpar)
     call mma_allocate(two_el_table, size(TUVX))
@@ -46,21 +49,29 @@ contains
     call fill_fock(fock_table, folded_Fock)
     call fill_2ElInt(two_el_table, TUVX)
 
+    n = 1
+    do j = 1, nSym
+      orbsym(n : n + nAsh(j) - 1) = j
+      n = n + nAsh(j)
+    end do
+
     if (present(permutation)) then
-      call reorder(orbital_table, fock_table, two_el_table, permutation)
+      call reorder(orbital_table, fock_table, two_el_table, orbsym, permutation)
     end if
 
-    call dump_ascii(core_energy, orbital_table, fock_table, two_el_table)
-    call dump_hdf5(core_energy, orbital_table, fock_table, two_el_table)
+    call dump_ascii(ascii_path, core_energy, orbital_table, fock_table, &
+                    & two_el_table, orbsym)
+    call dump_hdf5(h5_path, core_energy, orbital_table, fock_table, &
+                    & two_el_table, orbsym)
 
     call mma_deallocate(fock_table)
     call mma_deallocate(two_el_table)
     call mma_deallocate(orbital_table)
   end subroutine make_fcidumps
 
-  subroutine transform(iter, CMO, DIAF, D1I_AO, D1A_AO, D1S_MO, F_IN, orbital_E, folded_Fock)
-    implicit none
-    integer, intent(in) :: iter
+  subroutine transform(actual_iter, CMO, DIAF, D1I_AO, D1A_AO, D1S_MO, &
+                       F_IN, orbital_E, folded_Fock)
+    integer, intent(in) :: actual_iter
     real*8, intent(in) :: DIAF(nTot),&
       CMO(nTot2),&
       D1I_AO(nTot2),&
@@ -69,7 +80,12 @@ contains
     real*8, intent(inout) :: F_IN(nTot1)
     real*8, intent(out) :: orbital_E(nTot), folded_Fock(nAcPar)
 
-    call get_orbital_E(iter, DIAF, orbital_E)
+    call get_orbital_E(actual_iter, DIAF, orbital_E)
     call fold_Fock(CMO, D1I_AO, D1A_AO, D1S_MO, F_In, folded_Fock)
   end subroutine transform
+
+  subroutine cleanup()
+    use fcidump_reorder, only : fcidump_reorder_cleanup => cleanup
+    call fcidump_reorder_cleanup()
+  end subroutine
 end module fcidump

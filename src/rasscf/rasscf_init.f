@@ -22,12 +22,15 @@
 ************************************************************************
 
       Subroutine RasScf_Init()
+      Use Fock_util_global, only: ALGO, Deco, DensityCheck, dmpk,
+     &                            DoCholesky, DoLocK, Estimate, Nscreen,
+     &                            Update
+      use CMS, only: iCMSOpt,CMSGiveOpt
       Implicit Real*8 (A-H,O-Z)
       External Get_SuperName
       Character*100 ProgName, Get_SuperName
 #include "rasdim.fh"
 #include "output_ras.fh"
-      Parameter (ROUTINE='RasScf_Init')
 #include "rasscf.fh"
 #include "casvb.fh"
 #include "general.fh"
@@ -36,24 +39,13 @@
 #include "lucia_ini.fh"
 #include "orthonormalize.fh"
 #include "WrkSpc.fh"
-#include "ksdft.fh"
       Integer IPRGLB_IN, IPRLOC_IN(7)
 * What to do with Cholesky stuff?
-      Logical DoCholesky,timings,DensityCheck
-      Logical DoLocK,Deco
-      Logical Estimate,Update
-      Integer ALGO,Nscreen
-      Real*8  dmpk,ChFracMem
       Logical, External :: Is_First_Iter
 
-      Common /CHLCAS / DoCholesky,ALGO
-      COMMON /CHODENSITY/ DensityCheck
-      COMMON /CHOTIME / timings
-      Common /CHOLK / DoLocK,Deco,dmpk,Nscreen
-      COMMON /CHOSCREEN/ Estimate,Update
-      COMMON /CHOPAR/ ChFracMem
+#include "chotime.fh"
+#include "chopar.fh"
 
-      Call qEnter(ROUTINE)
 
 *----------------------------------------------------------------------*
       ProgName=Get_SuperName()
@@ -80,8 +72,7 @@ C        ICIRST=1 ! to be activated!
       End If
 
 * Initialize print levels: See output_ras.fh
-* Global logical unit numbers for standard input and standard output
-      IO=5
+* Global logical unit numbers for standard output
       LF=6
 * Externally set default print level control. Should the program be silent?
       IPRGLB_IN=iPrintLevel(-1)
@@ -267,9 +258,6 @@ C        ICIRST=1 ! to be activated!
 *
       KSDFT='SCF'
       ExFac=1.0D0
-* Initialize KSDF coefficients (S Dong, 2018)
-      CoefR = 1.0D0
-      CoefX = 1.0D0
 ** Default orthonormalization of CMOs to be with
 ** Gram-Schmidt
 *      Lowdin_ON=.False.
@@ -281,7 +269,7 @@ C        ICIRST=1 ! to be activated!
 * default spin value (singlet)
       ISPIN=1
 * default symmetry
-      LSYM=1
+      STSYM=1
 * default number of active electrons
       NACTEL=0
 * default maximum number of holes in RAS1
@@ -374,5 +362,15 @@ CSVC: lucia timers
       tsigma = 0.0d0
       tdensi = 0.0d0
 *
+C state rotation
+      iRotPsi=0
+      iXMSP=0
+      iCMSP=0
+      ICMSIterMax=100
+      ICMSIterMin=5
+      CMSThreshold=1.0d-8
+      CMSStartMat='XMS'
+      iCMSOpt=1
+      CMSGiveOpt=.false.
       RETURN
       END

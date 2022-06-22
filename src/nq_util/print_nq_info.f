@@ -9,9 +9,9 @@
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
       Subroutine Print_NQ_Info(iSpin)
+      use nq_Info
       Implicit Real*8 (a-h,o-z)
 #include "real.fh"
-#include "nq_info.fh"
       Logical Reduce_Prt
       External Reduce_Prt
 *                                                                      *
@@ -24,7 +24,6 @@
 *                                                                      *
       If (iPL.ge.3) Then
          Call GAIGOP_SCAL(nTotGP,'+')
-         Call GADGOP_SCAL(Flop,'+')
          Write (6,*)
          Write (6,'(6X,A,T52,F17.10)')
      &            'Integrated DFT Energy   ',Energy_integrated
@@ -38,8 +37,6 @@
      &            'Integrated tau                ',Tau_I
          Write (6,'(6X,A,T54,I13)')
      &            'Total number of prunned grid points  ',nTotGP
-         Write (6,'(6X,A,T52,F17.1)')
-     &            'Number of grid points per SO-integral  ',Flop
          Write (6,*)
       End If
 *                                                                      *

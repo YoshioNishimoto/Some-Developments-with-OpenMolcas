@@ -14,12 +14,7 @@
 ************************************************************************
 *                                                                      *
 * Object: to assemble the orbital angular momentum integrals from the  *
-*         derivative integrals dipole integrals.        .              *
-*                                                                      *
-* Called from: OAMInt                                                  *
-*                                                                      *
-* Calling    : QEnter                                                  *
-*              QExit                                                   *
+*         derivative integrals and dipole integrals.                   *
 *                                                                      *
 *     Author: Roland Lindh, Dept. of Theoretical Chemistry,            *
 *             University of Lund, SWEDEN                               *
@@ -41,7 +36,6 @@
 *
       iRout = 211
       iPrint = nPrint(iRout)
-      Call qEnter('Util2 ')
 *
       If (iPrint.ge.99) Then
           Write (6,*) ' In Util2 la,lb=',la,lb
@@ -94,7 +88,7 @@
      &                  Slalbp(iZeta,ipa,Ind(lb+1,ixb+1,izb),3)
      &                 -Slalbp(iZeta,ipa,Ind(lb+1,ixb,izb+1),1) )
                Final(iZeta,ipa,ipb,3) = Two*Beta(iZeta) * (
-     &                  Slalbp(iZeta,ipa,Ind(lb+1,ixb,izb),  1)
+     &                  Slalbp(iZeta,ipa,Ind(lb+1,ixb,izb),1)
      &                 -Slalbp(iZeta,ipa,Ind(lb+1,ixb+1,izb),2) )
  30         Continue
 *
@@ -148,6 +142,5 @@
  300      Continue
       End If
 *
-      Call qExit('Util2 ')
       Return
       End

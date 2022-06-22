@@ -10,8 +10,8 @@
 *                                                                      *
 * Copyright (C) 2010, Thomas Bondo Pedersen                            *
 ************************************************************************
-      Subroutine LDFSCF_Drv(iUHF,nSym,nBas,DSQ,DLT,DSQ_ab,DLT_ab,
-     &                      FLT,FLT_ab,nFLT,ExFac,LWFSQ,LWFSQ_ab,
+      Subroutine LDFSCF_Drv(nD,nSym,nBas,DSQ,DLT,DSQ_ab,DLT_ab,
+     &                      FLT,FLT_ab,nFLT,ExFac,
      &                      nOcc,nOcc_ab)
 C
 C     Thomas Bondo Pedersen, September 2010.
@@ -20,13 +20,13 @@ C     Purpose: compute two-electron contributions to the SCF Fock matrix
 C              using Local Density Fitting (LDF) coefficients.
 C
       Implicit None
-      Integer iUHF, nSym, nFLT, LWFSQ, LWFSQ_ab
+      Integer nD, nSym, nFLT
       Integer nBas(nSym), nOcc(nSym), nOcc_ab(nSym)
       Real*8  DSQ(*), DLT(*)
       Real*8  DSQ_ab(*), DLT_ab(*)
       Real*8  FLT(*), FLT_ab(*)
       Real*8  ExFac
-#include "WrkSpc.fh"
+#include "stdalloc.fh"
 #include "ldfscf.fh"
 #include "localdf.fh"
 
@@ -35,7 +35,7 @@ C
 
       Integer  ip_of_Work, iPrintLevel
       External ip_of_Work, iPrintLevel
-#if defined (_DEBUG_)
+#if defined (_DEBUGPRINT_)
       Logical  LDF_X_IsSet
       External LDF_X_IsSet
 #endif
@@ -59,17 +59,13 @@ C
 
       Real*8  ThrPS(2)
       Real*8  FactC(nDen_Max)
-      Real*8  FactX(nDen_Max)
       Integer ip_D(nDen_Max)
-      Integer ip_F(nDen_Max)
 
       Integer nDen
       Integer u, v, uv
       Integer iPrint
       Integer irc
-      Integer ip_UBFNorm, l_UBFNorm
-      Integer ipF, lF, ipF2
-      Integer ip_myF, l_myF
+      Integer lF
       Integer iDen
       Integer AB_MAE, AB_MRNrm
       Integer lMode
@@ -94,17 +90,17 @@ C
 
       Integer i, j
       Integer iTri
+      Real*8, Allocatable:: UBFNorm(:), DrvF(:,:)
+
       iTri(i,j)=max(i,j)*(max(i,j)-3)/2+i+j
 
-#if defined (_DEBUG_)
+#if defined (_DEBUGPRINT_)
       ! Enter
-      Call qEnter(RegNam)
 #endif
-      Call ThisIsRestrictedCode('Thomas Bondo Pedersen','LDF-SCF',
-     &                          .false.)
+      Call Untested('LDF-SCF')
 
       ! Get print level
-#if defined (_DEBUG_)
+#if defined (_DEBUGPRINT_)
       iPrint=max(iPrintLevel(-1),4)
 #else
       iPrint=iPrintLevel(-1)
@@ -125,7 +121,7 @@ C
       Call Set_Basis_Mode('WithAuxiliaryr')
       Call Setup_iSD()
 
-#if defined (_DEBUG_)
+#if defined (_DEBUGPRINT_)
       If (.not.LDF_X_IsSet()) Then
          Call WarningMessage(2,SecNam//': LDF info not set!')
          Call LDF_Quit(1)
@@ -335,7 +331,6 @@ C--------------------------------------------------------------
       If (ExFac.ne.0.0d0) Then ! Coulomb-and-exchange
          Write(6,'(//,A,A)') SecNam,': Exchange not implemented yet!'
          Call LDF_NotImplemented()
-         FactX(1)=ExFac ! avoid compiler warning
       Else ! Coulomb-only
          ! Set number of density matrices
          nDen=1
@@ -347,14 +342,13 @@ C--------------------------------------------------------------
          End If
          ! Set scaling factors
          FactC(1)=1.0d0
-         If (iUHF.eq.0) Then ! spin-restricted Coulomb-only
+         If (nD==1) Then ! spin-restricted Coulomb-only
             ! Get pointers to D and F
             ! Off-diagonal elements of DLT are scaled by 2 by the SCF
             ! program. This is incompatible with the LDF implementation.
             ! So, use instead the quadratic DSQ.
             ! Use packed F (FLT) for result.
             ip_D(1)=ip_of_Work(DSQ(1))
-            ip_F(1)=ip_of_Work(FLT(1))
             ! Set flags for quadratic (SQ) density matrix and packed
             ! Fock matrix
             PackedD=.False.
@@ -374,12 +368,11 @@ C--------------------------------------------------------------
                Call WarningMessage(0,SecNam//
      &               ': Computing norm of upper bound to Coulomb error')
                Call xFlush(6)
-               l_UBFNorm=nDen
-               Call GetMem('UBFNorm','Allo','Real',ip_UBFNorm,l_UBFNorm)
+               Call mma_Allocate(UBFNorm,nDen,Label='UBFNorm')
                Call LDF_Fock_CoulombUpperBoundNorm_Full(.True.,PackedD,
      &                                                 nDen,FactC,ip_D,
-     &                                                 Work(ip_UBFNorm))
-               Call GetMem('UBFNorm','Free','Real',ip_UBFNorm,l_UBFNorm)
+     &                                                 UBFNorm)
+               Call mma_deAllocate(UBFNorm)
             End If
             ! Print args
             If (iPrint.ge.3) Then
@@ -402,64 +395,49 @@ C--------------------------------------------------------------
                If (iPrint.ge.5) Then
                   Write(6,'(2X,A,3I15)')
      &            'ip_D.............',(ip_D(i),i=1,nDen)
-                  Write(6,'(2X,A,3I15)')
-     &            'ip_F.............',(ip_F(i),i=1,nDen)
                End If
             End If
             ! Compute two-electron contributions to Fock matrix
             Call LDF_Fock_CoulombOnly(IntegralOption,
      &                                Timing,Mode,ThrPS,
      &                                Add,PackedD,PackedF,
-     &                                nDen,FactC,ip_D,ip_F)
+     &                                nDen,FactC,ip_D,FLT)
             ! Debug: check Coulomb error
             If (LDF_CoulombCheck) Then
                Call WarningMessage(0,
      &                            SecNam//': Analysis of Coulomb error')
                Call xFlush(6)
-               l_myF=nDen
-               Call GetMem('DrvmyF','Allo','Inte',ip_myF,l_myF)
                If (PackedF) Then
                   lF=nBas(1)*(nBas(1)+1)/2
                Else
                   lF=nBas(1)**2
                End If
+               Call mma_allocate(DrvF,lF,nDen,Label='DrvF')
                Do iDen=1,nDen
-                  Call GetMem('DrvF','Allo','Real',ipF,lF)
-                  Call dCopy_(lF,Work(ip_F(iDen)),1,Work(ipF),1)
-                  iWork(ip_myF-1+iDen)=ipF
+                  Call dCopy_(lF,FLT(iDen),1,
+     &                           DrvF(:,iDen),1)
                End Do
                ComputeF=.False.
                Call LDF_Fock_CoulombErrorAnalysis(ComputeF,Mode,
      &                                            PackedD,PackedF,
      &                                            nDen,FactC,ip_D,
-     &                                            iWork(ip_myF))
-               Do iDen=1,nDen
-                  ipF=iWork(ip_myF-1+iDen)
-                  Call GetMem('DrvF','Free','Real',ipF,lF)
-               End Do
-               Call GetMem('DrvmyF','Free','Inte',ip_myF,l_myF)
+     &                                            DrvF)
+               Call mma_deallocate(DrvF)
             End If
             ! Debug: check mode consistency
             If (LDF_ModeCheck) Then
                LDF_ModeCheck=.False. ! check only once
                Call WarningMessage(0,SecNam//': Mode Check')
                Call xFlush(6)
-               l_myF=nDen*2
-               Call GetMem('DrvmyF','Allo','Inte',ip_myF,l_myF)
                If (PackedF) Then
                   lF=nBas(1)*(nBas(1)+1)/2
                Else
                   lF=nBas(1)**2
                End If
+               Call mma_allocate(DrvF,lF,2*nDen,Label='DrvF')
                Do iDen=1,nDen
-                  Call GetMem('DrvF','Allo','Real',ipF,lF)
-                  iWork(ip_myF-1+iDen)=ipF
-               End Do
-               Do iDen=1,nDen
-                  Call GetMem('DrvF','Allo','Real',ipF,lF)
-                  ipF2=ip_F(iDen)
-                  Call dCopy_(lF,Work(ipF2),1,Work(ipF),1)
-                  iWork(ip_myF-1+nDen+iDen)=ipF
+                  Call dCopy_(lF,FLT(iDen),1,
+     &                           DrvF(:,nDen+iDen),1)
                End Do
                If (Mode.eq.1) Then
                   lMode=3
@@ -469,8 +447,7 @@ C--------------------------------------------------------------
                   factor=-2.0d0
                Else If (Mode.eq.3) Then
                   Do iDen=1,nDen
-                     ipF=iWork(ip_myF-1+nDen+iDen)
-                     Call dScal_(lF,2.0d0,Work(ipF),1)
+                     Call dScal_(lF,2.0d0,DrvF(:,nDen+iDen),1)
                   End Do
                   lMode=1
                   factor=-1.0d0
@@ -484,12 +461,10 @@ C--------------------------------------------------------------
      &                                   Timing,lMode,ThrPS,
      &                                   Add,PackedD,PackedF,
      &                                   nDen,FactC,ip_D,
-     &                                   iWork(ip_myF))
+     &                                   DrvF)
                Do iDen=1,nDen
-                  ipF=iWork(ip_myF-1+iDen)
-                  ipF2=iWork(ip_myF-1+nDen+iDen)
-                  Call dAXPY_(lF,factor,Work(ipF),1,
-     &                                 Work(ipF2),1)
+                  Call dAXPY_(lF,factor,DrvF(:,     iDen),1,
+     &                                  DrvF(:,nDen+iDen),1)
                End Do
                If (Mode.eq.1) Then
                   lMode=2
@@ -510,18 +485,16 @@ C--------------------------------------------------------------
      &                                   Timing,lMode,ThrPS,
      &                                   Add,PackedD,PackedF,
      &                                   nDen,FactC,ip_D,
-     &                                   iWork(ip_myF))
+     &                                   DrvF)
                Do iDen=1,nDen
-                  ipF=iWork(ip_myF-1+iDen)
-                  ipF2=iWork(ip_myF-1+nDen+iDen)
-                  Call dAXPY_(lF,factor,Work(ipF),1,
-     &                                 Work(ipF2),1)
+                  Call dAXPY_(lF,factor,DrvF(:,     iDen),1,
+     &                                  DrvF(:,nDen+iDen),1)
                End Do
                Call Cho_Head(SecNam//': Mode Check','=',80,6)
                n=0
                Do iDen=1,nDen
-                  ipF=iWork(ip_myF-1+nDen+iDen)
-                  FNorm=sqrt(dDot_(lF,Work(ipF),1,Work(ipF),1))
+                  FNorm=sqrt(dDot_(lF,DrvF(:,nDen+iDen),1,
+     &                                DrvF(:,nDen+iDen),1))
                   If (FNorm.gt.Tol_ModeCheck) Then
                      Write(6,'(3X,A,I3,A,1P,D20.10,A)')
      &               'Density no.',iDen,' Check norm=',Fnorm,
@@ -538,11 +511,7 @@ C--------------------------------------------------------------
                   Call LDF_Quit(1)
                End If
                Call xFlush(6)
-               Do iDen=1,nDen*2
-                  ipF=iWork(ip_myF-1+iDen)
-                  Call GetMem('DrvF','Free','Real',ipF,lF)
-               End Do
-               Call GetMem('DrvmyF','Free','Inte',ip_myF,l_myF)
+               Call mma_deallocate(DrvF)
             End If
          Else ! spin-unrestricted Coulomb-only
             ! Add alpha and beta parts of density matrix
@@ -553,7 +522,6 @@ C--------------------------------------------------------------
             ! So, use instead the quadratic DSQ.
             ! Use packed F (FLT) for result.
             ip_D(1)=ip_of_Work(DSQ(1))
-            ip_F(1)=ip_of_Work(FLT(1))
             ! Set flags for quadratic (SQ) density matrix and packed
             ! Fock matrix
             PackedD=.False.
@@ -573,12 +541,11 @@ C--------------------------------------------------------------
                Call WarningMessage(0,SecNam//
      &               ': Computing norm of upper bound to Coulomb error')
                Call xFlush(6)
-               l_UBFNorm=nDen
-               Call GetMem('UBFNorm','Allo','Real',ip_UBFNorm,l_UBFNorm)
+               Call mma_Allocate(UBFNorm,nDen,Label='UBFNorm')
                Call LDF_Fock_CoulombUpperBoundNorm_Full(.True.,PackedD,
      &                                                 nDen,FactC,ip_D,
-     &                                                 Work(ip_UBFNorm))
-               Call GetMem('UBFNorm','Free','Real',ip_UBFNorm,l_UBFNorm)
+     &                                                 UBFNorm)
+               Call mma_deAllocate(UBFNorm)
             End If
             ! Print args
             If (iPrint.ge.3) Then
@@ -601,64 +568,49 @@ C--------------------------------------------------------------
                If (iPrint.ge.5) Then
                   Write(6,'(2X,A,3I15)')
      &            'ip_D.............',(ip_D(i),i=1,nDen)
-                  Write(6,'(2X,A,3I15)')
-     &            'ip_F.............',(ip_F(i),i=1,nDen)
                End If
             End If
             ! Compute two-electron contributions to Fock matrix
             Call LDF_Fock_CoulombOnly(IntegralOption,
      &                                Timing,Mode,ThrPS,
      &                                Add,PackedD,PackedF,
-     &                                nDen,FactC,ip_D,ip_F)
+     &                                nDen,FactC,ip_D,FLT)
             ! Debug: check Coulomb error
             If (LDF_CoulombCheck) Then
                Call WarningMessage(2,
      &                            SecNam//': Analysis of Coulomb error')
                Call xFlush(6)
-               l_myF=nDen
-               Call GetMem('DrvmyF','Allo','Inte',ip_myF,l_myF)
                If (PackedF) Then
                   lF=nBas(1)*(nBas(1)+1)/2
                Else
                   lF=nBas(1)**2
                End If
+               Call mma_Allocate(DrvF,lF,nDen,Label='DrvF')
                Do iDen=1,nDen
-                  Call GetMem('DrvF','Allo','Real',ipF,lF)
-                  Call dCopy_(lF,Work(ip_F(iDen)),1,Work(ipF),1)
-                  iWork(ip_myF-1+iDen)=ipF
+                  Call dCopy_(lF,FLT(iDen),1,
+     &                           DrvF(:,iDen),1)
                End Do
                ComputeF=.False.
                Call LDF_Fock_CoulombErrorAnalysis(ComputeF,Mode,
      &                                            PackedD,PackedF,
      &                                            nDen,FactC,ip_D,
-     &                                            iWork(ip_myF))
-               Do iDen=1,nDen
-                  ipF=iWork(ip_myF-1+iDen)
-                  Call GetMem('DrvF','Free','Real',ipF,lF)
-               End Do
-               Call GetMem('DrvmyF','Free','Inte',ip_myF,l_myF)
+     &                                            DrvF)
+               Call mma_deallocate(DrvF)
             End If
             ! Debug: check mode consistency
             If (LDF_ModeCheck) Then
                LDF_ModeCheck=.False. ! check only once
                Call WarningMessage(0,SecNam//': Mode Check')
                Call xFlush(6)
-               l_myF=nDen*2
-               Call GetMem('DrvmyF','Allo','Inte',ip_myF,l_myF)
                If (PackedF) Then
                   lF=nBas(1)*(nBas(1)+1)/2
                Else
                   lF=nBas(1)**2
                End If
+               Call mma_Allocate(DrvF,lF,2*nDen,Label='DrvF')
                Do iDen=1,nDen
-                  Call GetMem('DrvF','Allo','Real',ipF,lF)
-                  iWork(ip_myF-1+iDen)=ipF
-               End Do
-               Do iDen=1,nDen
-                  Call GetMem('DrvF','Allo','Real',ipF,lF)
-                  ipF2=ip_F(iDen)
-                  Call dCopy_(lF,Work(ipF2),1,Work(ipF),1)
-                  iWork(ip_myF-1+nDen+iDen)=ipF
+                  Call dCopy_(lF,FLT(iDen),1,
+     &                           DrvF(:,nDen+iDen),1)
                End Do
                If (Mode.eq.1) Then
                   lMode=3
@@ -668,8 +620,7 @@ C--------------------------------------------------------------
                   factor=-2.0d0
                Else If (Mode.eq.3) Then
                   Do iDen=1,nDen
-                     ipF=iWork(ip_myF-1+nDen+iDen)
-                     Call dScal_(lF,2.0d0,Work(ipF),1)
+                     Call dScal_(lF,2.0d0,DrvF(:,nDen+iDen),1)
                   End Do
                   lMode=1
                   factor=-1.0d0
@@ -683,12 +634,10 @@ C--------------------------------------------------------------
      &                                   Timing,lMode,ThrPS,
      &                                   Add,PackedD,PackedF,
      &                                   nDen,FactC,ip_D,
-     &                                   iWork(ip_myF))
+     &                                   DrvF)
                Do iDen=1,nDen
-                  ipF=iWork(ip_myF-1+iDen)
-                  ipF2=iWork(ip_myF-1+nDen+iDen)
-                  Call dAXPY_(lF,factor,Work(ipF),1,
-     &                                 Work(ipF2),1)
+                  Call dAXPY_(lF,factor,DrvF(:,     iDen),1,
+     &                                  DrvF(:,nDen+iDen),1)
                End Do
                If (Mode.eq.1) Then
                   lMode=2
@@ -709,18 +658,16 @@ C--------------------------------------------------------------
      &                                   Timing,lMode,ThrPS,
      &                                   Add,PackedD,PackedF,
      &                                   nDen,FactC,ip_D,
-     &                                   iWork(ip_myF))
+     &                                   DrvF)
                Do iDen=1,nDen
-                  ipF=iWork(ip_myF-1+iDen)
-                  ipF2=iWork(ip_myF-1+nDen+iDen)
-                  Call dAXPY_(lF,factor,Work(ipF),1,
-     &                                 Work(ipF2),1)
+                  Call dAXPY_(lF,factor,DrvF(:,     iDen),1,
+     &                                  DrvF(:,nDen+iDen),1)
                End Do
                Call Cho_Head(SecNam//': Mode Check','=',80,6)
                n=0
                Do iDen=1,nDen
-                  ipF=iWork(ip_myF-1+nDen+iDen)
-                  FNorm=sqrt(dDot_(lF,Work(ipF),1,Work(ipF),1))
+                  FNorm=sqrt(dDot_(lF,DrvF(:,nDen+iDen),1,
+     &                                DrvF(:,nDen+iDen),1))
                   If (FNorm.gt.Tol_ModeCheck) Then
                      Write(6,'(3X,A,I3,A,1P,D20.10,A)')
      &               'Density no.',iDen,' Check norm=',Fnorm,
@@ -737,11 +684,7 @@ C--------------------------------------------------------------
                   Call LDF_Quit(1)
                End If
                Call xFlush(6)
-               Do iDen=1,nDen*2
-                  ipF=iWork(ip_myF-1+iDen)
-                  Call GetMem('DrvF','Free','Real',ipF,lF)
-               End Do
-               Call GetMem('DrvmyF','Free','Inte',ip_myF,l_myF)
+               Call mma_deallocate(DrvF)
             End If
             ! Copy result to FLT_ab
             Call dCopy_(nFLT,FLT,1,FLT_ab,1)
@@ -770,15 +713,12 @@ C--------------------------------------------------------------
       End If
       Call Free_iSD()
 
-#if defined (_DEBUG_)
+#if defined (_DEBUGPRINT_)
       ! Exit
-      Call qExit(RegNam)
 #endif
 c Avoid unused argument warnings
       If (.False.) Then
          Call Unused_real_array(DLT_ab)
-         Call Unused_integer(LWFSQ)
-         Call Unused_integer(LWFSQ_ab)
          Call Unused_integer_array(nOcc)
          Call Unused_integer_array(nOcc_ab)
       End If

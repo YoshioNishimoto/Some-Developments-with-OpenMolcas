@@ -17,18 +17,16 @@
 * SWEDEN                                     *
 *--------------------------------------------*
       SUBROUTINE SIZES()
+      use output_caspt2, only:iPrGlb,usual
       USE SUPERINDEX
       IMPLICIT REAL*8 (A-H,O-Z)
 
 #include "rasdim.fh"
-#include "warnings.fh"
+#include "warnings.h"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "pt2_guga.fh"
-#include "WrkSpc.fh"
 
-      CALL QENTER('SIZES')
 
 C Available workspace right now:
       CALL GETMEM('LDUM','MAX','REAL',LDUM,MXLEFT)
@@ -80,7 +78,7 @@ C SBMAT need:
 *       N=NTUV(ISYM)
 *       NG3C=NG3C+(N*(N+1))/2
 *     END DO
-      NG3C=iPARDIV(NG3TOT,NG2)
+*     NG3C=iPARDIV(NG3TOT,NG2)
 
 C Sizes and addresses to lists:
       DO ISL1=1,NSYM
@@ -196,7 +194,7 @@ C transformations (overrides NSIGMA computed above)
 
 C PRPCTL needs:
 C In DIADNS alone, NDD words are needed:
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       WRITE(6,*)' Memory requirements for PRPCTL (Above SGUGA).'
       WRITE(6,*)
       WRITE(6,*)' PRP1) First phase of PRPCTL.'
@@ -231,7 +229,7 @@ C In DIADNS alone, NDD words are needed:
             NIS=NISUP(ISYM,ICASE)
             IF(NIS.GT.0) THEN
               NAS=NASUP(ISYM,ICASE)
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
               WRITE(6,*)' Case, Symm:',ICASE,ISYM
               WRITE(6,*)' NIN,NAS,NIS:',NIN,NAS,NIS
               WRITE(6,*)' NIMX,NSMX:',NIMX,NAMX
@@ -245,20 +243,20 @@ C In DIADNS alone, NDD words are needed:
               END IF
             END IF
           END IF
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       WRITE(6,'(1x,a,2i4,5x,i8)')'      Case, symm:',ICASE,ISYM,2*NX
 #endif
           NDD=MAX(2*NX,NDD)
         END DO
       END DO
 
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       WRITE(6,*)'       DIADNS needs the maximum, or NDD=',NDD
 #endif
       NCMO=NBSQT
       NPRP1=NBOTTOM+NCMO+notri+NLSTOT+2*NOSQT+MMX+NDD
 
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       WRITE(6,*)
       WRITE(6,*)'    B) Also needed, for 1st phase of PRPCTL:'
       WRITE(6,'(1x,a,i8)')'       NBOTTOM:',NBOTTOM
@@ -270,7 +268,7 @@ C In DIADNS alone, NDD words are needed:
 #endif
       NPRP2=NBOTTOM+2*NCMO+notri+NBAST*(NBAST+1)
 
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       WRITE(6,*)' PRP2) Second phase of PRPCTL.'
       WRITE(6,*)
       WRITE(6,'(1x,a,i8)')'       NBOTTOM:',NBOTTOM
@@ -350,7 +348,6 @@ C This is a Cholesky calculation, only give recommended amount
        END IF
       END IF
 
-      CALL QEXIT('SIZES')
 
       RETURN
       END

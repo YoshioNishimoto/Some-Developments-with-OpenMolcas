@@ -8,17 +8,17 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine symtrizcvb_cvb(vecstr)
       implicit real*8 (a-h,o-z)
-#include "ext_cvb.fh"
 #include "main_cvb.fh"
 #include "optze_cvb.fh"
 #include "files_cvb.fh"
 #include "print_cvb.fh"
 
-#include "malloc_cvb.fh"
+#include "WrkSpc.fh"
       dimension vecstr(nvb)
       dimension dum(1)
 
@@ -28,11 +28,11 @@
         i1 = mstackr_cvb(ndetvb)
         i2 = mstackr_cvb(nvb)
         call symtrizcvb2_cvb(vecstr,
-     >    iw(ls(13)),iw(ls(16)),w(i1),w(i2))
+     >    iwork(ls(13)),iwork(ls(16)),work(i1),work(i2))
         call mfreer_cvb(i1)
-        call symtrizcvb3_cvb(vecstr,iw(ls(10)))
+        call symtrizcvb3_cvb(vecstr,iwork(ls(10)))
       elseif(iconstruc.eq.2)then
-        call schmidtd_cvb(w(ls(15)),nconstr,vecstr,1,dum,nvb,0)
+        call schmidtd_cvb(work(ls(15)),nconstr,vecstr,1,dum,nvb,0)
       endif
       return
       end
