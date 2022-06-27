@@ -68,9 +68,11 @@
       Integer count_tmp1,count_tmp2
       integer  i_off1,i_off2,ifone
       integer isym,iash,jsym
-      integer iorb,iish
+      integer iorb,iish,Tot_El,NactOrb
+      Logical EffH
       integer LUGS
-      integer nAOs,offset
+      integer nAOs,offset,counter
+      Character(len=80) :: FMT1
 #include "mspdft.fh"
       External IsFreeUnit
 
@@ -114,15 +116,36 @@ C Local print level (if any)
       Endif
       Call GetMem('OvMat','Allo','Real',iOvMat,ntot**2)
 !Write overlap matrix to file 'Overlap'
+
+      EffH=.true.
+      Open(unit=1099,file='MolEl.dat', action='write',iostat=ios)
+      nAOs = 0
+      do isym=1,nsym
+        nAOs = nAOs + nBas(iSym)
+      end do
+      Tot_El = 0
+      nActOrb = 0
+      Do iSym=1,nSym
+         Tot_El=Tot_El+ nFro(iSym)+nIsh(iSym)
+         nActOrb = nActOrb + nAsh(iSym)
+      End Do
+      Tot_El = Tot_El + nActEl
+
+      FMT1 = "(I4,1X,I4,1X,I4,1X,I4,1X,I4)"
+      write(1099,*) 'Number of states,orbitals,electrons,ActOrb,ActEl'
+      write(1099,FMT1) lroots,nAOs,Tot_El,nActOrb,nActEl
+      write(1099,*) 'Overlap Matrix (AO)'
+
+
+      FMT1 = "(I4,1X,I4,1X,F20.14)"
       counter = 0
       offset = 0
-      Open(unit=87,file='Overlap', action='write',iostat=ios)
       do isym=1,nsym
         iBas = nBas(iSym)
         do i=1,iBas
           do j=1,i
 !            if(abs(Work(iTmp0+counter)).ge.1d-12) then
-              write(87,*) i+offset,j+offset,Work(iTmp0+counter)
+              write(1099,FMT1) i+offset,j+offset,Work(iTmp0+counter)
               Work(iOvMat+(i+offset-1)*ntot+(j+offset-1))= 
      &        Work(iTmp0+counter)
               Work(iOvMat+(j+offset-1)*ntot+(i+offset-1))= 
@@ -133,12 +156,24 @@ C Local print level (if any)
         end do
         offset = offset + iBas
       end do
-      Close(87)
 
-      nAOs = 0
+      write(1099,*) 'Molecular orbital coefficients'
+      counter = 0
+      offset = 0
       do isym=1,nsym
-        nAOs = nAOs + nBas(iSym)
+        iBas = nBas(iSym)
+        do i=1,iBas
+          do j=1,iBas
+            write(1099,FMT1) i+offset,j+offset,CMO(1+counter)
+            counter = counter +1
+          end do
+        end do
+        offset = offset + iBas
       end do
+       
+      write(1099,*) 'Effective Hamiltonian(s) (AO)'
+
+
 
 !      Open(unit=87,file='MO_coeff', action='write',iostat=ios)
 !      counter = 0
@@ -335,7 +370,7 @@ c      end if
          Close(LUDM)
       end if
 
-      if(DoGradPDFT.and.jroot.eq.irlxroot) then
+      if((DoGradPDFT.and.jroot.eq.irlxroot).or.EffH) then
         Call GetMem('P2t','allo','Real',iP2dt1,NACPR2)
         Call FZero(Work(ip2dt1),Nacpr2)
         Call P2_contraction(Work(iD1Act),Work(iP2dt1))
@@ -392,7 +427,7 @@ c      end if
 *         end do
 
 !ANDREW _ RIGHT HERE
-      if((DoGradPDFT.and.jroot.eq.irlxroot).or.DoGradMSPD) then
+      if((DoGradPDFT.and.jroot.eq.irlxroot).or.DoGradMSPD.or.EffH) then
         Call GetMem('DtmpA_g','Allo','Real',iTmp_grd,nTot1)
         Call Fold_pdft(nSym,nBas,Work(iD1ActAO),Work(iTmp_grd))
         Call put_darray('d1activeao',Work(iTmp_grd),ntot1)
@@ -506,7 +541,7 @@ c iTmp5 and iTmp6 are not updated in DrvXV...
                     End Do
 
       do_pdftPot=.false.
-      if((DoGradPDFT.and.jroot.eq.irlxroot).or.DoGradMSPD) then
+      if((DoGradPDFT.and.jroot.eq.irlxroot).or.DoGradMSPD.or.EffH) then
 
         do_pdftPot=.true.
 
@@ -650,7 +685,6 @@ c         call xflush(6)
 ************************************************************************
 
       If (.not.DoCholesky .or. ALGO.eq.1) Then
-<<<<<<<<
 
       if (iprlev.ge.debug) then
             write(6,*) 'id1act before reading in'
@@ -662,26 +696,6 @@ c         call xflush(6)
       IF(.false.) then
         Call GetMem('id1act_FA','ALLO','Real',id1act_FA,nacpar)
         Call GetMem('id1actao_FA','ALLO','Real',id1actao_FA,ntot2)
-<<<<<<< HEAD
-!ANDREW ADD NOW
-      IF(.false.) then
-        Call GetMem('id1act_FA','ALLO','Real',id1act_FA,nacpar)
-        Call GetMem('id1actao_FA','ALLO','Real',id1actao_FA,ntot2)
-
-=======
-*      If (jroot.eq.irlxroot) Then
-*TRS
-      if (iprlev.ge.debug) then
-            write(6,*) 'id1act before reading in'
-            do i=1,nacpar
-              write(6,*) work(id1act-1+i)
-            end do
-      end if
-*
-        Call GetMem('id1act_FA','ALLO','Real',id1act_FA,nacpar)
-        Call GetMem('id1actao_FA','ALLO','Real',id1actao_FA,ntot2)
-*
->>>>>>> 17238da5c339c41ddf14ceb88f139d57143d7a14
         itsDisk = IADR19(3)
         do i=1,irlxroot-1
           Call DDaFile(JOBOLD,0,Work(iD1Act_FA),NACPAR,itsDisk)
@@ -692,7 +706,6 @@ c         call xflush(6)
         Call DDaFile(JOBOLD,2,Work(iD1Act_FA),NACPAR,itsDisk)
         IF ( NASH(1).NE.NAC ) CALL DBLOCK_m(Work(iD1Act_FA))
         Call Get_D1A_RASSCF_m(CMO,Work(iD1Act_FA),Work(iD1ActAO_FA))
-<<<<<<<
         Call GetMem('lcmo','ALLO','Real',lcmo,ntot2)
         CALL DCOPY_(NTOT2,CMO,1,WORK(LCMO),1)
         if(iprlev.ge.debug) then
@@ -732,52 +745,6 @@ c         call xflush(6)
 *
 
 
-<<<<<<< HEAD
-
-        Call GetMem('lcmo','ALLO','Real',lcmo,ntot2)
-        CALL DCOPY_(NTOT2,CMO,1,WORK(LCMO),1)
-
-
-=======
-*****
-        Call GetMem('lcmo','ALLO','Real',lcmo,ntot2)
-        CALL DCOPY_(NTOT2,CMO,1,WORK(LCMO),1)
-        if(iprlev.ge.debug) then
-            write(6,*) 'cmo before tractl'
-            do i=1,ntot2
-              write(6,*) work(lcmo-1+i)
-            end do
-            write(6,*) 'lpuvx before tractl'
-            do i=1,nfint
-              write(6,*) work(lpuvx-1+i)
-            end do
-            write(6,*) 'ltuvx after tractl'
-            do i=1,nacpr2
-              write(6,*) work(ltuvx-1+i)
-            end do
-            write(6,*) 'id1act_fa before tractl'
-            do i=1,nacpar
-              write(6,*) work(id1act_FA-1+i)
-            end do
-            write(6,*) 'id1actao_fa before tractl'
-            do i=1,ntot2
-              write(6,*) work(id1actao_FA-1+i)
-            end do
-            write(6,*) 'id1act before tractl'
-            do i=1,nacpar
-              write(6,*) work(id1act-1+i)
-            end do
-            write(6,*) 'id1actao before tractl'
-            do i=1,ntot2
-              write(6,*) work(id1actao-1+i)
-            end do
-            write(6,*) 'id1i before tractl'
-            do i=1,ntot2
-              write(6,*) work(id1i-1+i)
-            end do
-        end if
-*
->>>>>>> 17238da5c339c41ddf14ceb88f139d57143d7a14
         Call GetMem('FockI_save','ALLO','Real',ifocki_save,ntot1)
         if(iprlev.ge.debug) then
             write(6,*) 'ifocki before tractl'
@@ -1016,7 +983,7 @@ c         call xflush(6)
 *            BUILDING OF THE NEW FOCK MATRIX                           *
 *
 ************************************************************************
-        if(DoGradPDFT.and.jroot.eq.irlxroot) then
+        if((DoGradPDFT.and.jroot.eq.irlxroot).or.EffH) then
 
          Write(LF,*) 'Calculating potentials for analytic gradients...'
 !MCLR requires two sets of things:
@@ -1223,13 +1190,13 @@ cPS         call xflush(6)
 
 !         Call Dscal_(nBas(1)*nBas(1),2.0d0,Work(iF1sqmo),1)
 
-      write(*,*) "Square Fock MO"
-      do i=1,nbas(1)
-        do j=1,nbas(1)
-          write(*,*) i,j,Work(iF1sqmo-1+(i-1)*nbas(1) +j)
-     &,CMO((i-1)*nbas(1) +j)
-        end do
-      end do
+!      write(*,*) "Square Fock MO"
+!      do i=1,nbas(1)
+!        do j=1,nbas(1)
+!          write(*,*) i,j,Work(iF1sqmo-1+(i-1)*nbas(1) +j)
+!     &,CMO((i-1)*nbas(1) +j)
+!        end do
+!      end do
 
 !ANDREW - check the MO to AO transform routine
 !      CALL DCOPY_(Nbas(1)**2,[0.0D0],0,WORK(iF1sqmo),1)
@@ -1303,29 +1270,36 @@ cPS         call xflush(6)
 !     &                  CMO,nBas(iSym),
 !     &                  0.0d0,Work(iF1sqao),nBas(iSym))
 
-      write(*,*) "Square Fock AO"
-      do i=1,nbas(1)
-        do j=1,nbas(1)
-          write(*,*) i,j,Work(iF1sqao-1+(i-1)*nbas(1) +j)
-        end do
-      end do
+!      write(*,*) "Square Fock AO"
+!      do i=1,nbas(1)
+!        do j=1,nbas(1)
+!          write(*,*) i,j,Work(iF1sqao-1+(i-1)*nbas(1) +j)
+!        end do
+!      end do
 
-      write (fock_title, "(A8,I1)") "FOCK_AO_",jroot
-      write (*,*) fock_title
+!      write (fock_title, "(A8,I1)") "FOCK_AO_",jroot
+!      write (*,*) fock_title
 
 
 !      Open(unit=1999,file='FOCK_AO',action='write',iostat=ios)
-      Open(unit=1999,file=fock_title,action='write',iostat=ios)
-      if (ios.ne.0) then
-        write (6,*) "error opening FOCK_AO file"
-      end if
+!      Open(unit=1999,file=fock_title,action='write',iostat=ios)
+!      if (ios.ne.0) then
+!        write (6,*) "error opening FOCK_AO file"
+!      end if
+      write(1099,*) jroot
+
       do i=1,nbas(1)
         do j=1,nbas(1)
-          write(1999,*) i,j,Work(iF1sqao-1+(i-1)*nbas(1)+j)
+!          write(1999,*) i,j,Work(iF1sqao-1+(i-1)*nbas(1)+j)
+          write(1099,FMT1) i,j,Work(iF1sqao-1+(i-1)*nbas(1)+j)
         end do
       end do
-      close(1999)
+!      close(1999)
 
+      Call GetMem('F1_sq_MO','free','Real',iF1sqmo,nBas(1)*nBas(1))
+      Call GetMem('ipscr1','free','Real',ipscr1,nBas(1)*nBas(1))
+      Call GetMem('ipscr2','free','Real',ipscr2,nBas(1)*nBas(1))
+      Call GetMem('F1_sq_AO','free','Real',iF1sqao,nBas(1)*nBas(1))
       Call GetMem('D1AOsq','free','Real',id1aosq,nTot**2)
       Call GetMem('temp90','free','Real',itmp90,ntot**2)
       Call GetMem('temp92','free','Real',itmp92,ntot**2)
@@ -1469,20 +1443,20 @@ cPS         call xflush(6)
       write(6,*) 'DONE WITH NEW FOCK OPERATOR'
         end if
 
-      Open(unit=87,file='Fock', action='write',iostat=ios)
-      counter = 0
-      offset = 0
-      do isym=1,nsym
-        iBas = nBas(iSym)
-        do i=1,iBas
-          do j=1,i
-            write(87,*) i+offset,j+offset,Work(ipFocc+counter)
-            counter = counter+1
-          end do
-        end do
-        offset = offset + iBas
-      end do
-      Close(87)
+!      Open(unit=87,file='Fock', action='write',iostat=ios)
+!      counter = 0
+!      offset = 0
+!      do isym=1,nsym
+!        iBas = nBas(iSym)
+!        do i=1,iBas
+!          do j=1,i
+!            write(87,*) i+offset,j+offset,Work(ipFocc+counter)
+!            counter = counter+1
+!          end do
+!        end do
+!        offset = offset + iBas
+!      end do
+!      Close(87)
 
          CALL GETMEM('SXBM','Free','REAL',LBM,NSXS)
          CALL GETMEM('SXLQ','Free','REAL',LQ,NQ) ! q-matrix(1symmblock)
@@ -1558,7 +1532,7 @@ cPS         call xflush(6)
          END IF
       end do !loop over roots
 
-      if(DoGradPDFT.or.DoGradMSPD) then
+      if(DoGradPDFT.or.DoGradMSPD.or.EffH) then
         dmDisk = IADR19(3)
         do jroot=1,irlxroot-1
           Call DDaFile(JOBOLD,0,Work(iD1Act),NACPAR,dmDisk)
@@ -1640,6 +1614,9 @@ cPS         call xflush(6)
       End If
 
 !Free up all the memory we can here, eh?
+      write(1099,*) "Molecular Orbital Energies"
+      Close(1099)
+
       Call GetMem('OvMat','free','Real',iOvMat,ntot**2)
 
 
