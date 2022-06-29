@@ -344,46 +344,21 @@ c ///  opening the loop over different directions of the magnetic field
       End If !DBG
 !        computing the AVERAGE MOMENTS calculated at different temperatures (T(i))
          Do iT=1,nTempTotal
+            Do l=1,3
+               ! dM/dH model
+               XTtens_dMdH(iM,l,iT) = ( - 1.0_wp*MT1(l,iT)
+     &                                  + 9.0_wp*MT2(l,iT)
+     &                                  -45.0_wp*MT3(l,iT)
+     &                                  + 0.0_wp*MT4(l,iT)
+     &                                  +45.0_wp*MT5(l,iT)
+     &                                  - 9.0_wp*MT6(l,iT)
+     &                                  + 1.0_wp*MT7(l,iT) )
+     &                                * T(iT) * cm3tomB
+     &                                / (60.0_wp* hp)
 
-            ! dM/dH model
-            If(iM==1) Then
-            XTtens_dMdH(iM,1,iT) = (-1.0_wp*MT1(1,iT)
-     &                              +9.0_wp*MT2(1,iT)
-     &                             -45.0_wp*MT3(1,iT)
-     &                              +0.0_wp*MT4(1,iT)
-     &                             +45.0_wp*MT5(1,iT)
-     &                              -9.0_wp*MT6(1,iT)
-     &                              +1.0_wp*MT7(1,iT) ) *T(iT)* cm3tomB
-     &                             / (60.0_wp* hp)
-
-            Else If (iM==2) Then
-            XTtens_dMdH(iM,2,iT) = (-1.0_wp*MT1(2,iT)
-     &                              +9.0_wp*MT2(2,iT)
-     &                             -45.0_wp*MT3(2,iT)
-     &                              +0.0_wp*MT4(2,iT)
-     &                             +45.0_wp*MT5(2,iT)
-     &                              -9.0_wp*MT6(2,iT)
-     &                              +1.0_wp*MT7(2,iT) ) *T(iT)* cm3tomB
-     &                             / (60.0_wp* hp)
-            Else If (iM==3) Then
-            XTtens_dMdH(iM,3,iT) = (-1.0_wp*MT1(3,iT)
-     &                              +9.0_wp*MT2(3,iT)
-     &                             -45.0_wp*MT3(3,iT)
-     &                              +0.0_wp*MT4(3,iT)
-     &                             +45.0_wp*MT5(3,iT)
-     &                              -9.0_wp*MT6(3,iT)
-     &                              +1.0_wp*MT7(3,iT) ) *T(iT)* cm3tomB
-     &                             / (60.0_wp* hp)
-            End If
-
-            ! M/H model
-            If(iM==1) Then
-            XTtens_MH(iM,1,iT) = MT4(1,iT)*T(iT)*cm3tomB/Xfield
-            Else If (iM==2) Then
-            XTtens_MH(iM,2,iT) = MT4(2,iT)*T(iT)*cm3tomB/Xfield
-            Else If (iM==3) Then
-            XTtens_MH(iM,3,iT) = MT4(3,iT)*T(iT)*cm3tomB/Xfield
-            End If
+               ! M/H model
+               XTtens_MH(iM,l,iT) = MT4(l,iT)*T(iT)*cm3tomB/Xfield
+            End Do
          End Do
 c ///  closing the loops over field directions
       End Do ! iM (nDirX)
