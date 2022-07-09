@@ -9,7 +9,7 @@
 # LICENSE or in <http://www.gnu.org/licenses/>.                        *
 #                                                                      *
 # Copyright (C) 2014-2016, Steven Vancoillie                           *
-#               2014-2021, Ignacio Fdez. Galván                        *
+#               2014-2022, Ignacio Fdez. Galván                        *
 #               2015, Stefan Knecht                                    *
 #               2020, Gerardo Raggi                                    *
 #***********************************************************************
@@ -2023,7 +2023,6 @@ if (BIGOT AND CMAKE_Fortran_COMPILER_ID STREQUAL "Intel")
   set (SINGLE_MOD_DIR ON)
   set (MAIN_MOD_DIR ${MAIN_MOD_DIR}/_single)
 endif ()
-include_directories (${MAIN_MOD_DIR})
 
 if (MSYM)
   message ("Configuring MSYM support:")
@@ -2127,10 +2126,6 @@ endif ()
 
 # NECI Full-CI Quantum Monte-Carlo
 if (NECI)
-  message(FATAL_ERROR "At the moment the embedded NECI does not work. "
-    "Please use external NECI instead and contact the developers. "
-    "If https://gitlab.com/Molcas/OpenMolcas/-/issues/346 is resolved we can enable it again."
-  )
   if (NOT MPI)
     message (FATAL_ERROR "NECI requires MPI (-DMPI=ON).")
   endif ()
@@ -2921,6 +2916,7 @@ endif ()
 foreach (util ${utils})
   add_subdirectory (src/${util} ${PROJECT_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/${util})
   add_dependencies (${util}_obj mods_obj)
+  target_include_directories (${util}_obj PRIVATE ${MAIN_MOD_DIR})
   if (${util}_mods)
     # move the module files to the mods_obj target
     # (note COMPILE_DEFINITIONS must be on target level to properly compute dependencies)
@@ -2942,6 +2938,7 @@ set_target_properties (libmolcas PROPERTIES PREFIX "")
 set (MOLCAS_LIBRARIES "libmolcas")
 target_link_libraries (libmolcas ${utils_obj})
 target_link_libraries (libmolcas mods_obj)
+target_include_directories (libmolcas PRIVATE ${MAIN_MOD_DIR})
 # also create a static library!
 if (BUILD_SHARED_LIBS AND BUILD_STATIC_LIBS)
   add_library (libmolcas_static STATIC "")
@@ -2972,7 +2969,9 @@ foreach (prog ${progs})
   if (TARGET ${prog}_obj)
     add_dependencies (${prog}_obj ${utils_obj})
     add_dependencies (only_objs   ${prog}_obj)
+    target_include_directories (${prog}_obj PRIVATE ${MAIN_MOD_DIR})
   endif ()
+  target_include_directories (${prog}.exe PRIVATE ${MAIN_MOD_DIR})
   if (EXTERNAL_PROJECTS)
     add_dependencies (${prog}.exe ${EXTERNAL_PROJECTS})
   endif ()
@@ -3517,6 +3516,11 @@ if (IS_DIRECTORY "$ENV{HOME}/.Molcas")
 endif ()
 
 # Final warning(s)
+
 if (GEN1INT)
   message (WARNING "OpenMolcas is LGPL code, but Gen1Int's original license is GPL.\nThe generated binaries *cannot* be redistributed.")
+endif()
+
+if (NECI)
+  message (WARNING "OpenMolcas is LGPL code, but NECI's original license is GPL.\nThe generated binaries *cannot* be redistributed.")
 endif()
