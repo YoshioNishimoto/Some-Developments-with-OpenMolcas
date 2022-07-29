@@ -126,7 +126,7 @@ C Local print level (if any)
       Tot_El = 0
       nActOrb = 0
       Do iSym=1,nSym
-         Tot_El=Tot_El+ nFro(iSym)+nIsh(iSym)
+         Tot_El=Tot_El+ 2*(nFro(iSym)+nIsh(iSym))
          nActOrb = nActOrb + nAsh(iSym)
       End Do
       Tot_El = Tot_El + nActEl
@@ -1286,7 +1286,8 @@ cPS         call xflush(6)
 !      if (ios.ne.0) then
 !        write (6,*) "error opening FOCK_AO file"
 !      end if
-      write(1099,*) jroot
+      FMT1 = "(A5,1X,I2)"
+      write(1099,FMT1) "State",jroot
 
       do i=1,nbas(1)
         do j=1,nbas(1)
