@@ -1288,6 +1288,7 @@ cPS         call xflush(6)
 !      end if
       FMT1 = "(A5,1X,I2)"
       write(1099,FMT1) "State",jroot
+      FMT1 = "(I4,1X,I4,1X,F20.14)"
 
       do i=1,nbas(1)
         do j=1,nbas(1)
