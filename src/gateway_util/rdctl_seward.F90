@@ -27,10 +27,10 @@ use Sizes_of_Seward, only: S
 use Gateway_Info, only: Align_Only, CoM, CutInt, Do_Align, Do_FckInt, Do_GuessOrb, DoFMM, E1, E2, EMFR, FNMC, GIAO, kVector, &
                         lAMFI, lDOWNONLY, lMXTC, lRel, lRP, lSchw, lUPONLY, NEMO, PkAcc, RPQMin, Rtrnc, SadStep, Shake, ThrInt, &
                         Thrs, UnNorm, Vlct
-use DKH_Info, only: iCtrLD, BSS, CLightAU, DKroll, IRELAE, LDKRoll, nCtrlD, radiLD
-use RICD_Info, only: Cholesky, DiagCheck, Do_acCD_Basis, Do_nacCD_Basis, Do_RI, iRI_Type, LDF, LocalDF, Skip_High_AC, Thrshld_CD
+use DKH_Info, only: iCtrLD, BSS, cLightAU, DKroll, IRELAE, LDKRoll, nCtrlD, radiLD
+use RICD_Info, only: Cholesky, DiagCheck, Do_acCD_Basis, Do_RI, iRI_Type, LDF, LocalDF, Skip_High_AC, Thrshld_CD
 use Gateway_global, only: DirInt, Expert, Fake_ERIs, Force_Out_of_Core, force_part_c, force_part_p, G_Mode, ifallorb, iPack, &
-                          iWRopt, Onenly, Prprt, Run_Mode, S_Mode, Short, SW_FileOrb, Test
+                          iWRopt, NoTab, Onenly, Prprt, Run_Mode, S_Mode, Short, SW_FileOrb, Test
 #ifdef _FDE_
 use Embedding_Global, only: embOutDensPath, embOutEspPath, embOutGradPath, embOutHessPath, embPot, embPotInBasis, embPotPath, &
                             embWriteDens, embWriteEsp, embWriteGrad, embWriteHess, outGridPath, outGridPathGiven
@@ -52,7 +52,6 @@ logical(kind=iwp), intent(inout) :: lOPTO
 logical(kind=iwp), intent(out) :: Do_OneEl
 #include "Molcas.fh"
 #include "angtp.fh"
-#include "notab.fh"
 #include "rctfld.fh"
 #include "rmat.fh"
 #include "print.fh"
@@ -98,6 +97,7 @@ character(len=12), allocatable :: xb_label(:)
 logical(kind=iwp) :: geoInput, oldZmat, zConstraints
 #endif
 #ifdef _GROMACS_
+integer(kind=iwp) :: iCastMM, iLA, LuXYZ, nCastMM, nLA
 integer(kind=iwp), allocatable :: CastMM(:), DefLA(:,:)
 real(kind=wp), allocatable :: FactLA(:)
 #endif
@@ -125,7 +125,7 @@ character(len=*), parameter :: KeyW(188) = ['END ','EMBE','SYMM','FILE','VECT','
                                             'RMER','RMQC','RMDI','RMEQ','RMBP','GIAO','NOCH','CHOL','FCD ','THRC','1CCD','1C-C', &
                                             'CHOI','RP-C','SADD','CELL','SPAN','SPRE','LOW ','MEDI','HIGH','DIAG','RIC ','RIJ ', &
                                             'RIJK','RICD','XRIC','NOGU','RELA','RLOC','FOOC','CDTH','SHAC','KHAC','ACD ','FAT-', &
-                                            'ACCD','SLIM','NACC','DOFM','NOAM','RPQM','CONS','NGEX','LOCA','LDF ','LDF1','LDF2', &
+                                            'ACCD','SLIM','    ','DOFM','NOAM','RPQM','CONS','NGEX','LOCA','LDF ','LDF1','LDF2', &
                                             'TARG','THRL','APTH','CHEC','VERI','OVER','CLDF','UNCO','WRUC','UNIQ','NOUN','RLDF', &
                                             'NOAL','WEIG','ALIG','TINK','ORIG','HYPE','ZCON','SCAL','DOAN','GEOE','OLDZ','OPTH', &
                                             'NOON','GEO ','MXTC','FRGM','TRAN','ROT ','ZONL','BASL','NUME','VART','VARR','SHAK', &
@@ -133,12 +133,6 @@ character(len=*), parameter :: KeyW(188) = ['END ','EMBE','SYMM','FILE','VECT','
 integer(kind=iwp), external :: iCFrst, iChAtm, IsFreeUnit
 real(kind=wp), external :: NucExp, rMass, rMassx
 character(len=180), external :: Get_Ln
-interface
-  subroutine datimx(TimeStamp) bind(C,name='datimx_')
-    use, intrinsic :: iso_c_binding, only: c_char
-    character(kind=c_char) :: TimeStamp(*)
-  end subroutine
-end interface
 
 !                                                                      *
 !***********************************************************************
@@ -296,7 +290,7 @@ KeepBasis = ' '
 ! period
 lthCell = 0
 Cell_l = .false.
-call izero(ispread,3)
+ispread(:) = 0
 VCell(:,:) = Zero
 ! Set local DF variables (dummy)
 call LDF_SetInc()
@@ -1582,9 +1576,9 @@ do
         ! Speed of light (in au)
 
         KWord = Get_Ln(LuRd)
-        call Get_F1(1,CLightAU)
-        CLightAU = abs(CLightAU)
-        write(u6,*) 'The speed of light in this calculation =',CLightAU
+        call Get_F1(1,cLightAU)
+        cLightAU = abs(cLightAU)
+        write(u6,*) 'The speed of light in this calculation =',cLightAU
 
       case (KeyW(94))
         !                                                              *
@@ -2211,16 +2205,6 @@ do
         Do_acCD_Basis = .true.
         GWInput = .true.
 
-      case (KeyW(135))
-        !                                                              *
-        !**** NACC *****************************************************
-        !                                                              *
-        ! Generate a nacCD basis.
-
-        Do_acCD_Basis = .false.
-        Do_nacCD_Basis = .true.
-        GWInput = .true.
-
       case (KeyW(136))
         !                                                              *
         !**** DOFM *****************************************************
@@ -2827,7 +2811,7 @@ do
             call mma_allocate(CastMM,nCastMM)
           case ('CAST')
             KWord = Get_Ln(LuRd)
-            call Get_I(1,nCastMM,1)
+            call Get_I1(1,nCastMM)
             if (nCastMM <= 0) then
               Message = 'nCastMM is zero or negative'
               call WarningMessage(2,Message)
@@ -2900,7 +2884,7 @@ do
 #       ifdef _GROMACS_
         GWInput = .true.
         KWord = Get_Ln(LuRd)
-        call Get_I(1,nLA,1)
+        call Get_I1(1,nLA)
         if (nLA <= 0) then
           Message = 'LA definition: nLA is zero or negative'
           call WarningMessage(2,Message)
@@ -3911,7 +3895,7 @@ subroutine ProcessBasis()
 
   call UpCase(BSLbl)
   iDummy_basis = 0
-  call ICopy(4,BasisTypes,1,BasisTypes_save,1)
+  BasisTypes_save(:) = BasisTypes
   if ((BSLbl(1:2) == 'X.') .and. (index(BSLbl,'INLINE') == 0) .and. (index(BSLbl,'RYDBERG') == 0)) then
     BSLbl = 'X.ANO-RCC.'
     do i=11,80
@@ -3962,7 +3946,7 @@ subroutine ProcessBasis()
   Do_GuessOrb = Do_GuessOrb .and. (dbsc(nCnttp)%AtmNr <= 96)
 # endif
 
-  if (iDummy_Basis == 1) call ICopy(4,BasisTypes_Save,1,BasisTypes,1)
+  if (iDummy_Basis == 1) BasisTypes(:) = BasisTypes_save
   if (itype == 0) then
     if ((BasisTypes(3) == 1) .or. (BasisTypes(3) == 2) .or. (BasisTypes(3) == 14)) iType = BasisTypes(3)
   else

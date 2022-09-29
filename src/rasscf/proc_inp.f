@@ -25,12 +25,15 @@
       use Para_Info, Only: mpp_procid, mpp_nprocs
 #endif
 #endif
+      use csfbas, only: CONF, KCFTP
       use Fock_util_global, only: DoCholesky
-      use write_orbital_files, only: OrbFiles
+      use write_orbital_files, only: OrbFiles, write_orb_per_iter
       use fcidump, only: DumpOnly
       use fcidump_reorder, only: ReOrInp, ReOrFlag
       use fciqmc, only: DoEmbdNECI, DoNECI, tGUGA_in
+      use fciqmc_read_RDM, only: tHDF5_RDMs, MCM7
       use CC_CI_mod, only: Do_CC_CI
+      use spin_correlation, only: orb_range_p, orb_range_q, same_orbs
       use orthonormalization, only : ON_scheme, ON_scheme_values
       use fciqmc_make_inp, only : trial_wavefunction, pops_trial,
      &  t_RDMsampling, RDMsampling,
@@ -44,6 +47,7 @@
       use KSDFT_Info, only: CoefR, CoefX
       use OFembed, only: Do_OFemb,KEonly, OFE_KSDFT,
      &                   ThrFThaw, Xsigma, dFMD
+      use CMS, only: iCMSOpt,CMSGiveOpt,CMSGuessFile
       Implicit Real*8 (A-H,O-Z)
 #include "SysDef.fh"
 #include "rasdim.fh"
@@ -54,14 +58,13 @@
 #include "input_ras.fh"
 #include "splitcas.fh"
 #include "bk_approx.fh"
-#include "general.fh"
+#include "general_mul.fh"
 #include "output_ras.fh"
 #include "orthonormalize.fh"
 #include "casvb.fh"
 #include "pamint.fh"
 * Lucia-stuff:
 #include "ciinfo.fh"
-#include "csfbas.fh"
 #include "spinfo.fh"
 #include "lucia_ini.fh"
 #include "rasscf_lucia.fh"
@@ -845,6 +848,55 @@ C   No changing about read in orbital information from INPORB yet.
        Call SetPos(LUInput,'CMSI',Line,iRc)
        Call ChkIfKey()
       End If
+*---  Process CMSS command --------------------------------------------*
+      CMSStartMat='XMS'
+      If (KeyCMSS.and.(iCMSP.eq.1)) Then
+       If (DBG) Then
+         Write(6,*)' Reading CMS inital rotation matrix'
+       End If
+       Call SetPos(LUInput,'CMSS',Line,iRc)
+       Line=Get_Ln(LUInput)
+       If(iRc.ne._RC_ALL_IS_WELL_) GoTo 9810
+       Call ChkIfKey()
+       If (DBG) Then
+         Write(6,*) ' Reading CMS starting rotation matrix from'
+         Write(6,*) trim(Line)
+       End If
+       if(.not.(trim(Line).eq.'XMS'))  then
+         CMSGuessFile=trim(Line)
+         CMSStartMat=CMSGuessFile
+         call F_Inquire(trim(CMSStartMat),lExists)
+         if(.not.lExists) then
+           write(LF,'(6X,A,A)') trim(CMSStartMat),
+     &' is not found. Use XMS intermediate states as initial guess.'
+           CMSStartMat='XMS'
+         end if
+C         call fileorb(Line,CMSStartMat)
+       end if
+      End If
+*---  Process CMSO command --------------------------------------------*
+      If (KeyCMSO.and.(iCMSP.eq.1)) Then
+       If (DBG) Then
+         Write(6,*) 'Inputting CMS optimization option'
+       End If
+       Call SetPos(LUInput,'CMSO',Line,iRc)
+       Line=Get_Ln(LUInput)
+       CALL Upcase(Line)
+       If(Line(1:4).eq.'NEWT') Then
+        iCMSOpt=1
+       Else If(Line(1:4).eq.'JACO') Then
+        iCMSOpt=2
+       Else
+        ReadStatus='Wrong value assigned to keyword CMSO'
+        GoTo 9920
+       End If
+       CMSGiveOpt=.true.
+       If(iRc.ne._RC_ALL_IS_WELL_) GoTo 9810
+       If (DBG) Then
+        Write(6,*) ' CMS Optimization Option',iCMSOpt
+       End If
+       Call ChkIfKey()
+      End If
 *---  Process CMMA command --------------------------------------------*
       If (KeyCMMA) Then
        If (DBG) Write(6,*) ' CMS Max Cylces keyword was given.'
@@ -966,6 +1018,72 @@ C   No changing about read in orbital information from INPORB yet.
         Write(6,*) ' Response field will follow CISE root: ',ICIRFROOT
        End If
       End If
+*---  Process SSCR command --------------------------------------------*
+      if (KeySSCR) then
+        if (DBG) write(6,*) ' SSCR command was given.'
+        call setpos(luinput,'SSCR',line,irc)
+        If(iRc.ne._RC_ALL_IS_WELL_) GoTo 9810
+        line=get_ln(luinput)
+        line(80:80)='0'
+        ReadStatus=' Failure reading after KeySSCR keyword.'
+        read(line,*,err=9920,end=9920) norbs, same_orbs
+        ReadStatus=' O.K reading after KeySSCR keyword.'
+
+        if (norbs >= mxOrb) then
+          write(6,'(a)', advance="no") 'SSCR error:'
+          write(6,*) "number of spatial orbitals exceeds maximum"
+          write(6,'(a,i4)') "norbs = ", norbs
+          write(6,'(a)') new_line('a')
+          call abend()
+        end if
+
+        call mma_allocate(orb_range_p,norbs)
+        call mma_allocate(orb_range_q,norbs)
+
+        if (same_orbs /= 1) then
+          Line=Get_Ln(LUInput)
+          readstatus=' failure reading after SSCR keyword.'
+          read(Line,*) (orb_range_p(i), i = 1, norbs)
+          Line=Get_Ln(LUInput)
+          read(Line,*) (orb_range_q(j), j = 1, norbs)
+
+          if (size(orb_range_p) /= size(orb_range_q)) then
+            write(6,'(a)', advance="no") 'SSCR error:'
+            write(6,*) "numbers of spatial orbitals do not match"
+            write(6,*) "orb_range_p has length ", size(orb_range_p)
+            write(6,*) "orb_range_q has length ", size(orb_range_q)
+            write(6,'(a)') new_line('a')
+            call abend()
+          end if
+
+          do i = 1, norbs
+            do j = 1, norbs
+              if (i < j) then
+                if (orb_range_p(i) == orb_range_p(j)) then
+                  write(6,'(a)', advance="no") 'SSCR error:'
+                  write(6,*) 'first range contains duplicates.'
+                  write(6,'(*(i4))') orb_range_p
+                  write(6,'(a)') new_line('a')
+                  call abend()
+                end if
+                if (orb_range_q(i) == orb_range_q(j)) then
+                  write(6,'(a)', advance="no") 'SSCR error:'
+                  write(6,*) 'second range contains duplicates.'
+                  write(6,'(*(i4))') orb_range_q
+                  write(6,'(a)') new_line('a')
+                  call abend()
+                end if
+              end if
+            end do
+          end do
+        else
+            do i = 1, norbs
+              orb_range_p(i) = i
+              orb_range_q(i) = i
+            end do
+        end if
+      call ChkIfKey()
+      end if
 *---  Process CIRO command --------------------------------------------*
       If (DBG) Write(6,*) ' Check for CIROOTS command.'
       IF(KeyCIRO) Then
@@ -1940,6 +2058,9 @@ C orbitals accordingly
           goto 9930
         end if
       end if
+      if (KeyPERI) then
+        write_orb_per_iter = .true.
+      end if
 *---  Process NECI commands -------------------------------------------*
       if (KeyNECI) then
         if(DBG) write(6, *) 'NECI is actived'
@@ -1959,6 +2080,20 @@ C orbitals accordingly
      &'not compiled with embedded NECI. Please use -DNECI=ON '//
      &'for compiling or use an external NECI.')
 #endif
+        end if
+*----------------------------------------------------------------------------------------
+        if (KeyMCM7) then
+            MCM7 = .true.
+            if(DBG) write(6, *) 'M7 CASSCF activated.'
+        end if
+*----------------------------------------------------------------------------------------
+        if (KeyH5DM) then
+            tHDF5_RDMs = .true.
+            if(DBG) write(6, *) 'RDMs will be read from HDF5 files'
+            if (.not. KeyNECI .or. .not. KeyMCM7) then
+              call WarningMessage(2, 'H5DM requires NECI/M7 keyword!')
+              GoTo 9930
+            end if
         end if
 *----------------------------------------------------------------------------------------
         if (KeyGUGA) then
@@ -3328,7 +3463,7 @@ C Test read failed. JOBOLD cannot be used.
       IF (ICICH.EQ.1) THEN
         CALL GETMEM('UG2SG','ALLO','INTE',LUG2SG,NCONF)
         CALL UG2SG(NROOTS,NCONF,NAC,NACTEL,STSYM,IPR,
-     *             IWORK(KICONF(1)),IWORK(KCFTP),IWORK(LUG2SG),
+     *             CONF,IWORK(KCFTP),IWORK(LUG2SG),
      *             ICI,JCJ,CCI,MXROOT)
         CALL GETMEM('UG2SG','FREE','INTE',LUG2SG,NCONF)
       END IF

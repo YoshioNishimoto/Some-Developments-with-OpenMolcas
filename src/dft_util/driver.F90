@@ -16,16 +16,15 @@ subroutine Driver(KSDFA,Do_Grad,Func,Grad,nGrad,Do_MO,Do_TwoEl,D_DS,F_DFT,nh1,nD
 use libxc_parameters, only: Coeffs, func_id, initiate_libxc_functionals, libxc_functionals, nFuncs, nFuncs_max, &
                             remove_libxc_functionals
 use xc_f03_lib_m, only: XC_CORRELATION, XC_EXCHANGE, xc_f03_func_end, xc_f03_func_get_info, xc_f03_func_info_get_kind, &
-                        xc_f03_func_init, xc_f03_func_t, xc_f03_func_info_t, XC_GGA_K_TFVW, XC_LDA_K_TF
+                        xc_f03_func_init, xc_f03_func_t, xc_f03_func_info_t, XC_GGA_K_TFVW, XC_LDA_K_TF, XC_UNPOLARIZED
 use Functionals, only: Get_Funcs
 use KSDFT_Info, only: Do_PDFTPOT
 use OFembed, only: dFMD, Do_Core, KEOnly
 use libxc, only: Only_exc
 use nq_Grid, only: l_casdft
-use nq_pdft, only: lft
 use nq_Info, only: Functional_type, GGA_Type, LDA_Type
 use Constants, only: Zero, One
-use Definitions, only: wp, iwp, u6, LibxcInt
+use Definitions, only: wp, iwp, u6
 
 implicit none
 character(len=*), intent(in) :: KSDFA
@@ -36,7 +35,7 @@ logical(kind=iwp), intent(inout) :: Do_MO, Do_TwoEl
 real(kind=wp), intent(in) :: D_DS(nh1,nD)
 character(len=4), intent(in) :: DFTFOCK
 integer(kind=iwp) :: i, j
-logical(kind=iwp) :: LDTF, NDSD
+logical(kind=iwp) :: IsFT, LDTF, NDSD
 character(len=80) :: FLabel
 type(xc_f03_func_t) :: func_
 type(xc_f03_func_info_t) :: info_
@@ -46,7 +45,7 @@ type(xc_f03_func_info_t) :: info_
 abstract interface
   subroutine DFT_FUNCTIONAL(mGrid,nD)
     import :: iwp
-    integer(kind=iwp) :: mGrid, nD
+    integer(kind=iwp), intent(in) :: mGrid, nD
   end subroutine
 end interface
 procedure(DFT_FUNCTIONAL) :: Overlap, NucAtt, ndsd_ts
@@ -63,7 +62,7 @@ FLabel = KSDFA ! The user could be passing an explicit string! Hence, the local 
 
 l_casdft = (FLabel(1:2) == 'T:') .or. (FLabel(1:3) == 'FT:')
 
-lft = FLabel(1:3) == 'FT:'
+IsFT = FLabel(1:3) == 'FT:'
 
 if (l_casdft) then
   FLabel = FLabel(index(FLabel,'T:')+2:)
@@ -160,7 +159,7 @@ end if
 if (Do_Core) then
   ! Keep only correlation
   do i=1,nFuncs
-    call xc_f03_func_init(func_,func_id(i),0_LibxcInt)
+    call xc_f03_func_init(func_,func_id(i),XC_UNPOLARIZED)
     info_ = xc_f03_func_get_info(func_)
     if (xc_f03_func_info_get_kind(info_) == XC_CORRELATION) then
       Coeffs(i) = Coeffs(i)*dFMD
@@ -173,7 +172,7 @@ else if (LDTF) then
   ! Add TF kinetic with same coeff as exchange
   ! and optionally kill everything else
   do i=1,nFuncs
-    call xc_f03_func_init(func_,func_id(i),0_LibxcInt)
+    call xc_f03_func_init(func_,func_id(i),XC_UNPOLARIZED)
     info_ = xc_f03_func_get_info(func_)
     if (xc_f03_func_info_get_kind(info_) == XC_EXCHANGE) then
       if (nFuncs == nFuncs_max) then
@@ -215,11 +214,11 @@ nFuncs = j
 
 if (associated(Sub,libxc_functionals)) call Initiate_libxc_functionals(nD)
 
-call DrvNQ(Sub,F_DFT,nD,Func,D_DS,nh1,nD,Do_Grad,Grad,nGrad,Do_MO,Do_TwoEl,DFTFOCK)
+call DrvNQ(Sub,F_DFT,nD,Func,D_DS,nh1,nD,Do_Grad,Grad,nGrad,Do_MO,Do_TwoEl,DFTFOCK,IsFT)
 
 if (associated(Sub,libxc_functionals)) call Remove_libxc_functionals()
 
-if (associated(External_Sub)) call DrvNQ(External_Sub,F_DFT,nD,Func,D_DS,nh1,nD,Do_Grad,Grad,nGrad,Do_MO,Do_TwoEl,DFTFOCK)
+if (associated(External_Sub)) call DrvNQ(External_Sub,F_DFT,nD,Func,D_DS,nh1,nD,Do_Grad,Grad,nGrad,Do_MO,Do_TwoEl,DFTFOCK,IsFT)
 
 Only_exc = .false.
 LDTF = .false.

@@ -50,15 +50,23 @@
 
 #ifdef _DMRG_
 !     module dependencies
-      use qcmaquis_interface_cfg
-      use qcmaquis_interface
+      use qcmaquis_interface, only: qcmaquis_interface_delete_chkp,
+     &  qcmaquis_interface_prepare_hirdm_template,
+     &  qcmaquis_interface_deinit, qcmaquis_param,
+     &  TEMPLATE_4RDM, TEMPLATE_TRANSITION_3RDM, dmrg_energy
       use qcmaquis_interface_mpssi, only: qcmaquis_mpssi_transform
 #endif
       use stdalloc, only: mma_allocate, mma_deallocate
       use Fock_util_global, only: ALGO, DoActive, DoCholesky
-      use write_orbital_files, only : OrbFiles, putOrbFile
+      use write_orbital_files, only : OrbFiles, putOrbFile,
+     &  write_orb_per_iter
+      use filesystem, only: copy_, real_path
       use generic_CI, only: CI_solver_t
       use fciqmc, only: DoNECI, fciqmc_solver_t, tGUGA_in
+      use para_info, only: king
+      use fortran_strings, only: str
+      use spin_correlation, only: spin_correlation_driver,
+     &    orb_range_p, orb_range_q
       use CC_CI_mod, only: Do_CC_CI, CC_CI_solver_t
       use fcidump, only : make_fcidumps, transform, DumpOnly
       use orthonormalization, only : ON_scheme
@@ -68,6 +76,7 @@
 #endif
 #ifdef _HDF5_
       use mh5, only: mh5_put_attr, mh5_put_dset
+      use csfbas, only: CONF, KCFTP
 #endif
       use OFembed, only: Do_OFemb, FMaux
 
@@ -90,7 +99,6 @@
 #include "casvb.fh"
 #include "rasscf_lucia.fh"
 #include "lucia_ini.fh"
-#include "csfbas.fh"
 #include "gugx.fh"
 #include "pamint.fh"
 #include "qnctl.fh"
@@ -807,6 +815,9 @@ c         write(6,*) (WORK(LTUVX+ind),ind=0,NACPR2-1)
 
         if (allocated(CI_solver)) then
           call CI_solver%run(actual_iter=actual_iter,
+     &                    ifinal=ifinal,
+     &                    iroot=iroot,
+     &                    weight=weight,
      &                    CMO=work(LCMO : LCMO + nTot2 - 1),
      &                    DIAF=work(LDIAF : LDiaf + nTot - 1),
      &                    D1I_AO=work(lD1I : lD1I + nTot2 - 1),
@@ -1071,6 +1082,9 @@ c.. upt to here, jobiph are all zeros at iadr15(2)
         Call Timing(Swatch,Swatch,Zenith_1,Swatch)
         if (allocated(CI_solver)) then
           call CI_solver%run(actual_iter=actual_iter,
+     &                    ifinal=ifinal,
+     &                    iroot=iroot,
+     &                    weight=weight,
      &                    CMO=work(LCMO : LCMO + nTot2 - 1),
      &                    DIAF=work(LDIAF : LDiaf + nTot - 1),
      &                    D1I_AO=work(lD1I : lD1I + nTot2 - 1),
@@ -1321,6 +1335,7 @@ cGLM        write(6,*) 'CASDFT energy :', CASDFT_Funct
       call mh5_put_attr(wfn_iter, Iter)
       call mh5_put_dset(wfn_energy, ENER(1,Iter))
 #endif
+
 *
 * Print output of energies and convergence parameters
 *
@@ -1526,6 +1541,15 @@ cGLM some additional printout for MC-PDFT
         END IF
       end if
 
+      if (write_orb_per_iter .and. king()) then
+        call copy_(real_path('RASORB'),
+     &             real_path('ITERORB.'//str(actual_iter)))
+#ifdef _HDF5_
+        call copy_(real_path('RASWFN'),
+     &             real_path('RASWFN.'//str(actual_iter)))
+
+#endif
+      end if
 
 *
 * Convergence check:
@@ -1685,6 +1709,9 @@ c Clean-close as much as you can the CASDFT stuff...
 
       if (allocated(CI_solver)) then
           call CI_solver%run(actual_iter=actual_iter,
+     &                    ifinal=ifinal,
+     &                    iroot=iroot,
+     &                    weight=weight,
      &                    CMO=work(LCMO : LCMO + nTot2 - 1),
      &                    DIAF=work(LDIAF : LDiaf + nTot - 1),
      &                    D1I_AO=work(lD1I : lD1I + nTot2 - 1),
@@ -1784,7 +1811,7 @@ c Clean-close as much as you can the CASDFT stuff...
 *           Read and reorder the left CI vector
             Call DDafile(JOBIPH,2,Work(iTmp),nConf,jDisk)
             Call Reord2(NAC,NACTEL,STSYM,1,
-     &                  iWork(KICONF(1)),iWork(KCFTP),
+     &                  CONF,iWork(KCFTP),
      &                  Work(iTmp),Work(iVecL),iWork(ivkcnf))
             C_Pointer=iVecL
             kDisk=IADR15(4)
@@ -1792,7 +1819,7 @@ c Clean-close as much as you can the CASDFT stuff...
 *              Read and reorder the right CI vector
                Call DDafile(JOBIPH,2,Work(iTmp),nConf,kDisk)
                Call Reord2(NAC,NACTEL,STSYM,1,
-     &                     iWork(KICONF(1)),iWork(KCFTP),
+     &                     CONF,iWork(KCFTP),
      &                     Work(iTmp),Work(iVecR),iWork(ivkcnf))
 *              Compute TDM and store in h5 file
                Call Lucia_Util('Densi',iVecR,iDummy,Dummy)
@@ -1815,6 +1842,13 @@ c Clean-close as much as you can the CASDFT stuff...
      &                         'TDM keyword ignored.')
 #endif
       End If
+
+      if (KeySSCR) then
+        call spin_correlation_driver(orb_range_p, orb_range_q, iroot)
+        call mma_deallocate(orb_range_p)
+        call mma_deallocate(orb_range_q)
+      end if
+
 *
 *****************************************************************
 * Export all information relevant to geometry optimizations.
@@ -2044,9 +2078,9 @@ c      End If
           if (NACTEL.gt.3) then ! Ignore 4-RDM if we have <4 electrons
           do i=1,NROOTS
               Write (6,'(a)') 'Writing 4-RDM QCMaquis template'//
-     &   ' for state '//trim(str(i))
+     &   ' for state '//str(i)
               call qcmaquis_interface_prepare_hirdm_template(
-     &        filename="meas-4rdm."//trim(str(i-1))//".in",
+     &        filename="meas-4rdm."//str(i-1)//".in",
      &        state=i-1,
      &        tpl=TEMPLATE_4RDM)
               call qcmaquis_mpssi_transform(
@@ -2062,10 +2096,9 @@ c      End If
           do i=1,NROOTS
             do j=i+1,NROOTS
               Write (6,'(a)') 'Writing 3-TDM QCMaquis template'//
-     &   ' for states '//trim(str(i))//" and "//trim(str(j))
+     &   ' for states '//str(i)//" and "//str(j)
               call qcmaquis_interface_prepare_hirdm_template(
-     &        filename="meas-3tdm."//trim(str(i-1))//"."//
-     &         trim(str(j-1))//".in",
+     &        filename="meas-3tdm."//str(i-1)//"."//str(j-1)//".in",
      &        state=i-1,
      &        state_j=j-1,
      &        tpl=TEMPLATE_TRANSITION_3RDM)

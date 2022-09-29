@@ -48,15 +48,6 @@ use Constants, only: Zero, One
 use Definitions, only: wp, iwp, u6
 
 implicit none
-interface
-  subroutine Kernel( &
-#                   define _CALLING_
-#                   include "grd_interface.fh"
-                   )
-    import :: wp, iwp
-#   include "grd_interface.fh"
-  end subroutine Kernel
-end interface
 external :: KrnlMm
 integer(kind=iwp), intent(in) :: nGrad, nFD, nComp, lOper(nComp), nOrdOp
 real(kind=wp), intent(out) :: Grad(nGrad)
@@ -309,7 +300,7 @@ do ijS=1,nTasks
       ! trace the result.
 
       call Kernel(Shells(iShll)%Exp,iPrim,Shells(jShll)%Exp,jPrim,Zeta,ZI,Kappa,Pcoor,rFinal,iPrim*jPrim,iAng,jAng,A,RB,nOrder, &
-                  Krnl,MemKer,Ccoor,nOrdOp,Grad,nGrad,IfGrad,IndGrd,DAO,mdci,mdcj,nOp,lOper,nComp,iStabM,nStabM)
+                  Krnl,MemKer,Ccoor,nOrdOp,Grad,nGrad,IfGrad,IndGrd,DAO,mdci,mdcj,nOp,nComp,iStabM,nStabM)
       if (iPrint >= 49) call PrGrad(' In Oneel',Grad,nGrad,ChDisp)
 
     end do

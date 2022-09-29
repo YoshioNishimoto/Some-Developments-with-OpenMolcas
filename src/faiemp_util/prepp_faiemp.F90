@@ -116,7 +116,7 @@ else if (Method == 'RASSCF  ' .or. Method == 'CASSCF  ' .or. Method == 'CASDFT  
 
   nDSO = nDens
   mIrrep = nIrrep
-  call ICopy(nIrrep,nBas,1,mBas,1)
+  mBas(0:nIrrep-1) = nBas(0:nIrrep-1)
   if (lPrint) then
     write(u6,*)
     write(u6,'(2A)') ' Wavefunction type: ',Method
@@ -137,7 +137,7 @@ else if (Method == 'CASSCFSA' .or. Method == 'RASSCFSA') then
   call Get_iScalar('SA ready',iGo)
   if (iGO == 1) lSA = .true.
   mIrrep = nIrrep
-  call ICopy(nIrrep,nBas,1,mBas,1)
+  mBas(0:nIrrep-1) = nBas(0:nIrrep-1)
   if (lPrint .and. lSA) then
     write(u6,*)
     write(u6,'(2A)') ' Wavefunction type: State average ',Method(1:6)
@@ -291,9 +291,9 @@ if (lpso) then
     end if
 
     ! P are stored as
-    !                            _                     _
-    !   P1=<i|e_pqrs|i> + sum_i <i|e_pqrs|i>+<i|e_pqrs|i>
-    !   P2=sum_i <i|e_pqrs|i>
+    !                              _                     _
+    !   P1 = <i|e_pqrs|i> + sum_i <i|e_pqrs|i>+<i|e_pqrs|i>
+    !   P2 = sum_i <i|e_pqrs|i>
 
     call Get_PLMO(G2(:,2),nG2)
     call Daxpy_(nG2,One,G2(:,2),1,G2(:,1),1)

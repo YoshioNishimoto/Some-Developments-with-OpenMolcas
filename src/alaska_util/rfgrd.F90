@@ -25,15 +25,16 @@ subroutine RFGrd( &
 !             November '90                                             *
 !             Modified to multipole moments November '90               *
 !                                                                      *
-!             Roland Lindh, Dept. of Theoratical Chemistry, University *
+!             Roland Lindh, Dept. of Theoretical Chemistry, University *
 !             of Lund, SWEDEN.                                         *
 !             Modified to reaction field calculations July '92         *
 !             Modified to gradient calculations May '95                *
 !***********************************************************************
 
-use Her_RW, only: iHerR, iHerW, HerR, HerW
+use Her_RW, only: HerR, HerW, iHerR, iHerW
 use PCM_arrays, only: MM
 use Center_Info, only: dc
+use Index_Functions, only: nTri_Elem1
 use Constants, only: Half
 use Definitions, only: wp, iwp, u6
 
@@ -46,15 +47,13 @@ logical(kind=iwp) :: ABeq(3)
 
 #include "macros.fh"
 unused_var(ZInv)
-unused_var(lOper)
 unused_var(iStabM)
+unused_var(nStabM)
 
 iRout = 122
 iPrint = nPrint(iRout)
 !iPrint = 99
-ABeq(1) = A(1) == RB(1)
-ABeq(2) = A(2) == RB(2)
-ABeq(3) = A(3) == RB(3)
+ABeq(:) = A == RB
 
 nip = 1
 ipAxyz = nip
@@ -102,9 +101,7 @@ call vCrtCmp(Array(ipTemp1),P,nZeta,RB,Array(ipBxyz),lb+1,HerR(iHerR(nHer)),nHer
 
 ! Compute the contribution from the multipole moment operator
 
-ABeq(1) = .false.
-ABeq(2) = .false.
-ABeq(3) = .false.
+ABeq(:) = .false.
 call vCrtCmp(Array(ipTemp1),P,nZeta,Ccoor,Array(ipRxyz),nOrdOp,HerR(iHerR(nHer)),nHer,ABeq)
 
 ! Compute the cartesian components for the multipole moment

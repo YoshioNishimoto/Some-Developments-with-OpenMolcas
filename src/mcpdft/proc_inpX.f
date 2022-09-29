@@ -11,6 +11,7 @@
       Subroutine Proc_InpX(DSCF,iRc)
 
 ! module dependencies
+      use csfbas, only: CONF, KCFTP
 #ifdef module_DMRG
 !     use molcas_dmrg_interface !stknecht: Maquis-DMRG program
 #endif
@@ -22,6 +23,7 @@
 #endif
       use KSDFT_Info, only: CoefR, CoefX
       use OFembed, only: Do_OFemb
+      use hybridpdft, only: Ratio_WF, Do_Hybrid
       Implicit Real*8 (A-H,O-Z)
 #include "SysDef.fh"
 #include "rasdim.fh"
@@ -42,7 +44,6 @@
 #include "wjob.fh"
 * Lucia-stuff:
 #include "ciinfo.fh"
-#include "csfbas.fh"
 #include "spinfo.fh"
 #include "lucia_ini.fh"
 #include "stdalloc.fh"
@@ -362,6 +363,25 @@ C   No changing about read in orbital information from INPORB yet.
        Call SetPos_m(LUInput,'WJOB',Line,iRc)
        Call ChkIfKey_m()
       End If
+*---  Process LAMB command --------------------------------------------*
+      If (KeyLAMB) Then
+       If (DBG) Write(6,*) 'Check if hybrid PDFT case'
+       Call SetPos_m(LUInput,'LAMB',Line,iRc)
+       ReadStatus=' Failure reading data following HPDF keyword.'
+       Read(LUInput,*,End=9910,Err=9920) Ratio_WF
+       ReadStatus=' O.K. reading data following HPDF keyword.'
+       If(iRc.ne._RC_ALL_IS_WELL_) GoTo 9810
+       If(Ratio_WF.gt.0.0d0) Then
+        Do_Hybrid=.true.
+        CALL Put_DScalar('R_WF_HMC',Ratio_WF)
+       End If
+       If (DBG) Write(6,*) 'Wave Funtion Ratio in hybrid PDFT',Ratio_WF
+       If (dogradmspd.or.dogradpdft) Then
+        Call WarningMessage(2,'GRAD currently not compatible with HPDF')
+        GoTo 9810
+       End If
+       Call ChkIfKey_m()
+      End If
 
 *---  Process HDF5 file --------------------------------------------*
       If (hasHDF5ref) Then
@@ -595,6 +615,9 @@ c      end if
       If (KeyGRAD) Then
        If (DBG) Write(6,*) ' GRADient keyword was used.'
        DoGradPDFT=.true.
+*TRS
+       call Put_iScalar('agrad',1)
+*TRS
        if(iMSPDFT==1) then
         dogradmspd=.true.
         dogradpdft=.false.
@@ -826,7 +849,7 @@ CSVC: check if NU<NT are included in the same gas space
       IF (ICICH.EQ.1) THEN
         CALL GETMEM('UG2SG','ALLO','INTE',LUG2SG,NCONF)
         CALL UG2SG_m(NROOTS,NCONF,NAC,NACTEL,STSYM,IPR,
-     *             IWORK(KICONF(1)),IWORK(KCFTP),IWORK(LUG2SG),
+     *             CONF,IWORK(KCFTP),IWORK(LUG2SG),
      *             ICI,JCJ,CCI,MXROOT)
         CALL GETMEM('UG2SG','FREE','INTE',LUG2SG,NCONF)
       END IF

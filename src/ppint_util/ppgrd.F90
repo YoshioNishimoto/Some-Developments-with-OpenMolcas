@@ -22,7 +22,7 @@ subroutine PPGrd( &
 use Basis_Info, only: dbsc, nCnttp, Shells
 use Center_Info, only: dc
 use Symmetry_Info, only: iOper
-use Index_util, only: nTri0Elem
+use Index_Functions, only: nTri_Elem1
 use Constants, only: Zero, One
 use Definitions, only: wp, iwp, u6
 
@@ -30,7 +30,7 @@ implicit none
 #include "grd_interface.fh"
 integer(kind=iwp), parameter :: lproju = 9, imax = 100, kcrs = 1
 integer(kind=iwp) :: i, ia, iAlpha, ib, iBeta, iCar, iCmp, iCnttp, iDCRT(0:7), iExp, iIrrep, iOff, iplalbm, iplalbp, iplamlb, &
-                     iplaplb, ipRef, iPrint, iRout, iSh, iStrt, iuvwx(4), iVec, iZeta, j, JndGrd(3,4), kCnt, kdc, kSh, kShEnd, &
+                     iplaplb, ipRef, iPrint, iRout, iSh, iStrt, iuvwx(4), iVec, iZeta, JndGrd(3,4), kCnt, kdc, kSh, kShEnd, &
                      kShStr, lcr(kcrs), lDCRT, LmbdT, lOp(4), mGrad, nArray, ncr(imax), ncrr, nDAO, nDCRT, nDisp, &
                      nkcrl(lproju+1,kcrs), nkcru(lproju+1,kcrs), nlalbm, nlalbp, nlamlb, nlaplb, npot, nPP_S
 real(kind=wp) :: C(3), ccr(imax), Fact, TC(3), zcr(imax)
@@ -47,9 +47,8 @@ unused_var(ZInv)
 unused_var(rKappa)
 unused_var(P)
 unused_var(nHer)
-unused_var(Ccoor)
+unused_var(Ccoor(1))
 unused_var(nOrdOp)
-unused_var(lOper)
 
 !                                                                      *
 !***********************************************************************
@@ -57,7 +56,7 @@ unused_var(lOper)
 iRout = 122
 iPrint = nPrint(iRout)
 
-nDAO = nTri0Elem(la)*nTri0Elem(lb)
+nDAO = nTri_Elem1(la)*nTri_Elem1(lb)
 iIrrep = 0
 iuvwx(1) = dc(mdc)%nStab
 iuvwx(2) = dc(ndc)%nStab
@@ -73,14 +72,14 @@ ipRef = 1
 
 ! la+1, lb
 
-nlaplb = max(nTri0Elem(la+1),nTri0Elem(lb))**2
+nlaplb = max(nTri_Elem1(la+1),nTri_Elem1(lb))**2
 iplaplb = ipRef+2*nArray
 nArray = nArray+nlaplb
 
 ! la-1, lb
 
 if (la > 0) then
-  nlamlb = max(nTri0Elem(la-1),nTri0Elem(lb))**2
+  nlamlb = max(nTri_Elem1(la-1),nTri_Elem1(lb))**2
 else
   nlamlb = 0
 end if
@@ -89,14 +88,14 @@ nArray = nArray+nlamlb
 
 ! la, lb+1
 
-nlalbp = max(nTri0Elem(la),nTri0Elem(lb+1))**2
+nlalbp = max(nTri_Elem1(la),nTri_Elem1(lb+1))**2
 iplalbp = ipRef+2*nArray
 nArray = nArray+nlalbp
 
 ! la, lb-1
 
 if (lb > 0) then
-  nlalbm = max(nTri0Elem(la),nTri0Elem(lb-1))**2
+  nlalbm = max(nTri_Elem1(la),nTri_Elem1(lb-1))**2
 else
   nlalbm = 0
 end if
@@ -176,12 +175,8 @@ do iCnttp=1,nCnttp
 
     iuvwx(3) = dc(kdc+kCnt)%nStab
     iuvwx(4) = dc(kdc+kCnt)%nStab
-    call ICopy(6,IndGrd,1,JndGrd,1)
-    do i=1,3
-      do j=1,2
-        JfGrad(i,j) = IfGrad(i,j)
-      end do
-    end do
+    JndGrd(:,1:2) = IndGrd
+    JfGrad(:,1:2) = IfGrad
 
     nDisp = IndDsp(kdc+kCnt,iIrrep)
     do iCar=0,2
@@ -202,10 +197,8 @@ do iCnttp=1,nCnttp
         JndGrd(iCar+1,3) = 0
       end if
     end do
-    call ICopy(3,[0],0,JndGrd(1,4),1)
-    JfGrad(1,4) = .false.
-    JfGrad(2,4) = .false.
-    JfGrad(3,4) = .false.
+    JndGrd(:,4) = 0
+    JfGrad(:,4) = .false.
     mGrad = 0
     do iCar=1,3
       do i=1,2
@@ -264,16 +257,16 @@ do iCnttp=1,nCnttp
       end do   ! iBeta
 
       !AOM<
-      if (abs(Fact-One) > 1.0e-7_wp) call dscal_(nAlpha*nBeta*nTri0Elem(la)*nTri0Elem(lb)*mGrad,Fact,rFinal,1)
+      if (abs(Fact-One) > 1.0e-7_wp) call dscal_(nAlpha*nBeta*nTri_Elem1(la)*nTri_Elem1(lb)*mGrad,Fact,rFinal,1)
       !AOM>
       if (iPrint >= 99) then
         write(u6,*) ' Result in PPGrd'
         write(u6,*) JfGrad
-        do ia=1,nTri0Elem(la)
-          do ib=1,nTri0Elem(lb)
+        do ia=1,nTri_Elem1(la)
+          do ib=1,nTri_Elem1(lb)
             do iVec=1,mGrad
               write(Label,'(A,I2,A,I2,A)') ' rFinal(',ia,',',ib,')'
-              call RecPrt(Label,' ',rFinal(1,ia,ib,iVec),nAlpha,nBeta)
+              call RecPrt(Label,' ',rFinal(:,ia,ib,1,iVec),nAlpha,nBeta)
             end do
           end do
         end do

@@ -75,6 +75,7 @@ David L. Cooper
 Maurizio Cossi  
 Joel Creutzberg  
 Oleh Danyliv  
+Danjo De Chavez  
 Mickaël G. Delcey  
 Ajitha Devarajan  
 Luca De Vico  
@@ -151,6 +152,7 @@ H. Rieger
 Björn O. Roos  
 Ulf Ryde  
 Andrzej J. Sadlej  
+Arta Safari  
 Pawel Salek  
 Andrew M. Sand  
 Michael A. Saunders  
@@ -194,4 +196,3 @@ Alexander Zech
 Yan Zhao  
 Chen Zhou  
 J. Patrick Zobel  
-
