@@ -44,12 +44,11 @@
 *                                                                      *
 ************************************************************************
       use OFembed, only: Do_OFemb
+      use InfSCF
+      use ChoSCF
       Implicit Real*8 (a-h,o-z)
       External EFP_On
 #include "real.fh"
-#include "mxdm.fh"
-#include "infscf.fh"
-#include "WrkSpc.fh"
 #include "stdalloc.fh"
 #include "rctfld.fh"
 #include "file.fh"
@@ -59,8 +58,6 @@
       Real*8 XCf(nXCf,nD), E_DFT(nE_DFT), Vxc(nDT,nD,NumDT)
       Real*8 Fock(nDT,nD)
       Logical FstItr, NoCoul
-*
-#include "choscf.fh"
 *
       Logical Found, EFP_On
 *
@@ -75,7 +72,8 @@
       Real*8, Allocatable, Target:: Temp(:,:)
       Real*8, Dimension(:,:), Allocatable, Target:: Aux
       Real*8, Dimension(:,:), Pointer:: pTwoHam
-      Dimension Dummy(1),iDummy(1),Dumm0(1),Dumm1(1)
+      Real*8, Allocatable :: tVxc(:)
+      Dimension Dummy(1),Dumm0(1),Dumm1(1)
 #include "SysDef.fh"
 *
       Interface
@@ -98,8 +96,6 @@
       Call NrmClc(TwoHam(1,1,nDens),nBT*nD,'PMat: Enter','T in iPsLst')
       Call NrmClc(Vxc   (1,1,nDens),nBT*nD,'PMat: Enter','T in iPsLst')
 #endif
-*
-      iter_d=iter-iter0
 *
 * --- Copy the (abs.) value of the Max Offdiag Fmat to a Common Block
 * --- Used in the LK Cholesky algorithm
@@ -132,8 +128,8 @@
          NonEq=.False.
          Do_DFT=.True.
          iDumm=1
-         ltmp1=iter_d.eq.1
-         ltmp2=iter_d.ne.1
+         ltmp1=iter.eq.1
+         ltmp2=iter.ne.1
          If (iUHF.eq.0) Then
             Call DrvXV(OneHam,TwoHam(1,1,iPsLst),Dens(1,1,iPsLst),
      &                  PotNuc,nBT,ltmp1,ltmp2,NonEq,
@@ -160,16 +156,18 @@
 *        Pick up the integrated energy contribution of the external
 *        potential to the total energy.
 *
-         Call Peek_dScalar('KSDFT energy',E_DFT(iter_d))
+         Call Peek_dScalar('KSDFT energy',E_DFT(iter))
 *
 *        Pick up the contribution to the Fock matrix due to the
 *        external field. Note that for some external field the
 *        potential is neither linear nor bi-linear.
 *
          If (KSDFT.ne.'SCF') Then
-            Call Get_dExcdRa(ipVxc,nVxc)
-            Call DCopy_(nVxc,Work(ipVxc),1,Vxc(1,1,iPsLst),1)
-            Call Free_Work(ipVxc)
+            nVxc=Size(Vxc,1)*Size(Vxc,2)
+            Call mma_allocate(tVxc,nVxc,Label='tVxc')
+            Call Get_dExcdRa_x(tVxc,nVxc)
+            Call DCopy_(nVxc,tVxc,1,Vxc(1,1,iPsLst),1)
+            Call mma_deallocate(tVxc)
          Else
             Call FZero(Vxc(1,1,iPsLst),nBT*nD)
          End If
@@ -177,9 +175,11 @@
          If (Do_OFemb) Then
             Call Get_NameRun(NamRfil) ! save the old RUNFILE name
             Call NameRun('AUXRFIL')   ! switch the RUNFILE name
-            Call Get_dExcdRa(ipVemb,nVemb)
-            Call DaXpY_(nDT*nD,One,Work(ipVemb),1,Vxc(1,1,iPsLst),1)
-            Call Free_Work(ipVemb)
+            nVxc=Size(Vxc,1)*Size(Vxc,2)
+            Call mma_allocate(tVxc,nVxc,Label='tVxc')
+            Call Get_dExcdRa_x(tVxc,nVxc)
+            Call DaXpY_(nDT*nD,One,tVxc,1,Vxc(1,1,iPsLst),1)
+            Call mma_deallocate(tVxc)
             Call NameRun(NamRfil)   ! switch back RUNFILE name
          End If
 #ifdef _DEBUGPRINT_
@@ -277,20 +277,18 @@
          Do iD = 1, nD
             Call Unfold(Dens(1,iD,iPsLst),nBT,DnsS(1,iD),nBB,nSym,nBas)
          End Do
-         If (iUHF.eq.0) Then
+         If (nD==1) Then
             Call FockTwo_Drv_scf(nSym,nBas,nBas,nSkip,
-     &                     Dens(1,1,iPsLst),DnsS(1,1),Temp(1,1),
-     &                     nBT,ExFac,nBB,MaxBas,iUHF,
-     &                     Dummy,
-     &                     Dummy,Dummy,nOcc(1,1),idummy,
+     &                     Dens(:,:,iPsLst),DnsS(:,:),Temp(1,1),
+     &                     nBT,ExFac,nBB,MaxBas,nD,
+     &                     Dummy,nOcc(:,:),Size(nOcc,1),
      &                     iDummy_run)
          Else
             Call FockTwo_Drv_scf(nSym,nBas,nBas,nSkip,
-     &                     Dens(1,1,iPsLst),DnsS(1,1),Temp(1,1),
-     &                     nBT,ExFac,nBB,MaxBas,iUHF,
-     &                     Dens(1,2,iPsLst),
-     &                     DnsS(1,2),Temp(1,2),nOcc(1,1),
-     &                     nOcc(1,2),iDummy_run)
+     &                     Dens(:,:,iPsLst),DnsS(:,:),Temp(1,1),
+     &                     nBT,ExFac,nBB,MaxBas,nD,
+     &                     Temp(1,2),nOcc(:,:),Size(nOcc,1),
+     &                     iDummy_run)
          End If
 *
 *------- Deallocate memory for squared density matrix
@@ -333,7 +331,7 @@
 *        G(D(k+1)) = G(delta(k+1)) + Sum_i_k C_i G(D_i)
 *
          Call mma_allocate(Aux,nDT,nD,Label='Aux')
-         Do iMat = 1, iter_d-1
+         Do iMat = 1, iter-1
 *
             tmp = 0.0D0
             Do iD = 1, nD
@@ -343,7 +341,8 @@
 
             iM = MapDns(iMat)
             If (iM.lt.0) Then
-               Call RWDTG(-iM,Aux,nDT*nD,'R','TWOHAM',iDisk,MxDDsk)
+               Call RWDTG(-iM,Aux,nDT*nD,'R','TWOHAM',iDisk,
+     &                    SIZE(iDisk,1))
                pTwoHam => Aux
             Else
                pTwoHam => TwoHam(1:nDT,1:nD,iM)

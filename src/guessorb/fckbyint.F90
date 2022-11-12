@@ -163,7 +163,7 @@ do iSym=1,nSym
     call Square(Fck(ijT),T1,1,nB,nB)
     call Square(Ovl(ijT),T2,1,nB,nB)
     call DGEMM_('N','N',nB,nB,nB,One,T1,nB,T2,nB,Zero,T3,nB)
-    call MxMt(T2,nB,1,T3,1,nB,Fck(ijT),nB,nB)
+    call DGEMM_Tri('T','N',nB,nB,nB,One,T2,nB,T3,nB,Zero,Fck(ijT),nB)
     if (Debug) then
       !call TriPrt('Fock matrix with metric','(12f12.6)',Fck(ijT),nB)
       call NrmClc(Fck(ijT),nB*(nB+1)/2,'FckbyInt','Fck(ijT)')
@@ -196,7 +196,7 @@ do iSym=1,nSym
   if (nB > 0) then
     call Square(Fck(ijT),T1,1,nB,nB)
     call DGEMM_('N','N',nB,nS,nB,One,T1,nB,CMO(ijS),nB,Zero,T2,nB)
-    call MxMt(CMO(ijS),nB,1,T2,1,nB,T3,nS,nB)
+    call DGEMM_Tri('T','N',nS,nS,nB,One,CMO(ijS),nB,T2,nB,Zero,T3,nS)
     if (Debug) then
       !call TriPrt('Transformed Fock matrix','(12f12.6)',T3,nB)
       call NrmClc(T3,nB*(nB+1)/2,'FckbyInt','Transformed Fck')
@@ -265,7 +265,7 @@ dummy: if (.true.) then
         call Square(Fck(ijT),T1,1,nB,nB)
         call DGEMM_('N','N',nB,nS,nB,One,T1,nB,CMO(ijS+nB*nC),nB,Zero,T2,nB)
 
-        call MxMt(CMO(ijS+nB*nC),nB,1,T2,1,nB,T3,nS,nB)
+        call DGEMM_Tri('T','N',nS,nS,nB,One,CMO(ijS+nB*nC),nB,T2,nB,Zero,T3,nS)
         if (Debug) then
           call TriPrt('Virtual space','(12f12.6)',T3,nS)
         end if
@@ -285,7 +285,7 @@ dummy: if (.true.) then
           tmp1 = Zero
           do kBas=1,nB
             ik = ijS+(iBas-1)*nB+kBas-1
-            tmp1 = tmp1+abs(CMO(ik)*dble(kBas))
+            tmp1 = tmp1+abs(CMO(ik)*real(kBas,kind=wp))
           end do
           do jBas=iBas+1,nB-nD
             ej = Eps(ijL+jBas-1)
@@ -293,7 +293,7 @@ dummy: if (.true.) then
               tmp2 = Zero
               do kBas=1,nB
                 jk = ijS+(jBas-1)*nB+kBas-1
-                tmp2 = tmp2+abs(CMO(jk)*dble(kBas))
+                tmp2 = tmp2+abs(CMO(jk)*real(kBas,kind=wp))
               end do
               if (tmp2 > tmp1) then
                 tmp = tmp2

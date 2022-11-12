@@ -29,14 +29,12 @@ use MpmC, only: Coor_MpM
 use PrpPnt, only: Den, Occ, Vec
 use External_Centers, only: Dxyz, AMP_Center, EF_Centers, DMS_Centers, nDMS, nEF, nOrdEF, nOrd_XF, nWel, OAM_Center, OMQ_Center, &
                             Wel_Info, XF
-use SW_file, only: SW_FileOrb
 use Symmetry_Info, only: iChBas
-use Temporary_Parameters, only: PrPrt, Short, Primitive_Pass
+use Gateway_global, only: Primitive_Pass, PrPrt, Short, SW_FileOrb
 use PAM2, only: iPAMcount, iPAMPrim, kCnttpPAM
 use DKH_Info, only: BSS, DKroll
 use Sizes_of_Seward, only: S
-use Real_Info, only: PotNuc, kVector
-use Logical_Info, only: Vlct, lRel, lAMFI, NEMO, Do_FckInt, DoFMM, EMFR, GIAO, lMXTC
+use Gateway_Info, only: Do_FckInt, DoFMM, EMFR, GIAO, kVector, lAMFI, lMXTC, lRel, NEMO, PotNuc, Vlct
 #ifdef _FDE_
 use Embedding_Global, only: embInt, embPot, embPotInBasis, embPotPath
 #endif
@@ -55,8 +53,8 @@ integer(kind=iwp) :: i, i2, i3, iAddr, iAtom_Number, iB, iC, iChO, iChO1, iChO2,
                      iMltpl, iOpt, iPAMBas, iPAMf, iPAMltpl, iPrint, iRC, iRout, iSym, iSymBx, iSymBy, iSymBz, iSymC, iSymCX, &
                      iSymCXY, iSymCy, iSymCz, iSymD, iSymLx, iSymLy, iSymLz, iSymR(0:3), iSymRx, iSymRy, iSymRz, iSymX, iSymxLx, &
                      iSymxLy, iSymxLz, iSymXY, iSymXZ, iSymY, iSymyLx, iSymyLy, iSymyLz, iSymYZ, iSymZ, iSymzLx, iSymzLy, iSymzLz, &
-                     iSyXYZ, iTemp, iTol, iWel, ix, ixyz, iy, iz, jx, jxyz, jy, jz,  kCnttpPAM_, lOper, LuTmp, mCnt, mComp, &
-                     mDMS, mMltpl, mOrdOp, nB, nComp, nOrdOp, nPAMltpl
+                     iSyXYZ, iTemp, iTol, iWel, ix, ixyz, iy, iz, jx, jxyz, jy, jz, kCnttpPAM_, lOper, LuTmp, mCnt, mComp, mDMS, &
+                     mMltpl, mOrdOp, nB, nComp, nOrdOp, nPAMltpl
 real(kind=wp) :: Ccoor(3), dum(1), Fact, rHrmt
 logical(kind=iwp) :: lECPnp, lECP, lPAM2np, lPAM2, lPP, lFAIEMP
 character(len=8) :: Label
@@ -86,7 +84,7 @@ external :: embPotKernel, embPotMem
 #endif
 #ifdef _GEN1INT_
 integer(kind=iwp) :: nAtoms, jCnt
-real(kind=wp) :: XTCInt, XTCMem !XTCInt and XTCMem are dummy names
+external :: DumInt, DumMem ! These won't actually be called, but need to be passed around
 #endif
 
 iRout = 131
@@ -1554,7 +1552,7 @@ if (lAMFI .and. (.not. Prprt) .and. (.not. Primitive_Pass)) then
     end if
   end do
 
-  call Drv_AMFI(Label,ipList,OperI,nComp,rHrmt,OperC,iAtmNr2,Charge2)
+  call Drv_AMFI(Label,OperI,nComp,iAtmNr2,Charge2)
 
   call mma_deallocate(iAtmNr2)
   call mma_deallocate(Charge2)
@@ -1575,34 +1573,34 @@ if (lMXTC.and.DKroll.and.Primitive_Pass) then
   ! Assume symmetric
   rHrmt = One
   nComp = 9
-  Call Get_nAtoms_All(nAtoms)
-  Do iCnt = 1, nAtoms
-    Do jCnt = 1, 2
-      if (jCnt.eq.1) then
-        !     Label for lower triangular portion
-        Write (Label,'(A,I3)') 'MAGXP', iCnt
-        Write (PLabel,'(A6)') 'MagInt'
+  call Get_nAtoms_All(nAtoms)
+  do iCnt = 1, nAtoms
+    do jCnt = 1, 2
+      if (jCnt == 1) then
+        ! Label for lower triangular portion
+        write(Label,'(A,I3)') 'MAGXP',iCnt
+        write(PLabel,'(A6)') 'MagInt'
       else
-        !     Label for upper triangular portion
-        Write (Label,'(A,I3)') 'MAGPX', iCnt
-        Write (PLabel,'(A6)') 'MagInt'
-      endif
-      Call Allocate_Auxiliary()
-      !     Dummy symmetry indices
+        ! Label for upper triangular portion
+        write(Label,'(A,I3)') 'MAGPX',iCnt
+        write(PLabel,'(A6)') 'MagInt'
+      end if
+      call Allocate_Auxiliary()
+      ! Dummy symmetry indices
       do i=1,nComp
         OperI(i) = 255
         OperC(i) = 0
-      enddo
-      !     Zero nuclear contribution
-      Call dcopy_(nComp,[Zero],0,Nuc,1)
-      !     Compute one electron integrals
-      Call OneEl(XTCInt,XTCMem,Label,ipList,OperI,nComp,CoorO,nOrdOp,Nuc,rHrmt,OperC,dum,1,dum,idum,0,0,dum,1,0)
-      Call Deallocate_Auxiliary()
-    enddo
-  enddo
+      end do
+      ! Zero nuclear contribution
+      call dcopy_(nComp,[Zero],0,Nuc,1)
+      ! Compute one electron integrals
+      call OneEl(DumInt,DumMem,Label,ipList,OperI,nComp,CoorO,nOrdOp,Nuc,rHrmt,OperC,dum,1,dum,idum,0,0,dum,1,0)
+      call Deallocate_Auxiliary()
+    end do
+  end do
 # else
-  Call WarningMessage(2,'Drv1El: NO Gen1int interface available!')
-  Call Abend()
+  call WarningMessage(2,'Drv1El: NO Gen1int interface available!')
+  call Abend()
 # endif
 end if ! lMXTC
 !***********************************************************************

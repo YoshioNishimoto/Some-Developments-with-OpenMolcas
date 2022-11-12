@@ -40,7 +40,7 @@ integer(kind=iwp) :: nFro(0:7), i, iBas, iGo, iIrrep, ij, ipTmp1, iSpin, jBas, n
 logical(kind=iwp) :: lPrint
 real(kind=wp) :: CoefX, CoefR
 character(len=8) :: RlxLbl, Method
-character(len=16) :: KSDFT
+character(len=80) :: KSDFT
 real(kind=wp), allocatable :: D1AV(:), Tmp(:)
 real(kind=wp), external :: Get_ExFac
 
@@ -64,7 +64,7 @@ nCMo = S%n2Tot
 mCMo = S%n2Tot
 if (Method == 'KS-DFT  ' .or. Method == 'CASDFT  ') then
   call Get_iScalar('Multiplicity',iSpin)
-  call Get_cArray('DFT functional',KSDFT,16)
+  call Get_cArray('DFT functional',KSDFT,80)
   call Get_dScalar('DFT exch coeff',CoefX)
   call Get_dScalar('DFT corr coeff',CoefR)
   ExFac = Get_ExFac(KSDFT)
@@ -116,7 +116,7 @@ else if (Method == 'RASSCF  ' .or. Method == 'CASSCF  ' .or. Method == 'CASDFT  
 
   nDSO = nDens
   mIrrep = nIrrep
-  call ICopy(nIrrep,nBas,1,mBas,1)
+  mBas(0:nIrrep-1) = nBas(0:nIrrep-1)
   if (lPrint) then
     write(u6,*)
     write(u6,'(2A)') ' Wavefunction type: ',Method
@@ -137,7 +137,7 @@ else if (Method == 'CASSCFSA' .or. Method == 'RASSCFSA') then
   call Get_iScalar('SA ready',iGo)
   if (iGO == 1) lSA = .true.
   mIrrep = nIrrep
-  call ICopy(nIrrep,nBas,1,mBas,1)
+  mBas(0:nIrrep-1) = nBas(0:nIrrep-1)
   if (lPrint .and. lSA) then
     write(u6,*)
     write(u6,'(2A)') ' Wavefunction type: State average ',Method(1:6)
@@ -291,9 +291,9 @@ if (lpso) then
     end if
 
     ! P are stored as
-    !                            _                     _
-    !   P1=<i|e_pqrs|i> + sum_i <i|e_pqrs|i>+<i|e_pqrs|i>
-    !   P2=sum_i <i|e_pqrs|i>
+    !                              _                     _
+    !   P1 = <i|e_pqrs|i> + sum_i <i|e_pqrs|i>+<i|e_pqrs|i>
+    !   P2 = sum_i <i|e_pqrs|i>
 
     call Get_PLMO(G2(:,2),nG2)
     call Daxpy_(nG2,One,G2(:,2),1,G2(:,1),1)

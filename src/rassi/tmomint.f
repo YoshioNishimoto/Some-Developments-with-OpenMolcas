@@ -39,7 +39,6 @@
       Integer IOFF(8,8)
 #endif
 #include "print.fh"
-#include "nq_info.fh"
 #include "real.fh"
 #include "wldata.fh"
 #include "property_label.fh"

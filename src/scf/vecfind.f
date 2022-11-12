@@ -42,9 +42,8 @@
 #ifdef _HDF5_
       Use mh5, Only: mh5_fetch_attr
 #endif
+      use InfSCF
       Implicit Real*8 (A-H,O-Z)
-#include "mxdm.fh"
-#include "infscf.fh"
 #include "stdalloc.fh"
 *----------------------------------------------------------------------*
 * Dummy arguments                                                      *
@@ -319,10 +318,10 @@
 *        Write(6,*) 'Using Guessorb orbitals'
          If(OccSet) Then
 *           Write(6,*) 'Occupation is set'
-            Continue
+            !continue
          Else If(FermSet) Then
 *           Write(6,*) 'Fermi is set'
-            Continue
+            !continue
          Else
 *           Write(6,*) 'Must decide if to use Fermi'
             If(nAufb(1).eq.-1) Then

@@ -41,7 +41,7 @@ subroutine PSOAO1(nSO,MemPrm,MemMax,iAnga,iCmpa,iAO,iFnc,iBas,iBsInc,jBas,jBsInc
 use aces_stuff, only: nGamma, Gamma_On
 use PSO_Stuff, only: lPSO
 use SOAO_Info, only: iAOtSO
-use Temporary_parameters, only: force_part_c, force_part_p
+use Gateway_global, only: force_part_c, force_part_p
 use Sizes_of_Seward, only: S
 use Symmetry_Info, only: nIrrep
 use Index_Functions, only: nTri_Elem1
@@ -168,7 +168,7 @@ do
     end if
     cycle
   end if
-  ! Subtract one additional word for getmem's internal error check (?)
+  ! Subtract one additional word (?)
   Mem0 = Mem0-Mem1-1
 
   ! *** Work2 and Work4 ***
@@ -230,7 +230,7 @@ do
     end if
     cycle
   end if
-  ! Subtract one additional word for getmem's internal error check (?)
+  ! Subtract one additional word (?)
   Mem0 = Mem0-Mem2-1
 
   ! *** Work3 and Work5 ***
@@ -301,7 +301,7 @@ do
     exit
   end if
 end do
-! Subtract one additional word for getmem's internal error check (?)
+! Subtract one additional word (?)
 Mem0 = Mem0-Mem3-1
 MinXtr = min(MinXtr,Mem0)
 

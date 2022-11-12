@@ -39,11 +39,9 @@
 *                                                                      *
 ************************************************************************
 *
+      use InfSO
+      use InfSCF
       Implicit Real*8 (a-h,o-z)
-*
-#include "mxdm.fh"
-#include "infscf.fh"
-#include "infso.fh"
 *
       Real*8 SIntTh
       Logical PkMode
@@ -118,7 +116,7 @@
 
 
       Subroutine Ini_PkR8(PkMode)
-      use Real_Info, only: PkAcc
+      use Gateway_Info, only: PkAcc
       Logical PkMode
 *
       Call inipkr8(PkAcc,PkMode)

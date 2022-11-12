@@ -16,12 +16,11 @@
 ************************************************************************
       SubRoutine Final()
       use SCF_Arrays
+      use InfSCF
       Implicit Real*8 (a-h,o-z)
 #ifdef _EFP_
       External EFP_On
 #endif
-#include "mxdm.fh"
-#include "infscf.fh"
 *
 *
 *---- Read remaining one-electron integrals
@@ -58,15 +57,15 @@
       Use mh5, Only: mh5_put_dset
 #endif
       Use Interfaces_SCF, Only: dOne_SCF
-      use OFembed, only: Do_OFemb, FMaux
+      use OFembed, only: Do_OFemb, FMaux, NDSD
 #ifdef _FDE_
       use Embedding_Global, only: embPot, embWriteEsp
 #endif
+      use SpinAV, only: DSc
+      use InfSCF
       Implicit Real*8 (a-h,o-z)
 *
 #include "real.fh"
-#include "mxdm.fh"
-#include "infscf.fh"
 #include "file.fh"
 #include "scfwfn.fh"
 #include "stdalloc.fh"
@@ -76,7 +75,6 @@
      &       Fock(mBT,nD), OccNo(mmB,nD), KntE(mBT), MssVlc(mBT),
      &       Darwin(mBT)
 *
-#include "spave.fh"
 #include "addcorr.fh"
 #ifdef _EFP_
       Logical EFP_On
@@ -95,6 +93,7 @@
       Real*8, Dimension(:,:), Allocatable:: GVFck, Scrt1, Scrt2, DMat,
      &                                      EOr
 #ifdef _HDF5_
+#include "Molcas.fh"
       character(Len=1), allocatable :: typestring(:)
       Integer nSSh(mxSym), nZero(mxSym)
 #endif
@@ -527,16 +526,9 @@ c make a fix for energies for deleted orbitals
 #endif
      &     KSDFT.ne.'SCF'        ) Call ClsSew
 *
-      If (Do_OFemb) Then
-        Call mma_deallocate(FMaux)
-#ifdef _NOT_USED_CODE_
-          If (l_NDSD.gt.0)
-     &        Call GetMem('NDSD','Free','Real',ip_NDSD,l_NDSD)
-#endif
-      EndIf
-      If (MxConstr.gt.0) Then
-         If (Do_SpinAV) Call GetMem('DSc','Free','Real',ip_DSc,nBB)
-      EndIf
+      If (Allocated(FMaux)) Call mma_deallocate(FMaux)
+      If (Allocated(NDSD)) Call mma_deallocate(NDSD)
+      If (Allocated(DSc)) Call mma_deallocate(DSc)
 #ifdef _EFP_
       If (EFP_On()) Then
          Call EFP_ShutDown(EFP_Instance)
@@ -567,6 +559,7 @@ c make a fix for energies for deleted orbitals
       Write(6,Fmt)'- - - - - - - - - - - - - - - - - - - - - - - - -'
      &          //' - - - - - - - - -'
       Do iFld = 1, nFldP
+         If ((iFld.eq.11).or.(iFld.eq.12)) Cycle
          Write(6,'(2x,A45,2f10.2)')NamFld(iFld),TimFld(iFld),
      &                             TimFld(iFld)/TotCpu
       End Do

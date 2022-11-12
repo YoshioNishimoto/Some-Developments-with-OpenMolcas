@@ -21,6 +21,11 @@
 *> Sets values in common blocks in rasscf.fh, general.fh, timers.fh
 ************************************************************************
       Subroutine RasScf_Init_m()
+      Use Fock_util_global, only: ALGO, Deco, DensityCheck, dmpk,
+     &                            DoLocK, DoCholesky, Estimate, Nscreen,
+     &                            Update
+      Use KSDFT_Info, Only: CoefR, CoefX
+      use hybridpdft, only: Ratio_WF, Do_Hybrid
       Implicit Real*8 (A-H,O-Z)
       External Get_SuperName
       Character*100 ProgName, Get_SuperName
@@ -28,22 +33,17 @@
 #include "output_ras.fh"
 #include "rasscf.fh"
 #include "casvb.fh"
-#include "general.fh"
+#include "general_mul.fh"
 #include "gas.fh"
 #include "timers.fh"
 #include "lucia_ini.fh"
 #include "orthonormalize_mcpdft.fh"
 #include "WrkSpc.fh"
-#include "ksdft.fh"
       Integer IPRGLB_IN, IPRLOC_IN(7)
 * What to do with Cholesky stuff?
       Logical, External :: Is_First_Iter
 
-#include "chlcas.fh"
-#include "chodensity.fh"
 #include "chotime.fh"
-#include "cholk.fh"
-#include "choscreen.fh"
 #include "chopar.fh"
 *----------------------------------------------------------------------*
       ProgName=Get_SuperName()
@@ -351,6 +351,12 @@ C The rest is at the present time just to allow testing
 CSVC: lucia timers
       tsigma = 0.0d0
       tdensi = 0.0d0
+
+*
+C Hybrid-PDFT
+      Ratio_WF=0.0d0
+      Do_Hybrid=.false.
+
 *
       RETURN
       END

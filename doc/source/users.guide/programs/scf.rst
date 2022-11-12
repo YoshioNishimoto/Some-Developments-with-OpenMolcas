@@ -327,22 +327,36 @@ Below is a list of keywords that should cover the needs of most users.
 
 :kword:`KSDFT`
   Use this keyword to do density functional theory calculations.
-  This keyword should be followed by functional keyword:
-  BLYP, BPBE, B2PLYP, B3LYP, B3LYP5, B86LYP, B86PBE, GLYP, GPBE, HFB,
-  HFS, KT2, KT3, LDA, LDA5, LSDA, LSDA5, M06, M06HF, M062X, M06L, OLYP, OPBE,
-  O2PLYP, O3LYP, PBE, PBESOL, PBE0, PTCA, RGE2, SSBSW, SVWN, SVWN5, TLYP.
-  Example: `KSDFT=B3LYP`
+  This keyword should be followed by a functional keyword.
+  Use :command:`pymolcas help_func` to see a list of available functionals,
+  you can also specify a `Libxc <https://www.tddft.org/programs/libxc/>`_ functional name, or a number :math:`N` followed
+  by :math:`N` lines, each of them containing a weight factor and a Libxc
+  functional name (or ``HF_X`` for exact exchange).
+  Examples (all three should be equivalent): ::
 
-  .. xmldoc:: <KEYWORD MODULE="SCF" NAME="KSDFT" APPEAR="DFT" KIND="CHOICE" LEVEL="BASIC"
-              LIST="----,BLYP,BPBE,B2PLYP,B3LYP,B3LYP5,B86LYP,B86PBE,GLYP,GPBE,HFB,HFS,KT2,KT3,LDA,LDA5,LSDA,LSDA5,M06,M06HF,M062X,M06L,OLYP,OPBE,O2PLYP,O3LYP,PBE,PBESOL,PBE0,PTCA,RGE2,SSBSW,SVWN,SVWN5,TLYP">
+     KSDFT=B3LYP                 * A functional keyword
+
+  ::
+
+     KSDFT=HYB_GGA_XC_B3LYP      * A Libxc functional name
+
+  ::
+
+     KSDFT=5                     * Five components with their weights
+           0.20 HF_X             * Keyword for exact exchange
+           0.08 XC_LDA_X         * Libxc functional names
+           0.72 XC_GGA_X_B88     *  .
+           0.19 XC_LDA_C_VWN_RPA *  .
+           0.81 XC_GGA_C_LYP     *  .
+
+  .. xmldoc:: <KEYWORD MODULE="SCF" NAME="KSDFT" APPEAR="DFT" KIND="STRINGS_COMPUTED" SIZE="1" LEVEL="BASIC">
+              <ALTERNATE KIND="STRING" />
               %%Keyword: KSDFT <basic>
               <HELP>
               Use this keyword to do density functional theory calculations
-              This keyword should be followed by the functional keyword:
-              BLYP, BPBE, B2PLYP, B3LYP, B3LYP5, B86LYP, B86PBE, GLYP, GPBE, HFB,
-              HFS, KT2, KT3, LDA, LDA5, LSDA, LSDA5, M06, M06HF, M062X, M06L, OLYP, OPBE,
-              O2PLYP, O3LYP, PBE, PBESOL, PBE0, PTCA, RGE2, SSBSW, SVWN, SVWN5, TLYP.
-              Example: KSDFT=B3LYP
+              This keyword should be followed by a functional keyword , a Libxc functional
+              name, or a functional specification. See "pymolcas help_func" for
+              available functionals keywords.
               </HELP>
               </KEYWORD>
 
@@ -572,7 +586,7 @@ Below is a list of keywords that should cover the needs of most users.
     Available only within :kword:`ChoInput`. Modifies the thresholds used in the LK screening.
     The keyword takes as argument a (double precision) floating point (non-negative) number used
     as correction factor for the LK screening thresholds.
-    The default value is 1.0d0. A smaller value results in a slower but more accurate calculation.
+    The default value is 0.045d0. A smaller value results in a slower but more accurate calculation.
 
     **Note:** The default choice of the LK screening thresholds is tailored to achieve as much as possible an
     accuracy of the converged SCF energy consistent with the choice of the Cholesky decomposition
@@ -582,7 +596,7 @@ Below is a list of keywords that should cover the needs of most users.
                 %%Keyword: dmpK <advanced>
                 <HELP>
                 Modifies the thresholds used in the LK screening. Available only within ChoInput
-                The default value is 1.0d0. A smaller value results in a slower but more accurate calculation.
+                The default value is 0.045d0. A smaller value results in a slower but more accurate calculation.
                 </HELP>
                 </KEYWORD>
 

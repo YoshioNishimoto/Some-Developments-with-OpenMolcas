@@ -32,11 +32,10 @@
 *                                                                      *
 ************************************************************************
 *
+      Use InfSO
+      use InfSCF
       Implicit Real*8 (a-h,o-z)
 #include "real.fh"
-#include "mxdm.fh"
-#include "infscf.fh"
-#include "infso.fh"
 #include "twoswi.fh"
 #include "file.fh"
 *

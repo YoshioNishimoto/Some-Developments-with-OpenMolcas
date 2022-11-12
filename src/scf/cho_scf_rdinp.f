@@ -15,6 +15,8 @@
 *             Else, read and process input for Cholesky section in SCF
 *
 ************************************************************************
+      Use Fock_util_global, only: Deco, DensityCheck, Estimate, Update
+      Use CHoSCF
       Implicit Real*8 (A-H,O-Z)
 #include "real.fh"
 #include "print.fh"
@@ -24,10 +26,7 @@
       character*13 SECNAM
       parameter (SECNAM = 'CHO_SCF_RDINP')
 *
-#include "choscf.fh"
-#include "chodensity.fh"
 #include "chotime.fh"
-#include "choscreen.fh"
 #include "chopar.fh"
 
 *
@@ -72,7 +71,7 @@
          DensityCheck=.false.
          timings=.false.
          NSCREEN = 10    ! default screening interval (# of red sets)
-         dmpk = 1.0d0   ! default damping of the screening threshold
+         dmpk = 0.045d0   ! default damping of the screening threshold
          Estimate = .false.
          Update = .true.
          goto 999  !return flag
@@ -85,11 +84,11 @@
          DensityCheck=.false.
          timings=.false.
          NSCREEN = 10
-         dmpk = 1.0d0
+         dmpk = 0.045d0
          Estimate = .false.
          Update = .true.
 
-         dmpk_dfl = 1.0d0
+         dmpk_dfl = dmpk
 ************************************************************************
 *                                                                      *
       iPrint=5

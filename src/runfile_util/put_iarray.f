@@ -116,7 +116,7 @@
          RecLab( 11)='Symmetry operati' !ons
          RecLab( 12)='nIsh_ab         '
          RecLab( 13)='nStab           '
-         RecLab( 14)='Quad_c          '
+         RecLab( 14)='                ' !Free slot
          RecLab( 15)='Quad_i          '
          RecLab( 16)='RFcInfo         '
          RecLab( 17)='RFiInfo         '
@@ -153,7 +153,7 @@
          RecLab( 48)='nBas_Prim       '
          RecLab( 49)='IsMM            '
          RecLab( 50)='Atom -> Basis   '
-         RecLab( 51)='Logical_Info    ' !Free slot
+         RecLab( 51)='Logical_Info    '
          RecLab( 52)='                ' !Free slot
          RecLab( 53)='                ' !Free slot
          RecLab( 54)='SCF nOcc        '

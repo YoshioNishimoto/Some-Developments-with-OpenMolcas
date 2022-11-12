@@ -55,8 +55,8 @@ external :: Cff2D, Fake, TNAI1
 
 #include "macros.fh"
 unused_var(rFinal)
-unused_var(Ccoor)
-unused_var(lOper)
+unused_var(Ccoor(1))
+unused_var(nComp)
 
 iRout = 151
 iPrint = nPrint(iRout)
@@ -131,7 +131,7 @@ do iTs=1,nTs
   kat = nint(PCMTess(4,iTs))
   if (iPrint >= 99) call RecPrt('C',' ',C,3,1)
 
-  ! Generate stabilizor of C
+  ! Generate stabilizer of C
 
   nStb = 1
   iStb(0) = 0
@@ -210,7 +210,7 @@ do iTs=1,nTs
     Coori(:,3) = TC(:)
     Coori(:,4) = TC(:)
 
-    call DYaX(nZeta*nDAO,Fact*Q,DAO,1,Array(ipDAO),1)
+    Array(ipDAO:ipDAO+nZeta*nDAO-1) = Fact*Q*pack(DAO,.true.)
 
     ! Compute integrals with the Rys quadrature.
 

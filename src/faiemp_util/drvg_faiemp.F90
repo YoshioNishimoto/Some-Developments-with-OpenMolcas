@@ -31,7 +31,7 @@ use iSD_data, only: iSD
 use k2_arrays, only: ipZeta, ipiZet, Mem_DBLE, Aux, Sew_Scr
 use Basis_Info, only: nBas, nBas_Frag, Shells
 use Sizes_of_Seward, only: S
-use Real_Info, only: CutInt
+use Gateway_Info, only: CutInt
 use Symmetry_Info, only: nIrrep
 use stdalloc, only: mma_allocate, mma_deallocate
 use Constants, only: Zero, One, Two, Three, Eight, Half
@@ -181,6 +181,7 @@ if (iPrint >= 15) call PrGrad(' In Drvg_FAIEMP: Total Grad (1)',Grad,nGrad,ChDis
 !***********************************************************************
 !                                                                      *
 call mma_MaxDBLE(MemMax)
+if (MemMax > 1000) MemMax=MemMax-1000
 call mma_allocate(Sew_Scr,MemMax,Label='Sew_Scr')
 ipMem1 = 1
 !                                                                      *

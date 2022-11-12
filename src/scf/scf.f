@@ -36,15 +36,13 @@
       Use SCF_Arrays
       Use Interfaces_SCF, Only: OccDef
       use OFembed, only: Do_OFemb
+      use InfSO
+      use InfSCF
       Implicit Real*8 (a-h,o-z)
 *
-#include "mxdm.fh"
-#include "infscf.fh"
-#include "infso.fh"
 #include "stdalloc.fh"
 #include "twoswi.fh"
 #include "file.fh"
-#include "hflda.fh"
 #include "warnings.h"
 *
       Character*8 EMILOOP
@@ -56,7 +54,6 @@
 *----------------------------------------------------------------------*
 *
       Call CWTime(TCPU1,TWall1)
-      HFLDA=0.0
       Call SCF_Init()
       iTerm=0
 *
@@ -86,11 +83,11 @@
 *
       Call mma_deallocate(HDiag)
       If (Aufb) Then
-         lthH = nBB
+         lthH = nBB*nD
       Else
-         lthH = nOV
+         lthH = mOV
       End If
-      Call mma_allocate(HDiag,lthH,nD,Label='HDiag')
+      Call mma_allocate(HDiag,lthH,Label='HDiag')
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -100,14 +97,13 @@
 
       FstItr=.True.
 
-      If(.not.OnlyProp) Then
-         Call WfCtl_SCF(iTerm,KSDFT,FstItr,SIntTh)
-      End If
+      If(.not.OnlyProp) Call WfCtl_SCF(iTerm,KSDFT,FstItr,SIntTh)
 
-*     so that iPsLst is right in case of nIter==0
-      If (nIter(nIterP).eq.0) iter0=-1
       Call Final()
       If (DSCF) Call Free_TLists()
+      Call mma_deallocate(Type)
+      Call mma_deallocate(Atom)
+      Call mma_deallocate(Name)
 *
       Call CWTime(TCPU2,TWall2)
       Call SavTim(4,TCPU2-TCPU1,TWall2-TWall1)
@@ -150,19 +146,15 @@
 *
       End
 ************************************************************************
-      SubRoutine IniLLs
+      SubRoutine IniLLs()
 *     initialize the diverse linked lists
+      use LnkLst, only: LLlist,LLGrad,LLdGrd,LLDelt,LLy,LLx,Init_LLs
+      use InfSCF
       Implicit Real*8 (a-h,o-z)
 
 #include "mxdm.fh"
-#include "infscf.fh"
-#include "infso.fh"
-#include "llists.fh"
-#include "lnklst.fh"
 *
 *
-*     MemRsv set tentatively to the size of six density matrices
-c     MemRsv=6*nBT
       LLlist=0
       LLGrad=0
       Call IniLst(LLGrad,20)
@@ -170,15 +162,17 @@ c     MemRsv=6*nBT
       Call IniLst(LLDelt,20)
       Call IniLst(LLy,20)
       Call IniLst(LLx,MxOptm)
-      Init_LLs=1
+      Init_LLs=.True.
 *
       End subroutine IniLLs
 *----------------------------------------------------------------------*
+#define _NOTUSED_
 #ifdef _NOTUSED_
       Subroutine StatLLS()
+      use LnkLst, only: LLGrad,LLdGrd,LLDelt,LLy,LLx,Init_LLs
       Implicit Real*8 (a-h,o-z)
-#include "llists.fh"
-      If (Init_LLs.eq.1) Then
+
+      If (Init_LLs) Then
          Call StlLst(LLGrad)
          Call StlLst(LLDgrd)
          Call StlLst(LLDelt)
@@ -194,15 +188,15 @@ c     MemRsv=6*nBT
 *----------------------------------------------------------------------*
       SubRoutine KiLLs
 *     dispose the diverse linked lists
+      use LnkLst, only: LLGrad,LLdGrd,LLDelt,LLy,LLx,Init_LLs
       Implicit Real*8 (a-h,o-z)
-#include "llists.fh"
-      If (Init_LLs.eq.1) Then
+      If (Init_LLs) Then
          Call KilLst(LLGrad)
          Call KilLst(LLDgrd)
          Call KilLst(LLDelt)
          Call KilLst(LLy)
          Call KilLst(LLx)
-         Init_LLs=-1
+         Init_LLs=.False.
       Else
          Write (6,*) '****** W A R N I N G ! ******'
          Write (6,*) ' Linked list already killed!'
@@ -211,28 +205,28 @@ c     MemRsv=6*nBT
       End
 *----------------------------------------------------------------------*
       Subroutine RclLLs(iDskPt)
+      use InfSO, only: MemRsv
+      use LnkLst, only: LLGrad,LLdGrd,LLDelt,LLy,LLx,Init_LLs
       Implicit Real*8 (a-h,o-z)
-#include "infso.fh"
 #include "file.fh"
-#include "llists.fh"
       Integer iDskPt(5)
       Call RclLst(LLGrad,LuGrd,iDskPt(1),MemRsv)
       Call RclLst(LLDgrd,LuDGd,iDskPt(2),MemRsv)
       Call RclLst(LLDelt,LuDel,iDskPt(3),MemRsv)
       Call RclLst(LLy   ,Lux  ,iDskPt(4),MemRsv)
       Call RclLst(LLx   ,Luy  ,iDskPt(5),MemRsv)
-      Init_LLs=1
-*     Call StatLLs
+      Init_LLs=.True.
+*     Call StatLLs()
       Return
       End
 *----------------------------------------------------------------------*
       Subroutine DmpLLs(iDskPt)
+      use LnkLst, only: LLGrad,LLdGrd,LLDelt,LLy,LLx,Init_LLs
       Implicit Real*8 (a-h,o-z)
 #include "file.fh"
-#include "llists.fh"
       Integer iDskPt(5)
-      If (Init_LLs.eq.1) Then
-*        Call StatLLs
+      If (Init_LLs) Then
+*        Call StatLLs()
          Call DmpLst(LLGrad,LuGrd,iDskPt(1))
          Call DmpLst(LLDgrd,LuDGd,iDskPt(2))
          Call DmpLst(LLDelt,LuDel,iDskPt(3))
@@ -246,36 +240,36 @@ c     MemRsv=6*nBT
       End
 *----------------------------------------------------------------------*
       Subroutine StlLst(LLink)
+      use LnkLst, only: nLList
       Implicit Real*8 (a-h,o-z)
-#include "WrkSpc.fh"
-      return
+*     return
        Write (6,*)
        Write (6,*) '*********** Status of Linked List *************'
        Write (6,*)
        Write (6,*) ' LLink:',LLink
        Write (6,*)
        Write (6,*) ' CNOD data'
-       Write (6,*) 'Error code:                       ',iWork(LLink  )
-       Write (6,*) 'Pointer to first NODE in the list:',iWork(LLink+1)
-       Write (6,*) 'Actual length of list:            ',iWork(LLink+2)
-       Write (6,*) '# of vectors in core:             ',iWork(LLink+3)
+       Write (6,*) 'Error code:                       ',nLList(LLink,0)
+       Write (6,*) 'Pointer to first NODE in the list:',nLList(LLink,1)
+       Write (6,*) 'Actual length of list:            ',nLList(LLink,2)
+       Write (6,*) '# of vectors in core:             ',nLList(LLink,3)
        Write (6,*)
-       iRoot=iWork(LLink+1)
+       iRoot=nLList(LLink,1)
        Do while (iRoot.ne.0)
           Write (6,*) ' NODE data'
           Write (6,*) 'NODE @:                         ',iRoot
-          Write (6,*) 'Pointer to next NODE:           ',iWork(iRoot  )
-          Write (6,*) 'Pointer to stored vector:       ',iWork(iRoot+1)
-          If (iWork(iRoot+5).ge.1) Then
+          Write (6,*) 'Pointer to next NODE:           ',nLList(iRoot,0)
+          Write (6,*) 'Pointer to stored vector:       ',nLList(iRoot,1)
+          If (nLList(iRoot,5).ge.1) Then
              Write (6,*) 'Vector status:                  in Core'
           Else
              Write (6,*) 'Vector status:                  on Disk'
           End If
-          Write (6,*) 'Next free position:             ',iWork(iRoot+2)
-          Write (6,*) 'Length of vector:               ',iWork(iRoot+3)
-          Write (6,*) 'Iteration number:               ',iWork(iRoot+4)
+          Write (6,*) 'Next free position:             ',nLList(iRoot,2)
+          Write (6,*) 'Length of vector:               ',nLList(iRoot,3)
+          Write (6,*) 'Iteration number:               ',nLList(iRoot,4)
           Write (6,*)
-          iRoot=iWork(iRoot)
+          iRoot=nLList(iRoot,0)
        End Do
        Write (6,*) '************ End of Status Report *************'
        Write (6,*)
@@ -283,10 +277,9 @@ c     MemRsv=6*nBT
       End
 *----------------------------------------------------------------------*
       Subroutine Free_TLists
+      use InfSCF
       Implicit Real*8 (a-h,o-z)
 
-#include "mxdm.fh"
-#include "infscf.fh"
 *
       Write (6,*) 'Free_TLists:',DSCF
       If (DSCF) Then
@@ -299,12 +292,11 @@ c     MemRsv=6*nBT
       End
 *----------------------------------------------------------------------*
       Subroutine Reduce_Thresholds(EThr_,SIntTh)
+      use InfSO, only: DltNTh
+      use InfSCF
       Implicit Real*8 (a-h,o-z)
 #include "real.fh"
 *
-#include "mxdm.fh"
-#include "infscf.fh"
-#include "infso.fh"
 #include "save.fh"
 *
       Write (6,*)
@@ -336,11 +328,10 @@ c     MemRsv=6*nBT
       Return
       End
       Subroutine Reset_Thresholds
+      use InfSO, only: DltNTh
+      Use InfSCF
       Implicit Real*8 (a-h,o-z)
 *
-#include "mxdm.fh"
-#include "infscf.fh"
-#include "infso.fh"
 #include "save.fh"
 *
       Write (6,*)
