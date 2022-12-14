@@ -8,14 +8,27 @@
 ! For more details see the full text of the license in the file        *
 ! LICENSE or in <http://www.gnu.org/licenses/>.                        *
 !***********************************************************************
-#ifndef _DEMO_
-      Integer, Parameter:: MaxBfn=10000
-#else
-      Integer, Parameter:: MaxBfn=100
-#endif
-!
-!     We normally expect the number of auxiliary functions to be
-!     in the range of 3-5 times the normal basis set.
-!
-      Integer, Parameter:: MaxBfn_Aux=7*MaxBfn
-      Integer, Parameter:: MxAO=MaxBfn+MaxBfn_Aux
+
+module caspt2_output
+
+  use definitions, only: wp,iwp
+
+  implicit none
+
+  ! amount of output written
+  Integer(kind=iwp),parameter :: silent  = 0
+  Integer(kind=iwp),parameter :: terse   = 1
+  Integer(kind=iwp),parameter :: usual   = 2
+  Integer(kind=iwp),parameter :: verbose = 3
+  Integer(kind=iwp),parameter :: debug   = 4
+  Integer(kind=iwp),parameter :: insane  = 5
+
+  Integer(kind=iwp) :: iPrGlb
+
+  ! thresholds for printing denominators
+  Real(kind=wp) :: dnmThr,cmpThr,cntThr
+
+  Real(kind=wp) :: EMP2
+  Real(kind=wp) :: STrA, STrF, STrX
+
+end module caspt2_output

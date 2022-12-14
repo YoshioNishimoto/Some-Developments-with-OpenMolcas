@@ -9,26 +9,18 @@
 ! LICENSE or in <http://www.gnu.org/licenses/>.                        *
 !***********************************************************************
 
-module output_caspt2
+! Global variables of the CASPT2 module
+! TODO: move here all variables in CASPT2 common blocks defined in caspt2.fh
+module caspt2_global
 
-  use definitions, only: wp,iwp
+  use definitions, only: iwp,wp
 
-  implicit none
+  Real(kind=wp)     :: ipea_shift = 0.0_wp
+  Real(kind=wp)     :: imag_shift = 0.0_wp
+  Real(kind=wp)     :: real_shift = 0.0_wp
 
-  ! amount of output written
-  Integer(kind=iwp),parameter :: silent  = 0
-  Integer(kind=iwp),parameter :: terse   = 1
-  Integer(kind=iwp),parameter :: usual   = 2
-  Integer(kind=iwp),parameter :: verbose = 3
-  Integer(kind=iwp),parameter :: debug   = 4
-  Integer(kind=iwp),parameter :: insane  = 5
+  ! sigma-p regularization
+  Real(kind=wp)     :: sigma_p_epsilon  = 0.0_wp
+  Integer(kind=iwp) :: sigma_p_exponent = 2_iwp
 
-  Integer(kind=iwp) :: iPrGlb
-
-  ! thresholds for printing
-  Real(kind=wp) :: dnmThr,cmpThr,cntThr
-
-  Real(kind=wp) :: EMP2
-  Real(kind=wp) :: STrA, STrF, STrX
-
-end module
+end module caspt2_global
