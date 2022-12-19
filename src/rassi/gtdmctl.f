@@ -967,7 +967,7 @@ C In full biorthonormal basis:
 C Correct Dyson norms, for a biorth. basis. Add by Bruno
          DYNORM=0.0D0
          CALL DYSNORM(CMO2,DYSAB,DYNORM) !do not change CMO2
-       IF (DYNORM.GT.1.0D-5) THEN
+       IF (DYNORM.GT.1.0D-15) THEN
 C In AO basis:
          CALL MKDYSZZ(CMO2,DYSAB,DYSZZ)  !do not change CMO2
         IF (DYSO) THEN
