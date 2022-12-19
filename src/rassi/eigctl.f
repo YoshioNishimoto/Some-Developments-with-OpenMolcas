@@ -2298,14 +2298,14 @@ C                                                                      C
 !+++ Bruno Tenorio, 2020. Added Corrected Dyson norms
 ! according to Dysnorm.f subroutine.
        IF (DYSO) THEN
-        DYSTHR=1.0D-5
+        DYSTHR=1.0D-15
         WRITE(6,*)
         CALL CollapseOutput(1,'Dyson amplitudes Biorth. corrected'//
      &                        '(spin-free states):')
         WRITE(6,'(3X,A)')     '----------------------------'//
      &                        '-------------------'
-        IF (DYSTHR.GT.0.0D0) THEN
-           WRITE(6,30) 'for Dyson intensities at least',DYSTHR
+        IF (DYSTHR.GT.DYSTHR) THEN
+           WRITE(6,30) 'for Dyson intensities at least 10E-15'
            WRITE(6,30)
         END IF
         WRITE(6,*) '       From      To        '//
