@@ -132,6 +132,12 @@ CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
       !---Oscillator strength----------
 c      Real(kind=8) :: F, Fx,Fy,Fz, AT, Ax,Ay,Az, AF, dnrm, dE
       Real(kind=8) :: H_torq, T_torq
+      !--- Project Exchange -----------
+      Integer       :: iDIM1, iDIM2, nExch
+      Logical       :: do_project_exchange
+      Character(LEN=180):: aniso_file_site_1
+      Character(LEN=180):: aniso_file_site_2
+
       !----BIG ARRAYS------------------
       Real(kind=8), allocatable :: eso(:), eso_au(:)
       Real(kind=8), allocatable :: esfs(:), esfs_au(:)
@@ -165,7 +171,7 @@ c      Real(kind=8) :: F, Fx,Fy,Fz, AT, Ax,Ay,Az, AF, dnrm, dE
       Logical :: DoPlot
       Logical :: DBG
       Integer :: l
-      Integer :: nss2,nstate2
+      Integer :: nss2, nstate2
 
       DBG=.false.
 
@@ -357,6 +363,8 @@ c---------------------------------------------------------------------
       lDIMcf=1
       H_torq=0.1_wp ! in Tesla
       T_torq=2.0_wp ! in K
+      idim1=0
+      idim2=0
 C  read the input
       IF(DBG) Write(6,*) 'SINGLE_ANISO2::  Enter readin_single'
       Call readin_single(iprint,nmult,ndim,ldim,ndimcf,ldimcf,
@@ -365,12 +373,16 @@ C  read the input
      & compute_g_tensors,compute_CF,nDirTot,nss,nstate,
      & compute_magnetization, compute_torque, smagn, tinput, hinput,
      & compute_Mdir_vector, zeeman_energy, LUZee, doplot,
+     & do_project_exchange,
      & encut_rate,ncut,nTempMagn,TempMagn, m_paranoid,
      & compute_barrier,nBlock,AngPoints,input_file_name,
      & nT,nH,texp,chit_exp,zJ,hexp,magn_exp,hmin,hmax,
      & nDir,nDirZee,dirX,dirY,dirZ,dir_weight,xfield,tmin,tmax,thrs,
-     & H_torq,T_torq )
+     & H_torq,T_torq,
+     & idim1,idim2,aniso_file_site_1,aniso_file_site_2)
       IF(DBG) Write(6,*) 'SINGLE_ANISO2::  Exit readin_single'
+      IF(DBG) Write(6,*) 'SINGLE_ANISO2:: idim1, idim2=',idim1, idim2
+      WRITE(6,*) 'input_to_read = ',input_to_read
 
       If ( ifrestart ) Then
          ! if restart, fetch "big data" from the input file
@@ -631,6 +643,29 @@ C  read the input
      &                    'submit a bug report.'
         End If
       End If
+
+
+
+
+!----------------------------------------------------------------------|
+      !   >> AB INITIO EXCHANGE INTERACTION <<
+      If ( do_project_exchange ) Then
+         nExch=iDIM1*iDIM2
+         !IF(DBG)
+         Write(6,*) 'SINGLE_ANISO2::  Enter '//
+     &                      'project_exchange_single',nExch
+         FLUSH(6)
+         Call project_exchange_single ( iDIM1, iDIM2,
+     &                        aniso_file_site_1, aniso_file_site_2,
+     &                        eso(1:nExch),
+     &                        MS(1:3,1:nExch,1:nExch),
+     &                        MM(1:3,1:nExch,1:nExch),
+     &                        iPrint )
+         !IF(DBG)
+         Write(6,*) 'SINGLE_ANISO2::  Exit '//
+     &                      'project_exchange_single'
+      End If
+
 
 !----------------------------------------------------------------------|
 

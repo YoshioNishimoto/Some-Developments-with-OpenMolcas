@@ -14,11 +14,13 @@
      & compute_g_tensors,compute_CF,nDirTot,nss,nstate,
      & compute_magnetization,compute_torque,smagn,tinput,hinput,
      & compute_Mdir_vector, zeeman_energy, LUZee, doplot,
+     & do_project_exchange,
      & encut_rate,ncut,nTempMagn,TempMagn,m_paranoid,
      & compute_barrier,nBlock,AngPoints,input_file_name,
      & nT,nH,texp,chit_exp,zJ,hexp,magn_exp,hmin,hmax,
      & nDir,nDirZee,dirX,dirY,dirZ,dir_weight,xfield,tmin,tmax,
-     & thrs,H_torq,T_torq)
+     & thrs,H_torq,T_torq,
+     & idim1,idim2,aniso_file_site_1,aniso_file_site_2)
 C
 C  THIS ROUTINE READS THE FILE "SINGLE_ANISO.INPUT".
 C
@@ -76,8 +78,15 @@ c----------------------------------------------------------------
       Character(Len=2)  :: cME,clanth(37)
       Character(Len=21) :: namefile_energy
       Character(Len=180):: input_file_name,tmpline,err_msg
+      Character(Len=180):: aniso_1, aniso_2
 
       External      :: FindDetR
+      ! project exchange interaction
+      Logical, intent(out)        :: do_project_exchange
+      Integer, intent(out)        :: iDim1, iDim2
+      Character(LEN=180), intent(out) :: aniso_file_site_1
+      Character(LEN=180), intent(out) :: aniso_file_site_2
+
 
       Integer  :: IsFreeUnit
       External :: IsFreeUnit
@@ -245,6 +254,7 @@ c      nTempMagn             = 1
       compute_CF            =  .FALSE.
       compute_barrier       =  .FALSE.
       compute_torque        =  .FALSE.
+      do_project_exchange   =  .FALSE.
       smagn                 =  .FALSE.
       TINPUT                =  .FALSE.
       HINPUT                =  .FALSE.
@@ -1269,10 +1279,37 @@ c        End If
         Go To 100
       End If
 C-------------------------------------------
+!      If (LINE(1:4).eq.'PREX') Then
+!        Read(5,*,ERR=997) n1, aniso_1
+!        Read(5,*,ERR=997) n2, aniso_2
+!        print '(A,i2,A,A)','PREX:  n1=',n1,' aniso_1=',trim(aniso_1)
+!        print '(A,i2,A,A)','PREX:  n2=',n2,' aniso_2=',trim(aniso_2)
+!        LINENR=LINENR+2
+!        Go To 100
+!      End If
+C-------------------------------------------
       If (LINE(1:4).eq.'PREX') Then
+        READ(5,*,ERR=997) iDIM1, aniso_file_site_1
+        READ(5,*,ERR=997) iDIM2, aniso_file_site_2
+        do_project_exchange=.true.
+        IF(DBG) Write(6,*) 'PREX: iDIM1, aniso_file_site_1 =',
+     &                            iDIM1, aniso_file_site_1
+        IF(DBG) Write(6,*) 'PREX: iDIM2, aniso_file_site_2 =',
+     &                            iDIM2, aniso_file_site_2
+        ! relevant exchange matrix is assumed to have the dimension iDIM1 * iDIM2
+        IF( nss < iDIM1*iDIM2 ) Then
+           Call WarningMessage(2,'PREX: size of the exchange matrix'//
+     &               ' smaller than the number of spin-orbit states')
+           Write(6,*)' Site 1:           = ',iDIM1
+           Write(6,*)' Site 2:           = ',iDIM2
+           Write(6,*)' Exchange matrix:  = ',iDIM1*iDIM2
+           Write(6,*)' Nr. of SO states: = ',nss
+           Call Quit_OnUserError()
+        End If
         LINENR=LINENR+1
         Go To 100
       End If
+
 C-------------------------------------------
       If (LINE(1:4).eq.'UBAR') Then
         compute_barrier=.TRUE.
