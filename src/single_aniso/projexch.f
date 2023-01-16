@@ -13,66 +13,77 @@
       Implicit None
       Integer, Parameter :: wp=selected_real_kind(p=15,r=307)
 #include "stdalloc.fh"
-      Integer, intent(in)          :: iPrint               ! print level
-      Integer, intent(in)          :: n1, n2               ! size of the local pseudospins
-      Real(kind=wp), intent(in)    :: E( n1*n2 )           ! spin-orbit energy
-      Complex(kind=wp), intent(in) :: S( 3, n1*n2, n1*n2 ) ! spin momentum, total
-      Complex(kind=wp), intent(in) :: M( 3, n1*n2, n1*n2 ) ! magnetic momentum, total
-      Character(LEN=180), intent(in)   :: aniso_1              ! aniso file containing information about site 1
-      Character(LEN=180), intent(in)   :: aniso_2              ! aniso file containing information about site 2
+      Integer, intent(in)            :: iPrint               ! print level
+      Integer, intent(in)            :: n1, n2               ! size of the local pseudospins
+      Real(kind=8), intent(in)       :: E( n1*n2 )           ! spin-orbit energy
+      Complex(kind=8), intent(in)    :: S( 3, n1*n2, n1*n2 ) ! spin momentum, total
+      Complex(kind=8), intent(in)    :: M( 3, n1*n2, n1*n2 ) ! magnetic momentum, total
+      Character(LEN=180), intent(in) :: aniso_1              ! aniso file containing information about site 1
+      Character(LEN=180), intent(in) :: aniso_2              ! aniso file containing information about site 2
 !     local variables
-      Integer                       :: nExch, l, i, j, k, nLoc
-      Integer                       :: neq(2), nexchange(2), lmax, nneq
-      Integer                       :: nb, nb1, isite
-      Integer                       :: intc(2), nind(2,2)
+      Integer                        :: nExch, l, i, j, k, nLoc
+      Integer                        :: neq(2), nexchange(2), lmax, nneq
+      Integer                        :: nb, nb1, isite
+      Integer                        :: intc(2), nind(2,2)
 
-      Integer, allocatable          :: ibas(:,:)
-      Real(kind=wp), allocatable    :: g(:), mg(:,:)
-      Complex(kind=wp), allocatable :: S1(:,:,:), M1(:,:,:)
-      Complex(kind=wp), allocatable :: S2(:,:,:), M2(:,:,:)
-      Complex(kind=wp), allocatable :: Z(:,:),tmp(:,:)
+      Integer, allocatable           :: ibas(:,:)
+      Real(kind=8), allocatable      :: g(:), mg(:,:)
+      Complex(kind=8), allocatable   :: S1(:,:,:), M1(:,:,:)
+      Complex(kind=8), allocatable   :: S2(:,:,:), M2(:,:,:)
+      Complex(kind=8), allocatable   :: Z(:,:),tmp(:,:)
 
-      Integer                       :: i1,j1,i2,itmp,is1,js1,js2
-      Integer                       :: is2,nb2,icoord(2),lp
-      Integer                       :: k1,k2,q1,q2
-      Character(len=1)              :: itype(2)
-      Logical                       :: aniso_1_exists, aniso_2_exists
-      Real(kind=wp), allocatable    :: g1(:),g2(:),mg1(:,:),mg2(:,:)
-      Real(kind=wp), allocatable    :: eso_1(:), eso_2(:)
-      Real(kind=wp)                 :: gtens_iso(3), D, EoverD, f1
-      Real(kind=wp)                 :: rot(2,1,3,3), diff(n1*n2,n1*n2)
-      Complex(kind=wp), allocatable :: mom1(:,:,:), mom2(:,:,:)
-      Complex(kind=wp), allocatable :: som1(:,:,:), som2(:,:,:)
-      Complex(kind=wp), allocatable :: lom1(:,:,:), lom2(:,:,:)
-      Complex(kind=wp), allocatable :: mom1r(:,:,:), mom2r(:,:,:)
-      Complex(kind=wp), allocatable :: som1r(:,:,:), som2r(:,:,:)
-      Complex(kind=wp), allocatable :: Z1(:,:), Z2(:,:)
+      Integer                        :: i1,j1,i2,itmp,is1,js1,js2
+      Integer                        :: is2,nb2,icoord(2),lp
+      Integer                        :: k1,k2,q1,q2
+      Character(len=1)               :: itype(2)
+      Logical                        :: aniso_1_exists, aniso_2_exists
+      Real(kind=8), allocatable      :: g1(:),g2(:),mg1(:,:),mg2(:,:)
+      Real(kind=8), allocatable      :: eso_1(:), eso_2(:)
+      Real(kind=8)                   :: gtens_iso(3), D, EoverD, f1
+      Real(kind=8)                   :: rot(2,1,3,3), diff(n1*n2,n1*n2)
+      Complex(kind=8), allocatable   :: mom1(:,:,:), mom2(:,:,:)
+      Complex(kind=8), allocatable   :: som1(:,:,:), som2(:,:,:)
+      Complex(kind=8), allocatable   :: lom1(:,:,:), lom2(:,:,:)
+      Complex(kind=8), allocatable   :: mom1r(:,:,:), mom2r(:,:,:)
+      Complex(kind=8), allocatable   :: som1r(:,:,:), som2r(:,:,:)
+      Complex(kind=8), allocatable   :: Z1(:,:), Z2(:,:)
 
-      Integer                       :: diff_min(n1*n2)
-c      Real(kind=wp), allocatable    :: wout(:)
-c      Complex(kind=wp), allocatable :: zout(:,:)
+      Integer                        :: diff_min(n1*n2)
+c      Real(kind=8), allocatable     :: wout(:)
+c      Complex(kind=8), allocatable  :: zout(:,:)
 
       ! exchange Hamiltonian
-      Complex(kind=wp), allocatable :: M3(:,:,:),S3(:,:,:),Z12(:,:)
-      Complex(kind=wp), allocatable :: MM(:,:,:,:),SM(:,:,:,:),ZM(:,:)
+      Complex(kind=8), allocatable   :: M3(:,:,:),S3(:,:,:),Z12(:,:)
+      Complex(kind=8), allocatable   :: MM(:,:,:,:),SM(:,:,:,:),ZM(:,:)
       ! exchange Hamiltonian:
-      Real(kind=wp), allocatable    :: E1(:), rot1(:,:), rot2(:,:)
-      Complex(kind=wp), allocatable :: H(:,:), H1(:,:,:,:), H2(:,:,:,:),
-     &                                 H3(:,:,:,:)
+      Real(kind=8), allocatable      :: E1(:), rot1(:,:), rot2(:,:)
+      Complex(kind=8), allocatable   :: H(:,:), H1(:,:,:,:),
+     &                                  H2(:,:,:,:), H3(:,:,:,:)
       ! zero field splitting extracted from the general exchange matrix
-      Complex(kind=wp), allocatable :: ZFS1(:,:), ZFS2(:,:)
+      Complex(kind=8), allocatable   :: ZFS1(:,:), ZFS2(:,:)
 
       ! exchange parameters:
-      Complex(kind=wp) :: JLin3(1:(n1-1),-(n1-1):(n1-1),
+      Complex(kind=8) :: JLin3(1:(n1-1),-(n1-1):(n1-1),
      &                          1:(n2-1),-(n2-1):(n2-1))
-      Real(kind=wp) :: JLinC3(3,3)
+      Real(kind=8) :: JLinC3(3,3)
       Logical :: dbg
       Integer :: norder
       External :: norder
 
 
+
+      Write(6,'(/)')
+      Write(6,'(100A)') ('%',i=1,95)
+      Write(6,'(5x,A,I2,A,I2,A,I2,A)')
+     &                       'DERIVATION OF ANISOTROPIC '//
+     &                       'MAGNETIC EXCHANGE ON THE BASIS '//
+     &                       'OF LOWEST ',n1,'x',n2,'=',n1*n2,
+     &                       ' SPIN-ORBIT STATES'
+      Write(6,'(100A)') ('%',i=1,95)
+      Write(6,*)
+!-----------------------------------------------------------------------
       nExch=n1*n2 ! size of exchange matrix
-      dbg=.true.
+      dbg=.false.
       ! sanity check:
       If ( nExch<=1 ) Then
           Call WarningMessage(1,'Project_exchange_single:: '//
@@ -105,7 +116,7 @@ c      Complex(kind=wp), allocatable :: zout(:,:)
       Call dcopy_(3  ,[0.0_wp],0,g,1)
       Call dcopy_(3*3,[0.0_wp],0,mg,1)
 
-      Call atens(M, n1*n2, g, mg, 2)
+      Call atens(M, n1*n2, g, mg, 1)
 
 ! 2. rotate the S and M to the main magnetic axes
       Call zcopy_(3*nExch*nExch,[(0.0_wp,0.0_wp)],0,s1,1)
@@ -137,11 +148,12 @@ c      Complex(kind=wp), allocatable :: zout(:,:)
         End Do
       End Do
 
-      Write(6,'(A)') 'Exchange Hamiltonian in pseudospin basis'
-      Do i=1,n1*n2
-        Write(6,'(12(2F7.4,1x))') (H(i,j),j=1,n1*n2)
-      End Do
-
+      If (iPrint>=3) Then
+        Write(6,'(A)') 'Exchange Hamiltonian in pseudospin basis'
+        Do i=1,n1*n2
+          Write(6,'(12(2F7.4,1x))') (H(i,j),j=1,n1*n2)
+        End Do
+      End If
 
 
 
@@ -174,26 +186,26 @@ c      Complex(kind=wp), allocatable :: zout(:,:)
       End Do ! L
       Call mma_deallocate(tmp)
 
-      If (dbg) Then
+      If (iPrint >3) Then
          Write(6,*) 'Matrix M2'
          Do l=1,3
             Write(6,*)
             Write(6,'(A,i2)') 'Projection = ', l
             Write(6,*)
             Do i=1,nExch
-c               Write(6,'(12(2F7.4,1x))') (M2(l,i,j),j=1,nExch)
+               Write(6,'(20(2F7.4,1x))') (M2(l,i,j),j=1,nExch)
             End Do
          End Do
 
-c         Write(6,*) 'Matrix S2'
-c         Do l=1,3
-c            Write(6,*)
-c            Write(6,'(A,i2)') 'Projection = ', l
-c            Write(6,*)
-c            Do i=1,nExch
-c               Write(6,'(12(2F7.4,1x))') (S2(l,i,j),j=1,nExch)
-c            End Do
-c         End Do
+!         Write(6,*) 'Matrix S2'
+!         Do l=1,3
+!            Write(6,*)
+!            Write(6,'(A,i2)') 'Projection = ', l
+!            Write(6,*)
+!            Do i=1,nExch
+!               Write(6,'(12(2F7.4,1x))') (S2(l,i,j),j=1,nExch)
+!            End Do
+!         End Do
       End If
 
       ! diagonal matrix M2(z,i,i) will be compared with the matrix we obtain
@@ -247,31 +259,31 @@ c         End Do
       End If ! dbg
 
 ! 5. Determine LOCAL matrices for the spin and orbital momenta
-      Call mma_allocate(mom1,3,n1,n1,'local magnetic moment site 1')
+      Call mma_allocate(mom1 ,3,n1,n1,'local magnetic moment site 1')
       Call mma_allocate(mom1r,3,n1,n1,'local magnetic moment site 1')
       Call mma_allocate(som1r,3,n1,n1,'local magnetic moment site 1')
-      Call mma_allocate(som1,3,n1,n1,'local spin moment site 1')
-      Call mma_allocate(lom1,3,n1,n1,'local orbital moment site 1')
-      Call mma_allocate(mom2,3,n2,n2,'local magnetic moment site 2')
+      Call mma_allocate(som1 ,3,n1,n1,'local spin moment site 1')
+      Call mma_allocate(lom1 ,3,n1,n1,'local orbital moment site 1')
+      Call mma_allocate(mom2 ,3,n2,n2,'local magnetic moment site 2')
       Call mma_allocate(mom2r,3,n2,n2,'local magnetic moment site 2')
       Call mma_allocate(som2r,3,n2,n2,'local magnetic moment site 2')
-      Call mma_allocate(som2,3,n2,n2,'local spin moment site 2')
-      Call mma_allocate(lom2,3,n2,n2,'local orbital moment site 2')
-      Call mma_allocate(eso_1,n1,'local s-o states site 1')
-      Call mma_allocate(eso_2,n2,'local s-o states site 2')
-      Call mma_allocate(Z1,n1,n1,'local pseudospin site 1')
-      Call mma_allocate(Z2,n2,n2,'local pseudospin site 2')
+      Call mma_allocate(som2 ,3,n2,n2,'local spin moment site 2')
+      Call mma_allocate(lom2 ,3,n2,n2,'local orbital moment site 2')
+      Call mma_allocate(eso_1,n1,     'local s-o states site 1')
+      Call mma_allocate(eso_2,n2,     'local s-o states site 2')
+      Call mma_allocate(Z1,n1,n1,     'local pseudospin site 1')
+      Call mma_allocate(Z2,n2,n2,     'local pseudospin site 2')
 
-      Call zcopy_(3*n1*n1,[(0.0_wp,0.0_wp)],0,mom1,1)
+      Call zcopy_(3*n1*n1,[(0.0_wp,0.0_wp)],0,mom1 ,1)
       Call zcopy_(3*n1*n1,[(0.0_wp,0.0_wp)],0,mom1r,1)
       Call zcopy_(3*n1*n1,[(0.0_wp,0.0_wp)],0,som1r,1)
-      Call zcopy_(3*n1*n1,[(0.0_wp,0.0_wp)],0,som1,1)
-      Call zcopy_(3*n1*n1,[(0.0_wp,0.0_wp)],0,lom1,1)
-      Call zcopy_(3*n2*n2,[(0.0_wp,0.0_wp)],0,mom2,1)
+      Call zcopy_(3*n1*n1,[(0.0_wp,0.0_wp)],0,som1 ,1)
+      Call zcopy_(3*n1*n1,[(0.0_wp,0.0_wp)],0,lom1 ,1)
+      Call zcopy_(3*n2*n2,[(0.0_wp,0.0_wp)],0,mom2 ,1)
       Call zcopy_(3*n2*n2,[(0.0_wp,0.0_wp)],0,mom2r,1)
       Call zcopy_(3*n2*n2,[(0.0_wp,0.0_wp)],0,som2r,1)
-      Call zcopy_(3*n2*n2,[(0.0_wp,0.0_wp)],0,som2,1)
-      Call zcopy_(3*n2*n2,[(0.0_wp,0.0_wp)],0,lom2,1)
+      Call zcopy_(3*n2*n2,[(0.0_wp,0.0_wp)],0,som2 ,1)
+      Call zcopy_(3*n2*n2,[(0.0_wp,0.0_wp)],0,lom2 ,1)
       Call dcopy_(n1,[0.0_wp],0,eso_1,1)
       Call dcopy_(n2,[0.0_wp],0,eso_2,1)
 
@@ -331,7 +343,7 @@ c---------------------------------------------------------------
          g1=0.0_wp
          mg1=0.0_wp
          mom1r=(0.0_wp,0.0_wp)
-         Call atens(mom1, n1, g1, mg1, 2)
+         Call atens(mom1, n1, g1, mg1, 1)
          Call rotmom2(mom1, n1, mg1, mom1r )
          Call rotmom2(som1, n1, mg1, som1r )
          Call pseudospin(mom1r,n1,Z1,3,1,iPrint)
@@ -346,7 +358,7 @@ c---------------------------------------------------------------
          g2=0.0_wp
          mg2=0.0_wp
          mom2r=(0.0_wp,0.0_wp)
-         Call atens(mom2, n2, g2, mg2, 2)
+         Call atens(mom2, n2, g2, mg2, 1)
          Call rotmom2(mom2, n2, mg2, mom2r )
          Call rotmom2(som2, n2, mg2, som2r )
          Call pseudospin(mom2r,n2,Z2,3,1,iPrint)
@@ -529,19 +541,17 @@ c---------------------------------------------------------------
                Write(6,'(12(2F7.4,1x))') (S3(l,i,j),j=1,nExch)
             End Do
          End Do
+
+         Write(6,*) 'Matrix M2 Z'
+         Do i=1,nExch
+            Write(6,'(12(2F7.4,1x))') (M2(3,i,j),j=1,nExch)
+         End Do
+
+         Write(6,*) 'Matrix M3 Z'
+         Do i=1,nExch
+            Write(6,'(12(2F7.4,1x))') (M3(3,i,j),j=1,nExch)
+         End Do
       End If
-
-
-      Write(6,*) 'Matrix M2 Z'
-      Do i=1,nExch
-      Write(6,'(12(2F7.4,1x))') (M2(3,i,j),j=1,nExch)
-      End Do
-
-      Write(6,*) 'Matrix M3 Z'
-      Do i=1,nExch
-      Write(6,'(12(2F7.4,1x))') (M3(3,i,j),j=1,nExch)
-      End Do
-
       ! find the roatation matrix which makes M2 as close as possible to M3
 
       Call mma_allocate(ZM,nExch,nExch,'ZM')
@@ -556,10 +566,12 @@ c---------------------------------------------------------------
          diff_min(i)=MINLOC( diff(i,:),1)
       End Do
 
-      Do i=1,nExch
-        Write(6,'(A,i2,A,12(F8.4,1x),a,I3)') 'i= ',i,' j-> ',
-     &    (diff(i,j),j=1,nExch), 'diff_min(i)=', diff_min(i)
-      End Do
+      If (dbg) Then
+         Do i=1,nExch
+            Write(6,'(A,i2,A,12(F8.4,1x),a,I3)') 'i= ',i,' j-> ',
+     &        (diff(i,j),j=1,nExch), 'diff_min(i)=', diff_min(i)
+        End Do
+      End If
 
       Do i=1,nExch
         Do j=1,nExch
@@ -567,10 +579,12 @@ c---------------------------------------------------------------
         End Do
       End Do
 
-      Write(6,*) 'Matrix ZM'
-      Do i=1,nExch
-         Write(6,'(12(2F4.1,1x))') (ZM(i,j),j=1,nExch)
-      End Do
+      If (dbg) Then
+         Write(6,*) 'Matrix ZM'
+         Do i=1,nExch
+            Write(6,'(12(2F4.1,1x))') (ZM(i,j),j=1,nExch)
+         End Do
+      End If
 
       ! rotate magnetic and spin moments:
 
@@ -643,8 +657,6 @@ c---------------------------------------------------------------
          Write(6,'(12(2F7.4,1x))') (M3(2,i,j),j=1,nExch)
          End Do
 
-
-
          Write(6,*) 'Matrix M2 (full ab initio):  Z  FINAL'
          Do i=1,nExch
          Write(6,'(12(2F7.4,1x))') (M2(3,i,j),j=1,nExch)
@@ -654,13 +666,12 @@ c---------------------------------------------------------------
          Do i=1,nExch
          Write(6,'(12(2F7.4,1x))') (M3(3,i,j),j=1,nExch)
          End Do
+
+         Write(6,'(A)') 'Exchange Hamiltonian in pseudospin basis --FIN'
+         Do i=1,n1*n2
+           Write(6,'(12(2F7.4,1x))') (H(i,j),j=1,n1*n2)
+         End Do
       end if
-
-
-      Write(6,'(A)') 'Exchange Hamiltonian in pseudospin basis --FIN'
-      Do i=1,n1*n2
-        Write(6,'(12(2F7.4,1x))') (H(i,j),j=1,n1*n2)
-      End Do
 
 
 
@@ -701,18 +712,18 @@ c---------------------------------------------------------------
         End Do  ! isite
       End Do  ! L
 
-      Call prmom('extracted moment on site 1',MM(1,1:3,1:n1,1:n1),n1)
-      Call prmom('extracted moment on site 2',MM(2,1:3,1:n2,1:n2),n2)
+      IF (iPrint>=3) Then
+        Call prmom('extracted moment on site 1',MM(1,1:3,1:n1,1:n1),n1)
+        Call prmom('extracted moment on site 2',MM(2,1:3,1:n2,1:n2),n2)
+      End If
 
-      Write(6,'(A)') 'g tensors for local pseudospins:'
-
+      If(dbg) Write(6,'(A)') 'g tensors for local pseudospins:'
       g1=0.0_wp
       g2=0.0_wp
       mg1=0.0_wp
       mg2=0.0_wp
-
-      Call atens(MM(1,1:3,1:n1,1:n1), n1, g1, mg1, 2)
-      Call atens(MM(2,1:3,1:n2,1:n2), n2, g2, mg2, 2)
+      Call atens(MM(1,1:3,1:n1,1:n1), n1, g1, mg1, 1)
+      Call atens(MM(2,1:3,1:n2,1:n2), n2, g2, mg2, 1)
 
 
 
@@ -803,7 +814,7 @@ c---------------------------------------------------------------
       Do is1=1,n1
         Do js1=1,n1
             Do k=1,n2
-c              H2(is1,js1,k,k) = H1(is1,js1,k,k) - ZFS1(is1,js1)
+              H2(is1,js1,k,k) = H1(is1,js1,k,k) - ZFS1(is1,js1)
             End Do
         End Do
       End Do
@@ -811,84 +822,86 @@ c              H2(is1,js1,k,k) = H1(is1,js1,k,k) - ZFS1(is1,js1)
       Do is2=1,n2
         Do js2=1,n2
             Do k=1,n1
-c              H2(k,k,is2,js2) = H2(k,k,is2,js2) - ZFS2(is2,js2)
+              H2(k,k,is2,js2) = H2(k,k,is2,js2) - ZFS2(is2,js2)
             End Do
         End Do
       End Do
 
-c---------------------------------------------------------------
+!---------------------------------------------------------------
 ! 9. Project exchange matrix on products of ITO.
 
-         Write(6,'(A)') 'Exchange Hamiltonian in pseudospin basis --FIN'
-         Do i=1,n1*n2
-           Write(6,'(12(2F7.3,1x))') (H(i,j),j=1,n1*n2)
-         End Do
+      IF (dbg) Then
+        Write(6,'(A)') 'Exchange Hamiltonian in pseudospin basis --FIN'
+        Do i=1,n1*n2
+          Write(6,'(12(2F7.3,1x))') (H(i,j),j=1,n1*n2)
+        End Do
+      End If
 
-        ! transofrm the Hamiltonian:
-          Call mma_allocate(H3,n1,n1,n2,n2,'H3')
-          Call mma_allocate(rot1,3,3,'rot1')
-          Call mma_allocate(rot2,3,3,'rot2')
-          Call zcopy_(n1*n1*n2*n2,[(0.0_wp,0.0_wp)],0,H3,1)
-          Call dcopy_(3*3,[0.0_wp],0,rot1,1)
-          Call dcopy_(3*3,[0.0_wp],0,rot2,1)
-          Do i=1,3
-            rot1(i,i)=1.0_wp
-            rot2(i,i)=1.0_wp
-          End Do
-c          iopt=2
-c          Call transHam( n1, n2, rot1, rot2,
-c     &                   MM(1,1:3,1:n1,1:n1), MM(2,1:3,1:n2,1:n2),
-c     &                   itype(1), itype(2),
-c     &                   H2(1:n1,1:n1, 1:n2,1:n2),
-c     &                   H3(1:n1,1:n1, 1:n2,1:n2), iopt )
-c
-          JLin3( 1:(n1-1), -(n1-1):(n1-1),
-     &           1:(n2-1), -(n2-1):(n2-1) )=(0.0_wp,0.0_wp)
-          JLinC3(:,:)=0.0_wp
+      ! transofrm the Hamiltonian:
+      Call mma_allocate(H3,n1,n1,n2,n2,'H3')
+      Call mma_allocate(rot1,3,3,'rot1')
+      Call mma_allocate(rot2,3,3,'rot2')
+      Call zcopy_(n1*n1*n2*n2,[(0.0_wp,0.0_wp)],0,H3,1)
+      Call dcopy_(3*3,[0.0_wp],0,rot1,1)
+      Call dcopy_(3*3,[0.0_wp],0,rot2,1)
+      Do i=1,3
+        rot1(i,i)=1.0_wp
+        rot2(i,i)=1.0_wp
+      End Do
+!        iopt=2
+!       Call transHam( n1, n2, rot1, rot2,
+!     &                   MM(1,1:3,1:n1,1:n1), MM(2,1:3,1:n2,1:n2),
+!     &                   itype(1), itype(2),
+!     &                   H2(1:n1,1:n1, 1:n2,1:n2),
+!     &                   H3(1:n1,1:n1, 1:n2,1:n2), iopt )
 
-          Call JKQPar( n1, n2, H1(1:n1,1:n1,1:n2,1:n2),
-     &                 JLin3( 1:(n1-1), -(n1-1):(n1-1),
-     &                        1:(n2-1), -(n2-1):(n2-1) ) )
+      JLin3( 1:(n1-1), -(n1-1):(n1-1),
+     &       1:(n2-1), -(n2-1):(n2-1) )=(0.0_wp,0.0_wp)
+      JLinC3(:,:)=0.0_wp
 
-        ! print out the data:
-        Write(6,'(A)')
-        Write(6,'(10x,A)') 'Parameters of the ITOs:'
-        Write(6,'( 5x,A)') 'with absolute values larger than:  0.5d-14 '
-        Write(6,'(A)') '--- SITE 1 --|--- SITE 2 --|---------------'//
-     &                 '----------------------|'
-        Write(6,'(A)') ' rank | proj.| rank | proj.|    Lines  Exch'//
-     &                 'ange  Interaction     |'
-        Write(6,'(A)') '------|------|------|------|------ Real ---'//
-     &                 '-------- Imag --------|'
-        Do k1=1,n1-1,2
-          Do q1=-k1,k1
-            Do k2=1,n2-1,2
-              Do q2=-k2,k2
-                If(ABS(JLin3(k1,q1,k2,q2)) .gt. 0.5d-14 ) Then
-                   Write(6,'(4(i4,2x,A),2(1x,E17.10),1x,A)')
-     &                   k1,'|',q1,'|',k2,'|',q2,'|',
-     &                   JLin3(k1,q1,k2,q2),'|'
-                End If
-              End Do
+      Call JKQPar( n1, n2, H1(1:n1,1:n1,1:n2,1:n2),
+     &             JLin3( 1:(n1-1), -(n1-1):(n1-1),
+     &                    1:(n2-1), -(n2-1):(n2-1) ) )
+
+      ! print out the data:
+      Write(6,'(A)')
+      Write(6,'(10x,A)') 'Parameters of the ITOs:'
+      Write(6,'( 5x,A)') 'with absolute values larger than:  0.5d-14 '
+      Write(6,'(A)') '--- SITE 1 --|--- SITE 2 --|---------------'//
+     &               '----------------------|'
+      Write(6,'(A)') ' rank | proj.| rank | proj.|    Lines  Exch'//
+     &               'ange  Interaction     |'
+      Write(6,'(A)') '------|------|------|------|------ Real ---'//
+     &               '-------- Imag --------|'
+      Do k1=1,n1-1,2
+        Do q1=-k1,k1
+          Do k2=1,n2-1,2
+            Do q2=-k2,k2
+              If(ABS(JLin3(k1,q1,k2,q2)) .gt. 0.5d-14 ) Then
+                 Write(6,'(4(i4,2x,A),2(1x,E17.10),1x,A)')
+     &                 k1,'|',q1,'|',k2,'|',q2,'|',
+     &                 JLin3(k1,q1,k2,q2),'|'
+              End If
             End Do
           End Do
         End Do
-        Write(6,'(A)') '------|------|------|------|---------------'//
-     &                 '----------------------|'
+      End Do
+      Write(6,'(A)') '------|------|------|------|---------------'//
+     &               '----------------------|'
 
-        Call tensor2cart( JLin3( 1,-1:1, 1,-1:1), JLinC3 )
+      Call tensor2cart( JLin3( 1,-1:1, 1,-1:1), JLinC3 )
 
-        Write(6,'(A)')
-        Write(6,'(A)') 'Cartesian representation of the (rank-1)*'//
-     &                 '(rank-1) exchange interaction: '
-        Write(6,'(A)') 'Anisotropic exchange interaction:  J matrix:'
-        Write(6,'(A)') 'LOCAL AXES:::'
-        Write(6,'(A)') '     (  xx   xy  xz  )  '
-        Write(6,'(A)') 'J =  (  yx   yy  yz  )  '
-        Write(6,'(A)') '     (  zx   zy  zz  )  '
-        Do i=1,3
-          Write(6,'(3ES22.14)') (JLinC3(i,j),j=1,3)
-        End Do
+      Write(6,'(A)')
+      Write(6,'(A)') 'Cartesian representation of the (rank-1)*'//
+     &               '(rank-1) exchange interaction: '
+      Write(6,'(A)') 'Anisotropic exchange interaction:  J matrix:'
+      Write(6,'(A)') 'LOCAL AXES:::'
+      Write(6,'(A)') '     (  xx   xy  xz  )  '
+      Write(6,'(A)') 'J =  (  yx   yy  yz  )  '
+      Write(6,'(A)') '     (  zx   zy  zz  )  '
+      Do i=1,3
+        Write(6,'(3ES22.14)') (JLinC3(i,j),j=1,3)
+      End Do
 
 !-----------------------------------------------------------------------
       ! deallocate temporary memory

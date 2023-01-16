@@ -382,7 +382,7 @@ C  read the input
      & idim1,idim2,aniso_file_site_1,aniso_file_site_2)
       IF(DBG) Write(6,*) 'SINGLE_ANISO2::  Exit readin_single'
       IF(DBG) Write(6,*) 'SINGLE_ANISO2:: idim1, idim2=',idim1, idim2
-      WRITE(6,*) 'input_to_read = ',input_to_read
+      IF(DBG) WRITE(6,*) 'input_to_read = ',input_to_read
 
       If ( ifrestart ) Then
          ! if restart, fetch "big data" from the input file
@@ -446,6 +446,7 @@ C  read the input
      &                               esfs, U, MM, MS, ML, DM,
      &                               ANGMOM, EDMOM, AMFI, HSO,
      &                               eso_au, esfs_au )
+         !IF (DBG)
          WRITE(6,'(A)') 'AFTER fetch_data_RunFile_all'
          Call xFlush(6)
          If (DBG) Then
@@ -651,18 +652,15 @@ C  read the input
       !   >> AB INITIO EXCHANGE INTERACTION <<
       If ( do_project_exchange ) Then
          nExch=iDIM1*iDIM2
-         !IF(DBG)
-         Write(6,*) 'SINGLE_ANISO2::  Enter '//
+         IF(DBG) Write(6,*) 'SINGLE_ANISO2::  Enter '//
      &                      'project_exchange_single',nExch
-         FLUSH(6)
          Call project_exchange_single ( iDIM1, iDIM2,
      &                        aniso_file_site_1, aniso_file_site_2,
      &                        eso(1:nExch),
      &                        MS(1:3,1:nExch,1:nExch),
      &                        MM(1:3,1:nExch,1:nExch),
      &                        iPrint )
-         !IF(DBG)
-         Write(6,*) 'SINGLE_ANISO2::  Exit '//
+         IF(DBG) Write(6,*) 'SINGLE_ANISO2::  Exit '//
      &                      'project_exchange_single'
       End If
 

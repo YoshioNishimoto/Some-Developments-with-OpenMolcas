@@ -74,12 +74,14 @@ c eq.40 in DoI:10.1103/PhysRevB.91.174438
         Call Stewens_matrixel(k1,q1, N1, O1,W1, ipr)
         Call Stewens_matrixel(k2,q2, N2, O2,W2, ipr)
 
-        If((k1==1).and.(q1==1)) Then
-          Call pa_prmat('JKQPar:  O1(k1=1,q1=1): ', O1, n1)
-          Call pa_prmat('JKQPar:  W1(k1=1,q1=1): ', W1, n1)
-        Else If((k1==1).and.(q1==0)) Then
-          Call pa_prmat('JKQPar:  O1(k1=1,q1=0): ', O1, n1)
-          Call pa_prmat('JKQPar:  W1(k1=1,q1=0): ', W1, n1)
+        If (dbg) Then
+          If((k1==1).and.(q1==1)) Then
+            Call pa_prmat('JKQPar:  O1(k1=1,q1=1): ', O1, n1)
+            Call pa_prmat('JKQPar:  W1(k1=1,q1=1): ', W1, n1)
+          Else If((k1==1).and.(q1==0)) Then
+            Call pa_prmat('JKQPar:  O1(k1=1,q1=0): ', O1, n1)
+            Call pa_prmat('JKQPar:  W1(k1=1,q1=0): ', W1, n1)
+          End If
         End If
 
 c      If (DBG) Then

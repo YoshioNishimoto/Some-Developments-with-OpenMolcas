@@ -902,7 +902,6 @@ c compatibility with the present version: of aniso_i.input file
       do i=1,nstate
         esfs(i)=(esfs_au(i)-esfs_au(1))*conv_au_to_cm1
       end do
-      write(6,*) esfs
 
       ! compute the orbital moment
       do l=1,3
