@@ -173,7 +173,8 @@ Per E. M. Siegbahn
 Pär Söderhjelm  
 Lasse Kragh Sørensen  
 Jonna Stålring  
-Hermann Stoll  
+Hermann Stoll 
+Tjerk P. Straatsma 
 Bingbing Suo  
 Ben Swerts  
 Akio Takatsuka  
