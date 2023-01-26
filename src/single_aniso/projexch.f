@@ -13,13 +13,15 @@
       Implicit None
       Integer, Parameter :: wp=selected_real_kind(p=15,r=307)
 #include "stdalloc.fh"
-      Integer, intent(in)            :: iPrint               ! print level
-      Integer, intent(in)            :: n1, n2               ! size of the local pseudospins
-      Real(kind=8), intent(in)       :: E( n1*n2 )           ! spin-orbit energy
-      Complex(kind=8), intent(in)    :: S( 3, n1*n2, n1*n2 ) ! spin momentum, total
-      Complex(kind=8), intent(in)    :: M( 3, n1*n2, n1*n2 ) ! magnetic momentum, total
-      Character(LEN=180), intent(in) :: aniso_1              ! aniso file containing information about site 1
-      Character(LEN=180), intent(in) :: aniso_2              ! aniso file containing information about site 2
+      Integer, intent(in)            :: iPrint
+      Integer, intent(in)            :: n1, n2
+      Real(kind=8), intent(in)       :: E( n1*n2 )
+      Complex(kind=8), intent(in)    :: S( 3, n1*n2, n1*n2 )
+      Complex(kind=8), intent(in)    :: M( 3, n1*n2, n1*n2 )
+      ! aniso file containing information about site 1
+      Character(LEN=180), intent(in) :: aniso_1
+      ! aniso file containing information about site 2
+      Character(LEN=180), intent(in) :: aniso_2
 !     local variables
       Integer                        :: nExch, l, i, j, k, nLoc
       Integer                        :: neq(2), nexchange(2), lmax, nneq
@@ -208,10 +210,11 @@ c      Complex(kind=8), allocatable  :: zout(:,:)
 !         End Do
       End If
 
-      ! diagonal matrix M2(z,i,i) will be compared with the matrix we obtain
-      ! from the coupling of two local momenta matrices, following their pseudospins
-      ! We will attempt to assign states by comparing the diagonal elements.
-      ! re-suffling may be neccecary;
+      ! diagonal matrix M2(z,i,i) will be compared with the matrix we
+      ! obtain from the coupling of two local momenta matrices,
+      ! following their pseudospins
+      ! We will attempt to assign states by comparing the diagonal
+      ! elements re-shuffling may be neccecary;
 
 
 ! 4. Set up an indexing scheme for the states:
@@ -455,8 +458,8 @@ c---------------------------------------------------------------
          End Do
       End If ! dbg
 c---------------------------------------------------------------
-!  build a test matrix of magnetic moment as direct product of local matrices
-!  diagonalize and test the eigenvectors:
+!  build a test matrix of magnetic moment as direct product of local
+!  matrices diagonalize and test the eigenvectors:
 
       Call mma_allocate(Z12,n1*n2,n1*n2,'Z12')
       Call mma_allocate(M3,3,n1*n2,n1*n2,'M3')
@@ -552,7 +555,8 @@ c---------------------------------------------------------------
             Write(6,'(12(2F7.4,1x))') (M3(3,i,j),j=1,nExch)
          End Do
       End If
-      ! find the roatation matrix which makes M2 as close as possible to M3
+      ! find the roatation matrix which makes M2 as close
+      ! as possible to M3
 
       Call mma_allocate(ZM,nExch,nExch,'ZM')
       Call zcopy_(nExch*nExch,[(0.0_wp,0.0_wp)],0,ZM,1)
@@ -732,7 +736,8 @@ c---------------------------------------------------------------
 
 
 !---------------------------------------------------------------
-! re-write the exchange Hamiltonian as a four index array: H1(i1,j1,i2,j2)
+! re-write the exchange Hamiltonian as a four index array:
+! H1(i1,j1,i2,j2)
       Call mma_allocate(H1,n1,n1,n2,n2,'H1')
       Call zcopy_(n1*n1*n2*n2,[(0.0_wp,0.0_wp)],0,H1,1)
 
