@@ -78,7 +78,6 @@ c----------------------------------------------------------------
       Character(Len=2)  :: cME,clanth(37)
       Character(Len=21) :: namefile_energy
       Character(Len=180):: input_file_name,tmpline,err_msg
-      Character(Len=180):: aniso_1, aniso_2
 
       External      :: FindDetR
       ! project exchange interaction
@@ -1278,15 +1277,6 @@ c     &                 'above QUAX in the input!'
 c        End If
         Go To 100
       End If
-C-------------------------------------------
-!      If (LINE(1:4).eq.'PREX') Then
-!        Read(5,*,ERR=997) n1, aniso_1
-!        Read(5,*,ERR=997) n2, aniso_2
-!        print '(A,i2,A,A)','PREX:  n1=',n1,' aniso_1=',trim(aniso_1)
-!        print '(A,i2,A,A)','PREX:  n2=',n2,' aniso_2=',trim(aniso_2)
-!        LINENR=LINENR+2
-!        Go To 100
-!      End If
 C-------------------------------------------
       If (LINE(1:4).eq.'PREX') Then
         READ(5,*,ERR=997) iDIM1, aniso_file_site_1
