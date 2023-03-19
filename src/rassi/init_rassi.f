@@ -165,6 +165,7 @@ C DEFAULT FLAGS:
       DYSEXPORT=.FALSE.
       TDYS=.FALSE.
       OCAN=1
+      NORCA=.FALSE.
       DCHS=.FALSE.
       DCHO=1
 * Exact operator

@@ -797,6 +797,13 @@ C ------------------------------------------
         GOTO 100
       END IF
 C ------------------------------------------
+      IF(LINE(1:4).EQ.'ORTH')THEN
+! Orthonormalize CMO2 and transform r2TDM
+        NORCA=.TRUE.
+        LINENR=LINENR+1
+        GOTO 100
+      END IF
+C ------------------------------------------
       IF(LINE(1:4).EQ.'DCHS')THEN
 ! Enable computation of DCH intensities
         DCHS=.TRUE.

@@ -1,0 +1,223 @@
+************************************************************************
+* This file is part of OpenMolcas.                                     *
+*                                                                      *
+* OpenMolcas is free software; you can redistribute it and/or modify   *
+* it under the terms of the GNU Lesser General Public License, v. 2.1. *
+* OpenMolcas is distributed in the hope that it will be useful, but it *
+* is provided "as is" and without any express or implied warranties.   *
+* For more details see the full text of the license in the file        *
+* LICENSE or in <http://www.gnu.org/licenses/>.                        *
+*                                                                      *
+* Copyright (C) 2020, BRUNO TENORIO                                    *
+************************************************************************
+*  SUBROUTINE TRORB_LL
+*  PURPOSE: ORTHNORMALIZE CMO2 USING A= L * L**T CHOLESKY FACTORIZATION
+*  A=L*L**T WHERE A=C**T * S * C
+*  AND U=C*(L**-1)**T IS ORTHONORMAL
+************************************************************************
+      SUBROUTINE TRORB_LL(UMO2,LMAT)
+
+      Implicit none
+
+      integer :: isym
+      character(len=8) :: Label
+      integer :: nb, nbast, nbast1, nbast2
+      real*8, allocatable :: SAO(:), IAO(:), Scr(:), Scr2(:)
+      real*8, allocatable :: Lmatinv(:), CMOA(:)
+      integer :: iOff1, iOff2
+      integer :: iOpt,iSyLbl,iRc
+      integer :: IC,istca,istcb,ist,ista,istcc,istc
+      REAL*8 UMO2(nCMO),LMAT(NTDMAB)
+      INTEGER INFOL
+      integer :: istcmo(8), istao(8), istacc(8)
+      Integer no1,nb1,isy1,i,j,indij,nldm
+      LOGICAL PRTEST
+#include "Molcas.fh"
+#include "cntrl.fh"
+#include "WrkSpc.fh"
+#include "symmul.fh"
+#include "rassi.fh"
+#include "stdalloc.fh"
+
+C============================================================
+      PRTEST=.False.
+      nbast=0
+      nbast1=0
+      nbast2=0
+      do isym=1,nsym
+        nb=NBASF(isym)
+        nbast=nbast+nb
+        nbast1=nbast1+(nb*(nb+1))/2
+        nbast2=nbast2+nb**2
+      end do
+
+      call mma_allocate(CMOA,nCMO)
+      CALL DCOPY_(nCMO,UMO2,1,CMOA,1) !CMO2
+
+      call mma_allocate(SAO,NBAST1)
+      call mma_allocate(IAO,NBAST2)
+      IAO=0.0D0
+
+      iRc=-1
+      iOpt=6
+      IC=1
+      iSyLbl=1
+      Label='Mltpl  0'
+      Call RdOne(iRc,iOpt,Label,IC,SAO,iSyLbl)
+      iOff1 = 0
+      iOff2 = 0
+      Do iSym = 1,nSym
+        nb = nBasf(iSym)
+        If ( nb.gt.0 ) then
+          call mma_allocate(Scr,nb*nb)
+          scr=0.0D0
+          Call Square(SAO(1+iOff1),Scr,1,nb,nb)
+          CALL DCOPY_(nb*nb,Scr,1,IAO(iOff2+1),1)
+          call mma_deallocate(Scr)
+        end if
+        iOff1 = iOff1 + (nb*nb+nb)/2
+        iOff2 = iOff2 + (nb*nb)
+      end do
+      call mma_deallocate(SAO)
+
+C============================================================
+
+      IST=1
+      ISTA=1
+      ISTCC=1
+      DO ISY1=1,NSYM
+        ISTCMO(ISY1)=IST
+        ISTAO(ISY1)=ISTA
+        ISTACC(ISY1)=ISTCC
+        NO1=NOSH(ISY1)
+        IST=IST+NO1*NBASF(ISY1)
+        ISTA=ISTA+(NBASF(ISY1)*NBASF(ISY1) )
+        ISTCC=ISTCC+NO1*NO1
+      END DO
+
+      DO ISY1=1,NSYM
+        ISTCB=ISTCMO(ISY1)
+        ISTCA=ISTAO(ISY1)
+        ISTC=ISTACC(ISY1)
+        NO1=NOSH(ISY1)
+        NB1=NBASF(ISY1)
+        NLDM=NO1*NO1
+        IF(NB1*NO1.EQ.0) GOTO 15
+
+        call mma_allocate(scr,NB1*NO1)
+        call mma_allocate(scr2,NO1*NO1)
+        Scr(:)=0.0D0
+        Scr2(:)=0.0D0
+
+        CALL DGEMM_('N','N', NB1, NO1, NB1, 1.0D0,
+     &                 IAO(ISTCA),NB1, CMOA(ISTCB), NB1,
+     &         0.0D0, Scr(ISTCB), NB1)
+
+        CALL DGEMM_('T','N', NO1, NO1, NB1, 1.0D0,
+     &                 CMOA(ISTCB),NB1, Scr(ISTCB), NB1,
+     &         0.0D0, Scr2(ISTC), NO1)
+
+! Proceed to compute A = L*L**T
+! WHERE L IS LOWER TRIANGULAR
+! DPOTRF computes the Cholesky factorization of a real symmetric
+! positive definite matrix A = C**T * S * C
+
+        INFOL=0
+        IF (PRTEST) THEN
+          write(6,*)'TEST A(=S) matrix'
+          call print_matrix(Scr2(ISTC), no1)
+          !call sqprt(Scr2(ISTC),NO1)
+        END IF
+
+        CALL DPOTRF_('L',NO1, Scr2(ISTC), NO1, INFOL)
+        ! L and L**-1 are square matrices of dimention (NO1,NO1)
+
+        call mma_allocate(Lmatinv,NLDM)
+        Lmatinv(:)=0.0D0
+
+        DO I=1,NO1
+         DO J=1,NO1
+          INDIJ=J+(NO1*(I-1)) - 1
+          IF(I.LE.J) Lmat(ISTC+INDIJ)=Scr2(ISTC+INDIJ)
+         END DO
+        END DO
+
+        IF (PRTEST) THEN
+          write(6,*)'TEST L matrix'
+          !call sqprt(LMAT(ISTC),NO1)
+          call print_matrix(LMAT(ISTC), no1)
+
+          !BRNCAT TEST A = L * L**T
+          Scr2(:)=0.0D0
+          CALL DGEMM_('N','T', NO1, NO1, NO1, 1.0D0,
+     &                 LMAT(ISTC), NO1, LMAT(ISTC), NO1,
+     &         0.0D0, Scr2(ISTC), NO1)
+
+          WRITE(6,*)'TEST A = L * L**T'
+          !call sqprt(Scr2(ISTC),NO1)
+          call print_matrix(Scr2(ISTC), no1)
+        END IF
+
+        ! DEFINE UMO2 = CMO2 * (L**-1)**T
+        CALL DCOPY_(NO1*NO1,LMAT(ISTC),1,LMATINV(ISTC),1)
+        CALL DTRTRI('L', 'N', NO1, LMATINV(ISTC), NO1, INFOL ) ! -> LMAT**-1
+
+        IF (PRTEST) THEN
+        ! TEST LMAT**-1 * LMAT
+          Scr2(:)=0.0D0
+          CALL DGEMM_('N','N', NO1, NO1, NO1, 1.0D0,
+     &                 LMAT(ISTC), NO1, LMATINV(ISTC), NO1,
+     &         0.0D0, SCR2(ISTC), NO1)
+          WRITE(6,*)'TEST  LMAT**-1 * LMAT'
+          !call sqprt(SCR2(ISTC),NO1)
+          call print_matrix(Scr2(ISTC), no1)
+        END IF
+
+        CALL DGEMM_('N','T', NB1, NO1, NO1, 1.0D0,
+     &                 CMOA(ISTCB), NB1, LMATINV(ISTC), NO1,
+     &         0.0D0, UMO2(ISTCB), NB1) ! -> CMO2 * LMATINV**T
+
+        IF (PRTEST) THEN
+        ! TEST OVERLAP U * U**T
+          Scr(:)=0.0D0
+          Scr2(:)=0.0D0
+          CALL DGEMM_('N','N', NB1, NO1, NB1, 1.0D0,
+     &                 IAO(ISTCA),NB1, UMO2(ISTCB), NB1,
+     &         0.0D0, Scr(ISTCB), NB1)
+
+          CALL DGEMM_('T','N', NO1, NO1, NB1, 1.0D0,
+     &                 UMO2(ISTCB),NB1, Scr(ISTCB), NB1,
+     &         0.0D0, Scr2(ISTC), NO1)
+
+          WRITE(6,*)'TEST  U * U**T'
+          !call sqprt(SCR2(ISTC),NO1)
+          call print_matrix(Scr2(ISTC), no1)
+        END IF
+
+        Call mma_deallocate(Scr)
+        Call mma_deallocate(Scr2)
+        Call mma_deallocate(Lmatinv)
+15      CONTINUE
+      END DO
+      Call mma_deallocate(IAO)
+      call mma_deallocate(CMOA)
+      RETURN
+
+      END SUBROUTINE TRORB_LL
+
+      subroutine print_matrix(arr, n)
+      implicit none
+      integer, intent(in) :: n
+      real*8 :: arr(n*n), mat(n,n)
+      integer :: i, j
+      CHARACTER*10 FWN
+      CHARACTER*1 NU
+      WRITE(NU,'(I1.1)') n
+      FWN='('//NU//'(f16.7))'
+
+      mat(:,:) = reshape(arr,(/ n,n /))
+      do i = 1, n
+        write(6,FWN) mat(i,:)
+      enddo
+      end subroutine print_matrix
+

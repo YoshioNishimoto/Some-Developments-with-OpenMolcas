@@ -59,6 +59,7 @@ C      use para_info, only: nProcs, is_real_par, king
       DIMENSION IDDET1(NSTATE), IDDET2(NSTATE)
       LOGICAL IF00, IF10,IF01,IF20,IF11,IF02,IF21,IF12,IF22
       LOGICAL IFTWO,TRORB
+      LOGICAL ORTH
       CHARACTER*8 WFTP1,WFTP2
       CHARACTER*6 STLNE1
       CHARACTER*48 STLNE2
@@ -100,7 +101,7 @@ CC    NTO section
       real*8, Allocatable:: DYSCOF(:), DYSAB(:), DYSZZ(:)
       Integer NRT2M,NRT2MAB,AUGSPIN,NDCHSM,DCHIJ
       Integer ISY,JSY,LSY,NI,NJ,NL
-      real*8, Allocatable:: RT2M(:),RT2MAB(:)
+      real*8, Allocatable:: RT2M(:),RT2MAB(:),UMO2(:),LMAT(:)
       real*8, Allocatable:: DCHSM(:)
       real*8 BEi,BEj,BEij
 #include "SysDef.fh"
@@ -985,10 +986,15 @@ C for a MO biorth. basis
 C ------------------------------------------------------------
 C This part computes the needed densities for Auger.
 C (DOI:10.1021/acs.jctc.2c00252)
+      ORTH = .True.
       IF ((IF21.or.IF12).and.TDYS.and.DYSO) THEN
        !WRITE MOLDEN FILE OF TRANSFORMED CMO2
+<<<<<<< HEAD
        CALL WRITE_RASSI_ORB(NBST,NOSHT,NCMO,CMO2,2,ISTATE,JSTATE)
 
+=======
+       !CALL WRITE_RASSI_ORB(NBST,NOSHT,NCMO,CMO2,2,ISTATE,JSTATE)
+>>>>>>> 0893210f7 (New Cholesky orthonormalization of CMO2)
        Call mma_allocate(RT2M,nRT2M,Label='RT2M')
        RT2M(:)=0.0D0
        Call mma_allocate(RT2MAB,nRT2MAB,Label='RT2MAB')
@@ -1005,9 +1011,25 @@ C evaluate K-2V spin+1 density
      &      IWORK(LSSTAB),
      &      IWORK(LOMAP),WORK(LDET1),WORK(LDET2),
      &      IF21,IF12,NRT2M,RT2M,AUGSPIN)
-        CALL RTDM2_PRINT(ISTATE,JSTATE,BEij,NDYSAB,DYSAB,NRT2MAB,
-     &                  RT2M,CMO1,CMO2,AUGSPIN)
-
+          IF (NORCA) THEN
+           ! TRANSFORM CMO2 as UMO2=CMO2*((L**-1)**T)
+           CALL mma_allocate(UMO2,nCMO,Label='UMO2')
+           CALL mma_allocate(LMAT,NTDMAB,Label='LMAT')
+           CALL DCOPY_(nCMO,CMO2,1,UMO2,1)
+           LMAT(:)=0.0D0
+           CALL TRORB_LL(UMO2,LMAT)
+           !WRITE MOLDEN FILE OF TRANSFORMED UMO2
+           CALL WRITE_RASSI_ORB(NBST,NOSHT,nCMO,UMO2,2,ISTATE,JSTATE)
+           ! TRANSFORM rT2M WITH LMAT
+           CALL TR_RT2M(nRT2M,RT2M,LMAT)
+           CALL RTDM2_PRINT(ISTATE,JSTATE,BEij,NDYSAB,DYSAB,NRT2MAB,
+     &                  RT2M,CMO1,UMO2,AUGSPIN) !CMO2->UMO2
+           Call mma_deallocate(UMO2)
+           Call mma_deallocate(LMAT)
+          ELSE !ORIGINAL RT2M AND CMO2
+          CALL RTDM2_PRINT(ISTATE,JSTATE,BEij,NDYSAB,DYSAB,NRT2MAB,
+     &                  RT2M,CMO1,CMO2,AUGSPIN) !ORIGINAL RT2M AND CMO2
+          END IF ! ORTH
         ELSE IF ((MPLET1-MPLET2).eq.INT(-1)) THEN
 C evaluate K-2V spin-1 density
         AUGSPIN=-1
@@ -1015,24 +1037,44 @@ C evaluate K-2V spin-1 density
      &      IWORK(LSSTAB),
      &      IWORK(LOMAP),WORK(LDET1),WORK(LDET2),
      &      IF21,IF12,NRT2M,RT2M,AUGSPIN)
-        CALL RTDM2_PRINT(ISTATE,JSTATE,BEij,NDYSAB,DYSAB,NRT2MAB,
-     &                  RT2M,CMO1,CMO2,AUGSPIN)
-        ELSE ! write then both
-        AUGSPIN=1
-        CALL MKRTDM2(IWORK(LFSBTAB1),IWORK(LFSBTAB2),
-     &      IWORK(LSSTAB),
-     &      IWORK(LOMAP),WORK(LDET1),WORK(LDET2),
-     &      IF21,IF12,NRT2M,RT2M,AUGSPIN)
-        CALL RTDM2_PRINT(ISTATE,JSTATE,BEij,NDYSAB,DYSAB,NRT2MAB,
-     &                  RT2M,CMO1,CMO2,AUGSPIN)
-
-        AUGSPIN=-1
-        CALL MKRTDM2(IWORK(LFSBTAB1),IWORK(LFSBTAB2),
-     &      IWORK(LSSTAB),
-     &      IWORK(LOMAP),WORK(LDET1),WORK(LDET2),
-     &      IF21,IF12,NRT2M,RT2M,AUGSPIN)
-        CALL RTDM2_PRINT(ISTATE,JSTATE,BEij,NDYSAB,DYSAB,NRT2MAB,
-     &                  RT2M,CMO1,CMO2,AUGSPIN)
+          IF (NORCA) THEN
+           !TRANSFORM CMO2 as UMO2=CMO2*((L**-1)**T)
+           CALL mma_allocate(UMO2,nCMO,Label='UMO2')
+           CALL mma_allocate(LMAT,NTDMAB,Label='LMAT')
+           CALL DCOPY_(nCMO,CMO2,1,UMO2,1)
+           LMAT(:)=0.0D0
+           CALL TRORB_LL(UMO2,LMAT)
+           !WRITE MOLDEN FILE OF TRANSFORMED UMO2
+           CALL WRITE_RASSI_ORB(NBST,NOSHT,nCMO,UMO2,2,ISTATE,JSTATE)
+           ! TRANSFORM rT2M WITH LMAT
+           CALL TR_RT2M(nRT2M,RT2M,LMAT)
+           CALL RTDM2_PRINT(ISTATE,JSTATE,BEij,NDYSAB,DYSAB,NRT2MAB,
+     &                  RT2M,CMO1,UMO2,AUGSPIN) !CMO2->UMO2
+           Call mma_deallocate(UMO2)
+           Call mma_deallocate(LMAT)
+          ELSE !ORIGINAL RT2M AND CMO2
+           CALL RTDM2_PRINT(ISTATE,JSTATE,BEij,NDYSAB,DYSAB,NRT2MAB,
+     &                  RT2M,CMO1,CMO2,AUGSPIN) !ORIGINAL RT2M AND CMO2
+          END IF ! ORTH
+        ELSE !
+          WRITE(6,*) 'TDYS: Auger matrix elements not recognized.'
+          WRITE(6,*) 'TDYS: Check whether Psi_1 and Psi_2 differ
+     & by one electron.'
+!       AUGSPIN=1
+!        CALL MKRTDM2(IWORK(LFSBTAB1),IWORK(LFSBTAB2),
+!     &      IWORK(LSSTAB),
+!     &      IWORK(LOMAP),WORK(LDET1),WORK(LDET2),
+!     &      IF21,IF12,NRT2M,RT2M,AUGSPIN)
+!        CALL RTDM2_PRINT(ISTATE,JSTATE,BEij,NDYSAB,DYSAB,NRT2MAB,
+!     &                  RT2M,CMO1,CMO2,AUGSPIN)
+!
+!        AUGSPIN=-1
+!        CALL MKRTDM2(IWORK(LFSBTAB1),IWORK(LFSBTAB2),
+!     &      IWORK(LSSTAB),
+!     &      IWORK(LOMAP),WORK(LDET1),WORK(LDET2),
+!     &      IF21,IF12,NRT2M,RT2M,AUGSPIN)
+!        CALL RTDM2_PRINT(ISTATE,JSTATE,BEij,NDYSAB,DYSAB,NRT2MAB,
+!     &                  RT2M,CMO1,CMO2,AUGSPIN)
        END IF
        Call mma_deallocate(RT2M)
        Call mma_deallocate(RT2MAB)

@@ -10,8 +10,15 @@
 *                                                                      *
 * Copyright (C) 2020, Bruno Tenorio                                    *
 ************************************************************************
+<<<<<<< HEAD
 !     Subroutine to correctly bunch together CMO matrices orbitals
 !     and pass them to the molden_dysorb interface for .molden export
+=======
+
+!     Subroutine to correctly bunch together CMO matrices orbitals
+!     and pass them to the molden_dysorb interface for .molden export
+
+>>>>>>> 0893210f7 (New Cholesky orthonormalization of CMO2)
       SUBROUTINE WRITE_RASSI_ORB(NBASFN,NOSHN,NCMOA,CMOA,NUM,ist,jst)
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "Molcas.fh"
@@ -23,9 +30,14 @@
 #include "Files.fh"
 
       INTEGER   NBASFN,NCMOA,NOSHN
+<<<<<<< HEAD
       INTEGER   DYSCIND,NBSFA
       INTEGER coeff1 , coeff2
       DIMENSION DYSAMPS(NOSHN,NOSHN)
+=======
+      INTEGER   NBSFA
+      INTEGER coeff1 , coeff2
+>>>>>>> 0893210f7 (New Cholesky orthonormalization of CMO2)
       DIMENSION DYSEN(NOSHN)
       DIMENSION AMPS(NBASFN)
       DIMENSION CMOA(NCMOA)
@@ -34,7 +46,10 @@
 
       Character*30 Filename
       Character*3 NUM1 , NUM2
+<<<<<<< HEAD
       Character*30 FNW
+=======
+>>>>>>> 0893210f7 (New Cholesky orthonormalization of CMO2)
       INTEGER NUM,ist,jst
       WRITE(NUM1,'(I3.3)') ist
       WRITE(NUM2,'(I3.3)') jst
@@ -44,6 +59,10 @@
       DYSEN=0.0D0 ! Orbital energies
       AMPS=0.0D0 ! Transition amplitudes (shown as occupations)
       CMOA1=0.0D0
+<<<<<<< HEAD
+=======
+
+>>>>>>> 0893210f7 (New Cholesky orthonormalization of CMO2)
       SYMOFF=0
       IBIOFF=0
       IZZOFF=0
@@ -53,6 +72,10 @@
         NO1=NOSH(ISY1)
         NA1=NASH(ISY1)
         NB1=NBASF(ISY1)
+<<<<<<< HEAD
+=======
+
+>>>>>>> 0893210f7 (New Cholesky orthonormalization of CMO2)
         IF(NA1.GT.0) THEN
         DO IBIO=1,NO1
          DO IZZ=1,NB1
@@ -63,7 +86,13 @@
          END DO
          IBSA=IBSA+NBASFN
         END DO
+<<<<<<< HEAD
         END IF
+=======
+
+        END IF
+
+>>>>>>> 0893210f7 (New Cholesky orthonormalization of CMO2)
         IZZOFF=NB1+IZZOFF
         IBIOFF=NO1+IBIOFF
         SYMOFF=(NO1*NB1)+SYMOFF
