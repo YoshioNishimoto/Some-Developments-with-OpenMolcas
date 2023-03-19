@@ -986,6 +986,9 @@ C ------------------------------------------------------------
 C This part computes the needed densities for Auger.
 C (DOI:10.1021/acs.jctc.2c00252)
       IF ((IF21.or.IF12).and.TDYS.and.DYSO) THEN
+       !WRITE MOLDEN FILE OF TRANSFORMED CMO2
+       CALL WRITE_RASSI_ORB(NBST,NOSHT,NCMO,CMO2,2,ISTATE,JSTATE)
+
        Call mma_allocate(RT2M,nRT2M,Label='RT2M')
        RT2M(:)=0.0D0
        Call mma_allocate(RT2MAB,nRT2MAB,Label='RT2MAB')
