@@ -84,7 +84,7 @@ def rt2mzz(OCA_c,OCA_atom,cmoa,cmob,d_sza,d_szb,tdmab,totalSymmetry,symmetry,\
                         #Block symmetry product isym,jsym,lsym
                         scr1=np.einsum('ijl,lc->ijc', rtdmab,np.transpose(cmo2l))
                         scr2=np.einsum('ijc,jb->ibc',scr1,np.transpose(cmo2j))
-                        tdmzz_symm=np.einsum('ai,ibc->abc',cmo2,scr2i)
+                        tdmzz_symm=np.einsum('ai,ibc->abc',cmo2i,scr2)
                         # ---------    
                         #print tdmzz_symm in 1-D
                         fizz=range(np.shape(tdmzz_symm)[0])
