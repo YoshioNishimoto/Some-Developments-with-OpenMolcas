@@ -103,18 +103,18 @@ C============================================================
         NB1=NBASF(ISY1)
         if (NB1*NO1 == 0) cycle
 
-        call mma_allocate(scr,nscr)
-        call mma_allocate(scr2,nscr)
+        call mma_allocate(scr,no1*nb1)
+        call mma_allocate(scr2,no1*no1)
         Scr=0.0D0
         Scr2=0.0D0
 
         CALL DGEMM_('N','N', NB1, NO1, NB1, 1.0D0,
      &                 IAO(ISTCA),NB1, CMOA(ISTCB), NB1,
-     &         0.0D0, Scr(ISTCB), NB1)
+     &         0.0D0, Scr, NB1)
 
         CALL DGEMM_('T','N', NO1, NO1, NB1, 1.0D0,
-     &                 CMOA(ISTCB),NB1, Scr(ISTCB), NB1,
-     &         0.0D0, Scr2(ISTC), NO1)
+     &                 CMOA(ISTCB),NB1, Scr, NB1,
+     &         0.0D0, Scr2, NO1)
 
 ! Src2 is the M matrix
 ! Proceed to compute norm=Dab*(Dab*M)
@@ -122,7 +122,7 @@ C============================================================
 
         call mma_allocate(DYSAB2,NO1)
         DYSAB2=0.0D0
-        CALL DGEMV_('N', NO1, NO1, 1.0D0, Scr2(ISTC), NO1,
+        CALL DGEMV_('N', NO1, NO1, 1.0D0, Scr2, NO1,
      &              DYSAB(NDYS),1, 0.0D0, DYSAB2, 1)
 
         normscr= DDOT_(NO1, DYSAB(NDYS), 1, DYSAB2, 1)

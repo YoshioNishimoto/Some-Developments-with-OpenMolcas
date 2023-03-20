@@ -101,7 +101,7 @@ CC    NTO section
       real*8, Allocatable:: DYSCOF(:), DYSAB(:), DYSZZ(:)
       Integer NRT2M,NRT2MAB,AUGSPIN,NDCHSM,DCHIJ
       Integer ISY,JSY,LSY,NI,NJ,NL
-      real*8, Allocatable:: RT2M(:),RT2MAB(:),UMO2(:),LMAT(:)
+      real*8, Allocatable:: RT2M(:),RT2MAB(:),UMO2(:),LMAT(:),S1MAT(:)
       real*8, Allocatable:: DCHSM(:)
       real*8 BEi,BEj,BEij
 #include "SysDef.fh"
@@ -1010,15 +1010,18 @@ C evaluate K-2V spin+1 density
            ! TRANSFORM CMO2 as UMO2=CMO2*((L**-1)**T)
            CALL mma_allocate(UMO2,nCMO,Label='UMO2')
            CALL mma_allocate(LMAT,NTDMAB,Label='LMAT')
+           CALL mma_allocate(S1MAT,NTDMAB,Label='S1MAT')
            CALL DCOPY_(nCMO,CMO2,1,UMO2,1)
            LMAT(:)=0.0D0
-           CALL TRORB_LL(UMO2,LMAT)
+           S1MAT(:)=0.0D0
+           CALL TRORB_LL(CMO1,UMO2,LMAT,S1MAT)
            !WRITE MOLDEN FILE OF TRANSFORMED UMO2
            CALL WRITE_RASSI_ORB(NBST,NOSHT,nCMO,UMO2,2,ISTATE,JSTATE)
            ! TRANSFORM rT2M WITH LMAT
-           CALL TR_RT2M(nRT2M,RT2M,LMAT)
+           !CALL TR_RT2M(nRT2M,RT2M,LMAT,S1MAT)
            CALL RTDM2_PRINT(ISTATE,JSTATE,BEij,NDYSAB,DYSAB,NRT2MAB,
      &                  RT2M,CMO1,UMO2,AUGSPIN) !CMO2->UMO2
+           Call mma_deallocate(S1MAT)
            Call mma_deallocate(UMO2)
            Call mma_deallocate(LMAT)
           ELSE !ORIGINAL RT2M AND CMO2
@@ -1036,15 +1039,18 @@ C evaluate K-2V spin-1 density
            !TRANSFORM CMO2 as UMO2=CMO2*((L**-1)**T)
            CALL mma_allocate(UMO2,nCMO,Label='UMO2')
            CALL mma_allocate(LMAT,NTDMAB,Label='LMAT')
+           CALL mma_allocate(S1MAT,NTDMAB,Label='S1MAT')
            CALL DCOPY_(nCMO,CMO2,1,UMO2,1)
            LMAT(:)=0.0D0
-           CALL TRORB_LL(UMO2,LMAT)
+           S1MAT(:)=0.0D0
+           CALL TRORB_LL(CMO1,UMO2,LMAT,S1MAT)
            !WRITE MOLDEN FILE OF TRANSFORMED UMO2
            CALL WRITE_RASSI_ORB(NBST,NOSHT,nCMO,UMO2,2,ISTATE,JSTATE)
            ! TRANSFORM rT2M WITH LMAT
-           CALL TR_RT2M(nRT2M,RT2M,LMAT)
+           !CALL TR_RT2M(nRT2M,RT2M,LMAT,S1MAT)
            CALL RTDM2_PRINT(ISTATE,JSTATE,BEij,NDYSAB,DYSAB,NRT2MAB,
      &                  RT2M,CMO1,UMO2,AUGSPIN) !CMO2->UMO2
+           Call mma_deallocate(S1MAT)
            Call mma_deallocate(UMO2)
            Call mma_deallocate(LMAT)
           ELSE !ORIGINAL RT2M AND CMO2

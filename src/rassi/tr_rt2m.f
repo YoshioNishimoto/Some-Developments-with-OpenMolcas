@@ -14,15 +14,16 @@
 *  PURPOSE: TRANSFORM RT2M USING L, THE CHOLESKY FACTORIZATION OF CMO2.
 *  THE L MATRIX IS OBTAINED FROM THE SUBROUTINE TRORB_LL
 ************************************************************************
-      SUBROUTINE TR_RT2M(NRT2M, RT2M, LMAT)
+      SUBROUTINE TR_RT2M(NRT2M, RT2M, LMAT, S1MAT)
 
       IMPLICIT REAL*8 (A-H,O-Z)
 
       integer SYM12, NRT2M
       Real*8, Allocatable :: SclI(:,:),SclJ(:,:),SclL(:,:)
-      Real*8, Allocatable :: Scrv(:,:,:), Scrv2(:,:,:), Scrv1(:,:,:)
+      Real*8, Allocatable :: S1I(:,:)
+      Real*8, Allocatable :: Scrv(:,:,:), Scrv2(:,:,:)
       REAL*8 RT2M(nRT2M)
-      REAL*8 LMAT(NTDMAB)
+      REAL*8 LMAT(NTDMAB), S1MAT(NTDMAB)
       integer :: istacc(8)
       Integer I,J,IJ,L,LA,LO,isy1,no1,a,b,iscc,isci,iscj,iscl
       LOGICAL PRTEST
@@ -69,11 +70,14 @@ C============================================================
        ISCI=ISTACC(ISYI)
        IF(NOI.EQ.0) CYCLE !GOTO 273
        Call mma_allocate(SclI,NOI,NOI,Label='SclI')
+       Call mma_allocate(S1I,NOI,NOI,Label='S1I')
        SclI=0.0D0
+       S1I =0.0D0
        DO Ix=1,NOI ! Lmat on I
          DO Jx=1,NOI
            IJ=Ix+(NOI*(Jx-1))
            IF(Jx.LE.Ix) SclI(Ix,Jx)=LMAT(IJ+ISCI)
+           S1I(Ix,Jx)=S1MAT(IJ+ISCI) ! S(CMO1) ** -1
          END DO
        END DO
        DO ISYJ=1,NSYM
@@ -111,10 +115,8 @@ C============================================================
 
             Call mma_allocate(Scrv,NOI,NOJ,NOL,Label='Scrv')
             Call mma_allocate(Scrv2,NOI,NOJ,NOL,Label='Scrv2')
-            Call mma_allocate(Scrv1,NOI,NOJ,NOL,Label='Scrv1')
             Scrv(:,:,:)=0.0D0
             Scrv2(:,:,:)=0.0D0
-            Scrv1(:,:,:)=0.0D0
 
 !            WRITE(6,'(A10,8I7,8I7,8I7,8I7)')' # sub-Block:',ISYI,ISYJ,
 !     &      ISYL,NOI*NOJ*NOL
@@ -141,25 +143,36 @@ C============================================================
              END DO
             END DO
 
+            ! S_CMO1^-1 * r2TDM
+            ! ai,ibc -> abc
+            Scrv2(:,:,:) = 0.0D0
+            do a=1,size(Scrv,2)
+             do b=1,size(Scrv,3)
+              Scrv2(:,a,b) = matmul(Transpose(S1I(:,:)), Scrv(:,a,b) )
+             end do
+            end do
+
             ! ijl,lc -> ijc
-            do a=1,size(Scrv,1)
-             do b=1,size(Scrv,2)
-              Scrv2(a,b,:) = matmul(Scrv(a,b,:), SclL(:,:) )
+            Scrv(:,:,:) = 0.0D0
+            do a=1,size(Scrv2,1)
+             do b=1,size(Scrv2,2)
+              Scrv(a,b,:) = matmul(Scrv2(a,b,:), SclL(:,:) )
              end do
             end do
 
             ! ijc,jb -> ibc
-            do a=1,size(Scrv2,1)
-             do b=1,size(Scrv2,3)
-              Scrv1(a,:,b) = matmul(Scrv2(a,:,b), SclJ(:,:) )
+            Scrv2(:,:,:) = 0.0D0
+            do a=1,size(Scrv,1)
+             do b=1,size(Scrv,3)
+              Scrv2(a,:,b) = matmul(Scrv(a,:,b), SclJ(:,:) )
              end do
             end do
 
             ! ai,ibc -> abc
-            Scrv2(:,:,:) = 0.0D0
-            do a=1,size(Scrv1,2)
-             do b=1,size(Scrv1,3)
-              Scrv2(:,a,b) = matmul(Transpose(SclI(:,:)), Scrv1(:,a,b) )
+            Scrv(:,:,:) = 0.0D0
+            do a=1,size(Scrv2,2)
+             do b=1,size(Scrv2,3)
+              Scrv(:,a,b) = matmul(Transpose(SclI(:,:)), Scrv2(:,a,b) )
              end do
             end do
 
@@ -179,10 +192,10 @@ C============================================================
                 IF (PRTEST) write(6,'(I7,I7,I7,E26.12)')IO,JO,LO,0.0D0
                ELSE
                 KPOS=IA+NASHT*((LA+NASHT*(JA-1))-1)
-                RT2M(KPOS)=Scrv2(I,J,L)
-                IF(ABS(RT2M(KPOS)).LT.1.0D-19) THEN
-                 RT2M(KPOS) = 0.0D0
-                END IF
+                RT2M(KPOS)=Scrv(I,J,L)
+                !IF(ABS(RT2M(KPOS)).LT.1.0D-19) THEN
+                ! RT2M(KPOS) = 0.0D0
+                !END IF
                 IF (PRTEST) write(6,'(I7,I7,I7,E26.12)')
      &                       IO,JO,LO,RT2M(KPOS)
                END IF
@@ -201,7 +214,6 @@ CTEST *********************************
      &********************************'
             end if
 
-            Call mma_deallocate(Scrv1 )
             Call mma_deallocate(Scrv2 )
             Call mma_deallocate(Scrv  )
 
@@ -211,6 +223,7 @@ CTEST *********************************
        Call mma_deallocate(SclJ )
        END DO
       Call mma_deallocate(SclI )
+      Call mma_deallocate(S1I )
       END DO
 
       RETURN
