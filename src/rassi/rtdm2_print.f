@@ -160,7 +160,7 @@ C Write Dyson orbitals in CI basis
        DO I=1,NOI
          IA=I+IOFFTD
 C        eliminate small numbers
-         IF(ABS(DYSAB(IA)).LT.1.0D-29) THEN
+         IF(ABS(DYSAB(IA)).LT.1.0D-19) THEN
             DYSAB(IA)=0.0D0
          END IF
          write(LU,'(I7,E22.12)') IA,DYSAB(IA)
@@ -209,7 +209,7 @@ C Write reduced 2-e TDM in CI basis.
                write(LU,'(I7,I7,I7,E26.12)') IO,JO,LO,0.0D0
                ELSE
                 KPOS=IA+NASHT*((LA+NASHT*(JA-1))-1)
-                IF(ABS(RT2M(KPOS)).LT.1.0D-39) THEN
+                IF(ABS(RT2M(KPOS)).LT.1.0D-19) THEN
                  RT2M(KPOS) = 0.0D0
                 END IF
                 write(LU,'(I7,I7,I7,E26.12)') IO,JO,LO,

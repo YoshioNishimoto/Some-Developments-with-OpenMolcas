@@ -70,8 +70,8 @@ def rt2mzz(OCA_c,OCA_atom,cmoa,cmob,d_sza,d_szb,tdmab,totalSymmetry,symmetry,\
                         #catchcmo(isym)[1] is the tuple(#basis,#orb)
 
                         x=catchcmo_sz(isym,sz_nbasf,nmo)
-                        cmo1i=d_sza[norbsztaboff[i]:norbsztaboff[i]+nszorb[i]]
-                        cmo1i=np.reshape(cmo1i,x[1],order='C')
+                        cmo2i=d_szb[norbsztaboff[i]:norbsztaboff[i]+nszorb[i]]
+                        cmo2i=np.reshape(cmo2i,x[1],order='C')
                         #
                         y=catchcmo_sz(jsym,sz_nbasf,nmo)
                         cmo2j=d_szb[norbsztaboff[j]:norbsztaboff[j]+nszorb[j]]
@@ -84,7 +84,7 @@ def rt2mzz(OCA_c,OCA_atom,cmoa,cmob,d_sza,d_szb,tdmab,totalSymmetry,symmetry,\
                         #Block symmetry product isym,jsym,lsym
                         scr1=np.einsum('ijl,lc->ijc', rtdmab,np.transpose(cmo2l))
                         scr2=np.einsum('ijc,jb->ibc',scr1,np.transpose(cmo2j))
-                        tdmzz_symm=np.einsum('ai,ibc->abc',cmo1i,scr2)
+                        tdmzz_symm=np.einsum('ai,ibc->abc',cmo2i,scr2)
                         # ---------    
                         #print tdmzz_symm in 1-D
                         fizz=range(np.shape(tdmzz_symm)[0])

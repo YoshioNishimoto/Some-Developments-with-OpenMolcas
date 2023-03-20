@@ -15,7 +15,7 @@
 *  A=L*L**T WHERE A=C**T * S * C
 *  AND U=C*(L**-1)**T IS ORTHONORMAL
 ************************************************************************
-      SUBROUTINE TRORB_LL(CMO1,UMO2,LMAT,S1MAT)
+      SUBROUTINE TRORB_LL(UMO2,LMAT,S1MAT)
 
       Implicit none
 
@@ -28,7 +28,7 @@
       integer :: iOff1, iOff2
       integer :: iOpt,iSyLbl,iRc
       integer :: IC,istca,istcb,ist,ista,istcc,istc
-      REAL*8 CMO1(nCMO),UMO2(nCMO),LMAT(NTDMAB),S1MAT(NTDMAB)
+      REAL*8  :: UMO2(nCMO),LMAT(NTDMAB),S1MAT(NTDMAB)
       INTEGER :: INFOL
       integer :: istcmo(8), istao(8), istacc(8)
       Integer ::  no1,nb1,isy1,I,J,indij,nldm
@@ -115,57 +115,6 @@ C============================================================
         Scr1(:)=0.0D0
 
         CALL DGEMM_('N','N', NB1, NO1, NB1, 1.0D0,
-     &                 IAO(ISTCA),NB1, CMO1(ISTCB), NB1,
-     &         0.0D0, Scr, NB1)
-
-        CALL DGEMM_('T','N', NO1, NO1, NB1, 1.0D0,
-     &                 CMO1(ISTCB),NB1, Scr, NB1,
-     &         0.0D0, Scr2, NO1)
-        CALL DCOPY_(NO1*NO1,Scr2,1,Scr22,1) ! save S in Scr22
-
-        IF (PRTEST) write(6,*)'TEST S(CMO1)'
-        IF (PRTEST) call print_matrix(Scr22, no1)
-
-        INFOL=0
-        CALL DPOTRF_('L',NO1, Scr2, NO1, INFOL)
-
-        DO I=1,NO1 ! COMPACT LOW TRIANGULAR OF S
-         DO J=1,I
-          INDIJ= I + ((J-1)*(2*NO1 - J)/2)
-          Scr1(INDIJ)=Scr2(I+(NO1*(J-1)))
-         END DO
-        END DO
-
-        CALL DPPTRI('L', NO1, Scr1, INFOL ) ! -> S ** -1
-
-        Scr2(:)=0.0D0
-        DO I=1,NO1 ! NOW SQUARE S ** -1
-         DO J=1,I
-          INDIJ= I + ((J-1)*(2*NO1 - J)/2)
-          Scr2(I+(NO1*(J-1)))=Scr1(INDIJ)
-          Scr2(J+(NO1*(I-1)))=Scr1(INDIJ)
-         END DO
-        END DO
-
-        CALL DCOPY_(NO1*NO1,Scr2,1,S1MAT(ISTC),1)
-
-        IF (PRTEST) THEN
-          write(6,*)'TEST S(CMO1) ** -1 matrix'
-          call print_matrix(S1MAT(ISTC), no1)
-          Scr2(:)=0.0D0
-          write(6,*)'TEST S(CMO1) ** -1 * S(CMO1)'
-          CALL DGEMM_('N','T', NO1, NO1, NO1, 1.0D0,
-     &                 S1MAT(ISTC), NO1, Scr22, NO1,
-     &         0.0D0, Scr2, NO1)
-          call print_matrix(Scr2, no1)
-        END IF
-        Call mma_deallocate(Scr22)
-
-! ********************************************
-
-        Scr(:)=0.0D0
-        Scr2(:)=0.0D0
-        CALL DGEMM_('N','N', NB1, NO1, NB1, 1.0D0,
      &                 IAO(ISTCA),NB1, CMOA(ISTCB), NB1,
      &         0.0D0, Scr, NB1)
 
@@ -177,25 +126,26 @@ C============================================================
 ! WHERE L IS LOWER TRIANGULAR
 ! DPOTRF computes the Cholesky factorization of a real symmetric
 ! positive definite matrix A = C**T * S * C
+        CALL DCOPY_(NO1*NO1,Scr2,1,Scr22,1) ! save S in Scr22
 
         INFOL=0
         IF (PRTEST) THEN
           write(6,*)'TEST A(= S(CMO2) ) matrix'
-          call print_matrix(Scr2, no1)
+          call print_matrix(Scr22, no1)
         END IF
 
         CALL DPOTRF_('L',NO1, Scr2, NO1, INFOL)
         ! L and L**-1 are square matrices of dimention (NO1,NO1)
 
-        call mma_allocate(Lmatinv,NLDM)
-        Lmatinv(:)=0.0D0
-
-        DO I=1,NO1
+        DO I=1,NO1 ! GET L AS SQUARE MATRIX
          DO J=1,NO1
           INDIJ=J+(NO1*(I-1))
           IF(I.LE.J) Lmat(ISTC-1+INDIJ)=Scr2(INDIJ)
          END DO
         END DO
+
+        call mma_allocate(Lmatinv,NLDM)
+        Lmatinv(:)=0.0D0
         CALL DCOPY_(NLDM,Lmat(ISTC),1,LMATINV,1)
 
         IF (PRTEST) THEN
@@ -212,8 +162,27 @@ C============================================================
           call print_matrix(Scr2, no1)
         END IF
 
-        ! DEFINE UMO2 = CMO2 * (L**-1)**T
-        CALL DTRTRI('L', 'N', NO1, LMATINV, NO1, INFOL ) ! -> LMAT**-1
+        ! GET L**-1
+        CALL DTRTRI('L', 'N', NO1, LMATINV, NO1, INFOL) !LMATINV=LMAT**-1
+
+        ! GET THE INVERSE OF S; S**-1 = (L**-1)**T * L**-1
+        Scr2(:)=0.0D0
+        CALL DGEMM_('T','N', NO1, NO1, NO1, 1.0D0,
+     &             LMATINV, NO1, LMATINV, NO1,
+     &             0.0D0, SCR2, NO1)
+        CALL DCOPY_(NO1*NO1,Scr2,1,S1MAT(ISTC),1) !S**-1 = S1MAT
+
+        IF (PRTEST) THEN
+          write(6,*)'TEST S(CMO2) ** -1'
+          call print_matrix(S1MAT(ISTC), no1)
+          Scr2(:)=0.0D0
+          write(6,*)'TEST S(CMO2) ** -1 * S(CMO2)'
+          CALL DGEMM_('N','T', NO1, NO1, NO1, 1.0D0,
+     &                 S1MAT(ISTC), NO1, Scr22, NO1,
+     &         0.0D0, Scr2, NO1)
+          call print_matrix(Scr2, no1)
+        END IF
+        Call mma_deallocate(Scr22)
 
         IF (PRTEST) THEN
         ! TEST LMAT**-1 * LMAT
@@ -225,6 +194,7 @@ C============================================================
           call print_matrix(Scr2, no1)
         END IF
 
+        ! DEFINE UMO2 = CMO2 * (L**-1)**T
         CALL DGEMM_('N','T', NB1, NO1, NO1, 1.0D0,
      &                 CMOA(ISTCB), NB1, LMATINV, NO1,
      &         0.0D0, UMO2(ISTCB), NB1) ! -> CMO2 * LMATINV**T
