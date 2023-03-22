@@ -1028,6 +1028,7 @@ C evaluate K-2V spin+1 density
           CALL RTDM2_PRINT(ISTATE,JSTATE,BEij,NDYSAB,DYSAB,NRT2MAB,
      &                  RT2M,CMO1,CMO2,AUGSPIN) !ORIGINAL RT2M AND CMO2
           END IF ! ORTH
+        call rtdm2_print_tiresia(ISTATE,JSTATE,NRT2MAB,RT2M) 
         ELSE IF ((MPLET1-MPLET2).eq.INT(-1)) THEN
 C evaluate K-2V spin-1 density
         AUGSPIN=-1
@@ -1057,6 +1058,7 @@ C evaluate K-2V spin-1 density
            CALL RTDM2_PRINT(ISTATE,JSTATE,BEij,NDYSAB,DYSAB,NRT2MAB,
      &                  RT2M,CMO1,CMO2,AUGSPIN) !ORIGINAL RT2M AND CMO2
           END IF ! ORTH
+        call rtdm2_print_tiresia(ISTATE,JSTATE,NRT2MAB,RT2M)
         ELSE !
           WRITE(6,*) 'TDYS: Auger matrix elements not recognized.'
           WRITE(6,*) 'TDYS: Check whether Psi_1 and Psi_2 differ

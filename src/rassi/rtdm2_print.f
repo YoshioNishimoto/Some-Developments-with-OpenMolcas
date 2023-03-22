@@ -29,7 +29,9 @@ C Code adapted from trd_print.f written by P. A. Malmqvist.
 #include "Files.fh"
 #include "Struct.fh"
 #include "stdalloc.fh"
-      INTEGER ISTATE, JSTATE, SYM12
+      INTEGER ISTATE, JSTATE, SYM12,ISYI,ISYJ,ISYL
+      INTEGER NOI,NAI,NII,NOJ,NAJ,NIJ,NOL,NAL,NIL,KPOS
+      INTEGER IA,IO,JA,JO,LA,LO
       INTEGER NDYSAB,NRT2MAB,AUGSPIN
       Real*8  DYSAB(*), RT2M(*), CMO1(*), CMO2(*)
       Real*8  EIJ
