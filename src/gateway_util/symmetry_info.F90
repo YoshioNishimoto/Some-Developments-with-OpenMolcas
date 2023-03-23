@@ -485,8 +485,8 @@ subroutine ChTab(iOper,nIrrep,outChTbl)
       jIrrep = 1
     else if (nIrrep == 2) then
       jIrrep = 1+(1-iTest(2))/2
-      write(6,*)'BRNCAT jIrrep',jIrrep
-      write(6,*)' ' !BRNCAT
+      !write(6,*)'BRNCAT jIrrep',jIrrep
+      !write(6,*)' ' !BRNCAT
     else if (nIrrep == 4) then
       !jIrrep = 1+((1-iTest(2))+2*(1-iTest(3)))/2
       !***************************
