@@ -70,7 +70,7 @@ def rt2mzz(OCA_c,OCA_atom,cmoa,cmob,d_sza,d_szb,tdmab,totalSymmetry,symmetry,\
                         #catchcmo(isym)[1] is the tuple(#basis,#orb)
 
                         x=catchcmo_sz(isym,sz_nbasf,nmo)
-                        cmo2i=d_szb[norbsztaboff[i]:norbsztaboff[i]+nszorb[i]]
+                        cmo2i=d_sza[norbsztaboff[i]:norbsztaboff[i]+nszorb[i]]
                         cmo2i=np.reshape(cmo2i,x[1],order='C')
                         #
                         y=catchcmo_sz(jsym,sz_nbasf,nmo)
