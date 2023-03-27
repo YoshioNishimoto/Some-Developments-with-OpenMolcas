@@ -1020,11 +1020,12 @@ C evaluate K-2V spin+1 density
            ! TRANSFORM rT2M WITH LMAT
            CALL TR_RT2M(nRT2M,RT2M,LMAT,S1MAT)
            CALL RTDM2_PRINT(ISTATE,JSTATE,BEij,NDYSAB,DYSAB,NRT2MAB,
-     &                  RT2M,CMO1,UMO2,AUGSPIN) !CMO2->UMO2
+     &                  RT2M,UMO2,UMO2,AUGSPIN) !CMO1 and CMO2->UMO2
            Call mma_deallocate(S1MAT)
            Call mma_deallocate(UMO2)
            Call mma_deallocate(LMAT)
           ELSE !ORIGINAL RT2M AND CMO2
+          CALL WRITE_RASSI_ORB(NBST,NOSHT,nCMO,CMO2,2,ISTATE,JSTATE)
           CALL RTDM2_PRINT(ISTATE,JSTATE,BEij,NDYSAB,DYSAB,NRT2MAB,
      &                  RT2M,CMO1,CMO2,AUGSPIN) !ORIGINAL RT2M AND CMO2
           END IF ! ORTH
@@ -1050,11 +1051,12 @@ C evaluate K-2V spin-1 density
            ! TRANSFORM rT2M WITH LMAT
            CALL TR_RT2M(nRT2M,RT2M,LMAT,S1MAT)
            CALL RTDM2_PRINT(ISTATE,JSTATE,BEij,NDYSAB,DYSAB,NRT2MAB,
-     &                  RT2M,CMO1,UMO2,AUGSPIN) !CMO2->UMO2
+     &                  RT2M,UMO2,UMO2,AUGSPIN) !CMO1 and CMO2->UMO2
            Call mma_deallocate(S1MAT)
            Call mma_deallocate(UMO2)
            Call mma_deallocate(LMAT)
           ELSE !ORIGINAL RT2M AND CMO2
+           CALL WRITE_RASSI_ORB(NBST,NOSHT,nCMO,CMO2,2,ISTATE,JSTATE)
            CALL RTDM2_PRINT(ISTATE,JSTATE,BEij,NDYSAB,DYSAB,NRT2MAB,
      &                  RT2M,CMO1,CMO2,AUGSPIN) !ORIGINAL RT2M AND CMO2
           END IF ! ORTH
