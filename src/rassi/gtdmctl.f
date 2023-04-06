@@ -59,7 +59,8 @@ C      use para_info, only: nProcs, is_real_par, king
       DIMENSION IDDET1(NSTATE), IDDET2(NSTATE)
       LOGICAL IF00, IF10,IF01,IF20,IF11,IF02,IF21,IF12,IF22
       LOGICAL IFTWO,TRORB
-      LOGICAL ORTH
+      LOGICAL TRAFO
+      CHARACTER*10 AFLNM
       CHARACTER*8 WFTP1,WFTP2
       CHARACTER*6 STLNE1
       CHARACTER*48 STLNE2
@@ -986,7 +987,8 @@ C for a MO biorth. basis
 C ------------------------------------------------------------
 C This part computes the needed densities for Auger.
 C (DOI:10.1021/acs.jctc.2c00252)
-      ORTH = .True.
+      !ORTH = .True.
+      TRAFO = .True.! transform r2TDM to AO basis
       IF ((IF21.or.IF12).and.TDYS.and.DYSO) THEN
        !WRITE MOLDEN FILE OF TRANSFORMED CMO2
        !CALL WRITE_RASSI_ORB(NBST,NOSHT,NCMO,CMO2,2,ISTATE,JSTATE)
@@ -1029,6 +1031,10 @@ C evaluate K-2V spin+1 density
           CALL RTDM2_PRINT(ISTATE,JSTATE,BEij,NDYSAB,DYSAB,NRT2MAB,
      &                  RT2M,CMO1,CMO2,AUGSPIN) !ORIGINAL RT2M AND CMO2
           END IF ! ORTH
+         IF (TRAFO) THEN
+          AFLNM='rT2DM_TAO_'!AFLNM MUST BE 10 CHARACTER
+          call TRAO_RT2M(NRT2M,RT2M,CMO1,CMO2,ISTATE,JSTATE,TRAFO,AFLNM)
+         END IF!TRAFO
         call rtdm2_print_tiresia(ISTATE,JSTATE,NRT2MAB,RT2M) 
         ELSE IF ((MPLET1-MPLET2).eq.INT(-1)) THEN
 C evaluate K-2V spin-1 density
@@ -1060,6 +1066,10 @@ C evaluate K-2V spin-1 density
            CALL RTDM2_PRINT(ISTATE,JSTATE,BEij,NDYSAB,DYSAB,NRT2MAB,
      &                  RT2M,CMO1,CMO2,AUGSPIN) !ORIGINAL RT2M AND CMO2
           END IF ! ORTH
+         IF (TRAFO) THEN
+          AFLNM='rT2DM_SAO_'!AFLNM MUST BE 10 CHARACTER
+          call TRAO_RT2M(NRT2M,RT2M,CMO1,CMO2,ISTATE,JSTATE,TRAFO,AFLNM)
+         END IF!TRAFO
         call rtdm2_print_tiresia(ISTATE,JSTATE,NRT2MAB,RT2M)
         ELSE !
           WRITE(6,*) 'TDYS: Auger matrix elements not recognized.'
