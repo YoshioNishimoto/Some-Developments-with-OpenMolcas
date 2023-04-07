@@ -182,23 +182,25 @@ C============================================================
             end do
 
             ! Now print -> RT2MAO
-            IF (TRAFO) WRITE(LU,'(A11,8I7,8I7,8I7,8I7)')'#Sub-Block:',
+            IF (TRAFO) THEN
+             WRITE(LU,'(A11,8I7,8I7,8I7,8I7)')'#Sub-Block:',
      &       ISYI,ISYJ,ISYL,NBI*NBJ*NBL
-            DO I=1,NBI
-             IA=IOFFAZ(ISYI)+I-NII
-             IB=IOFFBZ(ISYI)+I
-             DO J=1,NBJ
-              JA=IOFFAZ(ISYJ)+J-NIJ
-              JB=IOFFBZ(ISYJ)+J
-              DO L=1,NBL
-               LA=IOFFAZ(ISYL)+L-NIL
-               LB=IOFFBZ(ISYL)+L
-                KPOS=IB+NBST*((LB+NBST*(JB-1))-1)
-               IF (TRAFO) write(LU,'(I7,I7,I7,E26.12)')
+              DO I=1,NBI
+               IA=IOFFAZ(ISYI)+I-NII
+               IB=IOFFBZ(ISYI)+I
+               DO J=1,NBJ
+                JA=IOFFAZ(ISYJ)+J-NIJ
+                JB=IOFFBZ(ISYJ)+J
+                DO L=1,NBL
+                 LA=IOFFAZ(ISYL)+L-NIL
+                 LB=IOFFBZ(ISYL)+L
+                 KPOS=IB+NBST*((LB+NBST*(JB-1))-1)
+                 WRITE(LU,'(I7,I7,I7,E26.12)')
      &                       IB,JB,LB,rt2mao(I,J,L)
+                END DO
+               END DO
               END DO
-             END DO
-            END DO
+            END IF
 
 CTEST *********************************
             !Print test CMO1
