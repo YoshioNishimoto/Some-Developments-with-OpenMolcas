@@ -19,7 +19,7 @@
 Module InfSO
 use MxDM, only: MxIter
 Private
-Public :: IterSO, IterSO_Max, MemRsv, QNRTh, DltNth, DltNrm, Energy
+Public :: IterSO, IterSO_Max, MemRsv, QNRTh, DltNth, DltNrm, Energy, Trick
 
 Integer :: i
 
@@ -30,5 +30,6 @@ Real*8  :: QNRTh = 0.075d+00
 Real*8  :: DltNTh= 0.2d-4
 Real*8  :: DltNrm= 0.0D0
 Real*8  :: Energy(MxIter)=[(0.0D0,i=1,MxIter)]
+Logical :: Trick=.True.
 
 End Module InfSO

@@ -39,7 +39,7 @@
 #endif
       Use Interfaces_SCF, Only: TraClc_i
       use LnkLst, only: SCF_V, LLGrad, LLDelt, LLx
-      use InfSO, only: DltNrm, DltnTh, IterSO, IterSO_Max,qNRTh, Energy
+      use InfSO, only: DltNrm, DltnTh, IterSO, IterSO_Max,qNRTh, Energy, Trick
       use SCF_Arrays, only: CMO, Ovrlp, CMO_Ref, OccNo, CInter, TrDD, TrDh, TrDP
       use k2_arrays, only: DeDe
       use InfSCF, only: AccCon, Aufb, ChFracMem, CPUItr, Damping, TimFld, nOcc, nOrb, nBas, WarnCfg, WarnPocc,    &
@@ -584,7 +584,7 @@
 
             DD=Sqrt(DDot_(mOV,Disp(:),1,Disp(:),1))
 
-            If (DD>Pi) Then
+            If (DD>Pi.and.Trick) Then
                Write (6,*) 'WfCtl_SCF: Additional displacement is too large.'
                Write (6,*) 'DD=',DD
                If (kOptim/=1) Then
@@ -619,7 +619,7 @@
 
             DD=Sqrt(DDot_(mOV,Disp(:),1,Disp(:),1))
 
-            If (DD>Pi) Then
+            If (DD>Pi.and.Trick) Then
                Write (6,*) 'WfCtl_SCF: Total displacement is too large.'
                Write (6,*) 'DD=',DD
                If (kOptim/=1) Then

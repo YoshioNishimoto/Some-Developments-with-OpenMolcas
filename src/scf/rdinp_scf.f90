@@ -38,7 +38,7 @@
       use OFembed, only: OFE_KSDFT, dfmd, Do_OFemb, KEonly, ThrFThaw, XSigma
       use Functionals, only: Custom_File, Custom_Func
       use IOBuf, only: lDaRec,nSect!,DiskMx_MByte
-      use InfSO, only: DltnTh, QNRTh
+      use InfSO, only: DltnTh, QNRTh, Trick
 #ifdef _HDF5_
       use mh5, only: mh5_is_hdf5, mh5_open_file_r
       use InfSCF, only: FileOrb_ID
@@ -314,6 +314,7 @@
       If (Line(1:4).eq.'TEEE') Go To 4300
       If (Line(1:4).eq.'CHAR') Go To 4400
       If (Line(1:4).eq.'NOTE') Go To 4500
+      If (Line(1:4).eq.'NOTR') Go To 8908
       If (Line(1:4).eq.'KSDF') Go To 4600
       If (Line(1:4).eq.'DFCF') Go To 4605
       If (Line(1:4).eq.'OFEM') Go To 4650
@@ -1436,6 +1437,10 @@
          Write (6,*) 'Modify mxdm.f90 and recompile!'
          Call Abend()
       End If
+      GoTo 1000
+!>>>>>>>>>>>>> NOTRICK<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+ 8908 Continue
+      TRICK=.False.
       GoTo 1000
 !>>>>>>>>>>>>> FALC <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 30000 Continue

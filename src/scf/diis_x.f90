@@ -29,7 +29,7 @@
 !     R. Lindh in Slapaf and SCF in 1994.                              *
 !                                                                      *
 !***********************************************************************
-      use InfSO, only: IterSO, Energy
+      use InfSO, only: IterSO, Energy, Trick
       use InfSCF, only: TimFld, mOV, kOptim, Iter, C1DIIS, AccCon, Iter_Start, kOV
       use Constants, only: Zero, One
 #ifdef _NEW_
@@ -185,12 +185,14 @@
 !     that the BFGS update is ill-conditioned.
 !     Case1 = Bii_Min>1.0D0 .and. kOptim>1
       Case1 = (Bij(i,i)>1.0D0  .or. Bii_Min>1.0D0) .and. kOptim>1 .and. IterSO>1
+      Case1 = Case1 .and. Trick
 
 !     Case 2
 !     Check if we are sliding off a shoulder, that is, we have a
 !     lowering of the energy while the norm of the error vector
 !     increase.
       Case2 = Bij(i,i)>Bii_Min .and. Energy(Ind(i))+delta_E<E_Min_G .and. kOptim>1
+      Case2 = Case2 .and. Trick
 
 !     Case 3
 !     Check if elements are in decending order
@@ -200,6 +202,7 @@
          If (Fact_Decline*Bij(i,i)< Bij(i+1,i+1)) Case3=.True.
       End Do
       If (Energy(Ind(i))>=E_min) Case3=.False.
+      Case3 = Case3 .and. Trick
 
       If ( qNRStp .and. (Case1 .or. Case2 .or. Case3) ) Then
 #ifdef _DEBUGPRINT_
@@ -252,7 +255,7 @@
          Go To 100
       End If
 
-      If (kOptim/=1) Then
+      If (kOptim/=1.and.Trick) Then
           Do i = 1, kOptim-1
              If (delta*Sqrt(Bij(i,i))>Sqrt(Bij(kOptim,kOptim))) Then
                 Write (6,*) 'DIIS_X: Reduction of the subspace dimension due to numerical imbalance of the values in the B-Matrix'
