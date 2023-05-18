@@ -72,8 +72,8 @@ real(kind=wp) :: APThr, CholeskyThr, dm, dMass, Fact, gradLim, HypParam(3), Lamb
                  sDel, spanCD, stepFac1, SymThr, Target_Accuracy, tDel, Temp, v
 
 logical(kind=iwp) :: AnyMode, APThr_UsrDef, Basis_test, BasisSet, CholeskyWasSet, Convert, CoordSet, CSPF = .false., &
-                     CutInt_UsrDef, do1CCD, DoGromacs, DoneCoord, DoRys, DoTinker, EFgiven, Exists, ForceZMAT, FOUND, FragSet, &
-                     GroupSet, GWInput, HyperParSet, Invert, isnumber, lDMS = .false., lECP, lFAIEMP = .false., lMltpl, &
+                     CutInt_UsrDef, do1CCD, DoGromacs, DoneCoord, DoRys, DoTinker, EFgiven, Exists, FinishBasis, ForceZMAT, FOUND, &
+                     FragSet, GroupSet, GWInput, HyperParSet, Invert, isnumber, lDMS = .false., lECP, lFAIEMP = .false., lMltpl, &
                      lOAM = .false., lOMQ = .false., lPP, lSkip, lTtl, lXF = .false., MolWgh_UsrDef, nmwarn, NoAMFI, NoDKroll, &
                      NoZMAT, OrigInput, OriginSet, RF_read, RPSet, Skip1, Skip2, SymmSet, ThrInt_UsrDef, Vlct_, Write_BasLib, &
                      WriteZMat
@@ -185,6 +185,7 @@ isXfield = 0
 CholeskyThr = -huge(CholeskyThr)
 
 Basis_Test = .false.
+FinishBasis = .false.
 !                                                                      *
 !***********************************************************************
 !                                                                      *
@@ -404,6 +405,7 @@ do
         !                                                              *
         !***** END  ****************************************************
         !                                                              *
+        FinishBasis = .true.
         exit
 
 #     ifdef _FDE_
@@ -828,15 +830,26 @@ do
 
         GWInput = .true.
         Key = Get_Ln(LuRd)
-        BSLbl = Key(1:80)
+        if (len_trim(Key) > len(BSLbl)) then
+          call WarningMessage(2,'BASIS keyword: line too long')
+          call Quit_OnUserError()
+        end if
+        BSLbl = Key(1:len(BSLbl))
         if (BasisSet) then
-          KeepBasis = KeepBasis(1:index(KeepBasis,' '))//','//BSLbl
+          ! iOpt_XYZ=1 means we're dealing with "new style" and we need to accumulate all the labels
+          if ((.not. FinishBasis) .and. (iOpt_XYZ == 1)) then
+            if (len_trim(KeepBasis)+len_trim(BsLbl) > len(KeepBasis)-1) then
+              call WarningMessage(2,'BASIS keyword: total basis too long')
+              call Quit_OnUserError()
+            end if
+            KeepBasis = trim(KeepBasis)//','//BsLbl
+          end if
         else
           KeepBasis = BSLbl
           BasisSet = .true.
         end if
-        temp1 = KeepBasis
-        call UpCase(temp1)
+        !temp1 = KeepBasis
+        !call UpCase(temp1)
         !if (INDEX(temp1,'INLINE') /= 0) then
         !  write(u6,*) 'XYZ input and Inline basis set are not compatible'
         !  write(u6,*) 'Consult the manual how to change inline basis set'
@@ -3740,13 +3753,13 @@ end if
 if ((nTtl /= 0) .and. (Run_Mode == G_Mode)) then
   if (iPrint >= 6) then
     write(u6,*)
-    write(u6,'(15X,88A)') ('*',i=1,88)
-    write(u6,'(15X,88A)') '*',(' ',i=1,86),'*'
+    write(u6,'(15X,A)') repeat('*',88)
+    write(u6,'(15X,A,A,A)') '*',repeat(' ',86),'*'
     do iTtl=1,nTtl
       write(u6,'(15X,A,A,A)') '*   ',Title(iTtl),'   *'
     end do
-    write(u6,'(15X,88A)') '*',(' ',i=1,86),'*'
-    write(u6,'(15X,88A)') ('*',i=1,88)
+    write(u6,'(15X,A,A,A)') '*',repeat(' ',86),'*'
+    write(u6,'(15X,A)') repeat('*',88)
   else
     write(u6,*)
     write(u6,'(A)') ' Title:'
