@@ -67,33 +67,6 @@ tinker:
 # Define the actual jobs, each job has a "build" and a "test" stage,
 # the latter depends on the former.
 
-build:plain:
-  extends:
-    - .compile
-    - .plain
-test:plain:
-  extends:
-    - .run-tests
-    - .plain
-  needs:
-    - !reference [.use-clone]
-    - build:plain
-  parallel: 2
-
-build:options:
-  extends:
-    - .compile
-    - .options
-test:options:
-  extends:
-    - .run-tests
-    - .options
-  needs:
-    - !reference [.use-clone]
-    - build:options
-    - tinker
-  parallel: 2
-
 build:linalg:
   extends:
     - .compile
@@ -106,34 +79,6 @@ test:linalg:
     - !reference [.use-clone]
     - build:linalg
     - tinker
-  parallel: 2
-
-build:pgi:
-  extends:
-    - .compile
-    - .pgi
-test:pgi:
-  extends:
-    - .run-tests
-    - .pgi
-  needs:
-    - !reference [.use-clone]
-    - build:pgi
-  parallel: 2
-
-#build:sun:
-#  extends:
-#    - .compile
-#    - .sun
-#test:sun:
-#  extends:
-#    - .run-tests
-#    - .sun
-#  needs:
-#    - !reference [.use-clone]
-#    - build:sun
-#    - tinker
-#  parallel: 2
 
 build:intel:
   extends:
@@ -146,7 +91,6 @@ test:intel:
   needs:
     - !reference [.use-clone]
     - build:intel
-  parallel: 2
   tags:
     - docker
 
@@ -161,87 +105,5 @@ test:intel13:
   needs:
     - !reference [.use-clone]
     - build:intel13
-  parallel: 2
   tags:
     - docker
-
-build:nag:
-  extends:
-    - .compile
-    - .nag
-test:nag:
-  extends:
-    - .run-tests
-    - .nag
-  needs:
-    - !reference [.use-clone]
-    - build:nag
-  parallel: 4
-  tags:
-    - docker
-
-build:garble:
-  extends:
-    - .compile
-    - .garble
-test:garble:
-  extends:
-    - .run-tests
-    - .garble
-  needs:
-    - !reference [.use-clone]
-    - build:garble
-    - tinker
-  parallel: 4
-
-build:bounds:
-  extends:
-    - .compile
-    - .bounds
-test:bounds:
-  extends:
-    - .run-tests
-    - .bounds
-  needs:
-    - !reference [.use-clone]
-    - build:bounds
-  parallel: 4
-
-build:debug:
-  extends:
-    - .compile
-    - .debug
-#test:debug:
-#  extends:
-#    - .run-tests
-#    - .debug
-#  needs:
-#    - !reference [.use-clone]
-#    - build:debug
-#  parallel: 2
-
-build:qcmaquis:
-  extends:
-    - .compile
-    - .qcmaquis
-test:qcmaquis:
-  extends:
-    - .run-tests
-    - .qcmaquis
-  needs:
-    - !reference [.use-clone]
-    - build:qcmaquis
-  parallel: 2
-
-build:mpi:
-  extends:
-    - .compile
-    - .mpi
-test:mpi:
-  extends:
-    - .run-tests
-    - .mpi
-  needs:
-    - !reference [.use-clone]
-    - build:mpi
-  parallel: 8

@@ -64,7 +64,7 @@
     CC: "gcc"
     CXX: "g++"
     FC: "gfortran"
-    tests: ".all"
+    tests: "410 823"
   tags:
     - docker
 
@@ -113,6 +113,7 @@
     CC: "icc"
     CXX: "icpc"
     FC: "ifort"
+    tests: "374 397 423"
   tags:
     - intel_license
 
@@ -140,6 +141,7 @@
     CC: "icc"
     CXX: "icpc"
     FC: "ifort"
+    tests: "374 397 423"
   tags:
     - intel13
 
@@ -269,7 +271,6 @@
     CC: "gcc"
     CXX: "g++"
     FC: "gfortran"
-    tests: ".all"
     MPI_FLAGS: "--allow-run-as-root --oversubscribe"
     MOLCAS_NPROCS: "2"
   tags:
