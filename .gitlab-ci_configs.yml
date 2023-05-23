@@ -115,7 +115,7 @@
     FC: "ifort"
     tests: "374 397 423"
   tags:
-    - intel_license
+    - docker
 
 .intel13:
   image: ${CI_REGISTRY}/molcas/dockerfiles/intel-phusion:latest
