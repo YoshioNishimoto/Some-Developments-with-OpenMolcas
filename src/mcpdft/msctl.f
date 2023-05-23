@@ -28,12 +28,15 @@
 *     GLM, Minneapolis,   May 2013
 *     AMS, Minneapolis,   Feb 2016
 *
+      use definitions, only: wp
       use OneDat, only: sNoNuc, sNoOri
       Use KSDFT_Info, only: do_pdftpot, ifav, ifiv
       Use hybridpdft, only: Do_Hybrid, E_NoHyb, Ratio_WF
       use mspdft, only: dogradmspd, do_rotate, iIntS, iDIDA, IP2MOt,
      &                  D1AOMS, D1SAOMS
       use mcpdft_output, only: debug, lf, iPrLoc
+
+      use compute_pdft, only: load_1e_integrals, get_total_charge
 
       Implicit Real*8 (A-H,O-Z)
 
@@ -51,16 +54,13 @@
 #include "gugx.fh"
 #include "wadr.fh"
 #include "rasscf_lucia.fh"
-!      Logical TraOnly
 
-*
-      Character*8 Label
       Logical First, Dff, Do_DFT,Found
       Parameter ( Zero=0.0d0 , One=1.0d0 )
-      integer iD1I,iD1Act,iD1ActAO,iD1Spin,iD1SpinAO,IAD19
+      integer iD1Act,iD1ActAO,iD1Spin,iD1SpinAO,IAD19
       integer iJOB,dmDisk,iP2d
-      integer itmp0,itmp1,itmp2,itmp3,itmp4
-      integer itmp5,itmp6,itmp7,itmpn,itmpk,itmpa
+      integer itmp2,itmp3,itmp4
+      integer itmp5,itmp6,itmp7,itmpa
       integer ifocki,ifocka
       integer IADR19(1:30)
       integer LP,NQ,LQ,LPUVX
@@ -72,6 +72,9 @@
       integer isym,iash,jsym
       integer LUGS
       External IsFreeUnit
+
+      real(kind=wp), dimension(nTot1) :: h1, kincore, nucelcore
+      real(kind=wp), dimension(nTot2) :: D1I
 
 ***********************************************************
 C Local print level (if any)
@@ -87,102 +90,33 @@ C Local print level (if any)
 *TRS
 *
       Call Get_dScalar('PotNuc',potNuc)
+      call get_total_charge(iCharge)
 
-***********************************************************
-* Generate molecular charges
-***********************************************************
-      Call GetMem('Ovrlp','Allo','Real',iTmp0,nTot1+4)
-      iRc=-1
-      iOpt=ibset(0,sNoOri)
-      iComp=1
-      iSyLbl=1
-      Label='Mltpl  0'
-      Call RdOne(iRc,iOpt,Label,iComp,Work(iTmp0),iSyLbl)
-      Tot_Nuc_Charge=Work(iTmp0+nTot1+3)
-      If ( iRc.ne.0 ) then
-        Write(LF,*) 'CASDFT_Terms: iRc from Call RdOne not 0'
-        Write(LF,*) 'Label = ',Label
-        Write(LF,*) 'iRc = ',iRc
-        Call Abend
-      Endif
-      Call GetMem('Ovrlp','Free','Real',iTmp0,nTot1+4)
-
-      Tot_El_Charge=Zero
-      Do iSym=1,nSym
-        Tot_El_Charge=Tot_El_Charge
-     &                -2.0D0*DBLE(nFro(iSym)+nIsh(iSym))
-      End Do
-      Tot_El_Charge=Tot_El_Charge-DBLE(nActEl)
-      Tot_Charge=Tot_Nuc_Charge+Tot_El_Charge
-
-
-***********************************************************
-* Load bare nuclei Hamiltonian
+!**********************************************************
+! Load bare nuclei Hamiltonian (1-electron terms)
+!
 ! This is h_pq but in the AO basis (so h_{mu, nu})
-***********************************************************
-      Call GetMem('Fcore','Allo','Real',iTmp1,nTot1)
-      iComp  =  1
-      iSyLbl =  1
-      iRc    = -1
-      iOpt   =  ibset(ibset(0,sNoOri),sNoNuc)
-      Label  = 'OneHam  '
-      Call RdOne(iRc,iOpt,Label,iComp,Work(iTmp1),iSyLbl)
-      If ( iRc.ne.0 ) then
-        Write(LF,*) 'CASDFT_Terms: iRc from Call RdOne not 0'
-        Write(LF,*) 'Label = ',Label
-        Write(LF,*) 'iRc = ',iRc
-        Call Abend
-      Endif
-      If ( IPRLEV.ge.DEBUG ) then
-        Write(LF,*)
-        Write(LF,*) ' OneHam in AO basis in CASDFT_Terms'
-        Write(LF,*) ' ---------------------'
-        Write(LF,*)
-        iOff=0
-        Do iSym = 1,nSym
+!**********************************************************
+      call load_1e_integrals(h1, kincore, nucelcore)
+      if (IPRLEV >= debug) then
+        write(lf,*)
+        write(lf,*) ' OneHam in AO basis in MC-PDFT'
+        write(lf,*) '----------------------'
+        write(lf,*)
+        iOff = 1
+        do iSym = 1, nSym
           iBas = nBas(iSym)
-          Call TriPrt(' ','(5G17.11)',Work(iTmp1+iOff),iBas)
+          call triprt(' ', '(5G17.11)', h1(iOff), iBas)
           iOff = iOff + (iBas*iBas+iBas)/2
-        End Do
-      End If
-
-      Call GetMem('Kincore','Allo','Real',iTmpk,nTot1)
-c--reads kinetic energy integrals  Work(iTmpk)--(Label=Kinetic)----
-      iComp  =  1
-      iSyLbl =  1
-      iRc    = -1
-      iOpt   =  ibset(ibset(0,sNoOri),sNoNuc)
-      Label  = 'Kinetic '
-      Call RdOne(iRc,iOpt,Label,iComp,Work(iTmpk),iSyLbl)
-      If ( iRc.ne.0 ) then
-        Write(LF,*) 'CASDFT_Terms: iRc from Call RdOne not 0'
-        Write(LF,*) 'Label = ',Label
-        Write(LF,*) 'iRc = ',iRc
-        Call Abend
-      Endif
-      Call GetMem('NucElcore','Allo','Real',iTmpn,nTot1)
-      iComp  =  1
-      iSyLbl =  1
-      iRc    = -1
-      iOpt   =  ibset(ibset(0,sNoOri),sNoNuc)
-      Label  = 'Attract '
-      Call RdOne(iRc,iOpt,Label,iComp,Work(iTmpn),iSyLbl)
-      If ( iRc.ne.0 ) then
-        Write(LF,*) 'CASDFT_Terms: iRc from Call RdOne not 0'
-        Write(LF,*) 'Label = ',Label
-        Write(LF,*) 'iRc = ',iRc
-        Call Abend
-      Endif
-
+        end do
+      end if
 
 !Here we calculate the D1 Inactive matrix (AO).
-      Call GetMem('D1Inact','Allo','Real',iD1I,NTOT2)
-      Call Get_D1I_RASSCF_m(CMO,Work(iD1I))
-
+      Call Get_D1I_RASSCF_m(CMO, D1I)
       IF(IPRLEV.ge.DEBUG) THEN
-        write(6,*) 'iD1inact'
+        write(lf,*) 'D1 Inact'
         do i=1,ntot2
-        write(6,*) Work(iD1i-1+i)
+          write(lf,*) D1I(i)
         end do
       END IF
 
@@ -223,7 +157,7 @@ c--reads kinetic energy integrals  Work(iTmpk)--(Label=Kinetic)----
 ************************************************************************
       lPUVX = 1
 
-      If ( nFint.gt.0) then
+      If (nFint > 0) then
         iDisk = 0
         Call GetMem('PUVX','Allo','Real',lPUVX,nFint)
         Call DDaFile(LUINTM,2,Work(lPUVX),nFint,iDisk)
@@ -311,16 +245,14 @@ c--reads kinetic energy integrals  Work(iTmpk)--(Label=Kinetic)----
       end if
          Call Get_D1A_RASSCF_m(CMO,Work(iD1Act),Work(iD1ActAO))
 
-!ANDREW _ RIGHT HERE
       if((DoGradPDFT.and.jroot.eq.irlxroot).or.DoGradMSPD) then
         Call GetMem('DtmpA_g','Allo','Real',iTmp_grd,nTot1)
         Call Fold_pdft(nSym,nBas,Work(iD1ActAO),Work(iTmp_grd))
         Call put_darray('d1activeao',Work(iTmp_grd),ntot1)
         Call GetMem('DtmpA_g','Free','Real',iTmp_grd,nTot1)
       end if
-!END _RIGHT HERE
 *
-         Call Fold(nSym,nBas,Work(iD1I),Work(iTmp3))
+         Call Fold(nSym,nBas, D1I,Work(iTmp3))
          Call Fold(nSym,nBas,Work(iD1ActAO),Work(iTmp4))
 *
       if(DoGradMSPD) then
@@ -392,8 +324,6 @@ cPS         call xflush(6)
         Call Put_iArray('nAsh',nAsh,nSym)
         Call Put_iArray('nIsh',nIsh,nSym)
 
-        iCharge=Int(Tot_Charge)
-
 c iTmp5 and iTmp6 are not updated in DrvXV...
                    NTU=0
                    ITU=0
@@ -458,11 +388,11 @@ c iTmp5 and iTmp6 are not updated in DrvXV...
         Call DrvXV(Work(iTmp5),Work(iTmp6),Work(iTmp3),
      &             PotNuc,nTot1,First,Dff,NonEq,lRF,
      &             KSDFT_TEMP,ExFac,iCharge,iSpin,
-     &             Work(iD1I),Work(iD1ActAO),
+     &             D1I,Work(iD1ActAO),
      &             nTot1,DFTFOCK,Do_DFT)
 
 
-        Call Daxpy_(nTot1,1.0d0,Work(iTmp5),1,Work(iTmp1),1)
+        Call Daxpy_(nTot1,1.0d0,Work(iTmp5),1,h1,1)
         Call Daxpy_(nTot1,1.0d0,Work(iTmp6),1,Work(iFockI),1)
 
         Call GetMem('gtmp','Free','Real',iTmp6,nTot1)
@@ -475,29 +405,27 @@ c iTmp5 and iTmp6 are not updated in DrvXV...
       iTmp2=0
       Call GetMem('DoneI','Allo','Real',iTmp2,nTot1)
 
-      Call Fold(nSym,nBas,Work(iD1I),Work(iTmp2))
-c         call xflush(6)
+      Call Fold(nSym,nBas,D1I,Work(iTmp2))
 
       Call GetMem('DoneA','Allo','Real',iTmpa,nTot1)
-c         call xflush(6)
+
       Call Fold(nSym,nBas,Work(iD1ActAO),Work(iTmpa))
-c         call xflush(6)
 *
-      Eone = dDot_(nTot1,Work(iTmp2),1,Work(iTmp1),1)
+      Eone = dDot_(nTot1,Work(iTmp2),1,h1,1)
       Call Get_dScalar('PotNuc',PotNuc_Ref)
       Eone = Eone + (PotNuc-PotNuc_Ref)
       Etwo = dDot_(nTot1,Work(iTmp2),1,Work(iFockI),1)
 
 !**************Kinetic energy of inactive electrons********
-      Ekin = dDot_(nTot1,Work(iTmp2),1,Work(iTmpk),1)
+      Ekin = dDot_(nTot1,Work(iTmp2),1,kincore,1)
 
 !*****Nuclear electron attraction for inactive electrons******
-      Enuc = dDot_(nTot1,Work(iTmp2),1,Work(iTmpn),1)
+      Enuc = dDot_(nTot1,Work(iTmp2),1,nucelcore,1)
 
 c**************Kinetic energy of active electrons*********
-      EactK = dDot_(nTot1,Work(iTmpk),1,Work(iTmpa),1)
+      EactK = dDot_(nTot1,kincore,1,Work(iTmpa),1)
 
-      EactN = dDot_(nTot1,Work(iTmpn),1,Work(iTmpa),1)
+      EactN = dDot_(nTot1,nucelcore,1,Work(iTmpa),1)
 c         call xflush(6)
       EMY  = PotNuc_Ref+Eone+0.5d0*Etwo
 
@@ -536,7 +464,7 @@ c         call xflush(6)
         End Do
       End If
 
-      Call DaXpY_(nTot1,One,Work(iTmp1),1,Work(iFockI),1)
+      Call DaXpY_(nTot1,One,h1,1,Work(iFockI),1)
 
       If ( IPRLEV.ge.DEBUG ) then
         Write(LF,*)
@@ -609,9 +537,9 @@ c         call xflush(6)
             do i=1,ntot2
               write(6,*) work(id1actao-1+i)
             end do
-            write(6,*) 'id1i before tractl'
+            write(6,*) 'D1I before tractl'
             do i=1,ntot2
-              write(6,*) work(id1i-1+i)
+              write(6,*) D1I(i)
             end do
         end if
 *
@@ -658,7 +586,7 @@ c         call xflush(6)
 *
 *
          CALL TRACTL2(WORK(lcmo),WORK(LPUVX_tmp),WORK(LTUVX_tmp),
-     &                WORK(iD1I),WORK(ifocki),
+     &                D1I,WORK(ifocki),
      &                WORK(iD1ActAO),WORK(ifocka),
      &                IPR,lSquare,ExFac)
 *        Call dcopy_(ntot1,FA,1,Work(ifocka),1)
@@ -701,9 +629,9 @@ c         call xflush(6)
             do i=1,ntot2
               write(6,*) work(id1actao-1+i)
             end do
-            write(6,*) 'id1i before tractl'
+            write(6,*) 'D1I before tractl'
             do i=1,ntot2
-              write(6,*) work(id1i-1+i)
+              write(6,*) D1I(i)
             end do
         end if
 
@@ -787,10 +715,6 @@ c         call xflush(6)
          IFINAL = 1
          CALL FOCK_m(WORK(LFOCK),WORK(LBM),Work(iFockI),Work(iFockA),
      &         Work(iD1Act),WORK(LP),WORK(LQ),WORK(LPUVX),IFINAL,CMO)
-!TMP TEST
-!         Call Put_Darray('fock_tempo',Work(ipFocc),ntot1)
-!END TMP TEST
-
 
          CASDFT_Funct = 0
          Call Get_dScalar('CASDFT energy',CASDFT_Funct)
@@ -801,16 +725,10 @@ c         call xflush(6)
           E_NoHyb=CASDFT_E
           CASDFT_E=Ratio_WF*Ref_Ener(jRoot)+(1-Ratio_WF)*E_NoHyb
          END IF
-!         Write(6,*)
-!         '**************************************************'
-!         write(6,*) 'ENERGY REPORT FOR STATE',jroot
-*TRS
-*          write(6,*) 'ECAS', ECAS
 
 *TRS
         Call Print_MCPDFT_2(CASDFT_E,PotNuc,EMY,ECAS,CASDFT_Funct,
      &         jroot,Ref_Ener)
-c         call xflush(6)
 
 
          IF(Do_Rotate) Then
@@ -849,14 +767,7 @@ c         call xflush(6)
 !given by
 ! F_{xy} = \sum_{p} V_{py} D_{px} + \sum_{pqr} 2v_{pqry}d_{pqrx}.
 
-!
-!      write(6,*) 'NACPAR (input fock)',nacpar
-!      write(6,*) 'ntot1 (# of V, fock_occ)',ntot1
-!      write(6,*) 'nfint (# of v)',nfint
-cPS         call xflush(6)
-
 !I will read in the one- and two-electron potentials here
-
       Call GetMem('ONTOPT','ALLO','Real',ipTmpLTEOTP,nfint)
       Call GetMem('ONTOPO','ALLO','Real',ipTmpLOEOTP,ntot1)
       Call FZero(Work(iptmplteotp),Nfint)
@@ -892,7 +803,7 @@ cPS         call xflush(6)
 *
 *         CALL TRA_CTL2_(WORK(lcmo),
 *     &          WORK(LPUVX_tmp),WORK(LTUVX_tmp),WORK(id1actao)
-*     &         ,WORK(ifocka),WORK(id1i),WORK(ifocki),IPR,lSquare,ExFac)
+*     &         ,WORK(ifocka),D1I,WORK(ifocki),IPR,lSquare,ExFac)
 *
 *         write(6,*) 'cmo after before fmat 2'
 *         do i=1,ntot2
@@ -1232,7 +1143,7 @@ cPS         call xflush(6)
          If(NASH(1).ne.NAC) Call DBLOCK_m(Work(iD1Act))
          Call Get_D1A_RASSCF_m(CMO,Work(iD1Act),Work(iD1ActAO))
 
-         Call Fold(nSym,nBas,Work(iD1I),Work(iTmp3))
+         Call Fold(nSym,nBas,D1I,Work(iTmp3))
          Call Fold(nSym,nBas,Work(iD1ActAO),Work(iTmp4))
          Call Daxpy_(nTot1,1.0D0,Work(iTmp4),1,Work(iTmp3),1)
          Call Put_dArray('D1ao',Work(iTmp3),nTot1)
@@ -1291,14 +1202,10 @@ cPS         call xflush(6)
       Call GetMem('D1ActiveAO','free','Real',iD1ActAO,NTOT2)
       Call GetMem('D1Spin','free','Real',iD1Spin,NACPAR)
       Call GetMem('D1SpinAO','free','Real',iD1SpinAO,NTOT2)
-      Call GetMem('Fcore','Free','Real',iTmp1,nTot1)
       Call GetMem('FockI','FREE','Real',ifocki,ntot1)
       Call GetMem('FockA','FREE','Real',ifocka,ntot1)
 *      Call DDaFile(JOBOLD,0,Work(iP2d),NACPR2,dmDisk)
       Call GetMem('P2','Free','Real',iP2d,NACPR2)
-      Call GetMem('D1Inact','Free','Real',iD1i,NTOT2)
-      Call GetMem('Kincore','free','Real',iTmpk,nTot1)
-      Call GetMem('NucElcore','free','Real',iTmpn,nTot1)
 c      call xflush(6)
       Return
       END
@@ -1366,4 +1273,4 @@ c      call xflush(6)
 
       Return
       end
-************ columbus interface ****************************************
+
