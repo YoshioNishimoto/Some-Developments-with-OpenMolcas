@@ -64,7 +64,6 @@
     CC: "gcc"
     CXX: "g++"
     FC: "gfortran"
-    tests: "410 823"
   tags:
     - docker
 
@@ -113,7 +112,7 @@
     CC: "icc"
     CXX: "icpc"
     FC: "ifort"
-    tests: "374 397 423"
+    tests: "374 397"
   tags:
     - docker
 
@@ -141,7 +140,7 @@
     CC: "icc"
     CXX: "icpc"
     FC: "ifort"
-    tests: "374 397 423"
+    tests: "374 397"
   tags:
     - intel13
 
@@ -194,6 +193,7 @@
     CXX: "g++"
     FC: "nagfor"
     MOLCAS_TIMELIM: "1000"
+    tests: "374 397"
   tags:
     - nagfor
 
@@ -210,6 +210,7 @@
     CC: "gcc"
     CXX: "g++"
     FC: "gfortran"
+    tests: "374 397"
   tags:
     - docker
 
@@ -225,6 +226,7 @@
     CXX: "g++"
     FC: "gfortran"
     MOLCAS_TIMELIM: "1000"
+    tests: "374 397"
   tags:
     - docker
 
@@ -273,5 +275,6 @@
     FC: "gfortran"
     MPI_FLAGS: "--allow-run-as-root --oversubscribe"
     MOLCAS_NPROCS: "2"
+    tests: "374 397"
   tags:
     - docker
