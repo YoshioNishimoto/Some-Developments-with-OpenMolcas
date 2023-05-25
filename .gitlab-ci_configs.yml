@@ -93,7 +93,7 @@
     - docker
 
 .intel:
-  image: ${CI_REGISTRY}/molcas/dockerfiles/intel-phusion:latest
+  image: ${CI_REGISTRY}/molcas/dockerfiles/intel-phusion:testing
   variables:
     cache_file: |
       set (CMAKE_BUILD_TYPE "Release" CACHE STRING "opt, no debug info" )
@@ -114,7 +114,7 @@
     FC: "ifort"
     tests: "374 397"
   tags:
-    - docker
+    - intel
 
 .intel13:
   image: ${CI_REGISTRY}/molcas/dockerfiles/intel-phusion:latest

@@ -78,6 +78,8 @@ test:intel:
   needs:
     - !reference [.use-clone]
     - build:intel
+  tags:
+    - docker
 
 build:intel13:
   extends:
