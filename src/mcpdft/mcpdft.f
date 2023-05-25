@@ -532,14 +532,12 @@
       Call MSCtl(Work(LCMO),Work(LFI),Work(LFA),
      &       Work(iRef_E))
 
-      ! I guess iRef_E now holds the MC-PDFT energy for each state??
+      If(IWJOB==1.and.(.not.Do_Rotate)) Call writejob(iadr19)
 
-        If(IWJOB==1.and.(.not.Do_Rotate)) Call writejob(iadr19)
-
-        If (Do_Rotate) Then
-          call replace_diag(work(lhrot), work(iref_e), lroots)
-          call mspdft_finalize(work(lhrot), lroots, irlxroot, iadr19)
-        End If
+      If (Do_Rotate) Then
+        call replace_diag(work(lhrot), work(iref_e), lroots)
+        call mspdft_finalize(work(lhrot), lroots, irlxroot, iadr19)
+      End If
 
       ! Free up some space
       CALL GETMEM('CASDFT_Fock','FREE','REAL',LFOCK,NACPAR)
