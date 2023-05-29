@@ -28,7 +28,7 @@
 !***********************************************************************
 
       SubRoutine ExpKap(kapOV,nKapOV,U,mynOcc)
-      use InfSCF, only: nOFs, nSym, nFro, TimFld, nOrb
+      use InfSCF, only: nOFs, nSym, nFro, TimFld, nOrb, Trick
       Use Constants, only: Pi, Zero
 !
       Implicit None
@@ -50,7 +50,7 @@
       Real*8, Parameter :: Thrs = 1.0D-14
 
       Do j = 1, nKapOV
-         If (Abs(KapOV(j))>Pi) Then
+         If (Abs(KapOV(j))>Pi .and. Trick) Then
             Write (6,*) 'ExpKap: KapOV too large:',KapOV(j)
             Call Abend()
          End If
