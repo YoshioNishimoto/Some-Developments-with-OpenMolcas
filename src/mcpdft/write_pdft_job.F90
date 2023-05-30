@@ -47,8 +47,6 @@ module write_pdft_job
       use definitions, only: wp
       implicit none
 
-#include "WrkSpc.fh"
-#include "wadr.fh"
 #include "rasdim.fh"
 #include "rasscf.fh"
 #include "general.fh"

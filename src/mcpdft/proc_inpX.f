@@ -27,6 +27,7 @@
       use UnixInfo, only: SuperName
       use write_pdft_job, only: iwjob, hasHDF5ref, hasMPSref
       use mcpdft_output, only: terse, debug, insane, lf, iPrLoc
+      use lpdft, only: do_lpdft
 
       Implicit Real*8 (A-H,O-Z)
 #include "SysDef.fh"
@@ -284,18 +285,24 @@ C   No changing about read in orbital information from INPORB yet.
       If (KeyMSPD) Then
        If (DBG) Write(6,*) ' MSPD keyword was used.'
        iMSPDFT=1
-       Call setposition(LUInput,'MSPD',Line,iRc)
        if(dogradpdft) then
         dogradmspd=.true.
         dogradpdft=.false.
        end if
       End If
+!---  Process LPDF command --------------------------------------------!
+      if(dbg) write(lf,*) ' Check if Linearized PDFT case.'
+      if(keylpdf) then
+        if(dbg) then
+          write(lf,*)' LPDF keyword was used.'
+        end if
+        do_lpdft=.true.
+      endif
 *---  Process WJOB command --------------------------------------------*
       If (DBG) Write(6,*) ' Check if write JOBIPH case.'
       If (KeyWJOB) Then
        If (DBG) Write(6,*) ' WJOB keyword was used.'
        iWJOB=1
-       Call setposition(LUInput,'WJOB',Line,iRc)
       End If
 *---  Process LAMB command --------------------------------------------*
       If (KeyLAMB) Then

@@ -59,7 +59,8 @@
      &                  D1SAOMS, doNACMSPD, cmsNACstates, doMECIMSPD,
      &                  mspdft_finalize
       use mcpdft_output, only: terse, debug, insane, lf, iPrLoc
-      use mspdft_util, only: replace_diag
+      use mspdft_util, only: replace_diag, load_hrot,
+     &                       get_mspdft_ref_energy
 
       Implicit Real*8 (A-H,O-Z)
 
@@ -80,8 +81,7 @@
 #include "ciinfo.fh"
       Integer LHrot,NHrot             ! storing info in H0_Rotate.txt
 
-      CHARACTER(Len=18)::MatInfo
-      INTEGER LUMS,IsFreeUnit
+      INTEGER IsFreeUnit
       External IsFreeUnit
 
       Logical DSCF
@@ -96,10 +96,8 @@
 
       External RasScf_Init_m
       External Scan_Inp_m
-      integer iRef_E,IAD19
-      integer IADR19(1:15)
-      integer NMAYBE,KROOT
-      real*8 EAV
+      integer :: iRef_E, IAD19 = 0
+      integer :: IADR19(1:15) = 0
 !
       real*8, allocatable :: PLWO(:)
       integer ivkcnf
@@ -113,7 +111,6 @@
       IPRLEV=IPRLOC(1)
 
 * Default option switches and values, and initial data.
-      EAV = 0.0d0
       Call RasScf_Init_m()
       Call Seward_Init()
 * Open the one-olectron integral file:
@@ -193,7 +190,6 @@
 * Local print level may have changed:
       IPRLEV=IPRLOC(1)
 
-
       Call InpPri_m()
 
 *--------------------------------------------------------
@@ -246,14 +242,14 @@
       Call ReadVc_m(Work(LCMO),Work(lOCCN),
      &             WORK(LDMAT),WORK(LDSPN),WORK(LPMAT),WORK(LPA))
 * Only now are such variables finally known.
-      If (IPRLOC(1).GE.DEBUG) Then
-        CALL TRIPRT('Averaged one-body density matrix, D, in RASSCF',
+      If (IPRLOC(1) >= DEBUG) Then
+        CALL TRIPRT('Averaged one-body density matrix, D, in MCPDFT',
      &              ' ',Work(LDMAT),NAC)
-        CALL TRIPRT('Averaged one-body spin density matrix DS, RASSCF',
+        CALL TRIPRT('Averaged one-body spin density matrix DS, MCPDFT',
      &              ' ',Work(LDSPN),NAC)
         CALL TRIPRT('Averaged two-body density matrix, P',
      &              ' ',WORK(LPMAT),NACPAR)
-        CALL TRIPRT('Averaged antisym 2-body density matrix PA RASSCF',
+        CALL TRIPRT('Averaged antisym 2-body density matrix PA MCPDFT',
      &              ' ',WORK(LPA),NACPAR)
       END IF
 *
@@ -263,17 +259,16 @@
 
       Call Timing(dum1,dum2,Ebel_1,dum3)
 
-      ECAS   = 0.0d0
       Call GetMem('FOcc','ALLO','REAL',ipFocc,nTot1)
 
       ! I guess we spoof for the 2-electron part? Im not sure..
-        KSDFT_TEMP=KSDFT
-        KSDFT='SCF'
-        ExFac=1.0D0
+      KSDFT_TEMP=KSDFT
+      KSDFT='SCF'
+      ExFac=1.0D0
 
       Call GetMem('TmpDMAT','Allo','Real',ipTmpDMAT,NACPAR)
       call dcopy_(NACPAR,Work(LDMAT),1,Work(ipTmpDMAT),1)
-      If (NASH(1).ne.NAC) then
+      If (NASH(1) /= NAC) then
         Call DBLOCK_m(Work(ipTmpDMAT))
       end if
       Call Get_D1A_RASSCF_m(Work(LCMO),Work(ipTmpDMAT),WORK(LD1A))
@@ -287,39 +282,25 @@
 ! for each calculated MC-PDFT energy.
 !
 
-      iJOB=0
       Call GetMem('REF_E','ALLO','REAL',iRef_E,lroots)
       Call Fzero(Work(iRef_E),lroots)
-        Call f_Inquire('JOBOLD',Found)
-        if (.not.found) then
-          Call f_Inquire('JOBIPH',Found)
-          if(Found) JOBOLD=JOBIPH
+
+! The following is to set iAdr19 for subsequent function calls. Maybe
+! Should be made a global var or something...idk
+      call f_inquire('JOBOLD', found)
+      if (.not.found) then
+        call f_inquire('JOBIPH', found)
+        if(found) then
+          JOBOLD=JOBIPH
         end if
-        If (Found) iJOB=1
-        If (iJOB.eq.1) Then
-           if(JOBOLD.le.0) Then
-             JOBOLD=20
-             Call DaName(JOBOLD,'JOBOLD')
-           end if
+      end if
+      if(found) then
+        if(JOBOLD <= 0) then
+          JOBOLD = 20
+          call DaName(JOBOLD, 'JOBOLD')
         end if
-       IADR19(:)=0
-       IAD19=0
-      Call IDaFile(JOBOLD,2,IADR19,15,IAD19)
-      jdisk = IADR19(6)
-!I must read from the 'old' JOBIPH file.
-      Call GetMem('ELIST','ALLO','REAL',iEList,MXROOT*MXITER)
-      Call DDaFile(JOBOLD,2,Work(iEList),MXROOT*MXITER,jdisk)
-      NMAYBE=0
-      DO IT=1,MXITER
-        AEMAX=0.0D0
-        DO I=1,MXROOT
-          E=WORK(iEList+MXROOT*(IT-1)+(I-1))
-          AEMAX=MAX(AEMAX,ABS(E))
-        END DO
-        IF(ABS(AEMAX).LE.1.0D-12) GOTO 11
-        NMAYBE=IT
-      END DO
-  11  CONTINUE
+      end if
+      call iDaFile(JOBOLD, 2, iAdr19, 15, iAd19)
 
       IF(iMSPDFT==1) Then
        call f_inquire('ROT_HAM',Do_Rotate)
@@ -330,57 +311,15 @@
      &   'specific) MC-PDFT calculation'
        End If
       End IF
+
       IF(Do_Rotate) Then
-        write(lf,'(6X,80A)') ('=',i=1,80)
-        write(lf,*)
-        write(lf,'(6X,A,A)')'keyword "MSPD" is used and ',
-     &  'file recording rotated hamiltonian is found. '
-        write(lf,*)
-        write(lf,'(6X,A,A)')
-     &  'Switching calculation to Multi-State Pair-Density ',
-     &  'Functional Theory (MS-PDFT) '
-        write(lf,'(6X,A)')'calculation.'
-        write(lf,*)
         NHRot=lroots**2
         CALL GETMEM('HRot','ALLO','REAL',LHRot,NHRot)
-        LUMS=12
-        LUMS=IsFreeUnit(LUMS)
-        CALL Molcas_Open(LUMS,'ROT_HAM')
-        Do Jroot=1,lroots
-          read(LUMS,*) (Work(LHRot+Jroot-1+(Kroot-1)*lroots)
-     &                 ,kroot=1,lroots)
-        End Do
-        Read(LUMS,'(A18)') MatInfo
-        MSPDFTMethod=' MS-PDFT'
-        IF(trim(adjustl(MatInfo)).eq.'an unknown method') THEN
-         write(lf,'(6X,A,A)')'The MS-PDFT calculation is ',
-     & 'based on a user-supplied rotation matrix.'
-        ELSE
-         write(lf,'(6X,A,A,A)')'The MS-PDFT method is ',
-     &   trim(adjustl(MatInfo)),'.'
-        If(trim(adjustl(MatInfo)).eq.'XMS-PDFT') MSPDFTMethod='XMS-PDFT'
-        If(trim(adjustl(MatInfo)).eq.'CMS-PDFT') MSPDFTMethod='CMS-PDFT'
-        If(trim(adjustl(MatInfo)).eq.'VMS-PDFT') MSPDFTMethod='VMS-PDFT'
-        If(trim(adjustl(MatInfo)).eq.'FMS-PDFT') MSPDFTMethod='FMS-PDFT'
-        ENDIF
-        write(lf,*)
-        write(lf,'(6X,80A)') ('=',i=1,80)
-        write(lf,*)
-        Close(LUMS)
-        do KROOT=1,lROOTS
-          ENER(IROOT(KROOT),1)=Work((LHRot+(Kroot-1)*lroots+
-     &                                     (KROOT-1)))
-           EAV = EAV + ENER(IROOT(KROOT),ITER) * WEIGHT(KROOT)
-           Work(iRef_E + KROOT-1) = ENER(IROOT(KROOT),1)
-        end do
+        call load_hrot(lroots, work(lhrot), mspdftmethod)
+        call get_mspdft_ref_energy(lroots, work(lhrot), work(iRef_E))
       Else
-        do KROOT=1,lROOTS
-          ENER(IROOT(KROOT),1)=Work(iEList+MXROOT*(NMAYBE-1) +
-     &                                     (KROOT-1))
-           EAV = EAV + ENER(IROOT(KROOT),ITER) * WEIGHT(KROOT)
-           Work(iRef_E + KROOT-1) = ENER(IROOT(KROOT),1)
-        end do
-      End IF!End IF for Do_Rotate=.true.
+        call get_ref_energy(lroots, jobold, iadr19, work(iref_e))
+      End IF
 
       IF(doNACMSPD) Then
         write(6,'(6X,80A)') ('=',i=1,80)
@@ -409,7 +348,6 @@
         call Put_lScalar('isMECIMSPD      ', doMECIMSPD)
       End IF
 
-      Call GetMem('ELIST','FREE','REAL',iEList,MXROOT*MXITER)
       If(JOBOLD.gt.0.and.JOBOLD.ne.JOBIPH) Then
         Call DaClos(JOBOLD)
         JOBOLD=-1
@@ -442,8 +380,7 @@
           Call f_Inquire('JOBIPH',Found)
           if(Found) JOBOLD=JOBIPH
         end if
-        If (Found) iJOB=1
-        If (iJOB.eq.1) Then
+        If (Found) then
            if(JOBOLD.le.0) Then
              JOBOLD=20
              Call DaName(JOBOLD,'JOBOLD')
@@ -533,6 +470,7 @@
      &       Work(iRef_E))
 
       ! I guess iRef_E now holds the MC-PDFT energy for each state??
+      ! I think only is MSPDFT case..
 
         If(IWJOB==1.and.(.not.Do_Rotate)) Call writejob(iadr19)
 
