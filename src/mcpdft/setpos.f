@@ -10,15 +10,17 @@
 ************************************************************************
       Subroutine SetPos_m(LUnit,KeyIn,Line,iRc)
       use mcpdft_output, only: terse, lf, iPrLoc
+      implicit none
 
-      Implicit Real*8 (A-H,O-Z)
-      Character*(*) KeyIn
-      Character*(*) Line
-      Character*16 Command
-      Character*16 Key
+      Character*(*), intent(in) :: KeyIn
+      integer, intent(in) :: LUnit
+
+      character*(*), intent(out) :: Line
+      integer, intent(out) :: irc
+
+      Character*16 Command, Key
+      integer :: klen, iprlev
 #include "warnings.h"
-#include "rasdim.fh"
-#include "input_ras_mcpdft.fh"
       Intrinsic len, min
 * Read until, and including, a line beginning with a particular
 * string in an ASCII file, assumed already opened, with unit
@@ -48,7 +50,7 @@
        write(lf,*)' SETPOS: Attempt to find an input line beginning'
        write(lf,*)' with the keyword ''',KeyIn,''' failed.'
       End If
-*      Call Quit(_RC_INPUT_ERROR_)
+
       iRc=_RC_INPUT_ERROR_
       Return
 9920  CONTINUE
@@ -56,7 +58,7 @@
        write(lf,*)' SETPOS: Attempt to find an input line beginning'
        write(lf,*)' with the keyword ''',KeyIn,''' failed.'
       End If
-*      Call Quit(_RC_INPUT_ERROR_)
+
       iRc=_RC_INPUT_ERROR_
       Return
       End
