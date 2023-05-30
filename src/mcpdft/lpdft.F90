@@ -18,4 +18,9 @@ module lpdft
   logical :: do_lpdft=.false.
 
   public :: do_lpdft
+  public :: lpdft_kernel
+  contains
+    subroutine lpdft_kernel
+
+    end subroutine lpdft_kernel
 end module lpdft

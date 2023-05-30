@@ -61,6 +61,7 @@
       use mcpdft_output, only: terse, debug, insane, lf, iPrLoc
       use mspdft_util, only: replace_diag, load_hrot,
      &                       get_mspdft_ref_energy
+      use lpdft, only: do_lpdft, lpdft_kernel
 
       Implicit Real*8 (A-H,O-Z)
 
@@ -466,8 +467,12 @@
       ! This is where MC-PDFT actually computes the PDFT energy for
       ! each state
       ! only after 500 lines of nothing above...
-      Call MSCtl(Work(LCMO),Work(LFI),Work(LFA),
+      if(do_lpdft) then
+        call lpdft_kernel
+      else
+        Call MSCtl(Work(LCMO),Work(LFI),Work(LFA),
      &       Work(iRef_E))
+      end if
 
       ! I guess iRef_E now holds the MC-PDFT energy for each state??
       ! I think only is MSPDFT case..
@@ -553,7 +558,7 @@
 
 *
       Call StatusLine('MCPDFT:','Finished.')
-      If (IPRLEV.GE.2) Write(LF,*)
+
 
       Call Timing(dum1,dum2,Ebel_3,dum3)
       IF (IPRLEV.GE.3) THEN

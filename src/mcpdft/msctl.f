@@ -500,9 +500,7 @@ c**************Kinetic energy of active electrons*********
 c         call xflush(6)
       EMY  = PotNuc_Ref+Eone+0.5d0*Etwo
 
-      CASDFT_Funct = 0.0D0
-      Call Get_dScalar('CASDFT energy',CASDFT_Funct)
-*TRS
+
       If ( IPRLEV.ge.DEBUG ) then
        Write(LF,'(4X,A35,F18.8)')
      &  'Nuclear repulsion energy :',PotNuc
@@ -516,7 +514,6 @@ c         call xflush(6)
        Write(LF,'(4X,A35,F18.8)') 'Active Kinetic energy:',EactK
        Write(LF,'(4X,A35,F18.8)')
      &  'Active nuc-elec attraction energy:',EactN
-c       Write(LF,*) ' CASDFT Energy            :',CASDFT_Funct
       End If
 c         call xflush(6)
 ***********************************************************
@@ -725,10 +722,6 @@ c         call xflush(6)
              end do
          end  if
 *
-*        if (jroot.ne.irlxroot) then
-*        Call dcopy_(ntot1,FI,1,Work(ifocki),1)
-*        Call dcopy_(ntot1,FA,1,Work(ifocka),1)
-*        end if
 *
          Call Fmat_m(CMO,Work(lPUVX),Work(iD1Act),Work(iD1ActAO),
      &             Work(iFockI_save),Work(iFockA))
@@ -786,10 +779,6 @@ c         call xflush(6)
          IFINAL = 1
          CALL FOCK_m(WORK(LFOCK),WORK(LBM),Work(iFockI),Work(iFockA),
      &         Work(iD1Act),WORK(LP),WORK(LQ),WORK(LPUVX),IFINAL,CMO)
-!TMP TEST
-!         Call Put_Darray('fock_tempo',Work(ipFocc),ntot1)
-!END TMP TEST
-
 
          CASDFT_Funct = 0
          Call Get_dScalar('CASDFT energy',CASDFT_Funct)
@@ -800,16 +789,9 @@ c         call xflush(6)
           E_NoHyb=CASDFT_E
           CASDFT_E=Ratio_WF*Ref_Ener(jRoot)+(1-Ratio_WF)*E_NoHyb
          END IF
-!         Write(6,*)
-!         '**************************************************'
-!         write(6,*) 'ENERGY REPORT FOR STATE',jroot
-*TRS
-*          write(6,*) 'ECAS', ECAS
 
-*TRS
         Call Print_MCPDFT_2(CASDFT_E,PotNuc,EMY,ECAS,CASDFT_Funct,
      &         jroot,Ref_Ener)
-c         call xflush(6)
 
 
          IF(Do_Rotate) Then
@@ -820,7 +802,6 @@ c         call xflush(6)
             Energies(jroot)=CASDFT_E
             ener(jroot,1)=CASDFT_E
          END IF
-
 
          CALL GETMEM('SXBM','FREE','REAL',LBM,NSXS)
          CALL GETMEM('SXLQ','FREE','REAL',LQ,NQ)
