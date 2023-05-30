@@ -172,7 +172,7 @@ C   No changing about read in orbital information from INPORB yet.
        If (DBG) Then
          Write(6,*)' Reading file name for start orbitals.'
        End If
-       Call SetPos_m(LUInput,'FILE',Line,iRc)
+       Call setposition(LUInput,'FILE',Line,iRc)
        Line=Get_Ln(LUInput)
        If(iRc.ne._RC_ALL_IS_WELL_) GoTo 9810
        If (DBG) Then
@@ -205,7 +205,7 @@ C   No changing about read in orbital information from INPORB yet.
           If (DBG) Then
             Write(6,*)' Reading file name for JOBIPH file.'
           End If
-          Call SetPos_m(LUInput,'IPHN',Line,iRc)
+          Call setposition(LUInput,'IPHN',Line,iRc)
           If(iRc.ne._RC_ALL_IS_WELL_) GoTo 9810
           ReadStatus=' Failure reading IPHNAME string.'
           Read(LUInput,*,End=9910,Err=9920) IPHNAME
@@ -262,7 +262,7 @@ C   No changing about read in orbital information from INPORB yet.
 
       If (DBG) Write(6,*) ' KSDFT command was given.'
       DFTFOCK='ROKS'
-      Call SetPos_m(LUInput,'KSDF',Line,iRc)
+      Call setposition(LUInput,'KSDF',Line,iRc)
       If(iRc.ne._RC_ALL_IS_WELL_) GoTo 9810
       Read(LUInput,*,End=9910,Err=9920) Line
       KSDFT=Line(1:80)
@@ -273,7 +273,7 @@ C   No changing about read in orbital information from INPORB yet.
       If (DBG) Write(6,*) ' Check if DFCF was provided.'
       If (KeyDFCF) Then
        If (DBG) Write(6,*) ' DFCF command has been used.'
-       Call SetPos_m(LUInput,'DFCF',Line,iRc)
+       Call setposition(LUInput,'DFCF',Line,iRc)
        If(iRc.ne._RC_ALL_IS_WELL_) GoTo 9810
        ReadStatus=' Failure after reading DFCF keyword.'
        Read(LUInput,*,End=9910,Err=9920) CoefX,CoefR
@@ -284,7 +284,7 @@ C   No changing about read in orbital information from INPORB yet.
       If (KeyMSPD) Then
        If (DBG) Write(6,*) ' MSPD keyword was used.'
        iMSPDFT=1
-       Call SetPos_m(LUInput,'MSPD',Line,iRc)
+       Call setposition(LUInput,'MSPD',Line,iRc)
        if(dogradpdft) then
         dogradmspd=.true.
         dogradpdft=.false.
@@ -295,12 +295,12 @@ C   No changing about read in orbital information from INPORB yet.
       If (KeyWJOB) Then
        If (DBG) Write(6,*) ' WJOB keyword was used.'
        iWJOB=1
-       Call SetPos_m(LUInput,'WJOB',Line,iRc)
+       Call setposition(LUInput,'WJOB',Line,iRc)
       End If
 *---  Process LAMB command --------------------------------------------*
       If (KeyLAMB) Then
        If (DBG) Write(6,*) 'Check if hybrid PDFT case'
-       Call SetPos_m(LUInput,'LAMB',Line,iRc)
+       Call setposition(LUInput,'LAMB',Line,iRc)
        ReadStatus=' Failure reading data following LAMB keyword.'
        Read(LUInput,*,End=9910,Err=9920) Ratio_WF
        ReadStatus=' O.K. reading data following LAMB keyword.'
@@ -544,7 +544,7 @@ c      end do
         dogradmspd=.true.
         dogradpdft=.false.
        end if
-       Call SetPos_m(LUInput,'GRAD',Line,iRc)
+       Call setposition(LUInput,'GRAD',Line,iRc)
 *TRS - Adding else statement to make nograd the default if the grad
 *keyword isn't used
        Else
@@ -573,7 +573,7 @@ c      end do
         Write(LF,*) ' **********************************'
         Call Abend()
        end if
-       Call SetPos_m(LUInput,'NAC',Line,iRc)
+       Call setposition(LUInput,'NAC',Line,iRc)
        If(iRc.ne._RC_ALL_IS_WELL_) GoTo 9810
        Read(LUInput,*,End=9910,Err=9920) cmsNACstates(1),
      & cmsNACstates(2)
@@ -595,21 +595,21 @@ c      end do
         Write(LF,*) ' **********************************'
         Call Abend()
        end if
-       if(DoGradMSPD .eqv. .false.) then
+       if(.not.DoGradMSPD) then
         Call WarningMessage(2,'NACs implemented with GRAD Code')
         Write(LF,*) ' ************* ERROR **************'
         Write(LF,*) ' MECI requires the GRAD Keyword    '
         Write(LF,*) ' **********************************'
         Call Abend()
        end if
-       if(DoNACMSPD .eqv. .false.) then
+       if(.not.DoNACMSPD) then
         Call WarningMessage(2,'NACs implemented with GRAD Code')
         Write(LF,*) ' ************* ERROR **************'
         Write(LF,*) ' MECI requires the NAC Keyword     '
         Write(LF,*) ' **********************************'
         Call Abend()
        end if
-       Call SetPos_m(LUInput,'MECI',Line,iRc)
+       Call setposition(LUInput,'MECI',Line,iRc)
       End If
 *
 *---  Process GSOR command --------------------------------------------*
@@ -617,7 +617,7 @@ c      end do
       If (KeyGSOR) Then
        If (DBG) Write(6,*) ' GSOR keyword was used.'
        DoGSOR=.true.
-       Call SetPos_m(LUInput,'GSOR',Line,iRc)
+       Call setposition(LUInput,'GSOR',Line,iRc)
       End If
 *
 *---  All keywords have been processed ------------------------------*
