@@ -22,7 +22,7 @@ subroutine get_ref_energy(nroots, jobold, iadr19, ref_energy)
 ! for mxiter, mxroot
 #include "rasdim.fh"
 
-  integer :: jdisk, iter, root
+  integer :: jdisk, iter, root, maybe
   real(kind=wp) :: aemax
   real(kind=wp), dimension(mxiter*mxroot) :: elist
 

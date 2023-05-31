@@ -66,7 +66,6 @@
       integer  LOEOTP
       integer jroot
       real*8,dimension(1:nroots) :: Energies
-      integer count_tmp1,count_tmp2
       integer  i_off1,i_off2,ifone
       integer isym,iash,jsym
       integer LUGS
@@ -301,14 +300,14 @@ c--reads kinetic energy integrals  Work(iTmpk)--(Label=Kinetic)----
 * Generate total density
 ***********************************************************
 
-         If(NASH(1).ne.NAC) Call DBLOCK_m(Work(iD1Act))
-      IF(IPRLEV.ge.DEBUG) THEN
+      If(NASH(1) /= NAC) Call DBLOCK_m(Work(iD1Act))
+      IF(IPRLEV >= DEBUG) THEN
         write(6,*) 'd1act'
         do i=1,NACPAR
           write(6,*) work(iD1Act-1+i)
         end do
       end if
-         Call Get_D1A_RASSCF_m(CMO,Work(iD1Act),Work(iD1ActAO))
+         Call cas_mo_to_ao(CMO,Work(iD1Act),Work(iD1ActAO))
 
 !ANDREW _ RIGHT HERE
       if((DoGradPDFT.and.jroot.eq.irlxroot).or.DoGradMSPD) then
@@ -352,7 +351,7 @@ cPS         call xflush(6)
            Call dcopy_(NACPAR,[0.0d0],0,Work(iD1SpinAO),1)
          end if
          IF ( NASH(1).NE.NAC ) CALL DBLOCK_m(Work(iD1Spin))
-         Call Get_D1A_RASSCF_m(CMO,Work(iD1Spin),
+         Call cas_mo_to_ao(CMO,Work(iD1Spin),
      &                      Work(iD1SpinAO))
          Call GetMem('DtmpS','Allo','Real',iTmp7,nTot1)
          Call Fold(nSym,nBas,Work(iD1SpinAO),Work(iTmp7))
@@ -422,25 +421,6 @@ c iTmp5 and iTmp6 are not updated in DrvXV...
         Call DCopy_(NTOT1,[0.0d0],0,Work(LOEOTP),1)
         Call DCopy_(NFINT,[0.0d0],0,work(LTEOTPG),1)
 
-      !preallocate the runfile stuff for inact-containing potentials.
-        count_tmp1 = 0
-        count_tmp2 = 0
-        do isym=1,nsym
-          do jsym=1,nsym
-         count_tmp2 = count_tmp2 + nIsh(isym)*(nIsh(jsym)+nAsh(jsym))**2
-          end do
-          count_tmp1 = count_tmp1 + nIsh(isym)*(nish(isym)+nAsh(isym))
-        end do
-        CALL GETMEM('JUNK','ALLO','REAL',ijunk,count_tmp2)
-        Call DCopy_(count_tmp2,[0.0d0],0,Work(ijunk),1)
-!        Call Put_dArray('TEP_I',work(ijunk),count_tmp2)
-        CALL GETMEM('JUNK','Free','REAL',ijunk,count_tmp2)
-
-        CALL GETMEM('JUNK','ALLO','REAL',ijunk,count_tmp1)
-        Call DCopy_(count_tmp1,[0.0d0],0,Work(ijunk),1)
-!        Call Put_dArray('OEP_I',work(ijunk),count_tmp1)
-        CALL GETMEM('JUNK','Free','REAL',ijunk,count_tmp1)
-
         Call Put_dArray('ONTOPO',work(LOEOTP),NTOT1)
         Call Put_dArray('ONTOPT',work(LTEOTPG),NFINT)
 
@@ -475,13 +455,10 @@ c iTmp5 and iTmp6 are not updated in DrvXV...
       Call GetMem('DoneI','Allo','Real',iTmp2,nTot1)
 
       Call Fold(nSym,nBas,Work(iD1I),Work(iTmp2))
-c         call xflush(6)
 
       Call GetMem('DoneA','Allo','Real',iTmpa,nTot1)
-c         call xflush(6)
       Call Fold(nSym,nBas,Work(iD1ActAO),Work(iTmpa))
-c         call xflush(6)
-*
+
       Eone = dDot_(nTot1,Work(iTmp2),1,Work(iTmp1),1)
       Call Get_dScalar('PotNuc',PotNuc_Ref)
       Eone = Eone + (PotNuc-PotNuc_Ref)
@@ -515,7 +492,6 @@ c         call xflush(6)
        Write(LF,'(4X,A35,F18.8)')
      &  'Active nuc-elec attraction energy:',EactN
       End If
-c         call xflush(6)
 ***********************************************************
 * Printing matrices
 ***********************************************************
@@ -572,7 +548,7 @@ c         call xflush(6)
         end do
         Call DDaFile(JOBOLD,2,Work(iD1Act_FA),NACPAR,itsDisk)
         IF ( NASH(1).NE.NAC ) CALL DBLOCK_m(Work(iD1Act_FA))
-        Call Get_D1A_RASSCF_m(CMO,Work(iD1Act_FA),Work(iD1ActAO_FA))
+        Call cas_mo_to_ao(CMO,Work(iD1Act_FA),Work(iD1ActAO_FA))
 *****
         Call GetMem('lcmo','ALLO','Real',lcmo,ntot2)
         CALL DCOPY_(NTOT2,CMO,1,WORK(LCMO),1)
@@ -657,7 +633,7 @@ c         call xflush(6)
      &                WORK(iD1I),WORK(ifocki),
      &                WORK(iD1ActAO),WORK(ifocka),
      &                IPR,lSquare,ExFac)
-*        Call dcopy_(ntot1,FA,1,Work(ifocka),1)
+
         if (iprlev.ge.debug) then
              write(6,*) 'FA tractl msctl'
              call wrtmat(Work(ifocka),1,ntot1,1,ntot1)
@@ -726,7 +702,6 @@ c         call xflush(6)
          Call Fmat_m(CMO,Work(lPUVX),Work(iD1Act),Work(iD1ActAO),
      &             Work(iFockI_save),Work(iFockA))
         call  dcopy_(ntot1,work(ifocki_save),1,work(ifocki),1)
-*        call  dcopy_(nacpar,work(id1act_FA),1,work(id1act),1)
         Call GetMem('FockI_Save','Free','Real',ifocki_save,ntot1)
         Call GetMem('lcmo','Free','Real',lcmo,ntot2)
         Call GetMem('id1act_FA','Free','Real',id1act_FA,nacpar)
@@ -858,62 +833,6 @@ cPS         call xflush(6)
           end if
         end do
         end if
-*
-*         do i=1,nacpr2
-*         call dcopy_(nacpr2,0.0d0,1,Work(ltuvx_tmp-1+i),1)
-*         end do
-*
-*         CALL DCOPY_(NTOT2,CMO,1,WORK(LCMO),1)
-*
-*         do i=1,nfint
-*         Call dcopy_(nfint,0.0D0,1,WORK(lpuvx_tmp-1+i),1)
-*         end do
-*
-*
-*         CALL TRA_CTL2_(WORK(lcmo),
-*     &          WORK(LPUVX_tmp),WORK(LTUVX_tmp),WORK(id1actao)
-*     &         ,WORK(ifocka),WORK(id1i),WORK(ifocki),IPR,lSquare,ExFac)
-*
-*         write(6,*) 'cmo after before fmat 2'
-*         do i=1,ntot2
-*           write(6,*) work(lcmo-1+i)
-*         end do
-*        write(6,*) 'lpuvx after before fmat 2'
-*         do i=1,nfint
-*           write(6,*) work(lpuvx-1+i)
-*         end do
-*        write(6,*) 'id1act after before fmat 2'
-*         do i=1,nacpar
-*           write(6,*) work(id1act-1+i)
-*         end do
-*        write(6,*) 'id1actao after before fmat 2'
-*         do i=1,ntot2
-*           write(6,*) work(id1actao-1+i)
-*         end do
-*
-*         write(6,*) 'ifocki_save after before fmat 2'
-*         do i=1,ntot1
-*           write(6,*) work(ifocki_save-1+i)
-*         end do
-*        write(6,*) 'ifocka after before fmat 2'
-*         do i=1,ntot1
-*           write(6,*) work(ifocka-1+i)
-*         end do
-*
-
-*        Call Fmat_m(CMO,Work(lPUVX),Work(iD1Act),Work(iD1ActAO),
-*     &             Work(iFockI_save),Work(iFockA))
-*       call  dcopy_(ntot1,work(ifocki_save),1,work(ifocki),1)
-*
-*        Call GetMem('FockI_Save','Free','Real',ifocki_save,ntot1)
-*        Call GetMem('lcmo','Free','Real',lcmo,ntot2)
-*
-*        write(6,*) 'FA msctl after fmat 2'
-*        call wrtmat(Work(ifocka),1,ntot1,1,ntot1)
-*        write(6,*) 'FI msctl after fmat 2'
-*        call wrtmat(Work(ifocki),1,ntot1,1,ntot1)
-
-!
 
 !______________________________________________________
 !Grab the active-active part of the FI+FA matrix (currently held in the
@@ -1129,20 +1048,6 @@ cPS         call xflush(6)
       Call Put_dScalar('Last energy',Energies(iRlxRoot))
       iSA = 1
 
-!      Call GetMem('P2t','allo','Real',iP2dt1,NACPR2)
-!      Call FZero(Work(ip2dt1),Nacpr2)
-!      !I need the non-symmetry blocked d1act, hence the read.
-!      Call GetMem('D1Act1','Allo','Real',iD1Act1,NACPAR)
-!      Call Get_dArray_chk('D1mo',Work(iD1Act1),NACPAR)
-!        write(6,*) 'd1act'
-!        do i=1,NACPAR
-!          write(6,*) work(iD1Act1-1+i)
-!        end do
-!      Call P2_contraction(Work(iD1Act1),Work(iP2dt1))
-!      Call Put_dArray('P2MOt',Work(iP2dt1),NACPR2)
-!      Call GetMem('P2t','free','Real',iP2dt1,NACPR2)
-!      Call GetMem('Dens','free','Real',iD1Act1,NACPAR)
-
 !Put information needed for geometry optimizations.
       !if (jroot.eq.iRlxRoot) then
           iSA = 1 !need to do MCLR for gradient runs. (1 to run, 2 to
@@ -1196,30 +1101,18 @@ cPS         call xflush(6)
 *        Andrew added this line to fix heh2plus
         Call DDaFile(JOBOLD,2,Work(iD1Spin),NACPAR,dmDisk)
         Call Put_dArray('D1mo',Work(iD1Act),NACPAR)
-*        write(6,*) 'd1Spin'
-*        do i=1,NACPAR
-*          write(6,*) work(iD1spin-1+i)
-*        end do
-*TRS commenting out because we already read over this
-*        Call DDaFile(JOBOLD,0,Work(iD1Spin),NACPAR,dmDisk)
+
         Call DDaFile(JOBOLD,2,Work(iP2d),NACPR2,dmDisk)
         Call Put_dArray('P2mo',Work(iP2d),NACPR2)
-*        write(6,*) 'D2'
-*        do i=1,NACPR2
-*          write(6,*) Work(ip2d-1+i)
-*        end do
 
          If(NASH(1).ne.NAC) Call DBLOCK_m(Work(iD1Act))
-         Call Get_D1A_RASSCF_m(CMO,Work(iD1Act),Work(iD1ActAO))
+         Call cas_mo_to_ao(CMO,Work(iD1Act),Work(iD1ActAO))
 
          Call Fold(nSym,nBas,Work(iD1I),Work(iTmp3))
          Call Fold(nSym,nBas,Work(iD1ActAO),Work(iTmp4))
          Call Daxpy_(nTot1,1.0D0,Work(iTmp4),1,Work(iTmp3),1)
          Call Put_dArray('D1ao',Work(iTmp3),nTot1)
-!         write(6,*) 'd1ao'
-!         do i=1,ntot1
-!           write(6,*) work(itmp3-1+i)
-!         end do
+
 
 !Get the spin density matrix for open shell cases
 ***********************************************************
@@ -1231,7 +1124,7 @@ cPS         call xflush(6)
            Call dcopy_(NACPAR,[Zero],0,Work(iD1SpinAO),1)
          !end if
          IF ( NASH(1).NE.NAC ) CALL DBLOCK_m(Work(iD1Spin))
-         Call Get_D1A_RASSCF_m(CMO,Work(iD1Spin),
+         Call cas_mo_to_ao(CMO,Work(iD1Spin),
      &                      Work(iD1SpinAO))
          Call GetMem('DtmpS','Allo','Real',iTmp7,nTot1)
          Call Fold(nSym,nBas,Work(iD1SpinAO),Work(iTmp7))
