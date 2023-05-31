@@ -24,12 +24,14 @@ c     interaction matrix.
 c
 C          ********** IBM-3090 MOLCAS Release: 90 02 22 **********
 C
+      use definitions, only: wp
       use mcpdft_output, only: debug, lf, iPrLoc
+      implicit none
 
-      IMPLICIT REAL*8 (A-H,O-Z)
-      DIMENSION FI(*),FP(*),D(*),P(*),Q(*),FINT(*),F(*),BM(*),CMO(*)
-      integer ISTSQ(8),ISTAV(8)
-      real*8 ECAS0
+      real(kind=wp), dimension(*), intent(in) :: FI, CMO, D
+      real(kind=wp), dimension(*) :: FP, P, Q, FINT, F, BM
+      integer ISTSQ(8), ISTAV(8)
+      real(kind=wp) ECAS0
 
 #include "rasdim.fh"
 #include "rasscf.fh"
@@ -37,6 +39,13 @@ C
       Character*16 ROUTINE
       Parameter (ROUTINE='FOCK    ')
 #include "WrkSpc.fh"
+
+      integer :: ifinal, ipbm, ipFint, ipFMCSCF, ipP2reo, ipQ, IPRLEV
+      integer :: ISTBM, ISTD, ISTFCK, ISTFP, ISTP, ISTZ, iSym, IX
+      integer :: ix1, jstf, N1, n2, nao, nas, neo, ni, nia, nio, nis
+      integer :: nm, no, no2, nor, np, np2reo, npq, nq, nss, nt, ntm
+      integer :: ntt, ntu, ntv, nu, nuvx, nv, nvi, nvm
+      real(kind=wp) :: casdft_en, csx, qntm
 
 C
       IPRLEV=IPRLOC(4)

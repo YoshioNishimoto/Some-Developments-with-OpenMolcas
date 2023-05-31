@@ -275,8 +275,6 @@
       Call cas_mo_to_ao(Work(LCMO),Work(ipTmpDMAT),WORK(LD1A))
       Call GetMem('TmpDMAT','Free','Real',ipTmpDMAT,NACPAR)
 
-! 413 Continue
-
 !AMS start-
 ! - Read in the CASSCF Energy from JOBIPH file.  These values are not
 ! used in calculations, but are merely reprinted as the reference energy
