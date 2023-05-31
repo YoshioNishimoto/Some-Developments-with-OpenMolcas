@@ -21,6 +21,8 @@ module lpdft
   public :: lpdft_kernel
   contains
     subroutine lpdft_kernel
+      ! Want to first get the zero-order densities
+
 
     end subroutine lpdft_kernel
 end module lpdft
