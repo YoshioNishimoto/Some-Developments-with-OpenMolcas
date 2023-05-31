@@ -22,13 +22,14 @@ subroutine get_ref_energy(nroots, jobold, iadr19, ref_energy)
 ! for mxiter, mxroot
 #include "rasdim.fh"
 
-  integer :: jdisk, maybe=0, iter, root
+  integer :: jdisk, iter, root
   real(kind=wp) :: aemax
   real(kind=wp), dimension(mxiter*mxroot) :: elist
 
   jdisk = iAdr19(6)
   call DDaFile(JOBOLD, 2, elist, MXROOT*MXITER, jdisk)
 
+  maybe = 0
   do iter=1, mxiter
     aemax = 0.0D0
     do root=1, mxroot

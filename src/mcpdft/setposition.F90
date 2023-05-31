@@ -22,9 +22,12 @@ subroutine setposition(lunit, keyin, line, iRC)
 
 #include "warnings.h"
   integer :: iPrLev, key_len
-  character*16 :: command = ' ', key = ' '
+  character*16 :: command, key
 
   intrinsic :: len, min
+
+  command = ' '
+  key = ' '
 
   iPrLev = iPrLoc(1)
   iRC = _RC_ALL_IS_WELL_

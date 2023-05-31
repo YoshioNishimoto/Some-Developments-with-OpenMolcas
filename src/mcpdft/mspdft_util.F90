@@ -83,7 +83,7 @@ module mspdft_util
     logical :: refbas = .false.
     character(len=9), dimension(nroots) :: VecStat
     character(len=9) :: StatVec
-    character(len=30)::mspdftfmt
+    character(len=30) :: mspdftfmt
     character(Len=18) :: MatInfo
 
     integer :: root
