@@ -495,13 +495,7 @@ c**************Kinetic energy of active electrons*********
         end if
         Call cas_mo_to_ao(CMO,Work(iD1Act_FA),Work(iD1ActAO_FA))
 
-        Call GetMem('lcmo','ALLO','Real',lcmo,ntot2)
-        CALL DCOPY_(NTOT2,CMO,1,WORK(LCMO),1)
         if(iprlev.ge.debug) then
-          write(6,*) 'cmo before tractl'
-          do i=1,ntot2
-            write(6,*) work(lcmo-1+i)
-          end do
           write(6,*) 'lpuvx before tractl'
           do i=1,nfint
             write(6,*) work(lpuvx-1+i)
@@ -525,10 +519,6 @@ c**************Kinetic energy of active electrons*********
           write(6,*) 'id1actao before tractl'
           do i=1,ntot2
             write(6,*) work(id1actao-1+i)
-          end do
-          write(6,*) 'id1i before tractl'
-          do i=1,ntot2
-            write(6,*) work(id1i-1+i)
           end do
           write(6,*) 'ifocki before tractl'
           do i=1,ntot1
@@ -556,7 +546,7 @@ c**************Kinetic energy of active electrons*********
         CALL DCOPY_(nacpr2,[Zero],0,WORK(ltuvx_tmp),1)
         CALL DCOPY_(nfint,[Zero],0,WORK(lpuvx_tmp),1)
 
-        CALL TRACTL2(WORK(lcmo),WORK(LPUVX_tmp),WORK(LTUVX_tmp),
+        CALL TRACTL2(CMO,WORK(LPUVX_tmp),WORK(LTUVX_tmp),
      &                WORK(iD1I),WORK(ifocki),
      &                WORK(iD1ActAO),WORK(ifocka),
      &                IPR,lSquare,ExFac)
@@ -572,10 +562,6 @@ c**************Kinetic energy of active electrons*********
         Call GetMem('lpuvx_tmp','Free','Real',lpuvx_tmp,nfint)
 
         if(iprlev.ge.debug) then
-          write(6,*) 'cmo after tractl'
-          do i=1,ntot2
-            write(6,*) work(lcmo-1+i)
-          end do
           write(6,*) 'lpuvx after tractl'
           do i=1,nfint
             write(6,*) work(lpuvx-1+i)
@@ -600,10 +586,6 @@ c**************Kinetic energy of active electrons*********
           do i=1,ntot2
             write(6,*) work(id1actao-1+i)
           end do
-          write(6,*) 'id1i before tractl'
-          do i=1,ntot2
-            write(6,*) work(id1i-1+i)
-          end do
           write(6,*) 'ifocki after tractl'
           do i=1,ntot1
             write(6,*) work(ifocki-1+i)
@@ -622,7 +604,6 @@ c**************Kinetic energy of active electrons*********
      &             Work(iFockI_save),Work(iFockA))
         call  dcopy_(ntot1,work(ifocki_save),1,work(ifocki),1)
         Call GetMem('FockI_Save','Free','Real',ifocki_save,ntot1)
-        Call GetMem('lcmo','Free','Real',lcmo,ntot2)
         Call GetMem('id1act_FA','Free','Real',id1act_FA,nacpar)
         Call GetMem('id1actao_FA','Free','Real',id1actao_FA,ntot2)
 
@@ -662,10 +643,9 @@ c**************Kinetic energy of active electrons*********
         end do
         if(NQ < NIAIA) NQ=NIAIA
         CALL GETMEM('FOCK','ALLO','REAL',LFOCK,NTOT4)
-        CALL GETMEM('SXBM','ALLO','REAL',LBM,NSXS)
         CALL GETMEM('SXLQ','ALLO','REAL',LQ,NQ) ! q-matrix(1symmblock)
         IFINAL = 1
-        CALL FOCK_m(WORK(LFOCK),WORK(LBM),Work(iFockI),Work(iFockA),
+        CALL FOCK_m(WORK(LFOCK),Work(iFockI),Work(iFockA),
      &        Work(iD1Act),WORK(LP),WORK(LQ),WORK(LPUVX),IFINAL,CMO)
         CASDFT_Funct = 0
         Call Get_dScalar('CASDFT energy',CASDFT_Funct)
@@ -686,7 +666,6 @@ c**************Kinetic energy of active electrons*********
           ener(jroot,1)=CASDFT_E
         END IF
 
-        CALL GETMEM('SXBM','FREE','REAL',LBM,NSXS)
         CALL GETMEM('SXLQ','FREE','REAL',LQ,NQ)
 !At this point, the energy calculation is done.  Now I need to build the
 !fock matrix if this root corresponds to the relaxation root.
@@ -863,11 +842,11 @@ cPS         call xflush(6)
           END IF
 
 !Must add to existing FOCK operator (occ/act). FOCK is not empty.
-          CALL GETMEM('SXBM','ALLO','REAL',LBM,NSXS)
+! delete NSXS (LBM) or BM
           CALL GETMEM('SXLQ','ALLO','REAL',LQ,NQ) ! q-matrix(1symmblock)
-          CALL FOCK_update(WORK(LFOCK),WORK(LBM),Work(iFockI),
+          CALL FOCK_update(WORK(LFOCK),Work(iFockI),
      &        Work(iFockA),Work(iD1Act),WORK(LP),
-     &        WORK(LQ),WORK(ipTmpLTEOTP),IFINAL,CMO)
+     &        WORK(LQ),WORK(ipTmpLTEOTP),CMO)
 
           Call Put_dArray('FockOcc',Work(ipFocc),ntot1)
           If (IPRLEV >= DEBUG) then
@@ -876,7 +855,6 @@ cPS         call xflush(6)
             write(lf,*) 'DONE WITH NEW FOCK OPERATOR'
           end if
 
-          CALL GETMEM('SXBM','Free','REAL',LBM,NSXS)
           CALL GETMEM('SXLQ','Free','REAL',LQ,NQ) ! q-matrix(1symmblock)
           Call GetMem('ONTOPO','FREE','Real',ipTmpLOEOTP,ntot1)
           Call GetMem('ONTOPT','FREE','Real',ipTmpLTEOTP,nfint)
@@ -896,7 +874,7 @@ cPS         call xflush(6)
 *        starting from 'BUILDING OF THE NEW FOCK MATRIX'
 *        Hopefully this code will be neater.
           call savefock_pdft(CMO,IFockI,IFockA,iD1Act,LFock,
-     &                        LP,NQ,LQ,LPUVX,ip2d,jroot)
+     &                        LP,NQ,LPUVX,ip2d,jroot)
         end if
 
         Call Put_iScalar('Number of roots',nroots)

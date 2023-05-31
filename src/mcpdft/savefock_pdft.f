@@ -13,7 +13,7 @@
 *               2021, Jie J. Bao                                       *
 ************************************************************************
       Subroutine SaveFock_PDFT(CMO,IFockI,IFockA,iD1Act,LFock,
-     &                         LP,NQ,LQ,LPUVX,ip2d,istate)
+     &                         LP,NQ,LPUVX,ip2d,istate)
 * ****************************************************************
 * history:                                                       *
 * Jie J. Bao, on Jan. 04, 2021, created this file.               *
@@ -186,11 +186,10 @@
        CALL PMAT_RASSCF_M(Work(iP2d),WORK(LP))
       END IF
 !Must add to existing FOCK operator (occ/act). FOCK is not empty.
-      CALL GETMEM('SXBM','ALLO','REAL',LBM,NSXS)
       CALL GETMEM('SXLQ','ALLO','REAL',LQ,NQ) ! q-matrix(1symmblock)
-      CALL FOCK_update(WORK(LFOCK),WORK(LBM),Work(iFockI),
+      CALL FOCK_update(WORK(LFOCK),Work(iFockI),
      &     Work(iFockA),Work(iD1Act),WORK(LP),
-     &     WORK(LQ),WORK(ipTmpLTEOTP),IFINAL,CMO)
+     &     WORK(LQ),WORK(ipTmpLTEOTP),CMO)
 
       CALL DCopy_(nTot1,Work(ipFocc),1,WORK(iFocMS+(iIntS-1)*nTot1),1)
       IF ( IPRLEV.GE.DEBUG ) THEN
@@ -199,7 +198,6 @@
        write(lf,*) 'DONE WITH NEW FOCK OPERATOR'
       END IF
 
-      CALL GETMEM('SXBM','Free','REAL',LBM,NSXS)
       CALL GETMEM('SXLQ','Free','REAL',LQ,NQ) ! q-matrix(1symmblock)
       Call GetMem('ONTOPO','FREE','Real',ipTmpLOEOTP,ntot1)
       Call GetMem('ONTOPT','FREE','Real',ipTmpLTEOTP,nfint)

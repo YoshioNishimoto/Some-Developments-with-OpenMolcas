@@ -8,28 +8,31 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
-      SUBROUTINE FOCK_m(F,BM,FI,FP,D,P,Q,FINT,IFINAL,CMO)
-C
-C     RASSCF program version IBM-3090: SX section
-c
-c     Calculation of the MCSCF fock matrix F(eq.(7) in I.J.Q.C.S14,175)
-c     FP is the matrix FI+FA (FP is FA at entrance)
-c     F is stored as a symmetry blocked square matrix, by columns.
-c     Note that F contains all elements, also the zero elements
-c     occurring when the first index is secondary.
-c     F is used to construct the Brillouin elements and the first row
-c     of the super-CI Hamiltonian, while FP is used as the effective
-c     one-electron operator in the construction of the super-CI
-c     interaction matrix.
-c
-C          ********** IBM-3090 MOLCAS Release: 90 02 22 **********
-C
+      SUBROUTINE FOCK_m(F,FI,FP,D,P,Q,FINT,IFINAL,CMO)
+!
+!     RASSCF program version IBM-3090: SX section
+!
+!     Calculation of the MCSCF fock matrix F(eq.(7) in I.J.Q.C.S14,175)
+!     FP is the matrix FI+FA (FP is FA at entrance)
+!     F is stored as a symmetry blocked square matrix, by columns.
+!     Note that F contains all elements, also the zero elements
+!     occurring when the first index is secondary.
+!     F is used to construct the Brillouin elements and the first row
+!     of the super-CI Hamiltonian, while FP is used as the effective
+!     one-electron operator in the construction of the super-CI
+!     interaction matrix.
+!
+!     Does not compute the Brillouin elements any more since they
+!     are not needed!
+!
+!          ********** IBM-3090 MOLCAS Release: 90 02 22 **********
+!
       use definitions, only: wp
       use mcpdft_output, only: debug, lf, iPrLoc
       implicit none
 
       real(kind=wp), dimension(*), intent(in) :: FI, CMO, D
-      real(kind=wp), dimension(*) :: FP, P, Q, FINT, F, BM
+      real(kind=wp), dimension(*) :: FP, P, Q, FINT, F
       integer ISTSQ(8), ISTAV(8)
       real(kind=wp) ECAS0
 
@@ -40,12 +43,12 @@ C
       Parameter (ROUTINE='FOCK    ')
 #include "WrkSpc.fh"
 
-      integer :: ifinal, ipbm, ipFint, ipFMCSCF, ipP2reo, ipQ, IPRLEV
-      integer :: ISTBM, ISTD, ISTFCK, ISTFP, ISTP, ISTZ, iSym, IX
-      integer :: ix1, jstf, N1, n2, nao, nas, neo, ni, nia, nio, nis
-      integer :: nm, no, no2, nor, np, np2reo, npq, nq, nss, nt, ntm
-      integer :: ntt, ntu, ntv, nu, nuvx, nv, nvi, nvm
-      real(kind=wp) :: casdft_en, csx, qntm
+      integer :: ifinal, ipFint, ipFMCSCF, ipP2reo, ipQ, IPRLEV
+      integer :: ISTD, ISTFCK, ISTFP, ISTP, ISTZ, iSym, IX
+      integer :: ix1, jstf, N1, n2, nao, neo, ni, nia, nio
+      integer :: nm, no, no2, nor, np, np2reo, nt, ntm
+      integer :: ntt, ntv, nuvx, nv, nvi, nvm
+      real(kind=wp) :: casdft_en, qntm
 
 C
       IPRLEV=IPRLOC(4)
@@ -73,7 +76,6 @@ C
       ISTFCK=0
       ISTFP=0
       ISTD=0
-      ISTBM=0
       IX1=0
       ISTZ=0
       E2act=0.0d0
@@ -87,7 +89,6 @@ C
        NIA=NIO+NAO
        NO=NORB(ISYM)
        NO2=(NO**2+NO)/2
-       CSX=0.0D0
        N1=0
        N2=0
        IF(NO.EQ.0) GO TO 90
@@ -95,7 +96,7 @@ C
 c
 c      first index in F is inactive
 c
-       IF(NIO.NE.0) THEN
+       IF(NIO /= 0) THEN
         DO NP=1,NO
          DO NI=1,NIO
           N1=MAX(NP,NI)
@@ -112,8 +113,6 @@ c
         ISTP=ISTORP(ISYM)+1
         JSTF=ISTORD(ISYM)+1
         NUVX=(ISTORP(ISYM+1)-ISTORP(ISYM))/NAO
-
-
 c
 c          first compute the Q-matrix (equation (19))
 c
@@ -185,55 +184,13 @@ c
          END DO
         END DO
        ENDIF
-c
-c       The Brillouin matrix BM(pq)=F(qp)-F(pq)
-c
-       NPQ=ISTBM
-       DO NP=NIO+1,NO
-        DO NQ=1,NIA
-         NPQ=NPQ+1
-         BM(NPQ)=F(ISTFCK+NO*(NP-1)+NQ)-F(ISTFCK+NO*(NQ-1)+NP)
-c
-c        Set zeroes to BM elements corresponding to rotations not allowed
-c        as controlled by the array IZROT.
-c
-         IF(NP.LE.NIA.AND.NQ.GT.NIO) THEN
-          NT=NP-NIO
-          NU=NQ-NIO
-          IF(NT.LE.NU) THEN
-           BM(NPQ)=0.0D0
-          ELSE
-           NTU=ISTZ+ITRI(NT-1)+NU
-           IF(IZROT(NTU).NE.0) THEN
-            BM(NPQ)=0.0D0
-           END IF
-           IF(IXSYM(IX+NP).NE.IXSYM(IX+NQ)) THEN
-            BM(NPQ)=0.0D0
-           END IF
-          ENDIF
-         ENDIF
-c
-c        check for largest Brillouin matrix element
-c
-         IF(ABS(BM(NPQ)).LT.ABS(CSX)) GO TO 20
-         IF(IXSYM(IX+NP).NE.IXSYM(IX+NQ)) GO TO 20
-         CSX=BM(NPQ)
-         N1=NQ+NFRO(ISYM)
-         N2=NP+NFRO(ISYM)
- 20      CONTINUE
-        END DO
-       END DO
-c
+
 90     CONTINUE
        ISTFCK=ISTFCK+NO**2
        ISTFP=ISTFP+NO2
        ISTD=ISTD+(NAO**2+NAO)/2
-       ISTBM=ISTBM+(NIO+NAO)*(NAO+NEO)
        IX1=IX1+NBAS(ISYM)
        ISTZ=ISTZ+(NAO**2-NAO)/2
-       CBLB(ISYM)=CSX
-       IBLB(ISYM)=N1
-       JBLB(ISYM)=N2
 c
 * End of long loop over symmetry
       END DO
@@ -253,29 +210,7 @@ c
            Call RecPrt(' ',' ',F(ipFMCSCF),nOr,nOr)
            ipFMCSCF=ipFMCSCF+nOr*nOr
         End Do
-        Write(LF,'(A)')' Brillouin matrix'
-        ipBM=1
-        Do iSym=1,nSym
-           nIs=nIsh(iSym)
-           nAs=nAsh(iSym)
-           nSs=nSsh(iSym)
-           Call RecPrt(' ',' ',BM(ipBM),(nAs+nIs),(nAs+nSs))
-           ipBM=ipBM+(nAs+nIs)*(nAs+nSs)
-        End Do
-      End If
-C
-C     Maximum BLB matrix element all symmetries
-C
-      CBLBM=0.0D0
-      ISYMBB=0
-      DO ISYM=1,NSYM
-       IF(ABS(CBLB(ISYM)).LT.ABS(CBLBM)) GO TO 150
-       CBLBM=CBLB(ISYM)
-       IBLBM=IBLB(ISYM)
-       JBLBM=JBLB(ISYM)
-       ISYMBB=ISYM
- 150   CONTINUE
-      END DO
+      end if
 C
 c     Calculate Fock matrix for occupied orbitals.
 C
@@ -298,31 +233,33 @@ C
       RETURN
       END
 
-      SUBROUTINE FOCK_update(F,BM,FI,FP,D,P,Q,FINT,IFINAL,CMO)
+      SUBROUTINE FOCK_update(F,FI,FP,D,P,Q,FINT,CMO)
 !This subroutine is supposed to add the dft portions of the mcpdft fock
 !matrix to the Fock matrix pieces that have already been built for the
 !CASSCF portion.
 
-C
-C     RASSCF program version IBM-3090: SX section
-c
-c     Calculation of the MCSCF fock matrix F(eq.(7) in I.J.Q.C.S14,175)
-c     FP is the matrix FI+FA (FP is FA at entrance)
-c     F is stored as a symmetry blocked square matrix, by columns.
-c     Note that F contains all elements, also the zero elements
-c     occurring when the first index is secondary.
-c     F is used to construct the Brillouin elements and the first row
-c     of the super-CI Hamiltonian, while FP is used as the effective
-c     one-electron operator in the construction of the super-CI
-c     interaction matrix.
-c
-C          ********** IBM-3090 MOLCASs Release: 90 02 22 **********
-C
+!
+!     RASSCF program version IBM-3090: SX section
+!
+!     Calculation of the MCSCF fock matrix F(eq.(7) in I.J.Q.C.S14,175)
+!     FP is the matrix FI+FA (FP is FA at entrance)
+!     F is stored as a symmetry blocked square matrix, by columns.
+!     Note that F contains all elements, also the zero elements
+!     occurring when the first index is secondary.
+!     F is used to construct the Brillouin elements and the first row
+!     of the super-CI Hamiltonian, while FP is used as the effective
+!     one-electron operator in the construction of the super-CI
+!     interaction matrix.
+!
+!     No longer computed the Brillouin elements!
+!
+!          ********** IBM-3090 MOLCASs Release: 90 02 22 **********
+!
       use mspdft, only: dogradmspd, iFxyMS, iIntS
       use mcpdft_output, only: debug, lf, iPrLoc
 
       IMPLICIT REAL*8 (A-H,O-Z)
-      DIMENSION FI(*),FP(*),D(*),P(*),Q(*),FINT(*),F(*),BM(*),CMO(*)
+      DIMENSION FI(*),FP(*),D(*),P(*),Q(*),FINT(*),F(*),CMO(*)
       integer ISTSQ(8),ISTAV(8),iTF
 
 #include "rasdim.fh"
@@ -338,8 +275,6 @@ C
         WRITE(LF,*)' Entering ',ROUTINE
       END IF
 
-      Call Unused_real_array(BM)
-      Call Unused_integer(ifinal)
       Call GetMem('fockt','ALLO','REAL',iTF,NTOT4)
       Call dcopy_(ntot4,[0d0],0,Work(iTF),1)
 
@@ -406,7 +341,6 @@ C     LOOP OVER ALL SYMMETRY BLOCKS
       ISTFCK=0
       ISTFP=0
       ISTD=0
-      ISTBM=0
       IX1=0
       ISTZ=0
       E2act=0.0d0
@@ -418,7 +352,6 @@ C
        NEO=NSSH(ISYM)
        NO=NORB(ISYM)
        NO2=(NO**2+NO)/2
-       CSX=0.0D0
        N1=0
        N2=0
        IF(NO.EQ.0) GO TO 90
@@ -443,8 +376,6 @@ c
         ISTP=ISTORP(ISYM)+1
         JSTF=ISTORD(ISYM)+1
         NUVX=(ISTORP(ISYM+1)-ISTORP(ISYM))/NAO
-
-
 c
 c          first compute the Q-matrix (equation (19))
 c
@@ -504,12 +435,8 @@ c
        ISTFCK=ISTFCK+NO**2
        ISTFP=ISTFP+NO2
        ISTD=ISTD+(NAO**2+NAO)/2
-       ISTBM=ISTBM+(NIO+NAO)*(NAO+NEO)
        IX1=IX1+NBAS(ISYM)
        ISTZ=ISTZ+(NAO**2-NAO)/2
-       CBLB(ISYM)=CSX
-       IBLB(ISYM)=N1
-       JBLB(ISYM)=N2
       END DO
 
 
