@@ -609,8 +609,8 @@ c**************Kinetic energy of active electrons*********
           end do
         end  if
 
-! TODO(MRH): this fmat_m can be replaced. It doesn unnecessary trasnformations
-! and also computes somethings for ecas..
+! TODO(MRH): this fmat_m can be replaced. It doesn unnecessary
+! trasnformations and also computes somethings for ecas..
         Call Fmat_m(CMO,Work(lPUVX),Work(iD1Act),Work(iD1ActAO),
      &             Work(iFockI_save),Work(iFockA))
         call  dcopy_(ntot1,work(ifocki_save),1,work(ifocki),1)
@@ -674,14 +674,13 @@ c**************Kinetic energy of active electrons*********
 !fock matrix if this root corresponds to the relaxation root.
 
         if((DoGradPDFT .and. jroot == irlxroot) .or. dogradmspd) then
-          ! The following does 2 things,
+          ! This not just does
           !   a) calculate the generalized Fock matrix and stores it in
           !      lfock
-          !   b) calculates the classical coulomb interaction and adds
-          !      it to ECAS (var defined in rasscf.fh)
           ! In theory, we don't need the lfock unless we are doing
           ! gradients! So we should try and remove that..
-          ! This can, and should, be wrapped up with the fock_update procedure
+          ! This can, and should, be wrapped up with the fock_update
+          !  procedure
           CALL GETMEM('FOCK','ALLO','REAL',LFOCK,NTOT4)
           CALL FOCK_m(WORK(LFOCK),Work(iFockI),Work(iFockA),
      &        Work(iD1Act),WORK(LP),WORK(LPUVX))
