@@ -19,7 +19,7 @@ C              The fock matrix is in MO basis with the frozen orbitals
 C              excluded. It is symmetry blocked in contrast to earlier
 C              versions.
 C
-C     called from FOCK if IFINAL=1.
+C     called from FOCK_update
 C
 C          ********** IBM-3090 MOLCAS Release: 90 02 22 **********
 C
@@ -58,6 +58,7 @@ C
 C
       IAD15=IADR15(5)
       CALL DDAFILE(JOBIPH,1,FOCC,IPQ,IAD15)
+
 C
 c fock matrices added -- R L 921008.
 *
@@ -67,13 +68,7 @@ c fock matrices added -- R L 921008.
       Call GetMem('Scr2','ALLO','REAL',ipScr2,no2m)
 
 
-* NOTE: FOCC is nowadays allocated alredy in RASSCF.
 * Disk address ipFocc is in /WADR/
-*      Call GetMem('FOcc','ALLO','REAL',ipFocc,nTot1)
-      call dcopy_(nTot1,[0.0D0],0,Work(ipFocc),1)
-#ifdef _DEBUGPRINT_
-      Write(LF,*) 'nTot1=',nTot1
-#endif
       nFock = 0
       Do iSym = 1, nSym
          nFock = nFock + (nISh(iSym)+nASh(iSym))**2
@@ -95,7 +90,7 @@ c fock matrices added -- R L 921008.
       Do ISYM=1,NSYM
 *        Hmm maybe you should check so I use correct nbas/norb
          NO = nOrb(isym)
-         IF (NO.NE.0) THEN
+         IF (NO /= 0) THEN
 *
 *-----------Transform to SO/AO basis.
 *

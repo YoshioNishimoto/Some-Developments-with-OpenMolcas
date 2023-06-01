@@ -8,7 +8,7 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
-      SUBROUTINE FOCK_m(F,FI,FP,D,P,Q,FINT,IFINAL,CMO)
+      SUBROUTINE FOCK_m(F,FI,FP,D,P,FINT)
 !
 !     RASSCF program version IBM-3090: SX section
 !
@@ -27,35 +27,31 @@
 !
 !          ********** IBM-3090 MOLCAS Release: 90 02 22 **********
 !
+      use stdalloc, only: mma_allocate, mma_deallocate
       use definitions, only: wp
       use mcpdft_output, only: debug, lf, iPrLoc
       implicit none
 
-      real(kind=wp), dimension(*), intent(in) :: FI, CMO, D
-      real(kind=wp), dimension(*) :: FP, P, Q, FINT, F
+      real(kind=wp), dimension(*), intent(in) :: FI, D, P, FINT
+      real(kind=wp), dimension(*), intent(inout) :: FP
+      real(kind=wp), dimension(*), intent(out) :: F
       integer ISTSQ(8), ISTAV(8)
       real(kind=wp) ECAS0
 
 #include "rasdim.fh"
 #include "rasscf.fh"
 #include "general.fh"
-      Character*16 ROUTINE
-      Parameter (ROUTINE='FOCK    ')
-#include "WrkSpc.fh"
 
-      integer :: ifinal, ipFint, ipFMCSCF, ipP2reo, ipQ, IPRLEV
+      integer :: ipFMCSCF, IPRLEV
       integer :: ISTD, ISTFCK, ISTFP, ISTP, ISTZ, iSym
       integer :: ix1, jstf, N1, n2, nao, ni, nio
-      integer :: nm, no, no2, nor, np, np2reo, nt, ntm
+      integer :: nm, no, no2, nor, np, nt, ntm
       integer :: ntt, ntv, nuvx, nv, nvi, nvm
+      real(kind=wp), dimension(:), allocatable :: Q
       real(kind=wp) :: casdft_en, qntm
 
-C
-      IPRLEV=IPRLOC(4)
-      IF(IPRLEV.ge.DEBUG) THEN
-        WRITE(LF,*)' Entering ',ROUTINE
-      END IF
 
+      IPRLEV=IPRLOC(4)
 
       ISTSQ(1)=0
       ISTAV(1)=0
@@ -63,12 +59,7 @@ C
          ISTSQ(iSym) = ISTSQ(iSym-1) + nBas(iSym-1)**2
          ISTAV(iSym) = ISTAV(iSym-1) + nBas(iSym-1)*nAsh(iSym-1)
       End Do
-C *****************************************
 
-
-      ipFint = ip_Dummy
-      ipP2reo= ip_Dummy
-c
 c     add FI to FA to obtain FP
       CALL DAXPY_(NTOT3,1.0D0,FI,1,FP,1)
 C     LOOP OVER ALL SYMMETRY BLOCKS
@@ -78,7 +69,6 @@ C
       ISTD=0
       IX1=0
       ISTZ=0
-      E2act=0.0d0
 C
 * A long loop over symmetry
       DO ISYM=1,NSYM
@@ -86,9 +76,7 @@ C
        NAO=NASH(ISYM)
        NO=NORB(ISYM)
        NO2=(NO**2+NO)/2
-       N1=0
-       N2=0
-       IF(NO.EQ.0) GO TO 90
+       IF(NO == 0) GO TO 90
        CALL FZERO(F(ISTFCK+1),NO**2)
 c
 c      first index in F is inactive
@@ -101,85 +89,55 @@ c
           F(ISTFCK+NO*(NP-1)+NI)=2*FP(ISTFP+(N1**2-N1)/2+N2)
          END DO
         END DO
-       ENDIF
+       END IF
 c
 c      first index in F active
 c
-       IF(NAO.NE.0) THEN
-
-        ISTP=ISTORP(ISYM)+1
-        JSTF=ISTORD(ISYM)+1
-        NUVX=(ISTORP(ISYM+1)-ISTORP(ISYM))/NAO
+       IF(NAO /= 0) THEN
+         ISTP=ISTORP(ISYM)+1
+         JSTF=ISTORD(ISYM)+1
+         NUVX=(ISTORP(ISYM+1)-ISTORP(ISYM))/NAO
 c
-c          first compute the Q-matrix (equation (19))
+c           first compute the Q-matrix (equation (19))
+c              Q(m,v) = sum_wxy  (m|wxy) * P(wxy,v)
+c           P is packed in xy and pre-multiplied by 2
+c                             and reordered
 c
-c          Q(m,v) = sum_wxy  (m|wxy) * P(wxy,v)
-c
-c          P is packed in xy and pre-multiplied by 2
-c                            and reordered
-c
-        CALL DGEMM_('N','N',
+         call mma_allocate(q, no*nao, label="q")
+         CALL DGEMM_('N','N',
      &              NO,NAO,NUVX,
      &              1.0d0,FINT(JSTF),NO,
      &              P(ISTP),NUVX,
      &              0.0d0,Q,NO)
-
-
 c
-c       active-active interaction term in the RASSCF energy
+c        active-active interaction term in the RASSCF energy
 c
-        ECAS0=ECAS
-        DO NT=1,NAO
-         NTT=(NT-1)*NO+NIO+NT
-         ECAS=ECAS+0.5D0*Q(NTT)
-         HALFQ1=HALFQ1+0.5D0*Q(NTT)
-         E2act=E2act+0.5D0*Q(NTT)
-        END DO
-      IF(IPRLEV.ge.DEBUG) THEN
-        write(6,*) 'Two-electron contribution (Q term):', ECAS-ECAS0
-      END IF
-*
-        If(ipFint.ne.ip_Dummy) Then
-          Call GetMem('TmpQ','Allo','Real',ipQ,NAO*NO)
-          If (ipP2reo.ne.ip_Dummy) Then
-             CALL DGEMM_('N','N',
-     &                   NO,NAO,NUVX,
-     &                   1.0d0,Work(ipFint+JSTF-1),NO,
-     &                   Work(ipP2reo+ISTP-1),NUVX,
-     &                   0.0d0,Work(ipQ),NO)
-          Else
-             CALL DGEMM_('N','N',
-     &                   NO,NAO,NUVX,
-     &                   1.0d0,Work(ipFint+JSTF-1),NO,
-     &                   P(ISTP),NUVX,
-     &                   0.0d0,Work(ipQ),NO)
-          End If
-          Call DaXpY_(NAO*NO,1.0d0,Work(ipQ),1,Q,1)
-*
-          DO NT=1,NAO
-            NTT=(NT-1)*NO+NIO+NT
-            HALFQ=HALFQ+0.5D0*Work(ipQ+NTT-1)
-          END DO
-          Call GetMem('TmpQ','Free','Real',ipQ,NAO*NO)
-        End If
-
-c
-c       Fock matrix
-c
-        NTM=0
-        DO NT=1,NAO
-         DO NM=1,NO
-          NTM=NTM+1
-          QNTM=Q(NTM)
-          DO NV=1,NAO
-           NVI=NV+NIO
-           NTV=ITRI(MAX(NT,NV))+MIN(NT,NV)+ISTD
-           NVM=ITRI(MAX(NVI,NM))+MIN(NVI,NM)+ISTFP
-           QNTM=QNTM+D(NTV)*FI(NVM)
-          END DO
-          F(ISTFCK+NO*(NM-1)+NT+NIO)=QNTM
+         ECAS0=ECAS
+         DO NT=1,NAO
+          NTT=(NT-1)*NO+NIO+NT
+          ECAS=ECAS+0.5D0*Q(NTT)
          END DO
-        END DO
+         IF(IPRLEV >= DEBUG) THEN
+           write(lf,*) 'Two-electron contribution (Q term):', ECAS-ECAS0
+         END IF
+c
+c        Fock matrix
+c
+         NTM=0
+         DO NT=1,NAO
+           DO NM=1,NO
+             NTM=NTM+1
+             QNTM=Q(NTM)
+             DO NV=1,NAO
+               NVI=NV+NIO
+               NTV=ITRI(MAX(NT,NV))+MIN(NT,NV)+ISTD
+               NVM=ITRI(MAX(NVI,NM))+MIN(NVI,NM)+ISTFP
+               QNTM=QNTM+D(NTV)*FI(NVM)
+             END DO
+             F(ISTFCK+NO*(NM-1)+NT+NIO)=QNTM
+           END DO
+         END DO
+         call mma_deallocate(q)
        ENDIF
 
 90     CONTINUE
@@ -188,18 +146,17 @@ c
        ISTD=ISTD+(NAO**2+NAO)/2
        IX1=IX1+NBAS(ISYM)
        ISTZ=ISTZ+(NAO**2-NAO)/2
-c
 * End of long loop over symmetry
       END DO
 c
-      If ( iPrLev.ge.DEBUG ) then
+      If (iPrLev.ge.DEBUG ) then
         CASDFT_En=0.0d0
         If(KSDFT(1:3).ne.'SCF'.and.KSDFT(1:3).ne.'PAM')
      &   Call Get_dScalar('CASDFT energy',CASDFT_En)
         Write(LF,'(A,2F22.16)') ' RASSCF energy: ',
      &                  ECAS+CASDFT_En,VIA_DFT
       End If
-      If ( iPrLev.ge.DEBUG ) then
+      If(iPrLev.ge.DEBUG ) then
         Write(LF,'(A)')' MCSCF Fock-matrix in MO-basis'
         ipFMCSCF=1
         Do iSym=1,nSym
@@ -208,26 +165,12 @@ c
            ipFMCSCF=ipFMCSCF+nOr*nOr
         End Do
       end if
-C
-c     Calculate Fock matrix for occupied orbitals.
-C
-      If (iFinal.eq.1) CALL FOCKOC_m(Q,F,CMO)
-C
-      If(ipFint.ne.ip_Dummy) Then
-        Call GetMem('TmpPUVX','Free','Real',ipFint,nFint)
-      End If
 
-      If(ipP2reo.ne.ip_Dummy) Then
-        CALL GETMEM('P2_reo','FREE','REAL',ipP2reo,nP2reo)
-      End If
-
-      If ( IPRLEV.ge.DEBUG ) then
+      If ( IPRLEV >= DEBUG ) then
          Write(LF,*)
          Write(LF,*) ' >>> Exit Fock <<< '
          Write(LF,*)
       End If
-C
-      RETURN
       END
 
       SUBROUTINE FOCK_update(F,FI,FP,D,P,Q,FINT,CMO)
@@ -340,7 +283,6 @@ C     LOOP OVER ALL SYMMETRY BLOCKS
       ISTD=0
       IX1=0
       ISTZ=0
-      E2act=0.0d0
 C
 * A long loop over symmetry
       DO ISYM=1,NSYM
@@ -399,7 +341,6 @@ c                            and reordered
         DO NT=1,NAO
          NTT=(NT-1)*NO+NIO+NT
          E2eP=E2eP+0.5D0*Q(NTT)
-         !ECAS=ECAS+Q(NTT)
         END DO
 c
 c       Fock matrix
@@ -453,14 +394,12 @@ C
       do i=1,Ntot4
         write(6,*) Work(itF-1+i)
       end do
-      call xflush(6)
       end if
       Call DAXPY_(NTOT4,1.0d0,Work(iTF),1,F,1)
-!      write(*,*) 'added new fock terms to old fock matrix'
 !I am going to add the Fock matrix temporarily to the Runfile.  I don't
 !want to construct it again in MCLR in the case of gradients.
-      If ( iPrLev.ge.DEBUG ) then
-        Write(LF,'(A)')' MCSCF Fock-matrix in MO-basis'
+      If (iPrLev >= DEBUG ) then
+        Write(LF,'(A)')'MC-PDFT Generalized Fock-matrix in MO-basis'
         ipFMCSCF=1
         Do iSym=1,nSym
            nOr=nOrb(iSym)
@@ -469,9 +408,6 @@ C
         End Do
       End If
 
-!What happens if we divide by two?
-!      Call Dscal_(ntot4,0.5d0,F,1)
-
 !For MCLR
       IF(DoGradMSPD) THEN
        CALL DCopy_(nTot4,F,1,WORK(iFxyMS+(iIntS-1)*nTot4),1)
@@ -479,7 +415,6 @@ C
        Call put_dArray('Fock_PDFT',F,ntot4)
       END IF
 
-      call xflush(6)
       CALL FOCKOC_m(Q,F,CMO)
 C
       Call GetMem('fockt','Free','REAL',iTF,NTOT4)
