@@ -59,7 +59,7 @@
       Parameter ( Zero=0.0d0 , One=1.0d0 )
       integer iD1I,iD1Act,iD1ActAO,iD1Spin,iD1SpinAO,IAD19
       integer iJOB,dmDisk,iP2d
-      integer itmp0,itmp1,itmp2,itmp3,itmp4
+      integer itmp1,itmp2,itmp3,itmp4
       integer itmp5,itmp6,itmp7,itmpn,itmpk,itmpa
       integer ifocki,ifocka
       integer, dimension(30) :: IADR19
@@ -96,34 +96,6 @@ C Local print level (if any)
 *TRS
 *
       Call Get_dScalar('PotNuc',potNuc)
-
-***********************************************************
-* Generate molecular charges
-***********************************************************
-      Call GetMem('Ovrlp','Allo','Real',iTmp0,nTot1+4)
-      iRc=-1
-      iOpt=ibset(0,sNoOri)
-      iComp=1
-      iSyLbl=1
-      Label='Mltpl  0'
-      Call RdOne(iRc,iOpt,Label,iComp,Work(iTmp0),iSyLbl)
-      Tot_Nuc_Charge=Work(iTmp0+nTot1+3)
-      If ( iRc /= 0 ) then
-        Write(LF,*) 'CASDFT_Terms: iRc from Call RdOne not 0'
-        Write(LF,*) 'Label = ',Label
-        Write(LF,*) 'iRc = ',iRc
-        Call Abend
-      Endif
-      Call GetMem('Ovrlp','Free','Real',iTmp0,nTot1+4)
-
-      Tot_El_Charge=Zero
-      Do iSym=1,nSym
-        Tot_El_Charge=Tot_El_Charge
-     &                -2.0D0*DBLE(nFro(iSym)+nIsh(iSym))
-      End Do
-      Tot_El_Charge=Tot_El_Charge-DBLE(nActEl)
-      Tot_Charge=Tot_Nuc_Charge+Tot_El_Charge
-
 
 ***********************************************************
 * Load bare nuclei Hamiltonian
@@ -395,7 +367,6 @@ c--reads kinetic energy integrals  Work(iTmpk)--(Label=Kinetic)----
      &             Work(iD1I),Work(iD1ActAO),
      &             nTot1,DFTFOCK,Do_DFT)
 
-
         Call Daxpy_(nTot1,1.0d0,Work(iTmp5),1,Work(iTmp1),1)
         Call Daxpy_(nTot1,1.0d0,Work(iTmp6),1,Work(iFockI),1)
 
@@ -415,8 +386,6 @@ c--reads kinetic energy integrals  Work(iTmpk)--(Label=Kinetic)----
         Call Fold(nSym,nBas,Work(iD1ActAO),Work(iTmpa))
 
         Eone = dDot_(nTot1,Work(iTmp2),1,Work(iTmp1),1)
-        Call Get_dScalar('PotNuc',PotNuc_Ref)
-        Eone = Eone + (PotNuc-PotNuc_Ref)
         Etwo = dDot_(nTot1,Work(iTmp2),1,Work(iFockI),1)
 
 !**************Kinetic energy of inactive electrons********
@@ -429,7 +398,7 @@ c**************Kinetic energy of active electrons*********
         EactK = dDot_(nTot1,Work(iTmpk),1,Work(iTmpa),1)
 
         EactN = dDot_(nTot1,Work(iTmpn),1,Work(iTmpa),1)
-        EMY  = PotNuc_Ref+Eone+0.5d0*Etwo
+        EMY  = PotNuc+Eone+0.5d0*Etwo
 
         If ( IPRLEV.ge.DEBUG ) then
           Write(LF,'(4X,A35,F18.8)')

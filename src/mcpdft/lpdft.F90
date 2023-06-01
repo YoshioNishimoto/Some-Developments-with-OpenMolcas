@@ -19,8 +19,10 @@ module lpdft
   private
   logical :: do_lpdft=.false.
 
+  real(kind=wp) :: hconst = 0.0D0
   real(kind=wp), allocatable, dimension(:) :: inactD1
   real(kind=wp), allocatable, dimension(:) :: casd1_0, casd1s_0, casd2_0
+  real(kind=wp), allocatable, dimension(:) :: veff1, veff2
 
   public :: do_lpdft
   public :: lpdft_kernel
@@ -36,6 +38,7 @@ module lpdft
       ! Want to first get the zero-order densities
       call get_zero_order_densities(casd1_0, casd1s_0, casd2_0)
       call compute_Eot_and_potentials(CMO)
+      call compute_hconst()
 
       call release_vars()
     end subroutine lpdft_kernel
@@ -77,9 +80,7 @@ module lpdft
 
       ! Some dummy vars that don't matter
       real(kind=wp), dimension(ntot1) :: htmp, gtmp
-      ! 1 and 2-electron on-top potentials
-      real(kind=wp), dimension(ntot1) :: oe_otp
-      real(kind=wp), dimension(nfint) :: te_otp
+      ! The density matrices
       real(kind=wp), dimension(ntot2) :: casd1AO_0
       real(kind=wp), dimension(ntot1) :: d1ao_0, casD1AO_folded_0
       integer(kind=iwp) :: charge
@@ -102,18 +103,43 @@ module lpdft
       ! We need the 1 and 2-electron potentials
       do_pdftpot = .True.
 
-      oe_otp = 0.0D0
-      te_otp = 0.0D0
-      call put_dArray('ONTOPO', oe_otp, ntot1)
-      call put_dArray('ONTOPT', te_otp, nfint)
+      veff1 = 0.0D0
+      veff2 = 0.0D0
+      call put_dArray('ONTOPO', veff1, ntot1)
+      call put_dArray('ONTOPT', veff2, nfint)
 
       htmp = 0.0D0
       gtmp = 0.0D0
-      !call DrvXV(htmp, gtm, d1ao_0, potnuc, nTot1, First, Dff, NonEq, &
-                 !lRF, KSDFT_TEMP, ExFac, )
+      call DrvXV(htmp, gtmp, d1ao_0, potnuc, nTot1, First, Dff, NonEq, &
+                 lRF, KSDFT_TEMP, ExFac, charge, ispin, inactD1, &
+                 casD1AO_0, nTot1, DFTFOCK, Do_DFT)
 
+      ! Load in the on-top potentials
+      call get_dArray("ONTOPO", veff1, ntot1)
+      call get_dArray("ONTOPT", veff2, nfint)
 
     end subroutine compute_Eot_and_potentials
+
+    subroutine compute_hconst()
+#include "rasdim.fh"
+#include "general.fh"
+#include "rasscf.fh"
+      real(kind=wp) :: hnuc
+      integer(kind=iwp) :: i
+
+      Call Get_dScalar('PotNuc',hnuc)
+
+      write(lf, *) "1E On Top Pot"
+      do i=1, ntot1
+        write(lf,*) veff1(i)
+      end do
+      write(lf, *) "2E On Top Pot"
+      do i=1, nfint
+        write(lf, *) veff2(i)
+      end do
+
+      hconst = hnuc
+    end subroutine compute_hconst
 
     subroutine set_iadr15()
       ! Set the iAdr15 variable in rasscf.fh so I don't have to do any
@@ -152,15 +178,19 @@ module lpdft
       call mma_allocate(casd1s_0, nacpar, "CASD1s_0")
       call mma_allocate(casd2_0, nacpr2, "CASD2_0")
       call mma_allocate(inactD1, ntot2, "inactD1")
+      call mma_allocate(veff1, ntot1, "1E-OnTopPot")
+      call mma_allocate(veff2, nfint, "2E-OnTopPot")
 
       call get_d1i_mcpdft(CMO, inactD1)
 
-
     end subroutine init_vars
+
     subroutine release_vars()
       call mma_deallocate(casd1_0)
       call mma_deallocate(casd1s_0)
       call mma_deallocate(casd2_0)
       call mma_deallocate(inactD1)
+      call mma_deallocate(veff1)
+      call mma_deallocate(veff2)
     end subroutine release_vars
 end module lpdft
