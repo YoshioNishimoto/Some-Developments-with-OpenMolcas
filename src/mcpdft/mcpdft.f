@@ -466,7 +466,7 @@
       ! each state
       ! only after 500 lines of nothing above...
       if(do_lpdft) then
-        call lpdft_kernel
+        call lpdft_kernel(work(lCMO))
       else
         Call MSCtl(Work(LCMO),Work(LFI),Work(LFA),
      &       Work(iRef_E))

@@ -31,7 +31,6 @@
       Use KSDFT_Info, only: CoefR, CoefX
       use mspdft, only: dogradmspd
       use mcpdft_output, only: silent, usual, lf, iPrLoc
-      use Fock_util_global, only: docholesky
 
       Implicit Real*8 (A-H,O-Z)
 #include "rasdim.fh"
@@ -291,17 +290,6 @@ C.. for RAS
        Call CollapseOutput(1,Line)
        Write(LF,Fmt1)'----------------------------'
        Write(LF,*)
-       If (DoCholesky) Then
-        Call Get_iScalar('System BitSwitch',iDoRI)
-        if (Iand(iDoRI,1024).Eq.1024) then
-             Write(LF,Fmt2//'A,T45,I6)')'RASSCF algorithm: LK RI/DF'
-
-        else
-             Write(LF,Fmt2//'A,T45,I6)')'RASSCF algorithm: LK Cholesky'
-        endif
-       Else
-        Write(LF,Fmt2//'A,T45,I6)')'RASSCF algorithm: Conventional'
-       EndIf
        KSDFT2 = KSDFT
        IF(KSDFT(1:2).eq.'T:'.or.KSDFT(1:3).eq.'FT:') Then
         KSDFT2 = KSDFT(index(KSDFT,'T:')+2:)

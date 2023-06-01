@@ -365,7 +365,7 @@ c--reads kinetic energy integrals  Work(iTmpk)--(Label=Kinetic)----
         Call Put_iArray('nAsh',nAsh,nSym)
         Call Put_iArray('nIsh',nIsh,nSym)
 
-        iCharge=Int(Tot_Charge)
+        call get_charge(iCharge)
 
         do_pdftPot=.false.
         if((DoGradPDFT.and.jroot == irlxroot).or.DoGradMSPD) then
