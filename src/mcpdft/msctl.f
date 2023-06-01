@@ -78,6 +78,15 @@ C Local print level (if any)
 ***********************************************************
       IPRLEV=IPRLOC(3)
 
+! Compute size of Q matrix...not sure if we really need it any more though
+      NQ=0
+      NIAIA=0
+      do ISYM=1,NSYM
+        NQ = MAX(NQ,NASH(ISYM)*NORB(ISYM))
+        NIAIA = NIAIA+(NASH(ISYM)+NISH(ISYM))**2
+      end do
+      if(NQ < NIAIA) NQ=NIAIA
+
 
 *TRS
       Call Get_iScalar('Relax CASSCF root',iRlxRoot)
@@ -600,6 +609,8 @@ c**************Kinetic energy of active electrons*********
           end do
         end  if
 
+! TODO(MRH): this fmat_m can be replaced. It doesn unnecessary trasnformations
+! and also computes somethings for ecas..
         Call Fmat_m(CMO,Work(lPUVX),Work(iD1Act),Work(iD1ActAO),
      &             Work(iFockI_save),Work(iFockA))
         call  dcopy_(ntot1,work(ifocki_save),1,work(ifocki),1)
@@ -620,41 +631,31 @@ c**************Kinetic energy of active electrons*********
           end do
         end if
 
-        IF(ISTORP(NSYM+1).GT.0) THEN
+! Compute the active-space DmatDmat (D_pqD_rs)
+        IF(ISTORP(NSYM+1) > 0) THEN
           CALL GETMEM('ISTRP','ALLO','REAL',LP,ISTORP(NSYM+1))
           CALL DmatDmat_m(Work(iD1Act),WORK(LP))
-          CALL GETMEM('ISTRP','ALLO','REAL',LP1,ISTORP(NSYM+1))
-          CALL PMAT_RASSCF_M(Work(iP2d),WORK(LP1))
         END IF
 
         if(iprlev >= debug) then
-          write(6,*) 'dmatdmat'
+          write(lf,*) 'dmatdmat'
           do i=1,istorp(nsym+1)
-            write(6,*) Work(LP-1+i)
+            write(lf,*) Work(LP-1+i)
           end do
         end if
-        NQ=0
-        NIAIA=0
-        do ISYM=1,NSYM
-          NQ = MAX(NQ,NASH(ISYM)*NORB(ISYM))
-          NIAIA = NIAIA+(NASH(ISYM)+NISH(ISYM))**2
-        end do
-        if(NQ < NIAIA) NQ=NIAIA
-        CALL GETMEM('FOCK','ALLO','REAL',LFOCK,NTOT4)
-        ! The following does 2 things,
-        !   a) calculate the generalized Fock matrix and stores it in
-        !      lfock
-        !   b) calculates the classical coulomb interaction and adds
-        !      it to ECAS (var defined in rasscf.fh)
-        ! In theory, we don't need the lfock unless we are doing
-        ! gradients! So we should try and remove that..
-        CALL FOCK_m(WORK(LFOCK),Work(iFockI),Work(iFockA),
-     &        Work(iD1Act),WORK(LP),WORK(LPUVX))
+! Now we calculate the active-space Classical Coulomb Energy
+        active_coulomb = 0.0D0
+        call active_classical_coulomb(work(LP), work(LPUVX),
+     &                                active_coulomb)
+        ECAS = ECAS + active_coulomb
+! Grab the E_ot energy which is computed somewhere above
         CASDFT_Funct = 0
         Call Get_dScalar('CASDFT energy',CASDFT_Funct)
-        CASDFT_E = ECAS+CASDFT_Funct
+        CASDFT_E = ECAS + CASDFT_Funct
+
+! Of course, now we deal with a hybrid functional
         IF(Do_Hybrid) THEN
-          E_NoHyb=CASDFT_E
+          E_NoHyb = CASDFT_E
           CASDFT_E=Ratio_WF*Ref_Ener(jRoot)+(1-Ratio_WF)*E_NoHyb
         END IF
 
@@ -672,12 +673,27 @@ c**************Kinetic energy of active electrons*********
 !At this point, the energy calculation is done.  Now I need to build the
 !fock matrix if this root corresponds to the relaxation root.
 
+        if((DoGradPDFT .and. jroot == irlxroot) .or. dogradmspd) then
+          ! The following does 2 things,
+          !   a) calculate the generalized Fock matrix and stores it in
+          !      lfock
+          !   b) calculates the classical coulomb interaction and adds
+          !      it to ECAS (var defined in rasscf.fh)
+          ! In theory, we don't need the lfock unless we are doing
+          ! gradients! So we should try and remove that..
+          ! This can, and should, be wrapped up with the fock_update procedure
+          CALL GETMEM('FOCK','ALLO','REAL',LFOCK,NTOT4)
+          CALL FOCK_m(WORK(LFOCK),Work(iFockI),Work(iFockA),
+     &        Work(iD1Act),WORK(LP),WORK(LPUVX))
+        end if
+
 !***********************************************************************
 *
 *            BUILDING OF THE NEW FOCK MATRIX                           *
 *
 ************************************************************************
         if(DoGradPDFT .and. jroot == irlxroot) then
+
           Write(LF,*) 'Loading potentials for analytic gradients...'
 !MCLR requires two sets of things:
 !1. The effective one-body Fock matrix and the effective two-body fock
@@ -879,12 +895,15 @@ cPS         call xflush(6)
      &                        LP,NQ,LPUVX,ip2d,jroot)
         end if
 
+        if((DoGradPDFT .and. jroot == irlxroot) .or. dogradmspd) then
+          CALL GETMEM('FOCK','Free','REAL',LFOCK,NTOT4)
+        end if
+
         Call GetMem('DoneI','Free','Real',iTmp2,nTot1)
         Call GetMem('DoneA','Free','Real',iTmpa,nTot1)
-        CALL GETMEM('FOCK','Free','REAL',LFOCK,NTOT4)
+
         IF(ISTORP(NSYM+1) > 0) THEN
           CALL GETMEM('ISTRP','FREE','REAL',LP,ISTORP(NSYM+1))
-          CALL GETMEM('ISTRP','FREE','REAL',LP1,ISTORP(NSYM+1))
         END IF
       end do !loop over roots
 
@@ -960,7 +979,6 @@ cPS         call xflush(6)
       Call GetMem('D1Inact','Free','Real',iD1i,NTOT2)
       Call GetMem('Kincore','free','Real',iTmpk,nTot1)
       Call GetMem('NucElcore','free','Real',iTmpn,nTot1)
-c      call xflush(6)
       Return
       END
 

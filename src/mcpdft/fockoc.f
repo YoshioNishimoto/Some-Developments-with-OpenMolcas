@@ -23,8 +23,9 @@ C     called from FOCK_update
 C
 C          ********** IBM-3090 MOLCAS Release: 90 02 22 **********
 C
-      use mcpdft_output, only: lf
 
+      use definitions, only: wp
+      use mcpdft_output, only: lf
       IMPLICIT REAL*8 (A-H,O-Z)
 
 #include "rasdim.fh"
@@ -32,8 +33,8 @@ C
 #include "general.fh"
 #include "wadr.fh"
 #include "WrkSpc.fh"
-
-      DIMENSION FOCC(*),F(*),CMO(*)
+      real(kind=wp), dimension(*), intent(in) :: F, CMO
+      real(kind=wp), dimension(*), intent(out) :: FOCC
 
 C
 
@@ -77,9 +78,6 @@ c fock matrices added -- R L 921008.
       iAd15 = iAdr15(5)
 *-----Read Fock matrix in MO basis from JOBIPH.
       Call DDaFile(Jobiph,2,Work(ipFock),nFock,iAd15)
-#ifdef _DEBUGPRINT_
-      Call RecPrt('Fock(MO)',' ',Work(ipFock),1,nFock)
-#endif
 *
 *-----Construct the occupied part of the Fock matrix in SO/AO basis.
 *
@@ -94,13 +92,6 @@ c fock matrices added -- R L 921008.
 *
 *-----------Transform to SO/AO basis.
 *
-#ifdef _DEBUGPRINT_
-            Write(LF,*) 'iSym=',iSym
-            Call RecPrt('F(iStFck)',' ',F(iStFck),nOrb(iSym),
-     &                                            nOrb(iSym))
-            Call RecPrt('CMO(iCMO)',' ',CMO(iCMO),nBas(iSym),
-     &                                            nBas(iSym))
-#endif
             Call DGEMM_('N','N',
      &                  nBas(iSym),nOrb(isym),nOrb(isym),
      &                  1.0d0,CMO(iCMo),nBas(iSym),
@@ -120,7 +111,7 @@ c fock matrices added -- R L 921008.
                   ij = ij + 1
                END DO
                kl = ipScr2-1 + nBas(iSym)*(iBas-1) + iBas
-               If (ij-jFock+1.gt.nTot1) Then
+               If (ij-jFock+1 > nTot1) Then
                   Write(LF,*) ij,jFock,nTot1
                   Call Abend()
                End If
@@ -128,9 +119,6 @@ c fock matrices added -- R L 921008.
                ij = ij + 1
             END DO
          END IF
-#ifdef _DEBUGPRINT_
-         Call TriPrt('FAO',' ',Work(jFock),nBas(iSym))
-#endif
          jFock = jFock + nBas(iSym)*(nBas(iSym)+1)/2
          iCMo  = iCMo  + nBas(iSym)**2
          ISTFCK=ISTFCK+NO**2

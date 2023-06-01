@@ -36,7 +36,6 @@
       real(kind=wp), dimension(*), intent(inout) :: FP
       real(kind=wp), dimension(*), intent(out) :: F
       integer ISTSQ(8), ISTAV(8)
-      real(kind=wp) ECAS0
 
 #include "rasdim.fh"
 #include "rasscf.fh"
@@ -46,7 +45,7 @@
       integer :: ISTD, ISTFCK, ISTFP, ISTP, ISTZ, iSym
       integer :: ix1, jstf, N1, n2, nao, ni, nio
       integer :: nm, no, no2, nor, np, nt, ntm
-      integer :: ntt, ntv, nuvx, nv, nvi, nvm
+      integer :: ntv, nuvx, nv, nvi, nvm
       real(kind=wp), dimension(:), allocatable :: Q
       real(kind=wp) :: casdft_en, qntm
 
@@ -109,17 +108,6 @@ c
      &              1.0d0,FINT(JSTF),NO,
      &              P(ISTP),NUVX,
      &              0.0d0,Q,NO)
-c
-c        active-active interaction term in the RASSCF energy
-c
-         ECAS0=ECAS
-         DO NT=1,NAO
-          NTT=(NT-1)*NO+NIO+NT
-          ECAS=ECAS+0.5D0*Q(NTT)
-         END DO
-         IF(IPRLEV >= DEBUG) THEN
-           write(lf,*) 'Two-electron contribution (Q term):', ECAS-ECAS0
-         END IF
 c
 c        Fock matrix
 c
@@ -259,20 +247,6 @@ C *****************************************
 ! Build the FI terms using the potentials v and V.
 !
 !******************************************************************
-
-
-!      iOff1 = 0
-!      Do ISYM=1,NSYM
-!        Do iOrb=1,norb(iSym)
-!          do jOrb=1,iOrb
-!should we follow the guide of ftwo.f?
-!for starters, I don't seem to have all the necessary 2-body potentials,
-!right?
-
-!          end do
-!        end do
-!      end do
-
 
 c     add FI to FA to obtain FP
       CALL DAXPY_(NTOT3,1.0D0,FI,1,FP,1)
