@@ -70,13 +70,13 @@ module lpdft
 
     subroutine compute_Eot_and_potentials(CMO)
       use KSDFT_Info, only: do_pdftpot
-
-      real(kind=wp), dimension(ntot2), intent(in) :: CMO
 #include "rasdim.fh"
 #include "general.fh"
 #include "rasscf.fh"
 !For lRf
 #include "rctfld.fh"
+
+      real(kind=wp), dimension(ntot2), intent(in) :: CMO
 
       ! Some dummy vars that don't matter
       real(kind=wp), dimension(ntot1) :: htmp, gtmp
