@@ -47,7 +47,7 @@
       integer :: nm, no, no2, nor, np, nt, ntm
       integer :: ntv, nuvx, nv, nvi, nvm
       real(kind=wp), dimension(:), allocatable :: Q
-      real(kind=wp) :: casdft_en, qntm
+      real(kind=wp) :: qntm
 
 
       IPRLEV=IPRLOC(4)
@@ -137,13 +137,6 @@ c
 * End of long loop over symmetry
       END DO
 c
-      If (iPrLev.ge.DEBUG ) then
-        CASDFT_En=0.0d0
-        If(KSDFT(1:3).ne.'SCF'.and.KSDFT(1:3).ne.'PAM')
-     &   Call Get_dScalar('CASDFT energy',CASDFT_En)
-        Write(LF,'(A,2F22.16)') ' RASSCF energy: ',
-     &                  ECAS+CASDFT_En,VIA_DFT
-      End If
       If(iPrLev.ge.DEBUG ) then
         Write(LF,'(A)')' MCSCF Fock-matrix in MO-basis'
         ipFMCSCF=1

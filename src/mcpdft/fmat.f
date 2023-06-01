@@ -148,112 +148,14 @@ C Local print level (if any)
       End If
       Call GetMem('Scr1','Free','Real',iTmp1,nTot1)
 
-*     print FI and FA
-      If ( iPrLev.ge.DEBUG ) then
-        Write(LF,*)
-        Write(LF,*) ' FI in AO-basis in fmat'
-        Write(LF,*) ' --------------'
-        Write(LF,*)
-        iOff = 1
-        Do iSym = 1,nSym
-          iOrb = nOrb(iSym)
-          Call TriPrt(' ',' ',FI(iOff),iOrb)
-          iOff = iOff + (iOrb*iOrb+iOrb)/2
-        End Do
-        Write(LF,*)
-        Write(LF,*) ' FA in AO-basis in fmat'
-        Write(LF,*) ' --------------'
-        Write(LF,*)
-        iOff = 1
-        Do iSym = 1,nSym
-          iOrb = nOrb(iSym)
-          Call TriPrt(' ',' ',FA(iOff),iOrb)
-          iOff = iOff + (iOrb*iOrb+iOrb)/2
-        End Do
-      End If
+
+!!!!! Seperate into 2 different subroutines here
 
 *     transform FI from AO to MO basis
-      iOff1 = 1
-      iOff2 = 1
-      iOff3 = 1
-      Do iSym = 1,nSym
-        iBas = nBas(iSym)
-        If (iBas==0) Cycle
-        iOrb = nOrb(iSym)
-        If (iOrb==0) Cycle
-        iFro = nFro(iSym)
-        Call GetMem('Scr1','Allo','Real',iTmp1,iBas*iBas)
-        Call GetMem('Scr2','Allo','Real',iTmp2,iOrb*iBas)
-        Call Square(FI(iOff1),Work(iTmp1),1,iBas,iBas)
-        Call DGEMM_('N','N',iBas,iOrb,iBas,
-     &               1.0d0,Work(iTmp1),iBas,
-     &               CMO(iOff2+(iFro*iBas)),iBas,
-     &               0.0d0,Work(iTmp2),iBas)
-        Call DGEMM_Tri('T','N',iOrb,iOrb,iBas,
-     &                 1.0D0,Work(iTmp2),iBas,
-     &                       CMO(iOff2+(iFro*iBas)),iBas,
-     &                 0.0D0,FI(iOff3),iOrb)
-        Call GetMem('Scr2','Free','Real',iTmp2,iOrb*iBas)
-        Call GetMem('Scr1','Free','Real',iTmp1,iBas*iBas)
-        iOff1 = iOff1 + (iBas*iBas+iBas)/2
-        iOff2 = iOff2 + iBas*iBas
-        iOff3 = iOff3 + (iOrb*iOrb+iOrb)/2
-      End Do
-
+      call ao2mo_1e(CMO, FI)
 *     transform FA from AO to MO basis
-      iOff1 = 1
-      iOff2 = 1
-      iOff3 = 1
-      Do iSym = 1,nSym
-        iBas = nBas(iSym)
-        If (iBas==0) Cycle
-        iOrb = nOrb(iSym)
-        If (iOrb==0) Cycle
-        iFro = nFro(iSym)
-        Call GetMem('Scr1','Allo','Real',iTmp1,iBas*iBas)
-        Call GetMem('Scr2','Allo','Real',iTmp2,iOrb*iBas)
-        Call Square(FA(iOff1),Work(iTmp1),1,iBas,iBas)
-        Call DGEMM_('N','N',iBas,iOrb,iBas,
-     &               1.0d0,Work(iTmp1),iBas,
-     &               CMO(iOff2+(iFro*iBas)),iBas,
-     &               0.0d0,Work(iTmp2),iBas)
-        Call DGEMM_Tri('T','N',iOrb,iOrb,iBas,
-     &                 1.0D0,Work(iTmp2),iBas,
-     &                       CMO(iOff2+(iFro*iBas)),iBas,
-     &                 0.0D0,FA(iOff3),iOrb)
-        Call GetMem('Scr2','Free','Real',iTmp2,iOrb*iBas)
-        Call GetMem('Scr1','Free','Real',iTmp1,iBas*iBas)
-        iOff1 = iOff1 + (iBas*iBas+iBas)/2
-        iOff2 = iOff2 + iBas*iBas
-        iOff3 = iOff3 + (iOrb*iOrb+iOrb)/2
-      End Do
-
-************************************************************************
+      call ao2mo_1e(CMO, FA)
 *     update Fock matrix
       Call Upd_FA_m(PUVX,FA,D,ExFac)
-
-*     print FI and FA
-      If ( iPrLev.ge.DEBUG ) then
-        Write(LF,*)
-        Write(LF,*) ' FI in MO-basis in fmat'
-        Write(LF,*) ' --------------'
-        Write(LF,*)
-        iOff = 1
-        Do iSym = 1,nSym
-          iOrb = nOrb(iSym)
-          Call TriPrt(' ',' ',FI(iOff),iOrb)
-          iOff = iOff + (iOrb*iOrb+iOrb)/2
-        End Do
-        Write(LF,*)
-        Write(LF,*) ' FA in MO-basis in fmat'
-        Write(LF,*) ' --------------'
-        Write(LF,*)
-        iOff = 1
-        Do iSym = 1,nSym
-          iOrb = nOrb(iSym)
-          Call TriPrt(' ',' ',FA(iOff),iOrb)
-          iOff = iOff + (iOrb*iOrb+iOrb)/2
-        End Do
-      End If
 
       End
