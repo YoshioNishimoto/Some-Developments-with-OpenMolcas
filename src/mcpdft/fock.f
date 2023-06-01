@@ -44,8 +44,8 @@
 #include "WrkSpc.fh"
 
       integer :: ifinal, ipFint, ipFMCSCF, ipP2reo, ipQ, IPRLEV
-      integer :: ISTD, ISTFCK, ISTFP, ISTP, ISTZ, iSym, IX
-      integer :: ix1, jstf, N1, n2, nao, neo, ni, nia, nio
+      integer :: ISTD, ISTFCK, ISTFP, ISTP, ISTZ, iSym
+      integer :: ix1, jstf, N1, n2, nao, ni, nio
       integer :: nm, no, no2, nor, np, np2reo, nt, ntm
       integer :: ntt, ntv, nuvx, nv, nvi, nvm
       real(kind=wp) :: casdft_en, qntm
@@ -82,11 +82,8 @@ C
 C
 * A long loop over symmetry
       DO ISYM=1,NSYM
-       IX=IX1+NFRO(ISYM)
        NIO=NISH(ISYM)
        NAO=NASH(ISYM)
-       NEO=NSSH(ISYM)
-       NIA=NIO+NAO
        NO=NORB(ISYM)
        NO2=(NO**2+NO)/2
        N1=0
@@ -349,7 +346,6 @@ C
       DO ISYM=1,NSYM
        NIO=NISH(ISYM)
        NAO=NASH(ISYM)
-       NEO=NSSH(ISYM)
        NO=NORB(ISYM)
        NO2=(NO**2+NO)/2
        N1=0
