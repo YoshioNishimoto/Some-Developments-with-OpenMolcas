@@ -70,7 +70,7 @@
       integer  i_off1,i_off2,ifone
       integer isym
       integer LUGS
-      real(kind=wp), allocatable, dimension(:) :: P2dt1, tmp_grd
+      real(kind=wp), allocatable, dimension(:) :: P2dt1, tmp_grd, scr1
       External IsFreeUnit
 
 ***********************************************************
@@ -480,31 +480,11 @@ c**************Kinetic energy of active electrons*********
 ************************************************************************
 * update and transform the Fock matrices FI and FA ----> FMAT routine
 ************************************************************************
-
-        if (iprlev >= debug) then
-           write(lf,*) 'id1act before reading in'
+        if(iprlev.ge.debug) then
+          write(lf,*) 'id1act before reading in'
            do i=1,nacpar
              write(lf,*) work(id1act-1+i)
            end do
-        end if
-*
-        Call GetMem('id1act_FA','ALLO','Real',id1act_FA,nacpar)
-        Call GetMem('id1actao_FA','ALLO','Real',id1actao_FA,ntot2)
-*
-        itsDisk = IADR19(3)
-        do i=1,irlxroot-1
-          Call DDaFile(JOBOLD,0,Work(iD1Act_FA),NACPAR,itsDisk)
-          Call DDaFile(JOBOLD,0,Work(iD1Spin),NACPAR,itsDisk)
-          Call DDaFile(JOBOLD,0,Work(iP2d),NACPR2,itsDisk)
-          Call DDaFile(JOBOLD,0,Work(iP2d),NACPR2,itsDisk)
-        end do
-        Call DDaFile(JOBOLD,2,Work(iD1Act_FA),NACPAR,itsDisk)
-        IF ( NASH(1) /= NAC ) then
-          CALL DBLOCK_m(Work(iD1Act_FA))
-        end if
-        Call cas_mo_to_ao(CMO,Work(iD1Act_FA),Work(iD1ActAO_FA))
-
-        if(iprlev.ge.debug) then
           write(6,*) 'lpuvx before tractl'
           do i=1,nfint
             write(6,*) work(lpuvx-1+i)
@@ -512,18 +492,6 @@ c**************Kinetic energy of active electrons*********
           write(6,*) 'ltuvx after tractl'
           do i=1,nacpr2
             write(6,*) work(ltuvx-1+i)
-          end do
-          write(6,*) 'id1act_fa before tractl'
-          do i=1,nacpar
-            write(6,*) work(id1act_FA-1+i)
-          end do
-          write(6,*) 'id1actao_fa before tractl'
-          do i=1,ntot2
-            write(6,*) work(id1actao_FA-1+i)
-          end do
-          write(6,*) 'id1act before tractl'
-          do i=1,nacpar
-            write(6,*) work(id1act-1+i)
           end do
           write(6,*) 'id1actao before tractl'
           do i=1,ntot2
@@ -535,13 +503,13 @@ c**************Kinetic energy of active electrons*********
           end do
         end if
 
-        Call GetMem('FockI_save','ALLO','Real',ifocki_save,ntot1)
-        call  dcopy_(ntot1,work(ifocki),1,work(ifocki_save),1)
-*
+        Call GetMem('FockI_save','ALLO','Real',ifocki_tmp,ntot1)
+        call  dcopy_(ntot1,work(ifocki),1,work(ifocki_tmp),1)
+
         if (iprlev.ge.debug) then
-          write(6,*) 'ifocki_save before tractl'
+          write(6,*) 'ifocki_tmp before tractl'
           do i=1,ntot1
-            write(6,*) work(ifocki_save-1+i)
+            write(6,*) work(ifocki_tmp-1+i)
           end do
 
           write(6,*) 'ifocka before tractl'
@@ -556,17 +524,11 @@ c**************Kinetic energy of active electrons*********
         CALL DCOPY_(nfint,[Zero],0,WORK(lpuvx_tmp),1)
 
         CALL TRACTL2(CMO,WORK(LPUVX_tmp),WORK(LTUVX_tmp),
-     &                WORK(iD1I),WORK(ifocki),
+     &                WORK(iD1I),WORK(ifocki_tmp),
      &                WORK(iD1ActAO),WORK(ifocka),
      &                IPR,lSquare,ExFac)
 
-        if (iprlev >= debug) then
-          write(6,*) 'FA tractl msctl'
-          call wrtmat(Work(ifocka),1,ntot1,1,ntot1)
-          write(6,*) 'FI tractl msctl'
-          call wrtmat(Work(ifocki),1,ntot1,1,ntot1)
-        end if
-
+        Call GetMem('FockI_Save','Free','Real',ifocki_tmp,ntot1)
         Call GetMem('ltuvx_tmp','Free','Real',ltuvx_tmp,nacpr2)
         Call GetMem('lpuvx_tmp','Free','Real',lpuvx_tmp,nfint)
 
@@ -579,18 +541,6 @@ c**************Kinetic energy of active electrons*********
           do i=1,nacpr2
             write(6,*) work(ltuvx-1+i)
           end do
-          write(6,*) 'id1act_FA after tractl'
-          do i=1,nacpar
-            write(6,*) work(id1act_FA-1+i)
-          end do
-          write(6,*) 'id1actao_FA after tractl'
-          do i=1,ntot2
-            write(6,*) work(id1actao_FA-1+i)
-          end do
-          write(6,*) 'id1act after tractl'
-          do i=1,nacpar
-            write(6,*) work(id1act-1+i)
-          end do
           write(6,*) 'id1actao after tractl'
           do i=1,ntot2
             write(6,*) work(id1actao-1+i)
@@ -599,37 +549,25 @@ c**************Kinetic energy of active electrons*********
           do i=1,ntot1
             write(6,*) work(ifocki-1+i)
           end do
-          write(lf,*) 'ifocki_save after tractl'
-          do i=1,ntot1
-            write(lf,*) work(ifocki_save-1+i)
-          end do
           write(lf,*) 'ifocka after tractl'
           do i=1,ntot1
             write(lf,*) work(ifocka-1+i)
           end do
         end  if
 
-! TODO(MRH): this fmat_m can be replaced. It doesn unnecessary
-! trasnformations and also computes somethings for ecas..
-        Call Fmat_m(CMO,Work(lPUVX),Work(iD1Act),Work(iD1ActAO),
-     &             Work(iFockI_save),Work(iFockA))
-        call  dcopy_(ntot1,work(ifocki_save),1,work(ifocki),1)
-        Call GetMem('FockI_Save','Free','Real',ifocki_save,ntot1)
-        Call GetMem('id1act_FA','Free','Real',id1act_FA,nacpar)
-        Call GetMem('id1actao_FA','Free','Real',id1actao_FA,ntot2)
+        ! Here we compute the inactive-active contribution (the so
+        ! called interaction energy (saved into VIA).
+        call mma_allocate(scr1, ntot1, "scr1")
+        call Fold(nSym, nBas, Work(iD1ActAO), scr1)
+        VIA = ddot_(ntot1, work(iFockI), 1, scr1, 1)
+        call mma_deallocate(scr1)
 
-        if(iprlev >= debug) then
-          write(6,*) 'FA after fmat 1'
-          call wrtmat(Work(ifocka),1,ntot1,1,ntot1)
-
-          write(6,*) 'FI after fmat 1'
-          call wrtmat(Work(ifocki),1,ntot1,1,ntot1)
-
-          write(lf,*) 'id1act after copy in tractl'
-          do i=1,nacpar
-            write(6,*) work(id1act-1+i)
-          end do
-        end if
+        ECAS = EMY + VIA
+        If ( iPrLev.ge.DEBUG ) then
+          Write(LF,'(A,E20.10)') ' Total core energy:            ',EMY
+          Write(LF,'(A,E20.10)') ' inactive-active interaction:  ',VIA
+          Write(LF,'(A,E20.10)') ' CAS energy (core+interaction):',ECAS
+        End If
 
 ! Compute the active-space DmatDmat (D_pqD_rs)
         IF(ISTORP(NSYM+1) > 0) THEN
@@ -674,6 +612,9 @@ c**************Kinetic energy of active electrons*********
 !fock matrix if this root corresponds to the relaxation root.
 
         if((DoGradPDFT .and. jroot == irlxroot) .or. dogradmspd) then
+          ! This converts
+          Call Fmat_m(CMO,Work(lPUVX),Work(iD1Act),
+     &               Work(ifocki),Work(iFockA))
           ! This not just does
           !   a) calculate the generalized Fock matrix and stores it in
           !      lfock
@@ -799,7 +740,6 @@ cPS         call xflush(6)
           Close(LUTMP)
           Call GetMem('F_ONE','Free','Real',iFone,NTOT1)
           Call GetMem('ttTUVX','Free','Real',ittTUVX,NACPR2)
-
 
 !____________________________________________________________
 !This next part is to generate the MC-PDFT generalized fock operator.
