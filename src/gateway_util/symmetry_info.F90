@@ -32,14 +32,13 @@ integer(kind=iwp), parameter :: Mul(8,8) = reshape([1,2,3,4,5,6,7,8, &
                                                     7,8,5,6,3,4,1,2, &
                                                     8,7,6,5,4,3,2,1],[8,8]), &
                                 Prmt(0:7,0:7) = reshape([1, 1, 1, 1, 1, 1, 1, 1, &
-                                                         1, 1,-1,-1, 1, 1,-1,-1, &
                                                          1,-1, 1,-1, 1,-1, 1,-1, &
+                                                         1, 1,-1,-1, 1, 1,-1,-1, &
                                                          1,-1,-1, 1, 1,-1,-1, 1, &
                                                          1, 1, 1, 1,-1,-1,-1,-1, &
-                                                         1, 1,-1,-1,-1,-1, 1, 1, &
                                                          1,-1, 1,-1,-1, 1,-1, 1, &
-                                                         1,-1,-1, 1,-1, 1, 1,-1],[8,8]) ! BRNCAT: table modified to give
-                                                ! standard irrep numbers, e.g., D2h -> ag b1g b2g b3g au b1u b2u b3u
+                                                         1, 1,-1,-1,-1,-1, 1, 1, &
+                                                         1,-1,-1, 1,-1, 1, 1,-1],[8,8])
 
 public :: iChBas, iChCar, iChTbl, iOper, iSkip, lBsFnc, lIrrep, Mul, nIrrep, Prmt, SymLab, Symmetry_Info_Dmp, Symmetry_Info_Free, &
           Symmetry_Info_Get, Symmetry_Info_Set, Symmetry_Info_Setup, VarR, VarT
@@ -398,7 +397,7 @@ subroutine ChTab(iOper,nIrrep,outChTbl)
                                              'xz, Ry', &
                                              'yz, Rx', &
                                              'I     ']
-  integer :: ki ! BRNCAT
+
   !                                                                    *
   !*********************************************************************
   !                                                                    *
@@ -477,40 +476,16 @@ subroutine ChTab(iOper,nIrrep,outChTbl)
       iTest(i) = iCh
     end do
 
-    !write(6,*)'BRNCAT iTest(i)',iTest(1:nIrrep)
-
     ! Compute place of Irrep
 
     if (nIrrep == 1) then
       jIrrep = 1
     else if (nIrrep == 2) then
       jIrrep = 1+(1-iTest(2))/2
-      !write(6,*)'BRNCAT jIrrep',jIrrep
-      !write(6,*)' ' !BRNCAT
     else if (nIrrep == 4) then
-      !jIrrep = 1+((1-iTest(2))+2*(1-iTest(3)))/2
-      !***************************
-      Do  ki =0,3 ! nIrrep-1
-        if (all(Prmt(ki,0:3).eq.iTest(1:4))) then
-          !write(6,*)'BRNCAT KI ->', ki+1
-          jIrrep = ki+1
-        end if
-      end do
-      !***************************
-      !write(6,*)'BRNCAT jIrrep ->',jIrrep
-      !write(6,*)' ' !BRNCAT
+      jIrrep = 1+((1-iTest(2))+2*(1-iTest(3)))/2
     else if (nIrrep == 8) then
-      !jIrrep = 1+((1-iTest(2))+2*(1-iTest(3))+4*(1-iTest(5)))/2
-      !***************************
-      Do  ki =0,7 !nIrrep-1
-        if (all(Prmt(ki,0:7).eq.iTest(1:8))) then
-          !write(6,*)'BRNCAT KI ->', ki+1
-          jIrrep = ki+1
-        end if
-      end do
-      !***************************
-      !write(6,*)'BRNCAT jIrrep =>',jIrrep
-      !write(6,*)' ' !BRNCAT
+      jIrrep = 1+((1-iTest(2))+2*(1-iTest(3))+4*(1-iTest(5)))/2
     else
       jIrrep = -1
       call WarningMessage(2,'ChTab: Illegal nIrrep value!')
@@ -660,6 +635,7 @@ subroutine ChTab(iOper,nIrrep,outChTbl)
   return
 
 end subroutine ChTab
+
 !***********************************************************************
 !***********************************************************************
 
