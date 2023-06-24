@@ -62,8 +62,7 @@ C Subroutine starts
       !WRITE(NUM2,'(I3.3)') JSTATE
       !CALL Molcas_Open(LU,'TIRESIA_r2TM')
       OPEN(LU,file='TIRESIA_r2TM',action='write',position='append')
-
-C xorb() translates from Molcas notation to Tiresia 
+C xorb() translates from Molcas notation to Tiresia
       K=1
       DO I=1,NSYM
          IZ=x2sym(I)
@@ -72,9 +71,7 @@ C xorb() translates from Molcas notation to Tiresia
         K=K+1
        END DO
       END DO
-
       SYM12=x2sym( MUL( LSYM1,LSYM2 ))
-      !SYM12= x2sym( MUL( LSYM1,LSYM2 ) )
       WRITE(LU,'(A27,8I7)')'# Total Symm of WF product:', SYM12
       WRITE(LU,'(A9,8I7,8I7)')'# States:',ISTATE, JSTATE
 C Write reduced 2-e TDM in CI basis.
