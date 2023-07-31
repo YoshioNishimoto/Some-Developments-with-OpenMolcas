@@ -6,9 +6,9 @@ At present, analytic first-order derivatives (gradient and derivative coupling v
 
 Reference:
 
-Nishimoto, Y. "Analytic Gradients for Restricted Active Space Second-order Perturbation Theory (RASPT2)" The Journal of Chemical Physics 2021, 154, 194103. DOI: 10.1063/5.0050074
-Nishimoto, Y.; Battaglia, S.; Lind, R. "Analytic First-Order Derivatives of (X)MS, XDW, and RMS Variants of the CASPT2 and RASPT2 Methods" Journal of Chemical Theory and Computation 2022, 18, 4269--4281. DOI: 10.1021/acs.jctc.2c00301
-Nishimoto, Y. "Analytic first-order derivatives of CASPT2 with IPEA shift" The Journal of Chemical Physics 2023, 158, 174112. DOI: 10.1063/5.0147611
+- Nishimoto, Y. "Analytic Gradients for Restricted Active Space Second-order Perturbation Theory (RASPT2)" The Journal of Chemical Physics 2021, 154, 194103. DOI: 10.1063/5.0050074
+- Nishimoto, Y.; Battaglia, S.; Lind, R. "Analytic First-Order Derivatives of (X)MS, XDW, and RMS Variants of the CASPT2 and RASPT2 Methods" Journal of Chemical Theory and Computation 2022, 18, 4269--4281. DOI: 10.1021/acs.jctc.2c00301
+- Nishimoto, Y. "Analytic first-order derivatives of CASPT2 with IPEA shift" The Journal of Chemical Physics 2023, 158, 174112. DOI: 10.1063/5.0147611
 
 ***
 
