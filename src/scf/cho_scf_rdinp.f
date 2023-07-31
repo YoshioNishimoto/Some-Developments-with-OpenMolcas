@@ -15,27 +15,19 @@
 *             Else, read and process input for Cholesky section in SCF
 *
 ************************************************************************
+      Use Fock_util_global, only: Deco, DensityCheck, Estimate, Update
+      Use CHoSCF
       Implicit Real*8 (A-H,O-Z)
-#include "itmax.fh"
-#include "info.fh"
 #include "real.fh"
 #include "print.fh"
-#include "WrkSpc.fh"
       Character*180 KWord, Key, Get_Ln
       External Get_Ln
       Logical  DFonly
       character*13 SECNAM
       parameter (SECNAM = 'CHO_SCF_RDINP')
-      Integer ALGO,NSCREEN
-      Logical REORD,DECO,DensityCheck,timings
-      Logical Estimate,Update
-      Real*8 dmpk,dFKmat
 *
-      Common /CHOSCF / REORD,DECO,dmpk,dFKmat,ALGO,NSCREEN
-      COMMON /CHODENSITY/ DensityCheck
-      COMMON /CHOTIME / timings
-      COMMON /CHOSCREEN/ Estimate,Update
-      COMMON /CHOPAR/ ChFracMem
+#include "chotime.fh"
+#include "chopar.fh"
 
 *
       iRout=1
@@ -79,7 +71,7 @@
          DensityCheck=.false.
          timings=.false.
          NSCREEN = 10    ! default screening interval (# of red sets)
-         dmpk = 1.0d0   ! default damping of the screening threshold
+         dmpk = 0.045d0   ! default damping of the screening threshold
          Estimate = .false.
          Update = .true.
          goto 999  !return flag
@@ -92,20 +84,13 @@
          DensityCheck=.false.
          timings=.false.
          NSCREEN = 10
-         dmpk = 1.0d0
+         dmpk = 0.045d0
          Estimate = .false.
          Update = .true.
 
-         dmpk_dfl = 1.0d0
+         dmpk_dfl = dmpk
 ************************************************************************
 *                                                                      *
-*                                                                      *
-************************************************************************
-*     Define Blank lines
-*
-      Do i = 1, 80
-         BLine(i:i) = ' '
-      End Do
       iPrint=5
 *                                                                      *
 ************************************************************************
@@ -127,7 +112,7 @@
 *-------------------------------------------------------------------*
 
       If (KWord(1:1).eq.'*')    Go To 1000
-      If (KWord.eq.BLine)       Go To 1000
+      If (KWord.eq.'')       Go To 1000
       If (KWord(1:4).eq.'ALGO') Go To 900
       If (KWord(1:4).eq.'REOR') Go To 800
       If (KWord(1:4).eq.'NODE') Go To 810
@@ -152,7 +137,6 @@
       iChrct=Len(KWord)
       Last=iCLast(KWord,iChrct)
       Write (6,'(1X,A,A)') KWord(1:Last),' is not a keyword!'
-      Call ErrTra
       Write (6,*) SECNAM, ' Error in keyword.'
       Call Quit_OnUserError()
 *                                                                      *
@@ -316,10 +300,8 @@ c      Write(6,*)
 *                                                                      *
 *-----Error handling
 *
-      Call ErrTra
       Write (6,*) SECNAM, ' Premature end of input file.'
       Call Quit_OnUserError()
-      Call ErrTra
       Write (6,*) SECNAM, ' Error while reading input file.'
       Call Quit_OnUserError()
 *

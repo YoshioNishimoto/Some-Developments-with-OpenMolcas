@@ -9,6 +9,7 @@
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
       SubRoutine Cho_SetAtomShl(irc,iAtomShl,n)
+      use ChoArr, only: iSOShl
 C
 C     Purpose: set mapping from shell to atom (i.e., center).
 C
@@ -18,29 +19,24 @@ C
 #include "cholesky.fh"
 #include "choprint.fh"
 #include "choorb.fh"
-#include "choptr.fh"
-#include "WrkSpc.fh"
+#include "stdalloc.fh"
 
-      Character*14 SecNam
-      Parameter (SecNam = 'Cho_SetAtomShl')
+      Character(LEN=14), Parameter:: SecNam = 'Cho_SetAtomShl'
 
-      Character*(LENIN8) AtomLabel(MxBas)
+      Character(LEN=LENIN8) AtomLabel(MxBas)
 
-      Parameter (Info_Debug = 4)
+      Integer, Parameter:: Info_Debug = 4
 
-      Logical Debug
-#if defined (_DEBUG_)
-      Parameter (Debug = .True.)
+#if defined (_DEBUGPRINT_)
+      Logical, Parameter:: Debug = .True.
 #else
-      Parameter (Debug = .False.)
+      Logical, Parameter:: Debug = .False.
 #endif
 
-      nBas_per_Atom(i)=iWork(ip_nBas_per_Atom-1+i)
-      nBas_Start(i)=iWork(ip_nBas_Start-1+i)
-      iSOShl(i)=iWork(ip_iSOShl-1+i)
+      Integer, Allocatable:: nBas_per_Atom(:)
+      Integer, Allocatable:: nBas_Start(:)
 
       If (Debug) Then
-         Call qEnter('_SetAtomShl')
          Write(Lupri,*) '>>> Enter ',SecNam
       End If
 
@@ -53,7 +49,6 @@ C     ------
          If (Debug) Then
             Write(Lupri,*) '>>> Exit ',SecNam,
      &      ' (error exit: symmetry not allowed!)'
-            Call qExit('_SetAtomShl')
          End If
          Return
       End If
@@ -77,13 +72,9 @@ C     Allocate and get index arrays for indexation of basis functions on
 C     each atom.
 C     ------------------------------------------------------------------
 
-      l_nBas_per_Atom = nAtom
-      l_nBas_Start    = nAtom
-      Call GetMem('nB_per_Atom','Allo','Inte',
-     &            ip_nBas_per_Atom,l_nBas_per_Atom)
-      Call GetMem('nB_Start','Allo','Inte',
-     &            ip_nBas_Start,l_nBas_Start)
-      Call BasFun_Atom(iWork(ip_nBas_per_Atom),iWork(ip_nBas_Start),
+      Call mma_allocate(nBas_per_Atom,nAtom,Label='nBas_per_Atom')
+      Call mma_allocate(nBas_Start,nAtom,Label='nBas_Start')
+      Call BasFun_Atom(nBas_per_Atom,nBas_Start,
      &                 AtomLabel,nBasT,nAtom,Debug)
 
 C     Set shell-to-atom mapping.
@@ -130,14 +121,11 @@ C     --------------------------
 C     Deallocations.
 C     --------------
 
-      Call GetMem('nB_Start','Free','Inte',
-     &            ip_nBas_Start,l_nBas_Start)
-      Call GetMem('nB_per_Atom','Free','Inte',
-     &            ip_nBas_per_Atom,l_nBas_per_Atom)
+      Call mma_deallocate(nBas_Start)
+      Call mma_deallocate(nBas_per_Atom)
 
       If (Debug) Then
          Write(Lupri,*) '>>> Exit ',SecNam
-         Call qExit('_SetAtomShl')
       End If
 
       End

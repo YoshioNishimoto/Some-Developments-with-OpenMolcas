@@ -17,26 +17,28 @@
 * SWEDEN                                     *
 *--------------------------------------------*
       SUBROUTINE DENS2T_RPT2 (CI1,CI2,SGM1,SGM2,G1,G2)
+#ifdef _MOLCAS_MPP_
+      USE Para_Info, ONLY: Is_Real_Par, King
+#endif
+      use caspt2_output, only:iPrGlb,debug
       IMPLICIT NONE
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "pt2_guga.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
 
-#include "para_info.fh"
       LOGICAL RSV_TSK
 
       REAL*8 CI1(MXCI),CI2(MXCI),SGM1(MXCI),SGM2(MXCI)
       REAL*8 G1(NLEV,NLEV),G2(NLEV,NLEV,NLEV,NLEV)
 
-      REAL*8 GTU,GTUVX,GTUXV
+      REAL*8 GTU,GTUVX !! ,GTUXV
 
       INTEGER ID
       INTEGER IST,ISU,ISV,ISX,ISTU,ISVX
-      INTEGER IT,IU,IV,IX,LT,LU,LV,LX,LTU,LVX
+      INTEGER IT,IU,IV,IX,LT,LU,LV,LX,LVX
       integer itu,ivx
 
       INTEGER ITASK,LTASK,LTASK2T,LTASK2U,NTASKS
@@ -48,7 +50,6 @@
 c Purpose: Compute the 1- and 2-electron density matrix
 c arrays G1 and G2.
 
-      CALL QENTER('DENS2_RPT2')
 
       CALL DCOPY_(NG1,[0.0D0],0,G1,1)
       CALL DCOPY_(NG2,[0.0D0],0,G2,1)
@@ -121,20 +122,20 @@ C     DO 140 LT=1,NLEV
 C       DO 130 LU=1,LT
         LU=iWork(lTask2U+iTask-1)
 C         LTU=LTU+1
-          LTU=iTask
+          ! LTU=iTask
           ISU=ISM(LU)
           IU=L2ACT(LU)
           ISTU=MUL(IST,ISU)
-          ISSG=MUL(ISTU,LSYM)
+          ISSG=MUL(ISTU,STSYM)
           NSGM=NCSF(ISSG)
 C         IF(NSGM.EQ.0) GOTO 130
           IF(NSGM.EQ.0) GOTO 500
-          CALL GETSGM2(LT,LU,LSYM,CI1,SGM1)
-C         write (*,*) "LT,LU=",lt,lu
+C         CALL GETSGM2(LT,LU,STSYM,CI1,SGM1)
+C         write(6,*) "LT,LU=",lt,lu
 C         do ix = 1, nsgm
-C         write (*,'(i3,f20.10)') ix,sgm1(ix)
+C         write(6,'(i3,f20.10)') ix,sgm1(ix)
 C         end do
-          CALL GETSGM2(LU,LT,LSYM,CI1,SGM1)
+          CALL GETSGM2(LU,LT,STSYM,CI1,SGM1)
           IF(ISTU.EQ.1) THEN
             GTU=DDOT_(NSGM,CI2,1,SGM1,1)
             G1(IT,IU)=G1(IT,IU)+GTU
@@ -165,7 +166,7 @@ C             ELSE
 C               IF(LVX.EQ.LTU) THEN
 C                 GTUXV=DDOT_(NSGM,SGM1,1,SGM1,1)
 C               ELSE
-C                 CALL GETSGM2(LX,LV,LSYM,CI,SGM2)
+C                 CALL GETSGM2(LX,LV,STSYM,CI,SGM2)
 C                 GTUXV=DDOT_(NSGM,SGM1,1,SGM2,1)
 C               END IF
 C             END IF
@@ -175,7 +176,7 @@ C             G2(IT,IU,IX,IV)=GTUXV
             END DO
           END DO
 
-          CALL GETSGM2(LU,LT,LSYM,CI2,SGM1)
+          CALL GETSGM2(LU,LT,STSYM,CI2,SGM1)
           IF(ISTU.EQ.1) THEN
             GTU=DDOT_(NSGM,CI1,1,SGM1,1)
             G1(IT,IU)=G1(IT,IU)+GTU
@@ -215,7 +216,7 @@ C     task.
       CALL GAdSUM (G1,NG1)
       CALL GAdSUM (G2,NG2)
 
-C     write (*,*) "before"
+C     write(6,*) "before"
 C     call sqprt(g2,nlev**2)
       Do LT = 1, NLEV
         IT = L2ACT(LT)
@@ -294,7 +295,6 @@ C     END DO
         WRITE(6,'("DEBUG> ",A,1X,ES21.14)') "G2:", DNRM2_(NG2,G2,1)
       ENDIF
 
-      CALL QEXIT('DENS2_RPT2')
 
       RETURN
       END

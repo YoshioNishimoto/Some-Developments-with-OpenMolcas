@@ -12,9 +12,7 @@
 !               2019, Oskar Weser                                      *
 !***********************************************************************
 module fcidump_transformations
-  use stdalloc, only : mma_allocate, mma_deallocate
-
-  use general_data, only : nActEl, nAsh, ntot, ntot1, ntot2, nBas, nSym
+  use general_data, only : nActEl, nAsh, ntot1, ntot2, nBas, nSym
   use rasscf_data, only : nAcPar, core_energy => Emy, nAc
   use index_symmetry, only : one_el_idx_flatten
   implicit none
@@ -32,7 +30,7 @@ contains
 !>  energies are read from the InpOrb.
 !>  Otherwise orbital_energies is a copy of DIAF.
 !>
-!>  @param[in] iter
+!>  @param[in] actual_iter
 !>  @param[in] DIAF
 !>  @param[out] orbital_energies
   subroutine get_orbital_E(actual_iter, DIAF, orbital_energies)
@@ -52,8 +50,8 @@ contains
       real*8, intent(inout) :: orbital_energies(:)
       real*8 :: Dummy(1)
       integer :: LuInpOrb = 10, iDummy(1), err
-      character(*), parameter ::  FnInpOrb = 'INPORB'
-      character(80) :: VecTit
+      character(len=*), parameter ::  FnInpOrb = 'INPORB'
+      character(len=80) :: VecTit
       logical :: okay
       call f_Inquire(FnInpOrb, okay)
       if (okay) then
@@ -62,7 +60,6 @@ contains
           VecTit, 0, err)
       else
         Write (6,*) 'RdCMO: Error finding MO file'
-        call QTrace()
         call Abend()
       end if
     end subroutine read_orbital_energies
@@ -77,7 +74,7 @@ contains
 !>  @details
 !>  Generate the Fock-matrix for the frozen and inactive orbitals.
 !>  in the basis of the active MOs as obtained from ::SGFCIN.
-!>  Has the sideeffect of setting ::EMY to the core energy.
+!>  Has the sideeffect of setting \p EMY to the core energy.
 !>
 !>  @param[in] CMO The MO coefficients.
 !>  @param[in] D1I_AO The inactive one-body density matrix in AO-space
@@ -88,11 +85,12 @@ contains
 !>    See ::get_D1A_rasscf.
 !>  @param[in] D1S_MO The active spin density matrix in MO-space
 !>    \f[ D^A_\alpha - D^A_\beta \f]
-!>  @param[inout] FI The inactive Fock matrix in AO-space
+!>  @param[in,out] F_In The inactive Fock matrix in AO-space
 !>    \f[\sum_{\sigma\rho} D^I_{\sigma\rho}(g_{\mu\nu\sigma\rho} - \frac{1}{2} g_{\mu\sigma\rho\nu})\f]
 !>    In output FI contains also the core energy added to
 !>    the diagonal elements.
-!>    \f[\sum_{\sigma\rho} D^I_{\sigma\rho}(g_{\mu\nu\sigma\rho} - \frac{1}{2} g_{\mu\sigma\rho\nu}) + \frac{E^{(0)}}{n_el} \delta_{\mu\nu} \f]
+!>    \f[\sum_{\sigma\rho} D^I_{\sigma\rho}(g_{\mu\nu\sigma\rho} -
+!>      \frac{1}{2} g_{\mu\sigma\rho\nu}) + \frac{E^{(0)}}{n_el} \delta_{\mu\nu} \f]
 !>  @param[out] folded_Fock The inactive Fock matrix
 !>    in the basis of the active MOs as obtained from ::SGFCIN.
   subroutine fold_Fock(CMO, D1I_AO, D1A_AO, D1S_MO, F_In, folded_Fock)

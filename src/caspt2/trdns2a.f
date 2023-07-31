@@ -19,12 +19,12 @@
 
       SUBROUTINE TRDNS2A(IVEC,JVEC,DPT2)
 
+      use caspt2_output, only:iPrGlb,verbose
       IMPLICIT REAL*8 (A-H,O-Z)
 
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "sigma.fh"
@@ -38,7 +38,6 @@ C    DPT2(p,q) = Add <IVEC| E(p,q) |JVEC>,
 C where p,q are active indices. Compare TRDNS2D.
 C The present solution gives just a reasonable approximation,
 C with correct trace.
-      CALL QENTER('TRDNS2A')
       IF ( IPRGLB.GE.VERBOSE ) THEN
       Call WarningMessage(1,'Computing approximated density.')
       WRITE(6,*)' The active/active submatrices of the density'
@@ -103,6 +102,5 @@ C with correct trace.
         IOFDPT=IOFDPT+NO**2
       END DO
 
-      CALL QEXIT('TRDNS2A')
       RETURN
       END

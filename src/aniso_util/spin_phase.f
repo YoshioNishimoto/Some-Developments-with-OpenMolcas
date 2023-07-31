@@ -20,7 +20,7 @@ C     eigenfunctions
 C
       Implicit None
 #include "stdalloc.fh"
-      Integer, parameter            :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter        :: wp=kind(0.d0)
       Integer, intent(in)           :: dim
       Complex(kind=8), intent(in)  :: mm(3,dim,dim)
       Complex(kind=8), intent(in)  :: Zinp(dim,dim)
@@ -34,7 +34,6 @@ C
       Complex(kind=8), allocatable :: tmp(:,:) !dim,dim
       Logical :: dbg
 
-      Call qEnter('s_phase')
 
       dbg=.false.
 
@@ -76,7 +75,7 @@ C
         r(1)=(1.0_wp,0.0_wp)
 
         ! kind=8, complex double precision
-        r(j)=DCMPLX( rxr(j), rxi(j))
+        r(j)=CMPLX( rxr(j), rxi(j), kind=8)
 
         Do i1=1,dim
           Zout(i1,j)=CONJG(r(j))*Zinp(i1,j)
@@ -155,7 +154,6 @@ cc    mZ(i,i)   => diagonal
       Call mma_deallocate(r)
       Call mma_deallocate(phs)
       Call mma_deallocate(tmp)
-      Call qExit('s_phase')
 
       Return
       End
@@ -177,7 +175,7 @@ C     eigenfunctions
 C
       Implicit None
 #include "stdalloc.fh"
-      Integer, parameter            :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter        :: wp=kind(0.d0)
       Integer, intent(in)           :: dim
       Complex(kind=8), intent(in)  :: mm(3,dim,dim)
       Complex(kind=8), intent(in)  :: Zinp(dim,dim)
@@ -192,7 +190,6 @@ C
       Complex(kind=8), allocatable :: tmp(:,:) !dim,dim
       Logical :: dbg
 
-      Call qEnter('s_phase')
       dbg=.false.
 
       Call mma_allocate(rxr,dim,'rxr')
@@ -234,7 +231,7 @@ C
         End If
 
         ! kind=8, complex double precision
-        r(j)=DCMPLX( rxr(j),-rxi(j))
+        r(j)=CMPLX( rxr(j),-rxi(j),kind=8)
 
         If(dbg) Then
           Write(6,'(A,i2,A,2ES24.14)') 'SPIN-PHASE:'//
@@ -317,7 +314,6 @@ cc    mZ(i,i)   => diagonal
       Call mma_deallocate(r)
       Call mma_deallocate(phs)
       Call mma_deallocate(tmp)
-      Call qExit('s_phase')
 
       Return
       End

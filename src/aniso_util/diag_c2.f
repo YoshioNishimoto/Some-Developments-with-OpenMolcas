@@ -17,7 +17,7 @@ c
 
       Implicit None
 #include "stdalloc.fh"
-      Integer, parameter          ::  wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter          ::  wp=kind(0.d0)
       Integer        :: info,i,j,n
       Complex(kind=8),intent(in)  :: matrix(n,n)
       Complex(kind=8),intent(out) :: z(n,n)
@@ -31,7 +31,6 @@ c
       Real(kind=8), external       :: dznrm2_
       Real(kind=8)                 :: RM
 
-      Call qEnter('diag_c2')
       info=0
       Call zcopy_(       N*N,[(0.0_wp,0.0_wp)],0,   Z ,1)
       Call dcopy_(         N,        [0.0_wp] ,0,   W ,1)
@@ -75,6 +74,5 @@ c
             z(i,i)=(1.0_wp,0.0_wp)
          End Do
       End If
-      Call qExit('diag_c2')
       Return
       End

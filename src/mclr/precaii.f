@@ -37,9 +37,9 @@
 *   rOut        :       Submatrix                                      *
 *                                                                      *
 ************************************************************************
+      use Arrays, only: G1t, G2t
       Implicit Real*8(a-h,o-z)
 #include "Input.fh"
-#include "WrkSpc.fh"
 #include "Pointers.fh"
       Real*8 Fock(nbaj,nbaj),FockA(nBaj,nBaj),Focki(nbaj,nbaj)
       Real*8 rout(nd*(nd+1)/2), A_J(nScr), A_K(nScr), Scr(nScr)
@@ -62,7 +62,6 @@
          Do jB=1,jA
 *
             i=itri1(ja,jb)
-C     write (*,*) "i in precaii (1) = ", i
 *
             Do kS=1,nSym
 *
@@ -78,12 +77,12 @@ C     write (*,*) "i in precaii (1) = ", i
 *
 *                    gamma(cdbb)=gamma(bbcd)
 *
-                     rDens1=sign*Work(ipg2-1+itri(itri(jCC,jDD),
+                     rDens1=sign*G2t(itri(itri(jCC,jDD),
      &                           itri(iBB,iBB)))
 *
 *                    gamma(bdcb)
 *
-                     rDens2=sign*work(ipg2-1+itri(itri(iBB,jDD),
+                     rDens2=sign*G2t(itri(itri(iBB,jDD),
      &                           itri(jCC,iBB)))
 *
 *                    (cd|ij)
@@ -92,10 +91,10 @@ C     write (*,*) "i in precaii (1) = ", i
                      cdij=A_J(icd)
                      cidj=A_K(icd)
                      !! is the coefficient opposite?
-C                    rout(i) = rout(i) + 2.0d0*(rDens2*cidj
-C    &                                 + 2.0d0* rDens1*cdij)
-                     rout(i) = rout(i) + 2.0d0*(rDens1*cdij
-     &                                 + 2.0d0* rDens2*cidj)
+                     rout(i) = rout(i) + 2.0d0*(rDens2*cidj
+     &                                 + 2.0d0* rDens1*cdij)
+C                    rout(i) = rout(i) + 2.0d0*(rDens1*cdij
+C    &                                 + 2.0d0* rDens2*cidj)
                   End Do
                End Do
             End Do
@@ -110,7 +109,7 @@ C    &                                 + 2.0d0* rDens1*cdij)
 *
 *        2*(delta(bc)-D(bc))
 *
-         rDens=sign*(-work(ipg1-1+itri(iCC,iBB)))
+         rDens=sign*(-G1t(itri(iCC,iBB)))
          If (iCC.eq.iBB) rdens=rdens+sign
          rDens=2.0D0*rDens
 *
@@ -120,7 +119,6 @@ C    &                                 + 2.0d0* rDens1*cdij)
          Do jA=1,nIsh(jS)
             Do jB=1,jA
                i=itri1(jA,jB)
-C     if (ic.eq.1) write (*,*) "i in precaii (2) = ",  i
 *
 *              (ci|bj)
 *              (bi|cj)
@@ -146,14 +144,13 @@ C     if (ic.eq.1) write (*,*) "i in precaii (2) = ",  i
 ************************************************************************
 *                                                                      *
       rFock = sign*2.0d0*Fockii + sign*2.0d0*Fockai - sign*Fockti
-      rdens=sign*2.0d0*Work(ipG1-1+itri(ibb ,ibb))
+      rdens=sign*2.0d0*G1t(itri(ibb ,ibb))
       i=0 ! dummy initialize
 *
       Do jA=1,nIsh(jS)
          Do jB=1,jA
 *
             i=itri1(ja,jb)
-C      write (*,*) "i in precaii (3) = ",  i
 *
             rout(i) = rout(i) - sign*4.0d0*( Focka(jA,jB)
      &                                      +Focki(jA,jB) )

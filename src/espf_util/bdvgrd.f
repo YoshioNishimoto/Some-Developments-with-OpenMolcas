@@ -8,31 +8,28 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
-      SubRoutine BdVGrd(Alpha,nAlpha,Beta, nBeta,Zeta,ZInv,rKappa,P,
-     &                  Final,nZeta,la,lb,A,RB,nRys,
-     &                  Array,nArr,Ccoor,nOrdOp,Grad,nGrad,
-     &                  IfGrad,IndGrd,DAO,mdc,ndc,kOp,lOper,nComp,
-     &                  iStabM,nStabM)
+      SubRoutine BdVGrd(                                                &
+#define _FIXED_FORMAT_
+#define _CALLING_
+#include "grd_interface.fh"
+     &                 )
+      use Index_Functions, only: nTri_Elem1
+      use Center_Info
       Implicit Real*8 (A-H,O-Z)
+#include "grd_interface.fh"
 #include "espf.fh"
 *
       External TNAI1, Fake, XCff2D
 #include "print.fh"
 #include "disp.fh"
-      Integer IndGrd(3,2), kOp(2), lOper(nComp), iStabM(0:nStabM-1),
-     &          iDCRT(0:7)
-      Real*8 Final(nZeta,(la+1)*(la+2)/2,(lb+1)*(lb+2)/2,6),
-     &       Zeta(nZeta), ZInv(nZeta), Alpha(nAlpha), Beta(nBeta),
-     &       rKappa(nZeta), P(nZeta,3), A(3), RB(3), CCoor(4,*),
-     &       Array(nZeta*nArr), Grad(nGrad),
-     &       DAO(nZeta,(la+1)*(la+2)/2*(lb+1)*(lb+2)/2)
-      Logical IfGrad(3,2),ESPFexist
+      Integer iDCRT(0:7)
+      Logical ESPFexist
       Character*180 Key,Get_Ln
       External Get_Ln
 *
 *-----Local arrays
 *
-      Real*8 C(3), TC(3), Coori(3,4), CoorAC(3,2), ZFd(3)
+      Real*8 C(3), TC(3), Coori(3,4), CoorAC(3,2), ZFd(3),TZFd(3)
       Logical NoLoop, JfGrad(3,4)
       Integer iAnga(4), iStb(0:7),
      &          jCoSet(8,8), JndGrd(3,4), lOp(4), iuvwx(4)
@@ -44,7 +41,6 @@
       nElem(ixyz) = (ixyz+1)*(ixyz+2)/2
 *
       iPrint = 5
-      Call qEnter('BdVGrd')
 *
 *---- Modify the density matrix with the prefactor
 *
@@ -75,7 +71,6 @@
       nip = nip + nAlpha*nBeta*nElem(la)*nElem(lb)*nElem(iOrdOp)
       If (nip-1.gt.nZeta*nArr) Then
          Write (6,*) 'nip-1.gt.nZeta*nArr'
-         Call ErrTra
          Call Abend
       End If
       nArray = nZeta*nArr - nip + 1
@@ -94,8 +89,8 @@
       Else
        call dcopy_(3,RB,1,CoorAC(1,1),1)
       End If
-      iuvwx(1) = nStab(mdc)
-      iuvwx(2) = nStab(ndc)
+      iuvwx(1) = dc(mdc)%nStab
+      iuvwx(2) = dc(ndc)%nStab
       lOp(1) = kOp(1)
       lOp(2) = kOp(2)
 *
@@ -110,8 +105,6 @@
          call dcopy_(nBeta,Beta,1,Array(ipBOff),nAlpha)
          ipBOff = ipBOff + 1
       End Do
-*
-      llOper = lOper(1)
 *
 *     Loop over centers of the grid
 *     But how to retrieve the grid ???
@@ -133,34 +126,24 @@
 *
       iDum=0
       Do iPnt = 1, nGrdPt
-         ZFd(1)=CCoor(4,iPnt)
+         ZFd(1)=CCoor((iPnt-1)*4+4)
          NoLoop = ZFd(1).eq.Zero
          If (NoLoop) Go To 111
 *------- Pick up the center coordinates
-         C(1)=CCoor(1,iPnt)
-         C(2)=CCoor(2,iPnt)
-         C(3)=CCoor(3,iPnt)
+         C(1)=CCoor((iPnt-1)*4+1)
+         C(2)=CCoor((iPnt-1)*4+2)
+         C(3)=CCoor((iPnt-1)*4+3)
 
          If (iPrint.ge.99) Call RecPrt('C',' ',C,1,3)
 *
-*------- Generate stabilizor of C
+*------- Generate stabilizer of C
 *
-         If (nIrrep.eq.8) Then
-             nOper=3
-         Else If (nIrrep.eq.4) Then
-             nOper=2
-         Else If (nIrrep.eq.2) Then
-             nOper=1
-         Else
-             nOper=0
-         End If
-         iChxyz=iChAtm(C,iOper,nOper,iChBas(2))
-         Call Stblz(iChxyz,iOper,nIrrep,nStb,iStb,iDum,jCoSet)
+         iChxyz=iChAtm(C)
+         Call Stblz(iChxyz,nStb,iStb,iDum,jCoSet)
 *
 *--------Find the DCR for M and S
 *
-         Call DCR(LmbdT,iOper,nIrrep,iStabM,nStabM,
-     &            iStb,nStb,iDCRT,nDCRT)
+         Call DCR(LmbdT,iStabM,nStabM,iStb,nStb,iDCRT,nDCRT)
          Fact = -DBLE(nStabM) / DBLE(LmbdT)
 *
          If (iPrint.ge.99) Then
@@ -209,11 +192,9 @@
          If (mGrad.eq.0) Go To 111
 *
          Do lDCRT = 0, nDCRT-1
-            lOp(3) = NrOpr(iDCRT(lDCRT),iOper,nIrrep)
+            lOp(3) = NrOpr(iDCRT(lDCRT))
             lOp(4) = lOp(3)
-            TC(1) = iPhase(1,iDCRT(lDCRT))*C(1)
-            TC(2) = iPhase(2,iDCRT(lDCRT))*C(2)
-            TC(3) = iPhase(3,iDCRT(lDCRT))*C(3)
+            Call OA(iDCRT(lDCRT),C,TC)
             call dcopy_(3,TC,1,CoorAC(1,2),1)
             call dcopy_(3,TC,1,Coori(1,3),1)
             call dcopy_(3,TC,1,Coori(1,4),1)
@@ -221,14 +202,15 @@
             If (iOrdOp.eq.0) Then
                Call DYaX(nZeta*nDAO,Fact*ZFd(1),DAO,1,Array(ipDAO),1)
             Else
+               Call OA(iDCRT(lDCRT),ZFd,TZFd)
                jpDAO = ipDAO
-               ZFdx=iPhase(1,iDCRT(lDCRT))*ZFd(1)
+               ZFdx=TZFd(1)
                Call DYaX(nZeta*nDAO,Fact*ZFdx,DAO,1,Array(jpDAO),1)
                jpDAO = jpDAO + nZeta*nDAO
-               ZFdy=iPhase(2,iDCRT(lDCRT))*ZFd(2)
+               ZFdy=TZFd(2)
                Call DYaX(nZeta*nDAO,Fact*ZFdy,DAO,1,Array(jpDAO),1)
                jpDAO = jpDAO + nZeta*nDAO
-               ZFdz=iPhase(3,iDCRT(lDCRT))*ZFd(3)
+               ZFdz=TZFd(3)
                Call DYaX(nZeta*nDAO,Fact*ZFdz,DAO,1,Array(jpDAO),1)
             End If
 *
@@ -253,12 +235,12 @@
 111      Continue
       End Do     ! End loop over centers in the grid
 *
-      Call qExit('BdVGrd')
       Return
 c Avoid unused argument warnings
       If (.False.) Then
-        Call Unused_real_array(Final)
-        Call Unused_integer(nRys)
+        Call Unused_real_array(rFinal)
+        Call Unused_integer(nHer)
         Call Unused_integer(nOrdOp)
+        Call Unused_integer(nComp)
       End If
       End

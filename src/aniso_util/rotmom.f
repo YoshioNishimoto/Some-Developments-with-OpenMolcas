@@ -11,7 +11,7 @@
       Subroutine rotmom(MOM, N, R, MOMR )
       ! inverse rotation
       Implicit None
-      Integer, Parameter :: wp=selected_real_kind(p=15,r=307)
+      Integer, parameter        :: wp=kind(0.d0)
       Integer, intent(in) :: N
       Real(kind=8), intent(in) :: R(3,3) !rotation matrix
 !     initial momentum matrix
@@ -22,7 +22,6 @@ c  local variables
       Integer :: i,j,l,k
       Complex(kind=8) :: RC(3,3)
 
-      Call qEnter('rotmom')
 c rotate the matrix
 
       Call zcopy_(3*N*N,[(0.0_wp,0.0_wp)],0,MOMR,1)
@@ -44,13 +43,12 @@ c rotate the matrix
          End Do
       End Do
 
-      Call qExit('rotmom')
       Return
       End
 c------------------------------------------------------------------------
       Subroutine rotmom2(MOM, N, R, MOMR)
       Implicit None
-      Integer, Parameter :: wp=selected_real_kind(p=15,r=307)
+      Integer, parameter        :: wp=kind(0.d0)
       Integer, intent(in) :: N
       Real(kind=8),intent(in) :: R(3,3) !rotation matrix
       Complex(kind=8),intent(in) :: MOM(3,N,N) !initial momentum matrix
@@ -60,7 +58,6 @@ c  local variables
       Integer i,j,l,k
       Complex(kind=8) :: RC(3,3)
 
-      Call qEnter('rotmom2')
 c rotate the matrix
       Call zcopy_(3*N*N,[(0.0_wp,0.0_wp)],0,MOMR,1)
 
@@ -81,7 +78,6 @@ c rotate the matrix
          End Do
       End Do
 
-      Call qExit('rotmom2')
       Return
       End
 

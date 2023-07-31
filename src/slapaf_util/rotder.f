@@ -8,17 +8,16 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
+*#define _DEBUGPRINT_
       Subroutine rotder(nmass,xmass,currxyz,ref123,trans,rotang,
-     &   rotvec,rotmat,norder,dRVdXYZ,d2RVdXYZ2,d3RVdXYZ3,d4RVdXYZ4)
+     &   rotvec,rotmat,norder,dRVdXYZ,d2RVdXYZ2)
+      use stdalloc, only: mma_allocate, mma_deallocate
       implicit none
-#include "stdalloc.fh"
       Integer nmass,norder
       real*8 xMass(nMass),CurrXYZ(3,nMass),Ref123(3,nMass)
       real*8 trans(3),RotAng,RotVec(3), RotMat(3,3)
       real*8 dRVdXYZ(3,3*nMass)
       real*8 d2RVdXYZ2(3,3*nMass,3*nMass)
-      real*8 d3RVdXYZ3(3,3*nMass,3*nMass,3*nMass)
-      real*8 d4RVdXYZ4(3,3*nMass,3*nMass,3*nMass,3*nMass)
 * Local variables:
       Integer i,imass,ip,ip1,ip2,ipk,ipk1,ipk2
       Integer iter,j,j1,j2,k,k1,k2
@@ -32,6 +31,9 @@ c     real*8 G(3,3),det,detinv
       real*8, dimension(:,:), allocatable :: Curr123,tmp
       real*8, dimension(:,:,:), allocatable :: dAdXYZ
 *
+#ifdef _DEBUGPRINT_
+      Call RecPrt('Ref123',' ',Ref123,3,nMass)
+#endif
       Call mma_allocate(Curr123,3,nMass,label='Curr123')
       Call mma_allocate(tmp,3,3*nMass,label='tmp')
       Call mma_allocate(dAdXYZ,3,3,nMass,label='dAdXYZ')
@@ -58,8 +60,14 @@ c     real*8 G(3,3),det,detinv
 * known when entering the Subroutine.
 * Given rotation vector (''BigOmega'' in formulas),
 * compute scalar rotation angle, and rotation matrix.
+#ifdef _DEBUGPRINT_
+      Call RecPrt('RotVec(00)',' ',RotVec,1,3)
+#endif
       RotAng=sqrt(RotVec(1)**2+RotVec(2)**2+RotVec(3)**2)
       Call mkRotMat(RotVec,RotMat)
+#ifdef _DEBUGPRINT_
+      Call RecPrt('RotVec(0)',' ',RotVec,1,3)
+#endif
       iter=0
   10  Continue
       iter=iter+1
@@ -83,6 +91,10 @@ c       Call Quit_OnConvError()
 * Compute the Moments-of-Inertia matrix. The asymmetrical
 * one, used for Sayvetz conditions.
       call dcopy_(3*nmass,Ref123,1,tmp,1)
+#ifdef _DEBUGPRINT_
+      Call RecPrt('Curr123',' ',Curr123,3,nMass)
+      Call RecPrt('tmp',' ',tmp,3,nMass)
+#endif
       Do imass=1,nMass
        Do i=1,3
         tmp(i,imass)=xMass(iMass)*tmp(i,imass)
@@ -96,6 +108,9 @@ c       Call Quit_OnConvError()
        end do
        MOI(i,i)=Trace-SMat(i,i)
       end do
+#ifdef _DEBUGPRINT_
+      Call RecPrt('MOI',' ',MOI,SIZE(MOI,1),SIZE(MOI,2))
+#endif
 * Invert the MOI-matrix.
 c     G(1,1)=MOI(2,2)*MOI(3,3)-MOI(2,3)*MOI(3,2)
 c     G(2,1)=MOI(3,2)*MOI(1,3)-MOI(3,3)*MOI(1,2)
@@ -127,18 +142,32 @@ c     MOIInv(3,3)=G(3,3)*DetInv
         End If
       End Do
       Call dgemm_('T','T',3,3,3,1.0d0,vmat,3,umat,3,0.0d0,MOIInv,3)
+#ifdef _DEBUGPRINT_
+      Call RecPrt('vmat',' ',vmat,SIZE(vmat,1),SIZE(vmat,2))
+      Call RecPrt('umat',' ',umat,SIZE(umat,1),SIZE(umat,2))
+      Call RecPrt('MOI',' ',MOIInv,SIZE(MOIInv,1),SIZE(MOIInv,2))
+      Call RecPrt('xMass',' ',xMass,1,nMass)
+      Call RecPrt('Ref123',' ',Ref123,3,nMass)
+      Call RecPrt('Curr123',' ',Curr123,3,nMass)
+#endif
 * Determine small rotation that zeroes the Sayvetz rotational conditions
 *      write(*,*)' Determine small rotation. First compute Sayvetz2:'
       do i=1,3
        j=1+mod(i,3)
        k=1+mod(j,3)
-       sum=0.0D0
+*      sum=0.0D0
+       Sayvetz2(i)=0.0D0
        do imass=1,nMass
-        sum=sum+xMass(imass)*(Ref123(j,imass)*Curr123(k,imass)-
-     &                       Ref123(k,imass)*Curr123(j,imass))
+        Sayvetz2(i)=Sayvetz2(i)+
+*       sum=sum+
+     &          xMass(imass)*(Ref123(j,imass)*Curr123(k,imass)-
+     &                        Ref123(k,imass)*Curr123(j,imass))
        end do
-       Sayvetz2(i)=sum
+*      Sayvetz2(i)=sum
       end do
+#ifdef _DEBUGPRINT_
+      Call RecPrt('Sayvetz2',' ',Sayvetz2,1,3)
+#endif
       RotErr=0.0D0
       do i=1,3
        sum=0.0D0
@@ -148,6 +177,9 @@ c     MOIInv(3,3)=G(3,3)*DetInv
        SmallRot(i)=+sum
        RotErr=RotErr+sum**2
       end do
+#ifdef _DEBUGPRINT_
+      Call RecPrt('SmallRot',' ',SmallRot,1,3)
+#endif
       RotErr=sqrt(RotErr)
 * Limiting step size:
       If(RotErr.gt.1.0D0) then
@@ -158,10 +190,20 @@ c     MOIInv(3,3)=G(3,3)*DetInv
       End If
 * Apply this rotation to the rotation matrix:
       Call updRotMat(SmallRot,RotMat)
+#ifdef _DEBUGPRINT_
+      Call RecPrt('RotMat(i)',' ',RotMat,3,3)
+      Call RecPrt('SmallRot',' ',SmallRot,1,3)
+#endif
       if(RotErr.gt.1.0D-12) goto 10
   11  continue
+#ifdef _DEBUGPRINT_
+      Call RecPrt('RotMat(Final)',' ',RotMat,3,3)
+#endif
 * Now RotMat is converged. Recompute RotVec, RotAng.
       Call Mat2Vec(RotMat,RotVec,RotAng)
+#ifdef _DEBUGPRINT_
+      Call RecPrt('RotVec(Recomputed)',' ',RotVec,1,3)
+#endif
 * Derivatives w.r.t A(i), of global rotation parameters RotVec
 * Note: A(i) is the dual vector of the antisymmetric part of the
 * asymmetrically defined MOI matrix, with frozen orientation.
@@ -251,11 +293,6 @@ c     MOIInv(3,3)=G(3,3)*DetInv
       Call mma_deallocate(tmp)
       Call mma_deallocate(dAdXYZ)
       return
-c Avoid unused argument warnings
-      If (.False.) Then
-         Call Unused_real_array(d3RVdXYZ3)
-         Call Unused_real_array(d4RVdXYZ4)
-      End If
       end
 *                                                                      *
 ************************************************************************
@@ -265,7 +302,7 @@ c Avoid unused argument warnings
 * Call arguments:
       integer norder
       real*8 S(3,3)
-      real*8 X(3),A(3),dXdA(3,3),d2XdA2(3,3,3),d3XdA3(3,3,3,3)
+      real*8 X(3),dXdA(3,3),d2XdA2(3,3,3),d3XdA3(3,3,3,3)
       real*8 d4XdA4(3,3,3,3,3)
 * Local variables:
       integer i,i1,i2,i3,ia,ib,ic,id,j,k,l,m,n
@@ -279,7 +316,7 @@ c Avoid unused argument warnings
       real*8 U(3,3),dUdX(3,3,3),d2UdX2(3,3,3,3),d3UdX3(3,3,3,3,3)
       real*8 d4UdX4(3,3,3,3,3,3)
       real*8 S0(3,3)
-      real*8 P(3,3),dPdX(3,3,3),d2PdX2(3,3,3,3),d3PdX3(3,3,3,3,3)
+      real*8 dPdX(3,3,3),d2PdX2(3,3,3,3),d3PdX3(3,3,3,3,3)
       real*8 d4PdX4(3,3,3,3,3,3)
       real*8 dAdX(3,3),d2AdX2(3,3,3),d3AdX3(3,3,3,3)
       real*8 d4AdX4(3,3,3,3,3)
@@ -685,11 +722,11 @@ c     real*8 T(3,3),det,detinv
 * the variables X, and its derivatives:
       do i=1,3
        do j=1,3
-        sum=0.0D0
-        do i1=1,3
-         sum=sum+S0(i,i1)*U(i1,j)
-        end do
-        P(i,j)=sum
+*       sum=0.0D0
+*       do i1=1,3
+*        sum=sum+S0(i,i1)*U(i1,j)
+*       end do
+*       P(i,j)=sum
         do k=1,3
          sum=0.0D0
          do i1=1,3
@@ -749,9 +786,9 @@ c     real*8 T(3,3),det,detinv
       end do
  301  continue
 * The vector A is the dual of the antisymmetric part of P:
-        A(1)=P(3,2)-P(2,3)
-        A(2)=P(1,3)-P(3,1)
-        A(3)=P(2,1)-P(1,2)
+*       A(1)=P(3,2)-P(2,3)
+*       A(2)=P(1,3)-P(3,1)
+*       A(3)=P(2,1)-P(1,2)
         do i=1,3
          dAdX(1,i)=dPdX(3,2,i)-dPdX(2,3,i)
          dAdX(2,i)=dPdX(1,3,i)-dPdX(3,1,i)

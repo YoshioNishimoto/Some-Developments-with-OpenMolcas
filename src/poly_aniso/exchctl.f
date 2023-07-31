@@ -24,7 +24,7 @@
 !     diagonalization of total hamiltonian and computation of matrix elements
 !     of magnetic and spin moment
       Implicit None
-      Integer, parameter            :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter        :: wp=kind(0.d0)
 #include "stdalloc.fh"
       ! global variables:
       Integer, intent(in)           :: nneq
@@ -42,7 +42,7 @@
       Integer, intent(in)           :: mem ! memory allocated so far
       Integer, intent(in)           :: MxRank1, MxRank2
       Integer, intent(in)           :: imaxrank(npair,2)
-      Character(1), intent(in)      :: itype(nneq)
+      Character(Len=1), intent(in)  :: itype(nneq)
 
       Real(kind=8), intent(in)     :: eso(nneq,nmax)
       Real(kind=8), intent(in)     :: Jex(npair)
@@ -156,7 +156,6 @@ c      Real(kind=8) ::  J1Ex(npair,3,3)
       Real(kind=8)    :: dnrm2_
       External         :: norder, dnrm2_  !,ilaenv
 
-      Call qEnter('PA_exchctl')
       DBG=.false.
 cccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       If(DBG) Then
@@ -437,17 +436,19 @@ cccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
         ! to the local pseudospin basis
         If(itype(i1)=='A') Then
          Call prep_mom_exchange( n1, rot(i1,j1,1:3,1:3),
-     &                            SM(i1,1:3,1:n1,1:n1),
-     &                            MM(i1,1:3,1:n1,1:n1), mg1, .true. )
+     &                           SM(i1,1:3,1:n1,1:n1),
+     &                           MM(i1,1:3,1:n1,1:n1), mg1, .true. )
         End If
         If(itype(i2)=='A') Then
          Call prep_mom_exchange( n2, rot(i2,j2,1:3,1:3),
-     &                            SM(i2,1:3,1:n2,1:n2),
-     &                            MM(i2,1:3,1:n2,1:n2), mg2, .true. )
+     &                           SM(i2,1:3,1:n2,1:n2),
+     &                           MM(i2,1:3,1:n2,1:n2), mg2, .true. )
         End If
 
-        If(dbg) Call prMom('SM(i1) bf Lines1',SM(i1,1:3,1:n1,1:n1),n1)
-        If(dbg) Call prMom('SM(i2) bf Lines1',SM(i2,1:3,1:n2,1:n2),n2)
+        !If(dbg)
+        Call prMom('SM(i1) bf Lines1',SM(i1,1:3,1:n1,1:n1),n1)
+        !If(dbg)
+        Call prMom('SM(i2) bf Lines1',SM(i2,1:3,1:n2,1:n2),n2)
 
         ! build the Lines exchange matrix:
         Call Lines_Exchange( Jex(lp), n1, n2,
@@ -1077,7 +1078,10 @@ cccc----------------------------------------------------------------------------
      &                MMR(1:nneq,1:3,1:nmaxR,1:nmaxR),
      &                SMR(1:nneq,1:3,1:nmaxR,1:nmaxR) )
 
-          Call barrier(exchR,MR(1:3,1:exchR,1:exchR),WR(1:exchR),1,2)
+          Call WarningMessage(2,'Wrong code in poly_aniso/exchctl.f')
+          ! FIXME: This call is missing 3 arguments
+          !Call barrier(exchR,MR(1:3,1:exchR,1:exchR),WR(1:exchR),1,2)
+          Call Abend()
         End If !KEOPT
 
         End If ! npair>0, index lp
@@ -1393,7 +1397,6 @@ c        End If
 c        End Do
 c      End Do
 c 199  Continue
-      Call qExit('PA_exchctl')
       Return
       End
 
@@ -1402,7 +1405,7 @@ c 199  Continue
       Subroutine prep_mom_exchange( n, R, S, M, mg, dbg)
 
       Implicit None
-      Integer, parameter            :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter        :: wp=kind(0.d0)
 #include "stdalloc.fh"
       Integer, intent(in)             :: n
       Real(kind=8), intent(in)       :: R(3,3)
@@ -1415,7 +1418,6 @@ c 199  Continue
 !      Real(kind=8)                   :: g(3)
 !      Complex(kind=8), allocatable   :: Z(:,:)
 
-      Call qEnter('PA_prep_mom_exch')
 !-----------------------------------------------------------------------
       Call mma_allocate(Mt,3,n,n,'Mt')
       Call mma_allocate(St,3,n,n,'St')
@@ -1486,7 +1488,6 @@ c 199  Continue
       Call mma_deallocate(St)
 !      Call mma_deallocate(Z)
 
-      Call qExit('PA_prep_mom_exch')
 
 !-----------------------------------------------------------------------
 ! old preparation of the data for Lines exchange

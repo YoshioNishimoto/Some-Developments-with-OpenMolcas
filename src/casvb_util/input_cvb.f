@@ -8,18 +8,18 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine input_cvb()
       implicit real*8 (a-h,o-z)
-#include "ext_cvb.fh"
 #include "main_cvb.fh"
 
 #include "optze_cvb.fh"
 #include "files_cvb.fh"
 #include "print_cvb.fh"
 
-#include "malloc_cvb.fh"
+#include "WrkSpc.fh"
 
       ibase = mstacki_cvb(0)
 
@@ -38,8 +38,9 @@
       irdorbs = mstackiz_cvb(mxorb)
 
       call input2_cvb(
-     >  iw(iorbrel),mxdimrel,iw(ifxorb),
-     >  iw(iorts),iw(irots),iw(izeta),w(iorbs),iw(irdorbs))
+     >  iwork(iorbrel),mxdimrel,iwork(ifxorb),
+     >  iwork(iorts),iwork(irots),iwork(izeta),work(iorbs),
+     >  iwork(irdorbs))
       call mfreei_cvb(ibase)
       return
       end

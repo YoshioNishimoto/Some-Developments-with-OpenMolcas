@@ -26,7 +26,7 @@
 
      &                          Title, itype, namefile_aniso,
 
-     &                          Do_structure_abc,
+     &                          Do_structure_abc, old_aniso_format,
      &                          compute_barrier, fitCHI, fitM, hinput,
      &                          tinput, compute_magnetization,
      &                          compute_Mdir_vector, zeeman_energy,
@@ -38,7 +38,7 @@
      &                          JITO_exchange )
 
       Implicit None
-      Integer, parameter        :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter        :: wp=kind(0.d0)
 #include "mgrid.fh"
 
       Integer, intent(in)       :: iPrint
@@ -48,14 +48,14 @@
       Integer, intent(in)       :: neq(nneq), neqv
 !     number of equivalent sites of each type, neqv = MAXVAL(neq(:))
       Integer, intent(in)       :: nexch(nneq), nmax
-      Character(1), intent(in)  :: itype(nneq)
+      Character(len=1), intent(in)  :: itype(nneq)
       Integer, intent(in)       :: nCenter
       Integer, intent(in)       :: nLoc
       Real(kind=8), intent(in) :: R_LG( nneq,neqv,3,3)
       Real(kind=8), intent(in) :: gtens_input(3,nneq)
       Real(kind=8), intent(in) :: eso(nneq,nLoc)
       Integer, intent(in)       :: nss(nneq), nsfs(nneq)
-      Character(180), intent(in) :: namefile_aniso(nneq)
+      Character(len=180), intent(in) :: namefile_aniso(nneq)
 c  definition of the exchange:
 !     total number of exchange states
       Integer, intent(in)       :: exch
@@ -68,6 +68,7 @@ c  definition of the exchange:
       Integer, intent(in)       :: MxRank1, MxRank2
       Logical, intent(in)       :: Lines, AnisoLines3, AnisoLines9
       Logical, intent(in)       :: Dipol, DM_exchange, JITO_exchange
+      Logical, intent(in)       :: old_aniso_format
 !     Lines exchange    ( 1 parameter / interacting pair)
       Real(kind=8), intent(in) :: Jex(nPair)
 !     Anisotropic Lines ( 3 parameter / interacting pair)
@@ -145,11 +146,11 @@ c  options for automatic fitting of parameters:
       Logical, intent(in)       :: fitM !-- not used so far
 
       Logical, intent(in)       :: check_title
-      Character(180),intent(in) :: Title
+      Character(len=180),intent(in) :: Title
 
 
 ! local variables
-      Character(180) fmtline
+      Character(len=180) fmtline
       Logical  :: nosym
       Logical  :: ab_initio_all
       Logical  :: DBG
@@ -158,7 +159,6 @@ c  options for automatic fitting of parameters:
       Integer  :: icount_B_sites
 
 
-      Call qEnter('PA_input_process')
       DBG=.false.
 c-----------------------------------------------------------------------
 c print the data from this Subroutine:
@@ -243,6 +243,12 @@ c     INFORMATION about individual magnetic sites
          Write(6,'(17x,A,99F10.5)') 'gY = ',(gtens_input(2,i),i=1,nneq)
          Write(6,'(17x,A,99F10.5)') 'gZ = ',(gtens_input(3,i),i=1,nneq)
       End If
+
+      IF(old_aniso_format) THEN
+         Write(6,'(A,A)') 'OLDA :         = ',' Input data files are'//
+     &                     ' given in OLD format'
+      END IF
+
 ! ======================================================================
 c     INFORMATION about exchange
 ! ======================================================================
@@ -617,7 +623,6 @@ c    ...
      &                     'is yet in the development'
       End If
 ! ======================================================================
-      Call qExit('PA_input_process')
 
       Return
       End subroutine input_process

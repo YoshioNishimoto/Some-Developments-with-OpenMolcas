@@ -23,7 +23,6 @@
 #include "rasdim.fh"
 #include "general.fh"
 #include "output_ras.fh"
-      Parameter (ROUTINE='PRIMO   ')
 #include "rasscf.fh"
 #include "WrkSpc.fh"
 
@@ -62,7 +61,7 @@
       Call CollapseOutput(1,'   Molecular orbitals:')
       Write(LF,'(6X,A)') '-------------------'
       Write(LF,*)
-      Write(LF,Fmt2//'A)') VecTit(:mylen(VecTit))
+      Write(LF,Fmt2//'A)') trim(VecTit)
       Write(LF,*)
 
 * Flag ipt2 in common in src/Include/rasscf.fh

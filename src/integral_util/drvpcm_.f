@@ -12,7 +12,11 @@
      &                   Z_Nuc,Cord,MaxAto,Tessera,DMat,VTessera,
      &                   VSave,QTessera,QTessera_Slow,VSlow,nTs,Eps,
      &                   EpsInf)
+      use Basis_Info, only: nBas
       use PCM_arrays
+      use Symmetry_Info, only: nIrrep, iChBas
+      use Gateway_global, only: PrPrt
+      use Integral_Interfaces, only: OneEl_Integrals
       Implicit Real*8 (A-H,O-Z)
       External PCMInt, NaMem
       Real*8 h1(nh1), TwoHam(nh1), D(nh1), Z_Nuc(MaxAto),
@@ -20,8 +24,6 @@
      &       VTessera(2,nTs), VSave(2,Nts), QTessera(2,nTs),
      &       QTessera_Slow(nTs),VSlow(nTs), Origin(3)
 #include "SysDef.fh"
-#include "itmax.fh"
-#include "info.fh"
 #include "print.fh"
 #include "real.fh"
 #include "stdalloc.fh"
@@ -30,10 +32,7 @@
       Logical First
       Character*8 Label
       Logical Save_tmp, NonEq
-      Real*8 RepNuc_Save
-      Common /RF/RepNuc_Save
       Dimension ip(1)
-#include "oneel_interface.fh"
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -73,7 +72,7 @@
           ZI=Tessera(3,iTile)
           Do jTile = 1, nTs
             If (jTile.eq.iTile) Then
-              Dij = 1.0694D0 * Two*Sqrt(Pi/Tessera(4,iTile))
+              Dij = DiagScale * Two*Sqrt(Pi/Tessera(4,iTile))
             Else
               XJ=Tessera(1,jTile)
               YJ=Tessera(2,jTile)
@@ -126,7 +125,7 @@
 *---- Evaluate the charges on the cavity boundary, nuclear and
 *     electronic.
 *
-      Call PCM_Driver(iPrint,DMat,VTessera,QTessera,nTs)
+      Call PCM_Driver(DMat,VTessera,QTessera,nTs)
 *
 *---- Make the slow charges (also called orientational charges or
 *     frozen charges). This is always done regardless if they ever
@@ -148,7 +147,7 @@
          ZI=Tessera(3,iTile)
          Do jTile = 1, nTs
            If (jTile.eq.iTile) Then
-             Dij = 1.0694D0 * Two*Sqrt(Pi/Tessera(4,iTile))
+             Dij = DiagScale * Two*Sqrt(Pi/Tessera(4,iTile))
            Else
              XJ=Tessera(1,jTile)
              YJ=Tessera(2,jTile)
@@ -222,7 +221,6 @@
      &            + Half * W_or_InfNuc
      &            - Half * W_0_or_el
      &            - Half * W_0_or_Inf
-         RepNuc_Save=RepNuc
          Label='PotNuc00'
          Call Put_Temp(Label,[RepNuc],1)
       End If

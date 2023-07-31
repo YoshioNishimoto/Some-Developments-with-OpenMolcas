@@ -13,8 +13,7 @@
 *               1992, Piotr Borowski                                   *
 *               2003, Valera Veryazov                                  *
 ************************************************************************
-      SubRoutine EneClc(En1V,En2V,EnerV,Dens,OneHam,TwoHam,mBT,mDens,nD,
-     &                  EDFT,nEDFT)
+      SubRoutine EneClc(En1V,En2V,EnerV)
 ************************************************************************
 *                                                                      *
 * Purpose: Compute one- and two-electron energies                      *
@@ -34,50 +33,50 @@
 *                                                                      *
 ************************************************************************
 #ifdef _FDE_
-      Use SCF_Arrays, Only: Emb
+      use Embedding_Global, only: Eemb, embInt, embPot
 #endif
-      Implicit Real*8 (a-h,o-z)
+      use OFembed, only: Do_OFemb
+      use OFembed, only: Rep_EN
+      use Constants, only: Half
+      use InfSCF, only: ipsLst, iUHF, Iter, nSym, KSDFT, PotNuc, ELst,
+     &                  nBT, nOcc, TimFld
+      use SCF_Arrays, only: OneHam, TwoHam, Dens, EDFT
+      Implicit None
 *
 * Declaration of procedure parameters
 *
-      REAL*8 En1V,En2V,EnerV
-      Real*8 Dens(mBT,nD,mDens), OneHam(mBT), TwoHam(mBT,nD,mDens),
-     &       EDFT(nEDFT)
-#include "real.fh"
+      Real*8 En1V,En2V,EnerV
 
-#include "mxdm.fh"
-#include "infscf.fh"
+      Real*8 :: En1V_AB, En2V_AB, E_DFT, CPU1, CPU2, Tim1, Tim2, Tim3
+      Integer nElec, iSym
+      Real*8, External :: DDot_
 #ifdef _FDE_
-#include "embpotdata.fh"
+      Integer nD
 #endif
-      Logical Do_OFemb,KEonly,OFE_first
-      COMMON  / OFembed_L / Do_OFemb,KEonly,OFE_first
-      COMMON  / OFembed_R / Rep_EN,Func_AB,Func_A,Func_B,Energy_NAD,
-     &                      V_Nuc_AB,V_Nuc_BA,V_emb
+
 *----------------------------------------------------------------------*
 * Start                                                                *
 *----------------------------------------------------------------------*
       Call Timing(Cpu1,Tim1,Tim2,Tim3)
-*define _DEBUG_
+*define _DEBUGPRINT_
 *
 * Allocate memory for full Dens and TwoHam
 *
 c set to Zero for RHF
       En1V_ab=0.0D0
       En2V_ab=0.0D0
-
-      iter_d=iter-iter0
 *
       En1V  = DDot_(nBT,OneHam,1,Dens(1,1,iPsLst),1)
       If(iUHF.eq.1) Then
          En1V_ab  = DDot_(nBT,OneHam,1,Dens(1,2,iPsLst),1)
       End If
 *
-      E_DFT = EDFT(iter_d)
+      E_DFT = EDFT(iter)
 *
 #ifdef _FDE_
+      nD = iUHF + 1
       ! Embedding
-      if (embPot) Eemb = DDot_(nBT*nD,Emb,1,Dens(1,1,iPsLst),1)
+      if (embPot) Eemb = DDot_(nBT*nD,embInt,1,Dens(1,1,iPsLst),1)
 #endif
 *
 *     If just one electron make sure that the two-electron energy
@@ -126,7 +125,7 @@ c set to Zero for RHF
 #ifdef __SUNPRO_F90
       If (iUHF.gt.3) Write (6,*) 'eneclc: Ene=',En1V,En1V_ab,En2V,EnerV
 #endif
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       Write (6,*) 'eneclc: Ene=',En1V,En1V_ab,En2V,EnerV
 #endif
       Call Timing(Cpu2,Tim1,Tim2,Tim3)

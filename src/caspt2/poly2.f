@@ -17,13 +17,15 @@
 * SWEDEN                                     *
 *--------------------------------------------*
       SUBROUTINE POLY2(CI)
+#ifdef _ENABLE_CHEMPS2_DMRG_
+      use caspt2_output, only:iPrGlb,debug
+#endif
       IMPLICIT NONE
 * PER-AAKE MALMQUIST, 92-12-07
 * THIS PROGRAM CALCULATES 1-EL AND 2-EL
 * DENSITY MATRICES FOR A CASSCF WAVE FUNCTION.
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "pt2_guga.fh"
 #include "SysDef.fh"
@@ -33,13 +35,11 @@
       INTEGER LSGM1,LSGM2,LG1TMP,LG2TMP
 
       INTEGER I
-      REAL*8, EXTERNAL :: DDOT_,DNRM2_
-
 
 #ifdef _ENABLE_CHEMPS2_DMRG_
+      REAL*8, EXTERNAL :: DNRM2_
       INTEGER NAC4
 #endif
-      CALL QENTER('POLY2')
 
       IF(NLEV.GT.0) THEN
 * NN.15 in case of DMRG-CASPT2, CI=1 and MXCI=1
@@ -65,7 +65,7 @@
         ELSE
           NAC4 = NLEV * NLEV * NLEV * NLEV
           CALL chemps2_load2pdm( NASHT, WORK( LG2TMP ), MSTATE(JSTATE) )
-          CALL TWO2ONERDM_BIS(NASHT,NACTEL,WORK(LG2TMP),WORK(LG1TMP))
+          CALL TWO2ONERDM(NASHT,NACTEL,WORK(LG2TMP),WORK(LG1TMP))
           IF(iPrGlb.GE.DEBUG) THEN
             WRITE(6,'("DEBUG> ",A)')
      &        "CHEMPS2: norms of the density matrices:"
@@ -99,7 +99,6 @@
         CALL GETMEM('LG2TMP','FREE','REAL',LG2TMP,NG2)
       END IF
 
-      CALL QEXIT('POLY2')
 
       RETURN
       END

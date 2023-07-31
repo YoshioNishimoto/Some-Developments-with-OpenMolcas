@@ -8,7 +8,8 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
 c  **************************************************************
 c  ** Transformation between VB structures and VB determinants **
@@ -40,7 +41,6 @@ c  *                                                                   *
 c **********************************************************************
       subroutine str2vbc_cvb(cvb,cvbdet)
       implicit real*8 (a-h,o-z)
-#include "ext_cvb.fh"
 #include "main_cvb.fh"
 #include "optze_cvb.fh"
 #include "files_cvb.fh"
@@ -48,12 +48,12 @@ c **********************************************************************
 
 
 #include "frag_cvb.fh"
-#include "malloc_cvb.fh"
+#include "WrkSpc.fh"
       dimension cvb(nvb),cvbdet(ndetvb)
 
       kab=2
 
-      kbs=nint(w(lb(kab)))
+      kbs=nint(work(lb(kab)))
       if(kbs.ne.kbasiscvb)then
         call mkbiks_cvb()
         kbs=kbasiscvb
@@ -66,16 +66,16 @@ c **********************************************************************
       ndetvbs_add=lb(6)
       do 200 ifrag=1,nfrag
       iwrk=mstackr_cvb(max(ndetvb_fr(ifrag),nvb_fr(ifrag)))
-      call str2vb2_cvb(w(lb(kab)+1),iw(lb(3)),cvb(ioffs_cvb),
+      call str2vb2_cvb(work(lb(kab)+1),iwork(lb(3)),cvb(ioffs_cvb),
      >  cvbdet(ioffs_cvbdet),2,
-     >  iw(idetvb_add),
+     >  iwork(idetvb_add),
      >  i2s_fr(1,ifrag),nS_fr(ifrag),nalf_fr(1,ifrag),nMs_fr(ifrag),
-     >  iw(ifnss_add),iw(ndetvbs_add),
+     >  iwork(ifnss_add),iwork(ndetvbs_add),
      >  absym(1),
      >  mnion_fr(ifrag),mxion_fr(ifrag),nconf_fr(ifrag),
      >  ndetvb_fr(ifrag),nvb_fr(ifrag),kbs,
      >  nel_fr(ifrag),nalf_fr(1,ifrag),nel,
-     >  w(iwrk),nconfion_fr(0,ifrag))
+     >  work(iwrk),nconfion_fr(0,ifrag))
       call mfreer_cvb(iwrk)
       idetvb_add=idetvb_add+ndetvb_fr(ifrag)
       ioffs_cvb=ioffs_cvb+nvb_fr(ifrag)
@@ -87,7 +87,6 @@ c **********************************************************************
 c
       subroutine vb2strg_cvb(cvbdet,cvb)
       implicit real*8 (a-h,o-z)
-#include "ext_cvb.fh"
 #include "main_cvb.fh"
 #include "optze_cvb.fh"
 #include "files_cvb.fh"
@@ -95,10 +94,10 @@ c
 
 
 #include "frag_cvb.fh"
-#include "malloc_cvb.fh"
+#include "WrkSpc.fh"
       dimension cvb(nvb),cvbdet(ndetvb)
       kab=2
-      kbs=nint(w(lb(kab)))
+      kbs=nint(work(lb(kab)))
       if(kbs.ne.kbasiscvb)then
         call mkbiks_cvb()
         kbs=kbasiscvb
@@ -111,16 +110,16 @@ c
       ndetvbs_add=lb(6)
       do 400 ifrag=1,nfrag
       iwrk=mstackr_cvb(max(ndetvb_fr(ifrag),nvb_fr(ifrag)))
-      call str2vb2_cvb(w(lb(kab)+1),iw(lb(3)),cvb(ioffs_cvb),
+      call str2vb2_cvb(work(lb(kab)+1),iwork(lb(3)),cvb(ioffs_cvb),
      >  cvbdet(ioffs_cvbdet),1,
-     >  iw(idetvb_add),
+     >  iwork(idetvb_add),
      >  i2s_fr(1,ifrag),nS_fr(ifrag),nalf_fr(1,ifrag),nMs_fr(ifrag),
-     >  iw(ifnss_add),iw(ndetvbs_add),
+     >  iwork(ifnss_add),iwork(ndetvbs_add),
      >  absym(1),
      >  mnion_fr(ifrag),mxion_fr(ifrag),nconf_fr(ifrag),
      >  ndetvb_fr(ifrag),nvb_fr(ifrag),kbs,
      >  nel_fr(ifrag),nalf_fr(1,ifrag),nel,
-     >  w(iwrk),nconfion_fr(0,ifrag))
+     >  work(iwrk),nconfion_fr(0,ifrag))
       call mfreer_cvb(iwrk)
       idetvb_add=idetvb_add+ndetvb_fr(ifrag)
       ioffs_cvb=ioffs_cvb+nvb_fr(ifrag)
@@ -132,7 +131,6 @@ c
 
       subroutine vb2strc_cvb(cvbdet,cvb)
       implicit real*8 (a-h,o-z)
-#include "ext_cvb.fh"
 #include "main_cvb.fh"
 #include "optze_cvb.fh"
 #include "files_cvb.fh"
@@ -140,12 +138,12 @@ c
 
 
 #include "frag_cvb.fh"
-#include "malloc_cvb.fh"
+#include "WrkSpc.fh"
       dimension cvb(nvb),cvbdet(ndetvb)
 
       kab=1
 
-      kbs=nint(w(lb(kab)))
+      kbs=nint(work(lb(kab)))
       if(kbs.ne.kbasiscvb)then
         call mkbiks_cvb()
         kbs=kbasiscvb
@@ -158,16 +156,16 @@ c
       ndetvbs_add=lb(6)
       do 400 ifrag=1,nfrag
       iwrk=mstackr_cvb(max(ndetvb_fr(ifrag),nvb_fr(ifrag)))
-      call str2vb2_cvb(w(lb(kab)+1),iw(lb(3)),cvb(ioffs_cvb),
+      call str2vb2_cvb(work(lb(kab)+1),iwork(lb(3)),cvb(ioffs_cvb),
      >  cvbdet(ioffs_cvbdet),1,
-     >  iw(idetvb_add),
+     >  iwork(idetvb_add),
      >  i2s_fr(1,ifrag),nS_fr(ifrag),nalf_fr(1,ifrag),nMs_fr(ifrag),
-     >  iw(ifnss_add),iw(ndetvbs_add),
+     >  iwork(ifnss_add),iwork(ndetvbs_add),
      >  absym(1),
      >  mnion_fr(ifrag),mxion_fr(ifrag),nconf_fr(ifrag),
      >  ndetvb_fr(ifrag),nvb_fr(ifrag),kbs,
      >  nel_fr(ifrag),nalf_fr(1,ifrag),nel,
-     >  w(iwrk),nconfion_fr(0,ifrag))
+     >  work(iwrk),nconfion_fr(0,ifrag))
       call mfreer_cvb(iwrk)
       idetvb_add=idetvb_add+ndetvb_fr(ifrag)
       ioffs_cvb=ioffs_cvb+nvb_fr(ifrag)
@@ -178,7 +176,6 @@ c
 
       subroutine str2vbg_cvb(cvb,cvbdet)
       implicit real*8 (a-h,o-z)
-#include "ext_cvb.fh"
 #include "main_cvb.fh"
 #include "optze_cvb.fh"
 #include "files_cvb.fh"
@@ -186,12 +183,12 @@ c
 
 
 #include "frag_cvb.fh"
-#include "malloc_cvb.fh"
+#include "WrkSpc.fh"
       dimension cvb(nvb),cvbdet(ndetvb)
 
       kab=1
 
-      kbs=nint(w(lb(kab)))
+      kbs=nint(work(lb(kab)))
       if(kbs.ne.kbasiscvb)then
         call mkbiks_cvb()
         kbs=kbasiscvb
@@ -204,16 +201,16 @@ c
       ndetvbs_add=lb(6)
       do 200 ifrag=1,nfrag
       iwrk=mstackr_cvb(max(ndetvb_fr(ifrag),nvb_fr(ifrag)))
-      call str2vb2_cvb(w(lb(kab)+1),iw(lb(3)),cvb(ioffs_cvb),
+      call str2vb2_cvb(work(lb(kab)+1),iwork(lb(3)),cvb(ioffs_cvb),
      >  cvbdet(ioffs_cvbdet),2,
-     >  iw(idetvb_add),
+     >  iwork(idetvb_add),
      >  i2s_fr(1,ifrag),nS_fr(ifrag),nalf_fr(1,ifrag),nMs_fr(ifrag),
-     >  iw(ifnss_add),iw(ndetvbs_add),
+     >  iwork(ifnss_add),iwork(ndetvbs_add),
      >  absym(1),
      >  mnion_fr(ifrag),mxion_fr(ifrag),nconf_fr(ifrag),
      >  ndetvb_fr(ifrag),nvb_fr(ifrag),kbs,
      >  nel_fr(ifrag),nalf_fr(1,ifrag),nel,
-     >  w(iwrk),nconfion_fr(0,ifrag))
+     >  work(iwrk),nconfion_fr(0,ifrag))
       call mfreer_cvb(iwrk)
       idetvb_add=idetvb_add+ndetvb_fr(ifrag)
       ioffs_cvb=ioffs_cvb+nvb_fr(ifrag)
@@ -225,7 +222,6 @@ c
 
       subroutine str2vbf_cvb(cvb,cvbdet)
       implicit real*8 (a-h,o-z)
-#include "ext_cvb.fh"
 #include "main_cvb.fh"
 #include "optze_cvb.fh"
 #include "files_cvb.fh"
@@ -233,12 +229,12 @@ c
 
 
 #include "frag_cvb.fh"
-#include "malloc_cvb.fh"
+#include "WrkSpc.fh"
       dimension cvb(nvb),cvbdet(ndetvb)
 
       kab=2
 
-      kbs=nint(w(lb(kab)))
+      kbs=nint(work(lb(kab)))
       if(kbs.ne.kbasiscvb)then
         call mkbiks_cvb()
         kbs=kbasiscvb
@@ -251,16 +247,16 @@ c
       ndetvbs_add=lb(6)
       do 200 ifrag=1,nfrag
       iwrk=mstackr_cvb(max(ndetvb_fr(ifrag),nvb_fr(ifrag)))
-      call str2vb2_cvb(w(lb(kab)+1),iw(lb(3)),cvb(ioffs_cvb),
+      call str2vb2_cvb(work(lb(kab)+1),iwork(lb(3)),cvb(ioffs_cvb),
      >  cvbdet(ioffs_cvbdet),2,
-     >  iw(idetvb_add),
+     >  iwork(idetvb_add),
      >  i2s_fr(1,ifrag),nS_fr(ifrag),nalf_fr(1,ifrag),nMs_fr(ifrag),
-     >  iw(ifnss_add),iw(ndetvbs_add),
+     >  iwork(ifnss_add),iwork(ndetvbs_add),
      >  absym(1),
      >  mnion_fr(ifrag),mxion_fr(ifrag),nconf_fr(ifrag),
      >  ndetvb_fr(ifrag),nvb_fr(ifrag),kbs,
      >  nel_fr(ifrag),nalf_fr(1,ifrag),nel,
-     >  w(iwrk),nconfion_fr(0,ifrag))
+     >  work(iwrk),nconfion_fr(0,ifrag))
       call mfreer_cvb(iwrk)
       idetvb_add=idetvb_add+ndetvb_fr(ifrag)
       ioffs_cvb=ioffs_cvb+nvb_fr(ifrag)

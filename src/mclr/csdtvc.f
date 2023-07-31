@@ -27,8 +27,6 @@
 
       ZERO = 0.0D0
       ONE = 1.0D0
-      MULTS = MULTSP
-      MS2 = MS2P
       IOFFCS = 0 ! dummy initialize
       IOFFDT = 0 ! dummy initialize
       IOFFCD = 0 ! dummy initialize
@@ -36,7 +34,6 @@
 
       NDET = NDTASM(IREFSM)
       NCSF = NCSASM(IREFSM)
-C     write (*,*) "ndet,ncsf=" , ndet,ncsf
 *
       IF(IWAY .EQ. 1 ) THEN
 *
@@ -46,15 +43,11 @@ C     write (*,*) "ndet,ncsf=" , ndet,ncsf
 *
         CALL SETVEC(DETVEC,ZERO ,NDET)
 *. Multiply with  expansion matrix
-C        write (*,*) "ntyp = ", ntyp
         DO 100 ITYP = 1,NTYP
           call xflush(6)
           IDET = NDPCNT(ITYP)
           ICSF = NCPCNT(ITYP)
           ICNF = NCNATS(ITYP,IREFSM)
-C         write (*,*) "ityp = ", ityp
-C         write (*,*) "idet,icsf,icnf"
-C         write (*,*) idet,icsf,icnf
           IF(ITYP .EQ. 1 ) THEN
             IOFFCS = 1
             IOFFDT = 1
@@ -64,15 +57,11 @@ C         write (*,*) idet,icsf,icnf
             IOFFDT = IOFFDT+NCNATS(ITYP-1,IREFSM)*NDPCNT(ITYP-1)
             IOFFCD = IOFFCD + NDPCNT(ITYP-1)*NCPCNT(ITYP-1)
           END IF
-C         write (*,*) ioffcs,ioffdt,ioffcd
           IF( IDET*ICNF*ICSF .GT. 0 ) THEN
           CALL  DGEMM_('N','N',IDET,ICNF,ICSF,ONE ,
      &                DTOCMT(IOFFCD),IDET,
      &                CSFVEC(IOFFCS),ICSF,ZERO,
      &                DETVEC(IOFFDT),IDET)
-C     do i = 1, idet*icnf
-C       write (*,'(i3,f20.10)') i,detvec(ioffdt+i-1)
-C     end do
          END IF
   100   CONTINUE
 *. Sign changes

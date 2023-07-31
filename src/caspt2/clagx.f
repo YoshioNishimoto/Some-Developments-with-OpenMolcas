@@ -1,19 +1,28 @@
-      Subroutine CLagX(IFF,CLag,trf,DEPSA,RDMSA,RDMEIG)
-C
+************************************************************************
+* This file is part of OpenMolcas.                                     *
+*                                                                      *
+* OpenMolcas is free software; you can redistribute it and/or modify   *
+* it under the terms of the GNU Lesser General Public License, v. 2.1. *
+* OpenMolcas is distributed in the hope that it will be useful, but it *
+* is provided "as is" and without any express or implied warranties.   *
+* For more details see the full text of the license in the file        *
+* LICENSE or in <http://www.gnu.org/licenses/>.                        *
+*                                                                      *
+* Copyright (C) 2021, Yoshio Nishimoto                                 *
+************************************************************************
+      Subroutine CLagX(IFF,CLag,DEPSA,VECROT)
+
+      use caspt2_output, only:iPrGlb,verbose
       Implicit Real*8 (A-H,O-Z)
-C
+
 #include "rasdim.fh"
 #include "caspt2.fh"
-C#include "output.fh"
-C#include "eqsolv.fh"
 #include "WrkSpc.fh"
-C#include "sigma.fh"
 #include "pt2_guga.fh"
-C
+
       DIMENSION CLag(nConf,nState)
-      dimension trf(nbast,nbast),DEPSA(nAshT,nAshT),
-     *          RDMSA(nAshT,nAshT),RDMEIG(nAshT,nAshT)
-C
+      dimension DEPSA(nAshT,nAshT),VECROT(*)
+
       !! reduced density matrix and fock-weighted RDM
       CALL GETMEM('G1'   ,'ALLO','REAL',LG1 ,NG1)
       CALL GETMEM('G2'   ,'ALLO','REAL',LG2 ,NG2)
@@ -21,7 +30,7 @@ C
       CALL GETMEM('F1'   ,'ALLO','REAL',LF1 ,NG1)
       CALL GETMEM('F2'   ,'ALLO','REAL',LF2 ,NG2)
       CALL GETMEM('F3'   ,'ALLO','REAL',LF3 ,NG3)
-C
+
       !! their derivative contributions
       CALL GETMEM('DERG1','ALLO','REAL',LDG1,NG1)
       CALL GETMEM('DERG2','ALLO','REAL',LDG2,NG2)
@@ -29,230 +38,102 @@ C
       CALL GETMEM('DERF1','ALLO','REAL',LDF1,NG1)
       CALL GETMEM('DERF2','ALLO','REAL',LDF2,NG2)
       CALL GETMEM('DERF3','ALLO','REAL',LDF3,NG3)
-C
+
       CALL PT2_GET(NG1,' GAMMA1',WORK(LG1))
       CALL PT2_GET(NG2,' GAMMA2',WORK(LG2))
       CALL PT2_GET(NG3,' GAMMA3',WORK(LG3))
       CALL PT2_GET(NG1,' DELTA1',WORK(LF1))
       CALL PT2_GET(NG2,' DELTA2',WORK(LF2))
       CALL PT2_GET(NG3,' DELTA3',WORK(LF3))
-C     write (*,*) "G1"
+C     write(6,*) "G1"
 C     call sqprt(work(lg1),5)
-C       write (*,*) "f1"
-C       call sqprt(work(lf1),5)
+C     write(6,*) "f1"
+C     call sqprt(work(lf1),5)
 C
       !! Initialize them
-      Call DCopy_(nG1,0.0D+00,0,Work(LDG1),1)
-      Call DCopy_(nG2,0.0D+00,0,Work(LDG2),1)
-      Call DCopy_(nG3,0.0D+00,0,Work(LDG3),1)
-      Call DCopy_(nG1,0.0D+00,0,Work(LDF1),1)
-      Call DCopy_(nG2,0.0D+00,0,Work(LDF2),1)
-      Call DCopy_(nG3,0.0D+00,0,Work(LDF3),1)
+      Call DCopy_(nG1,[0.0D+00],0,Work(LDG1),1)
+      Call DCopy_(nG2,[0.0D+00],0,Work(LDG2),1)
+      Call DCopy_(nG3,[0.0D+00],0,Work(LDG3),1)
+      Call DCopy_(nG1,[0.0D+00],0,Work(LDF1),1)
+      Call DCopy_(nG2,[0.0D+00],0,Work(LDF2),1)
+      Call DCopy_(nG3,[0.0D+00],0,Work(LDF3),1)
       !! DEASUM is the derivative cont. of EASUM
       DEASUM = 0.0D+00
-C
-C     write (*,*) "calling clagd"
+
       CALL TIMING(CPTF0,CPE,TIOTF0,TIOE)
       Call CLagD(Work(LG1),Work(LG2),Work(LG3),
-     *           Work(LF1),Work(LF2),Work(LF3),
      *           Work(LDG1),Work(LDG2),Work(LDG3),
      *           Work(LDF1),Work(LDF2),Work(LDF3),DEASUM,
-     *           DEPSA)
+     *           DEPSA,VECROT)
       CALL TIMING(CPTF10,CPE,TIOTF10,TIOE)
-      CPUT =CPTF10-CPTF0
-      WALLT=TIOTF10-TIOTF0
-      write (*,*) "CLagD : CPU/WALL TIME=", cput,wallt
-C     deasum = deasum*0.5d+00
-      write (*,*) "Deasum = ", deasum
-C     write (*,*) "depsa after CLagD"
-C     call sqprt(depsa,nasht)
-C     call dcopy(25,0.0d+00,0,depsa,1)
-C     scal=-1.0d+00
-C     work(ldg1+ 3-1) = work(ldg1+ 3-1) + 0.0000612d+00*scal
-C     work(ldg1+ 4-1) = work(ldg1+ 4-1) + 0.0005517d+00*scal
-C     work(ldg1+11-1) = work(ldg1+11-1) + 0.0000612d+00*scal
-C     work(ldg1+14-1) = work(ldg1+14-1) + 0.0052315d+00*scal
-C     work(ldg1+16-1) = work(ldg1+16-1) + 0.0005517d+00*scal
-C     work(ldg1+18-1) = work(ldg1+18-1) + 0.0052315d+00*scal
-C
+      IF (IPRGLB.GE.verbose) THEN
+        CPUT =CPTF10-CPTF0
+        WALLT=TIOTF10-TIOTF0
+        write(6,'(a,2f10.2)')" CLagD   : CPU/WALL TIME=", cput,wallt
+        write(6,*) "Deasum = ", deasum
+      END IF
+
       !! Some symmetrizations are likely required
       Call CLagSym(nAshT,Work(LDG1),Work(LDG2),Work(LDF1),Work(LDF2),0)
-C
+
       !! Do for the derivative of EASUM
       !! EASUM=EASUM+EPSA(IT)*DREF(IT,IT)
-C     write (*,*) "RDMSA"
-C     call sqprt(rdmsa,5)
       Do iT = 1, nAsh(1)
         Work(LDG1+iT-1+nAsh(1)*(iT-1))
      *    = Work(LDG1+iT-1+nAsh(1)*(iT-1)) + DEASUM*EPSA(iT)
-C       RDMEIG(iT,iT) = RDMEIG(iT,iT) + DEASUM*EPSA(iT)
-C       DEPSA(iT) = DEPSA(iT) + DEASUM*Work(LG1+iT-1+nAsh(1)*(iT-1))
         If (ISCF.EQ.0) Then
           Do iU = 1, nAsh(1)
             DEPSA(iT,iU) = DEPSA(iT,iU)
      *        + DEASUM*Work(LG1+iT-1+nAsh(1)*(iU-1))
-C    *        + DEASUM*RDMSA(iT,iU)
           End Do
         Else
           !! ?
         End If
       End Do
-C     write (*,*) "G1"
-C     call sqprt(work(lg1),nasht)
-C     write (*,*) "depsa before"
-C     call sqprt(depsa,nasht)
-C
-C     write (*,*) "g1"
-C     call sqprt(work(lg1),5)
-C     write (*,*) "g2"
-C     call sqprt(work(lg2),25)
-C     write (*,*) "dg1"
-C     call sqprt(work(ldg1),5)
-C     write (*,*) "df1"
-C     call sqprt(work(ldf1),5)
-      Call DCopy_(nConf*nState,0.0D+00,0,CLag,1)
-      !! Is this needed? To be verified...
-C     Call DGemm_('N','N',nAshT,nAshT,nAshT,
-C    *            1.0D+00,Trf(6,6),nBasT,Work(LDG1),nAshT,
-C    *            0.0D+00,Work(LDG2),nAshT)
-C     Call DGemm_('N','T',nAshT,nAshT,nAshT,
-C    *            1.0D+00,Work(LDG2),nAshT,Trf(6,6),nBasT,
-C    *            0.0D+00,Work(LDG1),nAshT)
-       
-C     call dcopy(25,0.0d+00,0,depsa,1)
-      !! Check: should be MSTATE(JSTATE)?
-C     write (*,*) "CLag for jState = ", jState
-      !!  Call DCopy_(nG1,0.0D+00,0,Work(LDG1),1)
-      !!  Call DCopy_(nG2,0.0D+00,0,Work(LDG2),1)
-      !!  Call DCopy_(nG3,0.0D+00,0,Work(LDG3),1)
-      !!  Call DCopy_(nG1,0.0D+00,0,Work(LDF1),1)
-      !!  Call DCopy_(nG2,0.0D+00,0,Work(LDF2),1)
-      !!  Call DCopy_(nG3,0.0D+00,0,Work(LDF3),1)
-      !!  call cnst_SA_CLag(Work(LG1),Work(LG2),Work(LDG1),Work(LDG2),eee)
-      if (.false.) then
-        if (.false.) then
-        delta = 1.0d-05
-        CALL GETMEM('WRK1','ALLO','REAL',ipWRK1,nBasT*nBasT)
-        CALL GETMEM('WRK2','ALLO','REAL',ipWRK2,nBasT*nBasT)
-        CALL GETMEM('LCMO','ALLO','REAL',LCMO,nBasT*nBasT)
-        CALL GETMEM('LFMO','ALLO','REAL',ipFIMO,NFIMO)
-        Call DCopy_(nBasT*nBasT,0.0D+00,0,Work(ipWRK1),1)
-        do imo = nfro(1)+1, nfro(1)+norbt
-          do iao = 1, nbast
-            do ivib = 1, 2
-              If (iVib.eq.1) Then
-                Work(LCMOPT2+iAO-1+nBast*(iMO-1))
-     *            = Work(LCMOPT2+iAO-1+nBast*(iMO-1)) + Delta
-              Else If (iVib.eq.2) Then
-                Work(LCMOPT2+iAO-1+nBasT*(iMO-1))
-     *            = Work(LCMOPT2+iAO-1+nBasT*(iMO-1)) - Delta
-              End If
-              Call DCopy_(nBasT*nBasT,Work(LCMOPT2),1,Work(LCMO),1)
-C
-C             CALL STINI
-              Call TraCtl(0)
-              call cnst_SA_CLag(Work(LG1),Work(LG2),
-     *                          Work(LDG1),Work(LDG2),eee)
-C           
-              If (iVib.eq.1) Then
-                EForward = eee
-                Work(LCMOPT2+iAO-1+nBasT*(iMO-1))
-     *            = Work(LCMOPT2+iAO-1+nBasT*(iMO-1)) - Delta
-              Else If (iVib.eq.2) Then
-                EBackward = eee
-                Work(LCMOPT2+iAO-1+nBasT*(iMO-1))
-     *            = Work(LCMOPT2+iAO-1+nBasT*(iMO-1)) + Delta
-              End If
-              Call DCopy_(nBasT*nBasT,Work(LCMOPT2),1,Work(LCMO),1)
-            End Do
-            Work(ipWRK1+iAO-1+nBasT*(iMO-1))
-     *        = (EForward-EBackward)/(2.0D+00*Delta)
-          end do
-        end do
-C
-        Call DGEMM_('T','N',nFro(1)+nOrbT,nFro(1)+nOrbT,nBasT,
-     *              1.0D+00,Work(LCMOPT2),nBasT,Work(ipWRK1),nBasT,
-     *              0.0D+00,Work(ipWRK2),nFro(1)+nOrbT)
-        write (*,*) "Orbital Lagrangian"
-        Call SqPrt(Work(ipWRK2),nFro(1)+nOrbT)
-          Call DGemm_('N','N',nBasT,nBasT,nBasT,
-     *                1.0D+00,Trf,nBasT,Work(ipWRK2),nBasT,
-     *                0.0D+00,Work(ipWRK1),nBasT)
-          Call DGemm_('N','T',nBasT,nBasT,nBasT,
-     *                1.0D+00,Work(ipWRK1),nBasT,Trf,nBasT,
-     *                0.0D+00,Work(ipWRK2),nBasT)
-        write (*,*) "Orbital Lagrangian in canonical"
-        Call SqPrt(Work(ipWRK2),nFro(1)+nOrbT)
-        Call DGeSub(Work(ipWRK2),nBas(1),'N',
-     &              Work(ipWRK2),nBas(1),'T',
-     &              Work(ipWRK1),nBas(1),
-     &              nBas(1),nBas(1))
-        write (*,*) "Orbital Lagrangian in canonical after asym"
-        Call SqPrt(Work(ipWRK1),nFro(1)+nOrbT)
-        CALL GETMEM('WRK1','FREE','REAL',ipWRK1,nBasT*nBasT)
-        CALL GETMEM('WRK2','FREE','REAL',ipWRK2,nBasT*nBasT)
-        CALL GETMEM('LCMO','FREE','REAL',LCMO,nBasT*nBasT)
-        CALL GETMEM('LFMO','FREE','REAL',ipFIMO,NFIMO)
-        call abend
-        else 
-          Call DCopy_(nG1,0.0D+00,0,Work(LDG1),1)
-          Call DCopy_(nG2,0.0D+00,0,Work(LDG2),1)
-          Call DCopy_(nG3,0.0D+00,0,Work(LDG3),1)
-          Call DCopy_(nG1,0.0D+00,0,Work(LDF1),1)
-          Call DCopy_(nG2,0.0D+00,0,Work(LDF2),1)
-          Call DCopy_(nG3,0.0D+00,0,Work(LDF3),1)
-        call cnst_SA_CLag(Work(LG1),Work(LG2),Work(LDG1),Work(LDG2),eee)
-        end if
-      end if
-      !!  write (*,*) "after cnst"
+
       Call CnstCLag(IFF,CLag(1,jState),
      *              Work(LDG1),Work(LDG2),Work(LDG3),
      *              Work(LDF1),Work(LDF2),Work(LDF3),
      *              DEPSA,
-     *              Work(LG1),Work(LG2),Work(LG3),
-     *              Work(LF1),Work(LF2),Work(LF3),
-     *              TRF)
-C     write (*,*) "depsa after cnstclag"
-C     call sqprt(depsa,nasht)
-C
+     *              Work(LG1),Work(LG2),Work(LG3))
+!     write(6,*) "depsa after cnstclag"
+!     call sqprt(depsa,nasht)
+
       CALL GETMEM('G1'   ,'FREE','REAL',LG1 ,NG1)
       CALL GETMEM('G2'   ,'FREE','REAL',LG2 ,NG2)
       CALL GETMEM('G3'   ,'FREE','REAL',LG3 ,NG3)
       CALL GETMEM('F1'   ,'FREE','REAL',LF1 ,NG1)
       CALL GETMEM('F2'   ,'FREE','REAL',LF2 ,NG2)
       CALL GETMEM('F3'   ,'FREE','REAL',LF3 ,NG3)
-C
+
       CALL GETMEM('DERG1','FREE','REAL',LDG1,NG1)
       CALL GETMEM('DERG2','FREE','REAL',LDG2,NG2)
       CALL GETMEM('DERG3','FREE','REAL',LDG3,NG3)
       CALL GETMEM('DERF1','FREE','REAL',LDF1,NG1)
       CALL GETMEM('DERF2','FREE','REAL',LDF2,NG2)
       CALL GETMEM('DERF3','FREE','REAL',LDF3,NG3)
-C
-      Return
-C
+
       End Subroutine CLagX
 C
 C-----------------------------------------------------------------------
 C
-      SUBROUTINE CLagD(G1,G2,G3,F1,F2,F3,
-     *                 DG1,DG2,DG3,DF1,DF2,DF3,DEASUM,DEPSA)
-C
+      SUBROUTINE CLagD(G1,G2,G3,DG1,DG2,DG3,DF1,DF2,DF3,DEASUM,DEPSA,
+     *                 VECROT)
+! #ifdef _MOLCAS_MPP_
+!       USE Para_Info, ONLY: Is_Real_Par, King
+! #endif
+
+      use caspt2_global, only:imag_shift
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "sigma.fh"
 #include "pt2_guga.fh"
-#ifdef _MOLCAS_MPP_
-      LOGICAL Is_Real_Par, KING
-#endif
 
-      DIMENSION G1(*),G2(*),G3(*),F1(*),F2(*),F3(*),
-     *          DG1(*),DG2(*),DG3(*),DF1(*),DF2(*),DF3(*),
-     *          DEPSA(*)
+      DIMENSION G1(*),G2(*),G3(*),DG1(*),DG2(*),DG3(*),
+     *          DF1(*),DF2(*),DF3(*),DEPSA(*),VECROT(*)
 
       Do iCase = 1, 13
 C       cycle
@@ -272,11 +153,11 @@ C       If (icase.ne. 1)                 cycle ! A
           NVEC = nIN*nIS
           nAS  = nASUP(iSym,iCase)
           If (nVec.EQ.0) Cycle
-C         write (*,*) "for icase = ", icase
-C         write (*,*) "# of independent vecs:", nin
-C         write (*,*) "# of non-active pairs:", nis
-C         write (*,*) "# of     active pairs:", nas
-C         write (*,*) "dimension for Vec = ", nin*nis
+C         write(6,*) "for icase = ", icase
+C         write(6,*) "# of independent vecs:", nin
+C         write(6,*) "# of non-active pairs:", nis
+C         write(6,*) "# of     active pairs:", nas
+C         write(6,*) "dimension for Vec = ", nin*nis
           !! lg_V1 = T (solution; not quasi-variational)
           Call RHS_ALLO(nIN,nIS,lg_V1)
           Call RHS_READ_SR(lg_V1,iCase,iSym,iVecX)
@@ -291,77 +172,79 @@ C
             !! lg_V4 = RHS (in MO basis)
             Call RHS_ALLO(nAS,nIS,lg_V4)
             Call RHS_READ_C (lg_V4,iCase,iSym,iVecW)
+            !! lg_V5 = RHS2 (in IC basis)
+            If (IFMSCOUP) Then
+              Call RHS_ALLO(nIN,nIS,lg_V5)
+              Call RHS_READ_SR(lg_V5,iCase,iSym,7)
+            Else
+              lg_V5 = lg_V3
+            End If
           Else
             Go To 100
           End If
-C         write (*,*) "vec1-4"
+C         write(6,*) "vec1-4"
 C         do i = 1, nin*nis
-C           write (*,'(i4,4f20.10)') i,work(lg_v1+i-1),work(lg_v2+i-1),
+C           write(6,'(i4,4f20.10)') i,work(lg_v1+i-1),work(lg_v2+i-1),
 C    *                                 work(lg_v3+i-1),work(lg_v4+i-1)
 C         end do
-C         write (*,*) "vec5-6"
+C         write(6,*) "vec5-6"
 C         do i = 1, nas*nis
-C           write (*,'(i4,2f20.10)') i,work(lg_v5+i-1),work(lg_v6+i-1)
+C           write(6,'(i4,2f20.10)') i,work(lg_v5+i-1),work(lg_v6+i-1)
 C         end do
 C         call abend
 C
-#ifdef _MOLCAS_MPP_
-          IF (Is_Real_Par()) THEN
-            IF (KING()) THEN
-              ! copy global array to local buffer
-              CALL GETMEM('VEC1','ALLO','REAL',LVEC1,NVEC)
-              CALL GA_GET(lg_V1,1,NIN,1,NIS,WORK(LVEC1),NIN)
-C             IF(IVEC.EQ.JVEC) THEN
-C               LVEC2=LVEC1
-C             ELSE
-                CALL GETMEM('VEC2','ALLO','REAL',LVEC2,NVEC)
-                CALL GA_GET(lg_V2,1,NIN,1,NIS,WORK(LVEC2),NIN)
-C             END IF
+! #ifdef _MOLCAS_MPP_
+    !       IF (Is_Real_Par()) THEN
+    !         IF (KING()) THEN
+    !           ! copy global array to local buffer
+    !           CALL GETMEM('VEC1','ALLO','REAL',LVEC1,NVEC)
+    !           CALL GA_GET(lg_V1,1,NIN,1,NIS,WORK(LVEC1),NIN)
+    !           CALL GETMEM('VEC2','ALLO','REAL',LVEC2,NVEC)
+    !           CALL GA_GET(lg_V2,1,NIN,1,NIS,WORK(LVEC2),NIN)
 
-              CALL CLagDX(0,ISYM,ICASE,WORK(LVEC1),WORK(LVEC2),
-     *                    WORK(LVEC3),WORK(LVEC4),
-     *                    nIN,nIS,nAS,G1,G2,G3,F1,F2,F3,
-     *                    DG1,DG2,DG3,DF1,DF2,DF3,DEASUM,DEPSA,
-     *                    iWORK(LLISTS))
+    !           CALL CLagDX(0,ISYM,ICASE,WORK(LVEC1),WORK(LVEC2),
+    !  *                    WORK(LVEC3),WORK(LVEC4),
+    !  *                    nIN,nIS,nAS,G1,G2,G3,
+    !  *                    DG1,DG2,DG3,DF1,DF2,DF3,DEASUM,DEPSA,
+    !  *                    VECROT,Work(lg_V5))
 
-              ! free local buffer
-              CALL GETMEM('VEC1','FREE','REAL',LVEC1,nVec)
-              CALL GETMEM('VEC2','FREE','REAL',LVEC2,nVec)
-            END IF
-            CALL GASYNC
-          ELSE
-            CALL CLagDX(0,ISYM,ICASE,WORK(lg_V1),WORK(lg_V2),
-     *                  Work(lg_V3),Work(lg_V4),
-     *                  nIN,nIS,nAS,G1,G2,G3,F1,F2,F3,
-     *                  DG1,DG2,DG3,DF1,DF2,DF3,DEASUM,DEPSA,
-     *                  iWORK(LLISTS))
-          END IF
-#else
-C          write (*,*) "calling clagdx for icase = ", icase
+    !           ! free local buffer
+    !           CALL GETMEM('VEC1','FREE','REAL',LVEC1,nVec)
+    !           CALL GETMEM('VEC2','FREE','REAL',LVEC2,nVec)
+    !         END IF
+    !         CALL GASYNC
+    !       ELSE
+    !         CALL CLagDX(0,ISYM,ICASE,WORK(lg_V1),WORK(lg_V2),
+    !  *                  Work(lg_V3),Work(lg_V4),
+    !  *                  nIN,nIS,nAS,G1,G2,G3,
+    !  *                  DG1,DG2,DG3,DF1,DF2,DF3,DEASUM,DEPSA,
+    !  *                  VECROT,Work(lg_V5))
+    !       END IF
+! #else
+C          write(6,*) "calling clagdx for icase = ", icase
           CALL CLagDX(0,iSym,iCase,Work(lg_V1),WORK(lg_V2),
      *                Work(lg_V3),Work(lg_V4),
-     *                nIN,nIS,nAS,G1,G2,G3,F1,F2,F3,
+     *                nIN,nIS,nAS,G1,G2,G3,
      *                DG1,DG2,DG3,DF1,DF2,DF3,DEASUM,DEPSA,
-     *                iWORK(LLISTS))
-     *                
-#endif
-C
-          If (SHIFTI.ne.0) Then
+     *                VECROT,Work(lg_V5))
+! #endif
+
+          If (imag_shift .ne. 0.0d0) Then
             nAS = nASUP(iSym,iCase)
             Call GETMEM('LBD','ALLO','REAL',LBD,nAS)
             Call GETMEM('LID','ALLO','REAL',LID,nIS)
             iD = iDBMat(iSym,iCase)
             Call dDaFile(LUSBT,2,Work(LBD),nAS,iD)
             Call dDaFile(LUSBT,2,Work(LID),nIS,iD)
-C
+
             CALL RHS_READ_SR(lg_V1,ICASE,ISYM,iVecX)
             Call CASPT2_ResD(2,nIN,nIS,lg_V1,Work(LBD),Work(LID))
             CALL RHS_READ_SR(lg_V2,ICASE,ISYM,iVecR)
             Call CASPT2_ResD(2,nIN,nIS,lg_V2,Work(LBD),Work(LID))
             CALL RHS_READ_SR(lg_V4,ICASE,ISYM,iVecR)
             Call CASPT2_ResD(2,nIN,nIS,lg_V4,Work(LBD),Work(LID))
-C           Call DaXpY_(nIN*nIS,1.0D+00,Work(lg_V2),1,Work(lg_V1),1)
-C
+!           Call DaXpY_(nIN*nIS,1.0D+00,Work(lg_V2),1,Work(lg_V1),1)
+
             Call DScal_(NG1,-1.0D+00,DG1,1)
             Call DScal_(NG2,-1.0D+00,DG2,1)
             Call DScal_(NG3,-1.0D+00,DG3,1)
@@ -370,47 +253,43 @@ C
             Call DScal_(NG3,-1.0D+00,DF3,1)
             DEASUM = -DEASUM
             Call DScal_(NG1,-1.0D+00,DEPSA,1)
-C
-#ifdef _MOLCAS_MPP_
-          IF (Is_Real_Par()) THEN
-            IF (KING()) THEN
-              ! copy global array to local buffer
-              CALL GETMEM('VEC1','ALLO','REAL',LVEC1,NVEC)
-              CALL GA_GET(lg_V1,1,NIN,1,NIS,WORK(LVEC1),NIN)
-C             IF(IVEC.EQ.JVEC) THEN
-C               LVEC2=LVEC1
-C             ELSE
-                CALL GETMEM('VEC2','ALLO','REAL',LVEC2,NVEC)
-                CALL GA_GET(lg_V2,1,NIN,1,NIS,WORK(LVEC2),NIN)
-C             END IF
 
-              CALL CLagDX(1,ISYM,ICASE,WORK(LVEC1),WORK(LVEC2),
-     *                    WORK(LVEC3),WORK(LVEC4),
-     *                    nIN,nIS,nAS,G1,G2,G3,F1,F2,F3,
-     *                    DG1,DG2,DG3,DF1,DF2,DF3,DEASUM,DEPSA,
-     *                    iWORK(LLISTS))
+! #ifdef _MOLCAS_MPP_
+!           IF (Is_Real_Par()) THEN
+!             IF (KING()) THEN
+!               ! copy global array to local buffer
+!               CALL GETMEM('VEC1','ALLO','REAL',LVEC1,NVEC)
+!               CALL GA_GET(lg_V1,1,NIN,1,NIS,WORK(LVEC1),NIN)
+!               CALL GETMEM('VEC2','ALLO','REAL',LVEC2,NVEC)
+!               CALL GA_GET(lg_V2,1,NIN,1,NIS,WORK(LVEC2),NIN)
 
-              ! free local buffer
-              CALL GETMEM('VEC1','FREE','REAL',LVEC1,nVec)
-              CALL GETMEM('VEC2','FREE','REAL',LVEC2,nVec)
-            END IF
-            CALL GASYNC
-          ELSE
-            CALL CLagDX(1,ISYM,ICASE,WORK(lg_V1),WORK(lg_V2),
+!               CALL CLagDX(1,ISYM,ICASE,WORK(LVEC1),WORK(LVEC2),
+!      *                    WORK(LVEC3),WORK(LVEC4),
+!      *                    nIN,nIS,nAS,G1,G2,G3,
+!      *                    DG1,DG2,DG3,DF1,DF2,DF3,DEASUM,DEPSA,
+!      *                    VECROT,Work(lg_V5))
+
+!               ! free local buffer
+!               CALL GETMEM('VEC1','FREE','REAL',LVEC1,nVec)
+!               CALL GETMEM('VEC2','FREE','REAL',LVEC2,nVec)
+!             END IF
+!             CALL GASYNC
+!           ELSE
+!             CALL CLagDX(1,ISYM,ICASE,WORK(lg_V1),WORK(lg_V2),
+!      *                  Work(lg_V3),Work(lg_V4),
+!      *                  nIN,nIS,nAS,G1,G2,G3,
+!      *                  DG1,DG2,DG3,DF1,DF2,DF3,DEASUM,DEPSA,
+!      *                  VECROT,Work(lg_V5))
+!           END IF
+! #else
+C          write(6,*) "calling clagdx for icase = ", icase
+            CALL CLagDX(1,iSym,iCase,Work(lg_V1),WORK(lg_V2),
      *                  Work(lg_V3),Work(lg_V4),
-     *                  nIN,nIS,nAS,G1,G2,G3,F1,F2,F3,
+     *                  nIN,nIS,nAS,G1,G2,G3,
      *                  DG1,DG2,DG3,DF1,DF2,DF3,DEASUM,DEPSA,
-     *                  iWORK(LLISTS))
-          END IF
-#else
-C          write (*,*) "calling clagdx for icase = ", icase
-          CALL CLagDX(1,iSym,iCase,Work(lg_V1),WORK(lg_V2),
-     *                Work(lg_V3),Work(lg_V4),
-     *                nIN,nIS,nAS,G1,G2,G3,F1,F2,F3,
-     *                DG1,DG2,DG3,DF1,DF2,DF3,DEASUM,DEPSA,
-     *                iWORK(LLISTS))
-#endif
-C
+     *                  VECROT,Work(lg_V5))
+! #endif
+
             Call DScal_(NG1,-1.0D+00,DG1,1)
             Call DScal_(NG2,-1.0D+00,DG2,1)
             Call DScal_(NG3,-1.0D+00,DG3,1)
@@ -428,19 +307,20 @@ C
           !! for non-separable density/derivative
           CALL RHS_READ_SR(lg_V1,ICASE,ISYM,iVecX)
           CALL RHS_READ_SR(lg_V2,ICASE,ISYM,iVecR)
-          Call DaXpY_(nIN*nIS,0.5D+00,Work(lg_V2),1,Work(lg_V1),1)
-          Call RHS_Save(nIN,nIS,lg_V1,iCase,iSym,iVecX)
+C         Call DaXpY_(nIN*nIS,0.5D+00,Work(lg_V2),1,Work(lg_V1),1)
+C         Call RHS_Save(nIN,nIS,lg_V1,iCase,iSym,iVecX)
 
           CALL RHS_FREE(nIN,nIS,lg_V1)
           CALL RHS_FREE(nIN,nIS,lg_V2)
           If (iCase.ne.12.and.iCase.ne.13) Then
             CALL RHS_FREE(nIN,nIS,lg_V3)
             CALL RHS_FREE(nAS,nIS,lg_V4)
+            If (IFMSCOUP) CALL RHS_FREE(nIN,nIS,lg_V5)
           End If
         End Do
       End Do
 C     do i = 1, 625
-C     write (*,'(i4,2f20.10)') i,dg2(i),df2(i)
+C     write(6,'(i4,2f20.10)') i,dg2(i),df2(i)
 C     end do
 C     call sqprt(dg2,25)
 C     call abend
@@ -452,10 +332,12 @@ C
 C-----------------------------------------------------------------------
 C
       Subroutine CLagDX(Mode,iSym,iCase,VEC1,VEC2,VEC3,VEC4,nIN,nIS,nAS,
-     *                  G1,G2,G3,F1,F2,F3,DG1,DG2,DG3,DF1,DF2,DF3,
-     *                  DEASUM,DEPSA,LIST)
+     *                  G1,G2,G3,DG1,DG2,DG3,DF1,DF2,DF3,
+     *                  DEASUM,DEPSA,VECROT,VEC5)
 C
       USE SUPERINDEX
+      use stdalloc, only: mma_allocate, mma_deallocate
+      use caspt2_global, only:ipea_shift, real_shift, imag_shift
 C
       Implicit Real*8 (A-H,O-Z)
 C
@@ -468,15 +350,17 @@ C
 #include "SysDef.fh"
 #include "caspt2_grad.fh"
 C
-      DIMENSION VEC1(*),VEC2(*),VEC3(*),VEC4(*),LIST(*)
+      DIMENSION VEC1(*),VEC2(*),VEC3(*),VEC4(*),VEC5(*)
       DIMENSION G1(nAshT,nAshT),G2(nAshT,nAshT,nAshT,nAshT),G3(*),
-     *          F1(nAshT,nAshT),F2(nAshT,nAshT,nAshT,nAshT),F3(*),
      *          DG1(nAshT,nAshT),DG2(nAshT,nAshT,nAshT,nAshT),DG3(*),
      *          DF1(nAshT,nAshT),DF2(nAshT,nAshT,nAshT,nAshT),DF3(*),
-     *          DEPSA(nAshT,nAshT)
+     *          DEPSA(nAshT,nAshT),VECROT(*)
 C
       Real*8, Allocatable :: WrkBbf(:,:,:,:),WrkSbf(:,:,:,:)
-C
+
+      INTEGER*1, allocatable :: idxG3(:,:)
+      ! INTEGER, PARAMETER :: I1=KIND(idxG3)
+
       nAshI = nAsh(iSym)
       Call GETMEM('WRK1  ','ALLO','REAL',LWRK1 ,nAS**2)
       Call GETMEM('WRK2  ','ALLO','REAL',LWRK2 ,MAX(nAS**2,nAS*nIS))
@@ -488,6 +372,9 @@ C
       Call DDAFILE(LUSBT,2,Work(LTRANS),nAS*nIN,idT)
       idB  = idBMAT(iSym,iCase)
       Call DDAFILE(LUSBT,2,WORK(LEIG),nIN,idB)
+C
+      SCAL = 1.0D+00
+      IF (IFMSCOUP) SCAL = VECROT(jState)
 C
       !! VEC1: solution in IC basis
       !! VEC2: lambda   in IC basis
@@ -508,13 +395,14 @@ C
       If (Mode.eq.0) Then
         !! Work(LWRK1) = T*T
         Call DGEMM_('N','T',nIN,nIN,nIS,
-     *              1.0D+00,VEC1,nIN,VEC1,nIN,
+     *              SCAL,VEC1,nIN,VEC1,nIN,
      *              0.0D+00,Work(LWRK1),nIN)
       Else
-        Call DCopy_(nIN*nIN,0.0D+00,0,Work(LWRK1),1)
+        Call DCopy_(nIN*nIN,[0.0D+0],0,Work(LWRK1),1)
       End If
 C
-      If (SHIFT.NE.0.0D+00.OR.SHIFTI.NE.0.0D+00) Then
+      If (real_shift .NE. 0.0D+00 .OR. imag_shift .NE. 0.0D+00
+     &    .OR. IFMSCOUP) Then
         !! Work(LWRK1) = T*T + (T*lambda+lambda*T)/2
         Call DGEMM_('N','T',nIN,nIN,nIS,
      *              0.5D+00,VEC2,nIN,VEC1,nIN,
@@ -524,8 +412,8 @@ C
      *              1.0D+00,Work(LWRK1),nIN)
       End If
 C
-      If (BSHIFT.NE.0.0D+00) Then
-C       write (*,*) "B derivative in internally contracted"
+      If (ipea_shift.NE.0.0D+00) Then
+C       write(6,*) "B derivative in internally contracted"
 C       call sqprt(Work(lWRK1),nin)
 C       Do iICB = 1, nIN
 C         Work(LWRK3+iICB-1) = Work(LWRK1+iICB-1+nIN*(iICB-1))
@@ -548,14 +436,14 @@ C    *        =-Work(LWRK1+jICB-1+nIN*(iICB-1))/(EigJ-EigI)
 C         End Do
 C         Work(LWRK1+iICB-1+nIN*(iICB-1)) = Work(LWRK3+iICB-1)
 C       End Do
-C       write (*,*) "B derivative in internally contracted"
+C       write(6,*) "B derivative in internally contracted"
 C       call sqprt(Work(lWRK1),nin)
 C       call abend
       End If
-C     write (*,*) "B derivative in internally contracted"
+C     write(6,*) "B derivative in internally contracted"
 C     call sqprt(Work(lWRK1),nin)
 C     do i = 1, nin*nis
-C       write (*,'(i4,f20.10)') i,vec1(i)
+C       write(6,'(i4,f20.10)') i,vec1(i)
 C     end do
 C
       !! Transform the internally contracted density to
@@ -569,7 +457,7 @@ C
       Call DGEMM_('N','T',nAS,nAS,nIN,
      *            1.0D+00,Work(LWRK2),nAS,Work(LTRANS),nAS,
      *            0.0D+00,Work(LWRK3),nAS)
-C     write (*,*) "B derivative in MO"
+C     write(6,*) "B derivative in MO"
 C     call sqprt(Work(lWRK3),nas)
 C
       !! Implicit derivative of the IC vector. This derivative
@@ -585,7 +473,7 @@ C
      *      = -Work(LWRK1+iICB-1+nIN*(jICB-1))*(EigI+EigJ)*0.5D+00
         End Do
       End Do
-C     write (*,*) "3"
+C     write(6,*) "3"
 C     call sqprt(Work(lWRK1),nin)
 C
       !! Derivative of the overlap in the IC basis.
@@ -596,9 +484,10 @@ C
       If (Mode.eq.0) Then
         !! Work(LWRK1) = -RHS*T
         Call DGEMM_('N','T',nIN,nIN,nIS,
-     *             -1.0D+00,VEC3,nIN,VEC1,nIN,
+     *             -1.0D+00,VEC5,nIN,VEC1,nIN,
      *              1.0D+00,Work(LWRK1),nIN)
-        If (SHIFT.NE.0.0D+00.OR.SHIFTI.NE.0.0D+00) Then
+        If (real_shift .NE. 0.0D+00 .OR. imag_shift .NE. 0.0D+00
+     &      .OR. IFMSCOUP) Then
           !! Work(LWRK1) = -RHS*(T+lambda/2)
           Call DGEMM_('N','T',nIN,nIN,nIS,
      *               -0.5D+00,VEC3,nIN,VEC2,nIN,
@@ -607,7 +496,7 @@ C
 C       Call DGEMM_('N','T',nIN,nIN,nIS,
 C    *              2.0D+00,VEC2,nIN,VEC1,nIN,
 C    *              0.0D+00,Work(LWRK2),nIN)
-C       write (*,*) "orbital lagrangian?"
+C       write(6,*) "orbital lagrangian?"
 C       call sqprt(work(lwrk2),nin)
       End If
 C
@@ -624,9 +513,10 @@ C
       If (Mode.eq.0) Then
         !! E = 2<0|H|1> - <1|H0-E0|1>
         Call DGEMM_('N','N',nAS,nIS,nIN,
-     *              1.0D+00,Work(LTRANS),nAS,VEC1,nIN,
+     *              SCAL,Work(LTRANS),nAS,VEC1,nIN,
      *              0.0D+00,Work(LWRK2),nAS)
-        If (SHIFT.NE.0.0D+00.OR.SHIFTI.NE.0.0D+00) THEN
+        If (real_shift .NE. 0.0D+00 .OR. imag_shift .NE. 0.0D+00
+     &      .OR. IFMSCOUP) THEN
           Call DGEMM_('N','N',nAS,nIS,nIN,
      *                0.5D+00,Work(LTRANS),nAS,VEC2,nIN,
      *                1.0D+00,Work(LWRK2),nAS)
@@ -656,31 +546,42 @@ C
         idS = idSMAT(iSym,1)
         CALL DDAFILE(LUSBT,2,WORK(LWRK2),nAS*(nAS+1)/2,idS)
         Call CLagDXA_DP (iSym,nAS,Work(LWRK3),Work(LWRK1),
-     *                   DF3,DG3,DF2,DG2,DF1,DG1,DEPSA,DEASUM,
+     *                   DF2,DG2,DF1,DG1,DEPSA,DEASUM,
      *                   1,nAS,1,nAS,0,g1,g2,work(lwrk2))
         !! G3 and F3 relevant
-        iPad=ItoB-MOD(6*NG3,ItoB)
-        CALL GETMEM('idxG3','ALLO','CHAR',LidxG3,6*NG3+iPad)
+        CALL mma_allocate(idxG3,6,NG3,label='idxG3')
         iLUID=0
-        CALL CDAFILE(LUSOLV,2,cWORK(LidxG3),6*NG3+iPad,iLUID)
+        CALL I1DAFILE(LUSOLV,2,idxG3,6*NG3,iLUID)
         idS = idSMAT(iSym,1)
         CALL DDAFILE(LUSBT,2,WORK(LWRK2),nAS*(nAS+1)/2,idS)
-        CALL MKSC_G3(iSym,Work(LWRK2),nG3,G3,i1Work(LidxG3))
+        CALL MKSC_G3(iSym,Work(LWRK2),nG3,G3,idxG3)
         call CLagDXA_FG3(iSym,nAS,NG3,Work(LWRK3),Work(LWRK1),
-     *                   DF1,DF2,DF3,DG1,DG2,DG3,DEASUM,DEPSA,G2,G3,
-     *                   Work(LWRK2),i1Work(LidxG3))
-        CALL GETMEM('idxG3','FREE','CHAR',LidxG3,6*NG3+iPad)
+     *                   DF1,DF2,DF3,DG1,DG2,DG3,DEPSA,G2,
+     *                   Work(LWRK2),idxG3)
+        call mma_deallocate(idxG3)
       Else If (iCase.eq. 2.or.iCase.eq. 3) Then !! B
         Allocate (WrkBbf(nAshT,nAshT,nAshT,nAshT))
         Allocate (WrkSbf(nAshT,nAshT,nAshT,nAshT))
-        Call DCopy_(nAshT**4,0.0d+00,0,WrkBbf,1)
-        Call DCopy_(nAshT**4,0.0d+00,0,WrkSbf,1)
-        If (BSHIFT.ne.0.0D+00) Then
+        Call DCopy_(nAshT**4,[0.0d+00],0,WrkBbf,1)
+        Call DCopy_(nAshT**4,[0.0d+00],0,WrkSbf,1)
+        If (ipea_shift.ne.0.0D+00) Then
           NS = NAS*(NAS+1)/2
           CALL GETMEM('S','ALLO','REAL',LS,NS)
           idS = idSMAT(iSym,iCase)
           CALL DDAFILE(LUSBT,2,WORK(LS),NS,idS)
         End If
+        ScalB1 = 0.0D+00
+        ScalB2 = 0.0D+00
+        ScalS1 = 0.0D+00
+        ScalS2 = 0.0D+00
+        iTabs  = 0
+        iUabs  = 0
+        iXabs  = 0
+        iYabs  = 0
+        iTgeUabs = 0
+        iTgtUabs = 0
+        iXgeYabs = 0
+        iXgtYabs = 0
         Do iTU = 1, nAS
           If (iCase.eq. 2) Then
             iTgeUabs = iTU + nTgeUes(iSym)
@@ -710,12 +611,12 @@ C
             BDER = Work(LWRK3+iBadr-1)
 C
             !! For IPEA shift
-            If (iTU.eq.iXY.and.BSHIFT.ne.0.0D+00) Then
+            If (iTU.eq.iXY.and.ipea_shift.ne.0.0D+00) Then
               idT=(iTabs*(iTabs+1))/2
-              idU=(iUabs*(iUabs+1))/2
+              ! idU=(iUabs*(iUabs+1))/2
               NSEQ = iTU*(iTU+1)/2
-              bsBDER = BSHIFT*0.5D+00*BDER
-              !! BSHIFT*0.5d0*(DREF(IDT)+DREF(IDU))*WORK(LSDP-1+ITGEU)
+              bsBDER = ipea_shift*0.5D+00*BDER
+!           !! ipea_shift*0.5d0*(DREF(IDT)+DREF(IDU))*WORK(LSDP-1+ITGEU)
               DG1(iTabs,iTabs) = DG1(iTabs,iTabs)
      *          + Work(LS+NSEQ-1)*bsBDER
               DG1(iUabs,iUabs) = DG1(iUabs,iUabs)
@@ -871,33 +772,33 @@ C
             End Do
           End Do
         End Do
-        If (BSHIFT.ne.0.0D+00) CALL GETMEM('S','FREE','REAL',LS,NS)
+        If (ipea_shift.ne.0.0D+00) CALL GETMEM('S','FREE','REAL',LS,NS)
 C
         DeAllocate (WrkBbf)
         DeAllocate (WrkSbf)
       Else If (iCase.eq. 4) Then !! C
-C     write (*,*) "Clear S derivative for C"
-C     call dcopy(nas*nas,0.0d+00,0,work(lwrk1),1)
+C     write(6,*) "Clear S derivative for C"
+C     call docpy_nas*nas,0.0d+00,0,work(lwrk1),1)
         idS = idSMAT(iSym,4)
         CALL DDAFILE(LUSBT,2,WORK(LWRK2),nAS*(nAS+1)/2,idS)
         Call CLagDXC_DP (iSym,nAS,Work(LWRK3),Work(LWRK1),
-     *                   DF3,DG3,DF2,DG2,DF1,DG1,DEPSA,DEASUM,
+     *                   DF2,DG2,DF1,DG1,DEPSA,DEASUM,
      *                   1,nAS,1,nAS,0,g1,g2,work(lwrk2))
 C
         !! G3 and F3 relevant
-        iPad=ItoB-MOD(6*NG3,ItoB)
-        CALL GETMEM('idxG3','ALLO','CHAR',LidxG3,6*NG3+iPad)
+        CALL mma_allocate(idxG3,6,NG3,label='idxG3')
         iLUID=0
-        CALL CDAFILE(LUSOLV,2,cWORK(LidxG3),6*NG3+iPad,iLUID)
+        CALL I1DAFILE(LUSOLV,2,idxG3,6*NG3,iLUID)
         idS = idSMAT(iSym,4)
         CALL DDAFILE(LUSBT,2,WORK(LWRK2),nAS*(nAS+1)/2,idS)
-        CALL MKSC_G3(iSym,Work(LWRK2),nG3,G3,i1Work(LidxG3))
+        CALL MKSC_G3(iSym,Work(LWRK2),nG3,G3,idxG3)
         call CLagDXC_FG3(iSym,nAS,NG3,Work(LWRK3),Work(LWRK1),
-     *                   DF1,DF2,DF3,DG1,DG2,DG3,DEASUM,DEPSA,G2,G3,
-     *                   Work(LWRK2),i1Work(LidxG3))
-        CALL GETMEM('idxG3','FREE','CHAR',LidxG3,6*NG3+iPad)
+     *                   DF1,DF2,DF3,DG1,DG2,DG3,DEPSA,G2,
+     *                   Work(LWRK2),idxG3)
+        call mma_deallocate(idxG3)
       Else If (iCase.eq. 5) Then !! D
-        If (BSHIFT.ne.0.0D+00) Then
+        LS=0
+        If (ipea_shift.ne.0.0D+00) Then
           NS = NAS*(NAS+1)/2
           CALL GETMEM('S','ALLO','REAL',LS,NS)
           idS = idSMAT(iSym,iCase)
@@ -964,9 +865,9 @@ C
             DEPSA(iXabs,iTabs) = DEPSA(iXabs,iTabs)
      *        + 2.0D+00*G1(iUabs,iYabs)*BDER2
 C
-            If (iTU.eq.iXY.and.BSHIFT.ne.0.0D+00) Then
-              !! BSHIFT*0.5d0*(2.0d0-DREF(IDU)+DREF(IDT))*WORK(LSD-1+ITU)
-              bsBDER = BSHIFT*0.5D+00*Work(LWRK3+iTU -1+nAS*(iXY -1))
+            If (iTU.eq.iXY.and.ipea_shift.ne.0.0D+00) Then
+C        !! ipea_shift*0.5d0*(2.0d0-DREF(IDU)+DREF(IDT))*WORK(LSD-1+ITU)
+              bsBDER = ipea_shift*0.5D+0*Work(LWRK3+iTU -1+nAS*(iXY -1))
               NSEQ = iTU*(iTU+1)/2
               DG1(iTabs,iTabs) = DG1(iTabs,iTabs)
      *          + bsBDER*Work(LS+NSEQ-1)
@@ -975,8 +876,8 @@ C
               Work(LWRK1+iTU -1+nAS*(iXY -1))
      *          = Work(LWRK1+iTU -1+nAS*(iXY -1))
      *          + bsBDER*(2.0D+00+G1(iTabs,iTabs)-G1(iUabs,iUabs))
-              !! BSHIFT*0.5d0*(2.0d0-DREF(IDU)+DREF(IDT))*WORK(LSD-1+ITU+NAS)
-              bsBDER = BSHIFT*0.5D+00*Work(LWRK3+iTU2-1+nAS*(iXY2-1))
+C    !! ipea_shift*0.5d0*(2.0d0-DREF(IDU)+DREF(IDT))*WORK(LSD-1+ITU+NAS)
+              bsBDER = ipea_shift*0.5D+0*Work(LWRK3+iTU2-1+nAS*(iXY2-1))
               NSEQ = iTU2*(iTU2+1)/2
               DG1(iTabs,iTabs) = DG1(iTabs,iTabs)
      *          + bsBDER*Work(LS+NSEQ-1)
@@ -986,7 +887,7 @@ C
      *          = Work(LWRK1+iTU2-1+nAS*(iXY2-1))
      *          + bsBDER*(2.0D+00+G1(iTabs,iTabs)-G1(iUabs,iUabs))
             End If
-C 
+C
             SDER1 = Work(LWRK1+iTU -1+nAS*(iXY -1))
      *            - Work(LWRK1+iTU -1+nAS*(iXY2-1))*0.5D+00
      *            - Work(LWRK1+iTU2-1+nAS*(iXY -1))*0.5D+00
@@ -1006,38 +907,38 @@ C
             End If
           End Do
         End Do
-        If (BSHIFT.ne.0.0D+00) CALL GETMEM('S','FREE','REAL',LS,NS)
+        If (ipea_shift.ne.0.0D+00) CALL GETMEM('S','FREE','REAL',LS,NS)
       Else If (iCase.eq. 6.or.iCase.eq. 7) Then !! E
-        If (BSHIFT.ne.0) Then
+        If (ipea_shift.ne.0.0d0) Then
           NS = NAS*(NAS+1)/2
           CALL GETMEM('S','ALLO','REAL',LS,NS)
           idS = idSMAT(iSym,6)
           CALL DDAFILE(LUSBT,2,WORK(LS),NS,idS)
-          !! BSHIFT*0.5d0*DREF(IDT)*WORK(LSD-1+IT)
+          !! ipea_shift*0.5d0*DREF(IDT)*WORK(LSD-1+IT)
           Do iT = 1, nAshI
             VAL = Work(LWRK3+iT-1+nAS*(iT-1))
             Work(LWRK1+iT-1+nAS*(iT-1)) = Work(LWRK1+iT-1+nAS*(iT-1))
-     *        + BSHIFT*0.5D+00*G1(iT,iT)*VAL
+     *        + ipea_shift*0.5D+00*G1(iT,iT)*VAL
             nSEQ = iT*(iT-1)/2+iT
-            DG1(iT,iT) = DG1(iT,iT) + BSHIFT*0.5D+00*Work(LS+nSEQ-1)*VAL
+            DG1(iT,iT)=DG1(iT,iT)+ipea_shift*0.5D+0*Work(LS+nSEQ-1)*VAL
           End Do
           CALL GETMEM('S','FREE','REAL',LS,NS)
         End If
-        !! E_{ti}_{aj}
-        !! B_{tu} = (E_{ti}E_{aj})*f_{vw}E_{vw}*E_{uk}E_{bl}
-        !!        = (j+ a i+ t v+ w u+ k b+ l)*f_{vw}
-        !!        = j+ a t v+ w u+ b+ l * f_{vw}
-        !!        = t v+ w u+ * f_{vw}
-        !!        = t v+ (del(uw)- u+ w) * f_{vw}
-        !!        = del(uw)*tD_{tv}*f_{vw} - t v+ u+ w * f_{vw}
-        !!        = del(uw)*tD_{tv}*f_{vw} + t u+ v+ w * f_{vw}
-        !!        = del(uw)*tD_{tv}*f_{vw} + (del(tu)- u+ t) v+ w * f_{vw}
-        !!        = del(uw)*tD_{tv}*f_{vw} + del(tu) v+ w * f_{vw}
-        !!          - u+ t v+ w * f_{vw}
-        !!        = del(uw)*tD_{tv}*f_{vw} + del(tu)*D_{vw}*f_{vw} - F_{ut}
-        !!        = tD_{tv}*f_{vu} + del(tu)*EASUM - F_{ut}
-        !!        = (2*del(tv)-D_{tv})*f_{vu} + del(tu)*EASUM - F_{ut}
-        !!        = 2*f_{tu} - D_{tv}*f_{vu} + del(tu)*EASUM - F_{ut}
+C     !! E_{ti}_{aj}
+C     !! B_{tu} = (E_{ti}E_{aj})*f_{vw}E_{vw}*E_{uk}E_{bl}
+C     !!        = (j+ a i+ t v+ w u+ k b+ l)*f_{vw}
+C     !!        = j+ a t v+ w u+ b+ l * f_{vw}
+C     !!        = t v+ w u+ * f_{vw}
+C     !!        = t v+ (del(uw)- u+ w) * f_{vw}
+C     !!        = del(uw)*tD_{tv}*f_{vw} - t v+ u+ w * f_{vw}
+C     !!        = del(uw)*tD_{tv}*f_{vw} + t u+ v+ w * f_{vw}
+C     !!        = del(uw)*tD_{tv}*f_{vw} + (del(tu)- u+ t) v+ w * f_{vw}
+C     !!        = del(uw)*tD_{tv}*f_{vw} + del(tu) v+ w * f_{vw}
+C     !!          - u+ t v+ w * f_{vw}
+C     !!        = del(uw)*tD_{tv}*f_{vw} + del(tu)*D_{vw}*f_{vw} -F_{ut}
+C     !!        = tD_{tv}*f_{vu} + del(tu)*EASUM - F_{ut}
+C     !!        = (2*del(tv)-D_{tv})*f_{vu} + del(tu)*EASUM - F_{ut}
+C     !!        = 2*f_{tu} - D_{tv}*f_{vu} + del(tu)*EASUM - F_{ut}
         Do iT = 1, nAshI
           iTabs = iT + nAes(iSym)
           ET = EPSA(iTabs)
@@ -1062,14 +963,27 @@ C
           End Do
         End Do
       Else If (iCase.eq. 8.or.iCase.eq. 9) Then !! F
-C     write (*,*) "Clear B derivative for F"
-C     call dcopy(nas*nas,0.0d+00,0,work(lwrk3),1)
-        If (BSHIFT.ne.0.0D+00) Then
+C     write(6,*) "Clear B derivative for F"
+C     call docpy_nas*nas,0.0d+00,0,work(lwrk3),1)
+        LS=0
+        If (ipea_shift.ne.0.0D+00) Then
           NS = NAS*(NAS+1)/2
           CALL GETMEM('S','ALLO','REAL',LS,NS)
           idS = idSMAT(iSym,iCase)
           CALL DDAFILE(LUSBT,2,WORK(LS),NS,idS)
         End If
+        ScalB1 = 0.0D+00
+        ScalB2 = 0.0D+00
+        ScalS1 = 0.0D+00
+        ScalS2 = 0.0D+00
+        iXabs  = 0
+        iYabs  = 0
+        iTabs  = 0
+        iUabs  = 0
+        iTgeUabs = 0
+        iTgtUabs = 0
+        iXgeYabs = 0
+        iXgtYabs = 0
         Do iTU = 1, nAS
           If (iCase.eq. 8) Then
             iTgeUabs = iTU + nTgeUes(iSym)
@@ -1093,12 +1007,12 @@ C     call dcopy(nas*nas,0.0d+00,0,work(lwrk3),1)
             iBadr = iTU + nAS*(iXY-1)
 C
             BDER = Work(LWRK3+iBadr-1)
-            If (iTU.eq.iXY.and.BSHIFT.ne.0.0D+00) Then
+            If (iTU.eq.iXY.and.ipea_shift.ne.0.0D+00) Then
               idT=(iTabs*(iTabs+1))/2
-              idU=(iUabs*(iUabs+1))/2
+              ! idU=(iUabs*(iUabs+1))/2
               NSEQ = iTU*(iTU+1)/2
-              bsBDER = BSHIFT*0.5D+00*BDER
-              !! BSHIFT*0.5d0*(4.0d0-DREF(IDT)-DREF(IDU))*WORK(LSDP-1+ITGEU)
+              bsBDER = ipea_shift*0.5D+00*BDER
+C     !! ipea_shift*0.5d0*(4.0d0-DREF(IDT)-DREF(IDU))*WORK(LSDP-1+ITGEU)
               DG1(iTabs,iTabs) = DG1(iTabs,iTabs)
      *          - Work(LS+NSEQ-1)*bsBDER
               DG1(iUabs,iUabs) = DG1(iUabs,iUabs)
@@ -1132,10 +1046,10 @@ C
      *      DEASUM = DEASUM - ScalB2*G2(iUabs,iXabs,iTabs,iYabs)
      *                      - ScalB1*G2(iUabs,iYabs,iTabs,iXabs)
 C
-            iTX = iTabs+nAshT*(iXabs-1)
-            iUY = iUabs+nAshT*(iYabs-1)
-            iTY = iTabs+nAshT*(iYabs-1)
-            iUX = iUabs+nAshT*(iXabs-1)
+            ! iTX = iTabs+nAshT*(iXabs-1)
+            ! iUY = iUabs+nAshT*(iYabs-1)
+            ! iTY = iTabs+nAshT*(iYabs-1)
+            ! iUX = iUabs+nAshT*(iXabs-1)
 C
             DF2(iTabs,iXabs,iUabs,iYabs)
      *        = DF2(iTabs,iXabs,iUabs,iYabs) + ScalB1
@@ -1159,32 +1073,32 @@ C
             End If
           End Do
         End Do
-        If (BSHIFT.ne.0.0D+00) CALL GETMEM('S','FREE','REAL',LS,NS)
+        If (ipea_shift.ne.0.0D+00) CALL GETMEM('S','FREE','REAL',LS,NS)
       Else If (iCase.eq.10.or.iCase.eq.11) Then !! G
-        If (BSHIFT.ne.0) Then
+        If (ipea_shift.ne.0.0d0) Then
           NS = NAS*(NAS+1)/2
           CALL GETMEM('S','ALLO','REAL',LS,NS)
           idS = idSMAT(iSym,10)
           CALL DDAFILE(LUSBT,2,WORK(LS),NS,idS)
-          !! BSHIFT*0.5d0*(2.0d0-DREF(IDT))*WORK(LSD-1+IT)
+          !! ipea_shift*0.5d0*(2.0d0-DREF(IDT))*WORK(LSD-1+IT)
           Do iT = 1, nAshI
             VAL = Work(LWRK3+iT-1+nAS*(iT-1))
             Work(LWRK1+iT-1+nAS*(iT-1)) = Work(LWRK1+iT-1+nAS*(iT-1))
-     *        + BSHIFT*0.5D+00*(2.0D+00-G1(iT,iT))*VAL
+     *        + ipea_shift*0.5D+00*(2.0D+00-G1(iT,iT))*VAL
             nSEQ = iT*(iT-1)/2+iT
-            DG1(iT,iT) = DG1(iT,iT) - BSHIFT*0.5D+00*Work(LS+nSEQ-1)*VAL
-C     write (*,'(i3,3f20.10)') i,g1(it,it),work(ls+nseq-1),
-C    *            BSHIFT*0.5d0*(2.0d0-g1(it,it))*work(ls+nseq-1)
+            DG1(iT,iT)=DG1(iT,iT)-ipea_shift*0.5D+00*Work(LS+nSEQ-1)*VAL
+C     write(6,'(i3,3f20.10)') i,g1(it,it),work(ls+nseq-1),
+C    *            ipea_shift*0.5d0*(2.0d0-g1(it,it))*work(ls+nseq-1)
 C           Do iU = 1, nAshI
 C             VAL = Work(LWRK3+iT-1+nAS*(iU-1))
 C             Work(LWRK1+iT-1+nAS*(iU-1)) = Work(LWRK1+iT-1+nAS*(iU-1))
-C    *          + BSHIFT*0.5D+00*(2.0D+00-G1(iT,iU))*VAL
+C    *          + ipea_shift*0.5D+00*(2.0D+00-G1(iT,iU))*VAL
 C             if (it.ge.iu) then
 C             nSEQ = iT*(iT-1)/2+iU
 C             else
 C             nSEQ = iU*(iU-1)/2+iT
 C             end if
-C             DG1(iT,iU) = DG1(iT,iU)-BSHIFT*0.5D+00*Work(LS+nSEQ-1)*VAL
+C         DG1(iT,iU) = DG1(iT,iU)-ipea_shift*0.5D+00*Work(LS+nSEQ-1)*VAL
 C           End Do
           End Do
           CALL GETMEM('S','FREE','REAL',LS,NS)
@@ -1216,25 +1130,27 @@ C
       !! From poly3
       SUBROUTINE CnstCLag(IFF,CLag,
      *                    DG1,DG2,DG3,DF1,DF2,DF3,DEPSA,
-     *                    G1,G2,G3,F1,F2,F3,TRF)
-C
+     *                    G1,G2,G3)
+
+      use stdalloc, only: mma_allocate, mma_deallocate
+      use caspt2_output, only: iPrGlb, verbose
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
 #include "WrkSpc.fh"
 
-#include "output.fh"
 #include "pt2_guga.fh"
 #include "SysDef.fh"
 C
       DIMENSION CLag(nConf)
       DIMENSION DG1(*),DG2(*),DG3(*),DF1(*),DF2(*),DF3(*)
-      DIMENSION G1(*),G2(*),G3(*),F1(*),F2(*),F3(*)
-      DIMENSION DEPSA(*),TRF(norbt,norbt)
+      DIMENSION G1(*),G2(*),G3(*)
+      DIMENSION DEPSA(*)
 C
       INTEGER ILEV
-      INTEGER NG3MAX,IPAD,LIDXG3
+      INTEGER NG3MAX
       INTEGER ILUID
+      integer*1, allocatable :: idxG3(:,:)
 C
       INTEGER IDCI
       INTEGER J
@@ -1252,11 +1168,9 @@ C-SVC20100831: recompute approximate max NG3 size needed
       NG3MAX=iPARDIV(NG3TOT,NG2)
 
 C-SVC20100831: allocate local G3 matrices
-      iPad=ItoB-MOD(6*NG3,ItoB)
-      CALL GETMEM('idxG3','ALLO','CHAR',LidxG3,6*NG3+iPad)
+      CALL mma_allocate(idxG3,6,NG3,label='idxG3')
       iLUID=0
-      CALL CDAFILE(LUSOLV,2,cWORK(LidxG3),6*NG3+iPad,iLUID)
-
+      CALL I1DAFILE(LUSOLV,2,idxG3,6*NG3,iLUID)
 * NG3 will change inside subroutine MKFG3 to the actual
 * number of nonzero elements, that is why here we allocate
 * with NG3MAX, but we only store (PT2_PUT) the first NG3
@@ -1265,11 +1179,15 @@ C-SVC20100831: allocate local G3 matrices
 
       CALL GETMEM('LCI','ALLO','REAL',LCI,NCONF)
       If (ISCF.EQ.0) Then
-        IDCI=IDTCEX
-        DO J=1,JSTATE-1
-          CALL DDAFILE(LUCIEX,0,WORK(LCI),NCONF,IDCI)
-        END DO
-        CALL DDAFILE(LUCIEX,2,WORK(LCI),NCONF,IDCI)
+        if (iff.eq.1) then
+          IDCI=IDTCEX
+          DO J=1,JSTATE-1
+            CALL DDAFILE(LUCIEX,0,WORK(LCI),NCONF,IDCI)
+          END DO
+          CALL DDAFILE(LUCIEX,2,WORK(LCI),NCONF,IDCI)
+        else
+C         Call LoadCI_XMS('C',1,Work(LCI),JSTATE,U0)
+        end if
         IF (IPRGLB.GE.VERBOSE) THEN
           WRITE(6,*)
           IF (NSTATE.GT.1) THEN
@@ -1278,281 +1196,59 @@ C-SVC20100831: allocate local G3 matrices
           ELSE
             WRITE(6,*)' With new orbitals, the CI array is:'
           END IF
-          CALL PRWF_CP2(LSYM,NCONF,WORK(LCI),CITHR)
+          CALL PRWF_CP2(STSYM,NCONF,WORK(LCI),CITHR)
         END IF
       Else
         WORK(LCI) = 1.0D+00
       End If
 C
-      !! construct transformation matrix for active only
-      CALL GETMEM('LTRF','ALLO','REAL',LTRF,NLEV*NLEV)
-      nCor = nFro(1)+nIsh(1)
-      Do iT = 1, nLEV
-        Do iU = 1, nLEV
-          Work(LTRF+iT-1+nLEV*(iU-1)) = TRF(nCor+iT,nCor+iU)
-        End Do
-      End Do
-C     call sqprt(work(ltrf),5)
-C
-C
-C     CALL MKFG3mod(IFF,WORK(LCI),WORK(LG1),WORK(LF1),WORK(LG2),
-C    &              WORK(LF2),WORK(LG3),WORK(LF3),i1WORK(LidxG3))
       CALL TIMING(CPTF0,CPE,TIOTF0,TIOE)
       If (ISCF.EQ.0) Then
-        CALL DERFG3(IFF,WORK(LCI),CLAG,DG1,DG2,DG3,DF1,DF2,DF3,
-     &              i1WORK(LidxG3),DEPSA,G1,G2,G3,F1,F2,F3,Work(LTRF))
+        CALL DERFG3(WORK(LCI),CLAG,DG1,DG2,DG3,DF1,DF2,DF3,
+     &              idxG3,DEPSA,G1,G2)
       Else
-        CALL DERSPE(DG1,DG2,DG3,DF1,DF2,DF3,
-     &              i1WORK(LidxG3),DEPSA,G1,G2,G3,F1,F2,F3)
+        CALL DERSPE(DF1,DF2,DF3,idxG3,DEPSA,G1,G2,G3)
       End If
       CALL TIMING(CPTF10,CPE,TIOTF10,TIOE)
-      CPUT =CPTF10-CPTF0
-      WALLT=TIOTF10-TIOTF0
-      write (*,*) "DERFG3: CPU/WALL TIME=", cput,wallt
-C      clag( 1) =       0.0033419667d+00
-C      clag( 2) =       0.0002249578d+00
-C      clag( 3) =       0.0000477485d+00
-C      clag( 4) =       0.0001358558d+00
-C      clag( 5) =       0.0000537170d+00
-C      clag( 6) =       0.0001577405d+00
-C      clag( 7) =       0.0006750156d+00
-C      clag( 8) =      -0.0002246736d+00
-C      clag( 9) =       0.0009028156d+00
-C      clag(10) =      -0.0000856915d+00
-C      clag(11) =       0.0001898570d+00
-C      clag(12) =      -0.0002448530d+00
-C      clag(13) =      -0.0000608225d+00
-C      clag(14) =      -0.0003217338d+00
-C      clag(15) =       0.0001718092d+00
-C      clag(16) =      -0.0014746604d+00
-C      clag(17) =       0.0005132961d+00
-C      clag(18) =      -0.0003930722d+00
-C      clag(19) =       0.0005589129d+00
-C      clag(20) =      -0.0003407763d+00
-C      clag(21) =       0.0000909495d+00
-C      clag(22) =       0.0003151968d+00
-C      clag(23) =       0.0002576428d+00
-C      clag(24) =       0.0000565592d+00
-C      clag(25) =      -0.0000568434d+00
-C      clag(26) =      -0.0014401280d+00
-C      clag(27) =       0.0006322409d+00
-C      clag(28) =      -0.0004608580d+00
-C      clag(29) =       0.0007146639d+00
-C      clag(30) =      -0.0003655032d+00
-C      clag(31) =       0.0005208278d+00
-C      clag(32) =      -0.0003204548d+00
-C      clag(33) =      -0.0002702905d+00
-C      clag(34) =      -0.0002150102d+00
-C      clag(35) =       0.0000302691d+00
-C      clag(36) =      -0.0000198952d+00
-C      clag(37) =      -0.0000154898d+00
-C      clag(38) =       0.0000595435d+00
-C      clag(39) =      -0.0000630962d+00
-C      clag(40) =      -0.0000289901d+00
-C      clag(41) =       0.0000200373d+00
-C      clag(42) =      -0.0001024603d+00
-C      clag(43) =      -0.0002046363d+00
-C      clag(44) =       0.0001811884d+00
-C      clag(45) =       0.0003326761d+00
-C      clag(46) =      -0.0000535749d+00
-C      clag(47) =       0.0009232792d+00
-C      clag(48) =      -0.0003024070d+00
-C      clag(49) =      -0.0002638956d+00
-C      clag(50) =       0.0003198863d+00
-C      clag(51) =       0.0009393375d+00
-C      clag(52) =      -0.0003164757d+00
-C      clag(53) =      -0.0000623857d+00
-C      clag(54) =      -0.0001465139d+00
-C      clag(55) =       0.0003738876d+00
-C      clag(56) =      -0.0001809042d+00
-C      clag(57) =      -0.0004018830d+00
-C      clag(58) =       0.0002795275d+00
-C      clag(59) =      -0.0007469225d+00
-C      clag(60) =       0.0002985701d+00
-C      clag(61) =       0.0001286082d+00
-C      clag(62) =      -0.0001786304d+00
-C      clag(63) =      -0.0003595346d+00
-C      clag(64) =       0.0001736566d+00
-C      clag(65) =      -0.0001951150d+00
-C      clag(66) =       0.0001490719d+00
-C      clag(67) =       0.0000665068d+00
-C      clag(68) =       0.0001683986d+00
-C      clag(69) =       0.0003875300d+00
-C      clag(70) =      -0.0003934986d+00
-C      clag(71) =       0.0005189804d+00
-C      clag(72) =      -0.0002384581d+00
-C      clag(73) =      -0.0000719069d+00
-C      clag(74) =       0.0000711964d+00
-C      clag(75) =       0.0011132784d+00
-C      clag(76) =      -0.0005809397d+00
-C      clag(77) =      -0.0000144951d+00
-C      clag(78) =      -0.0003169021d+00
-C      clag(79) =       0.0001146816d+00
-C      clag(80) =       0.0000709122d+00
-C      clag(81) =      -0.0003355183d+00
-C      clag(82) =       0.0000129319d+00
-C      clag(83) =      -0.0001129763d+00
-C      clag(84) =       0.0002715694d+00
-C      clag(85) =       0.0002906120d+00
-C      clag(86) =       0.0000309797d+00
-C      clag(87) =       0.0002752643d+00
-C      clag(88) =      -0.0001649880d+00
-C      clag(89) =       0.0001334399d+00
-C      clag(90) =       0.0001125500d+00
-C      clag(91) =      -0.0004615686d+00
-C      clag(92) =       0.0002094680d+00
-C      clag(93) =       0.0001988099d+00
-C      clag(94) =      -0.0001192291d+00
-C      clag(95) =      -0.0000194689d+00
-C      clag( 1) =       0.0027024925d+00
-C      clag( 2) =       0.0000695906d+00
-C      clag( 3) =       0.0003663558d+00
-C      clag( 4) =       0.0004356195d+00
-C      clag( 5) =      -0.0003152820d+00
-C      clag( 6) =      -0.0000466116d+00
-C      clag( 7) =       0.0000985096d+00
-C      clag( 8) =       0.0001036824d+00
-C      clag( 9) =       0.0007409398d+00
-C      clag(10) =      -0.0000836167d+00
-C      clag(11) =       0.0006440501d+00
-C      clag(12) =      -0.0001626290d+00
-C      clag(13) =       0.0006233449d+00
-C      clag(14) =      -0.0000862883d+00
-C      clag(15) =      -0.0000938201d+00
-C      clag(16) =       0.0009037819d+00
-C      clag(17) =      -0.0005558718d+00
-C      clag(18) =      -0.0000260911d+00
-C      clag(19) =       0.0002184777d+00
-C      clag(20) =       0.0004069705d+00
-C      clag(21) =      -0.0007431993d+00
-C      clag(22) =       0.0005576766d+00
-C      clag(23) =      -0.0002573870d+00
-C      clag(24) =       0.0000955538d+00
-C      clag(25) =       0.0000838725d+00
-C      clag(26) =       0.0010222152d+00
-C      clag(27) =       0.0006520509d+00
-C      clag(28) =       0.0004881429d+00
-C      clag(29) =      -0.0002027321d+00
-C      clag(30) =      -0.0004294236d+00
-C      clag(31) =      -0.0000236753d+00
-C      clag(32) =       0.0003032028d+00
-C      clag(33) =      -0.0000020748d+00
-C      clag(34) =      -0.0000522391d+00
-C      clag(35) =      -0.0000303260d+00
-C      clag(36) =       0.0000396057d+00
-C      clag(37) =       0.0000831619d+00
-C      clag(38) =      -0.0000404725d+00
-C      clag(39) =       0.0000867431d+00
-C      clag(40) =      -0.0001239755d+00
-C      clag(41) =       0.0000281801d+00
-C      clag(42) =      -0.0000803198d+00
-C      clag(43) =      -0.0000572129d+00
-C      clag(44) =      -0.0001397638d+00
-C      clag(45) =       0.0000177778d+00
-C      clag(46) =       0.0000219842d+00
-C      clag(47) =      -0.0002411440d+00
-C      clag(48) =       0.0000418936d+00
-C      clag(49) =       0.0000782165d+00
-C      clag(50) =      -0.0000129035d+00
-C      clag(51) =       0.0004885408d+00
-C      clag(52) =       0.0000374882d+00
-C      clag(53) =       0.0004379217d+00
-C      clag(54) =      -0.0001349036d+00
-C      clag(55) =      -0.0001158469d+00
-C      clag(56) =       0.0003216201d+00
-C      clag(57) =      -0.0000344045d+00
-C      clag(58) =       0.0000589182d+00
-C      clag(59) =      -0.0006063772d+00
-C      clag(60) =      -0.0001677165d+00
-C      clag(61) =      -0.0002049347d+00
-C      clag(62) =      -0.0003289529d+00
-C      clag(63) =       0.0000683542d+00
-C      clag(64) =      -0.0000635509d+00
-C      clag(65) =       0.0000019043d+00
-C      clag(66) =      -0.0001314788d+00
-C      clag(67) =      -0.0002597460d+00
-C      clag(68) =      -0.0001438707d+00
-C      clag(69) =       0.0001902691d+00
-C      clag(70) =      -0.0001638085d+00
-C      clag(71) =       0.0000757012d+00
-C      clag(72) =      -0.0000504627d+00
-C      clag(73) =      -0.0002171134d+00
-C      clag(74) =      -0.0001623732d+00
-C      clag(75) =       0.0005072991d+00
-C      clag(76) =       0.0001800657d+00
-C      clag(77) =       0.0004871197d+00
-C      clag(78) =       0.0001104326d+00
-C      clag(79) =       0.0002382450d+00
-C      clag(80) =       0.0004470024d+00
-C      clag(81) =      -0.0003978187d+00
-C      clag(82) =       0.0002725784d+00
-C      clag(83) =       0.0000508891d+00
-C      clag(84) =      -0.0000351861d+00
-C      clag(85) =       0.0000025437d+00
-C      clag(86) =       0.0000713811d+00
-C      clag(87) =      -0.0000249827d+00
-C      clag(88) =      -0.0001655991d+00
-C      clag(89) =      -0.0000263753d+00
-C      clag(90) =      -0.0000151061d+00
-C      clag(91) =       0.0000323581d+00
-C      clag(92) =      -0.0000610925d+00
-C      clag(93) =       0.0001861054d+00
-C      clag(94) =       0.0001623732d+00
-C      clag(95) =      -0.0001680860d+00
-C      clag( 1) =      -0.0009997052d+00
-C      clag( 2) =       0.0000000000d+00
-C      clag( 3) =       0.0155051936d+00
-C      clag( 4) =      -0.0055484435d+00
-C      clag( 5) =       0.0000000000d+00
-C      clag( 6) =      -0.0005734506d+00
-C      clag( 7) =       0.0000000000d+00
-C      clag( 8) =       0.0074289801d+00
-C      clag( 9) =       0.0000000000d+00
-C      clag(10) =      -0.0013715749d+00
-C      clag(11) =       0.0000000000d+00
-C      clag(12) =       0.0069490937d+00
-C      clag(13) =       0.0000000000d+00
-C      clag(14) =      -0.0017335964d+00
-C      clag(15) =       0.0038805581d+00
-C      clag(16) =       0.0000000000d+00
-C      clag(17) =       0.0004837233d+00
-C      clag(18) =      -0.0002733600d+00
-C      clag(19) =       0.0000000000d+00
-C      clag(20) =      -0.0007986500d+00
+      IF (IPRGLB.GE.verbose) THEN
+        CPUT =CPTF10-CPTF0
+        WALLT=TIOTF10-TIOTF0
+        write(6,*)
+        write(6,'(a,2f10.2)')" DERFG3  : CPU/WALL TIME=", cput,wallt
+      END IF
+C
+C     write(6,*) "clag after DERFG3"
+C     do i = 1, min(50,nconf)
+C       write(6,'(i3,2f20.10)') i,clag(i),work(lci+i-1)
+C     end do
 
-
-      write (*,*) "clag after DERFG3"
-      do i = 1, min(50,nconf)
-        write (*,'(i3,2f20.10)') i,clag(i),work(lci+i-1)
-      end do
 C     call abend
-C     ovl = ddot(nconf,work(lci),1,clag,1)
-C     write (*,*) "ovl = ", ovl
-C     call daxpy(nconf,-ovl,work(lci),1,clag,1)
-C     write (*,*) "clag after projection"
+C     ovl = ddot_(nconf,work(lci),1,clag,1)
+C     write(6,*) "ovl = ", ovl
+C     call daxpy_(nconf,-ovl,work(lci),1,clag,1)
+C     write(6,*) "clag after projection"
 C     do i = 1, nconf
-C       write (*,'(i3,f20.10)') i,clag(i)
+C       write(6,'(i3,f20.10)') i,clag(i)
 C     end do
 C     call abend
 
 C     CALL DCOPY_(NCONF,[0.0D0],0,WORK(LSGM),1)
 C     IF(ORBIN.EQ.'TRANSFOR') Call CLagX_TrfCI(CLAG)
 
-C     write (*,*) "clag after rotation"
+C     write(6,*) "clag after rotation"
 C     do i = 1, nconf
-C       write (*,'(i3,f20.10)') i,clag(i)
+C       write(6,'(i3,f20.10)') i,clag(i)
 C     end do
-C     write (*,*) "after projection"
-C     ovl = ddot(nconf,work(lci),1,clag,1)
-C     call daxpy(nconf,-ovl,work(lci),1,clag,1)
+C     write(6,*) "after projection"
+C     ovl = ddot_(nconf,work(lci),1,clag,1)
+C     call daxpy_(nconf,-ovl,work(lci),1,clag,1)
 C     do i = 1, nconf
-C       write (*,'(i3,2f20.10)') i,clag(i),
+C       write(6,'(i3,2f20.10)') i,clag(i),
 C    *    clag(i)*2.0d+00
 C     end do
 C
-      CALL GETMEM('LTRF','FREE','REAL',LTRF,NLEV*NLEV)
       CALL GETMEM('LCI','FREE','REAL',LCI,NCONF)
-      CALL GETMEM('idxG3','FREE','CHAR',LidxG3,6*NG3+iPad)
+      call mma_deallocate(idxG3)
 C
       Return
 C
@@ -1561,63 +1257,89 @@ C
 C-----------------------------------------------------------------------
 C
       !! From poly3
-      SUBROUTINE CLagEig(CLag,RDMEIG,proj)
+      SUBROUTINE CLagEig(IFSSDMloc,CLag,RDMEIG)
 C
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
 #include "WrkSpc.fh"
-
-#include "output.fh"
 #include "pt2_guga.fh"
 #include "SysDef.fh"
+#include "caspt2_grad.fh"
 C
       DIMENSION CLag(nConf,nState),RDMEIG(*)
-      logical proj
+      Logical   IFSSDMloc
+C
+C     MODE=0: Either state-averaged or LDWGT matrix
+C     MODE=1: XMS-specific term, always state-averaged DM
 C
       !! RDMEIG
       Call GetMem('LCI','ALLO','REAL',LCI,nConf)
-C     write (*,*) "nconf = ", nconf
-C     call dcopy(50,0.0d+00,0,clag,1)
+
       Do iState = 1, nState
-        If (IFSADREF) Then
+        If (.not.IFSSDMloc) Then
           If (ISCF.EQ.0) Then
             Call LoadCI(Work(LCI),iState)
           Else
             Work(LCI) = 1.0D+00
           End If
-C         Wgt = Work(LDWgt+iState-1+nState*(iState-1))
           WGT = 1.0D+00/nState
           Call DScal_(NLEV*NLEV,WGT,RDMEIG,1)
           Call Poly1_CLag(Work(LCI),CLag(1,iState),RDMEIG)
           Call DScal_(NLEV*NLEV,1.0D+00/WGT,RDMEIG,1)
-        Else If (iState.eq.jState) Then
-          If (ISCF.EQ.0) Then
-            Call LoadCI(Work(LCI),jState)
-          Else
-            Work(LCI) = 1.0D+00
+        Else
+          Wgt = Work(LDWgt+iState-1+nState*(jState-1))
+          If (abs(wgt).gt.1.0d-09) Then
+            If (ISCF.EQ.0) Then
+              Call LoadCI(Work(LCI),iState)
+            Else
+              Work(LCI) = 1.0D+00
+            End If
+            !! how is the numerical precision?
+            Call DScal_(NLEV*NLEV,WGT,RDMEIG,1)
+            Call Poly1_CLag(Work(LCI),CLag(1,iState),RDMEIG)
+            Call DScal_(NLEV*NLEV,1.0D+00/WGT,RDMEIG,1)
           End If
-          Call Poly1_CLag(Work(LCI),CLag(1,jState),RDMEIG)
+
+          !! Derivative of omega for dynamically weighted density
+          If (IFDW .and. zeta >= 0.0d0) Then
+            If (ISCF.EQ.0) Then
+              Call LoadCI(Work(LCI),iState)
+            Else
+              Work(LCI) = 1.0D+00
+            End If
+            Call GetMem('WRK','ALLO','REAL',LWRK,nAshT**2)
+            call POLY1(WORK(LCI))
+            call GETDREF(WORK(LDREF))
+            Call SQUARE(Work(LDREF),Work(LWRK),1,nAshT,nAshT)
+            !! probably it is doubled somewhere, so should half
+            Scal = DDOT_(nAshT**2,RDMEIG,1,Work(LWRK),1)*0.5d+00
+C           write (*,*) "scal = ", scal
+            Call GetMem('WRK','FREE','REAL',LWRK,nAshT**2)
+            WORK(ipOMGDER+iState-1+nState*(jState-1))
+     *      = WORK(ipOMGDER+iState-1+nState*(jState-1)) + Scal
+          End If
+
         End If
       End Do
-C     write (*,*) "clag before projection"
+C     write(6,*) "clag before projection"
 C     do istate = 1, nstate
-C       write (*,*) "state = ", istate
+C       write(6,*) "state = ", istate
 C       do i = 1, nconf
-C         write (*,'(i3,f20.10)') i,clag(i,istate)
+C         write(6,'(i3,f20.10)') i,clag(i,istate)
 C       end do
 C     end do
-C     write (*,*) "debug"
+C     write(6,*) "debug"
 C     IF(ORBIN.EQ.'TRANSFOR') Call CLagX_TrfCI(CLAG)
 C     if (proj) then
-C     ovl = ddot(nconf*nstate,work(lci),1,clag,1)
-C     write (*,*) "projection coeff = ",ovl
-C     call daxpy(nconf*nstate,-ovl,work(lci),1,clag,1)
-C     write (*,*) "clag after projection"
+C     ovl = ddot_(nconf*nstate,work(lci),1,clag,1)
+C     write(6,*) "projection coeff = ",ovl
+C     call daxpy_(nconf*nstate,-ovl,work(lci),1,clag,1)
+C     write(6,*) "clag after projection"
 C     do istate = 1, nstate
-C       write (*,*) "state = ", istate
+C       write(6,*) "state = ", istate
 C       do i = 1, nconf
-C         write (*,'(i3,f20.10)') i,clag(i,istate)
+C         write(6,'(i3,f20.10)') i,clag(i,istate)
 C       end do
 C     end do
 C     end if
@@ -1632,6 +1354,7 @@ C-----------------------------------------------------------------------
 C
       Subroutine CLagFinal(CLag,SLag)
 C
+      use caspt2_output, only: iPrGlb,verbose
       IMPLICIT REAL*8 (A-H,O-Z)
 C
       Dimension CLag(nConf,nState),SLag(*)
@@ -1640,9 +1363,6 @@ C
 #include "caspt2.fh"
 #include "WrkSpc.fh"
 
-Cinclude "output.fh"
-Cinclude "pt2_guga.fh"
-Cinclude "SysDef.fh"
       Call GetMem('LCI1','ALLO','REAL',LCI1,nConf)
       Call GetMem('LCI2','ALLO','REAL',LCI2,nConf)
 C
@@ -1654,20 +1374,24 @@ C
         Else
           Work(LCI1) = 1.0D+00
         End If
-        do jlStat = 1, ilStat-1
+        Do jlStat = 1, ilStat !! -1
+          ijst = ilStat + nState*(jlStat-1)
+          If (ilStat.eq.jlStat) Cycle
           If (ISCF.EQ.0) Then
             Call LoadCI(Work(LCI2),jlStat)
           Else
             Work(LCI2) = 1.0D+00
           End If
-          ijst = ijst + 1
-          SLag(ijst) = SLag(ijst)
-     *      + DDOT_(nConf,Work(LCI1),1,CLag(1,jlStat),1)
-     *      - DDOT_(nConf,Work(LCI2),1,CLag(1,ilStat),1)
-C           write (*,*)DDOT_(nConf,Work(LCI1),1,CLag(1,jlStat),1)
-C           write (*,*)DDOT_(nConf,Work(LCI2),1,CLag(1,ilStat),1)
-            write (*,'("SLag for State ",i1,"-",i1," = ",f20.10)')
+          Scal = DDOT_(nConf,Work(LCI1),1,CLag(1,jlStat),1)
+     *         - DDOT_(nConf,Work(LCI2),1,CLag(1,ilStat),1)
+          Scal = Scal/(REFENE(jlStat)-REFENE(ilStat))
+          SLag(ijst) = SLag(ijst) + Scal
+          IF (IPRGLB.GE.VERBOSE) THEN
+            write(6,*)
+            write(6,'(1x,"SLag for State ",i1,"-",i1," = ",f20.10)')
      *         ilstat,jlstat,slag(ijst)
+            write(6,*)
+          END IF
         end do
       end do
 C
@@ -1675,7 +1399,7 @@ C
       Do ilStat = 1, nState
         Call DCopy_(nConf,CLag(1,ilStat),1,Work(LCI1),1)
 C       do i = 1, nconf
-C         write (*,'(i3,f20.10)') i,clag(i,ilstat)
+C         write(6,'(i3,f20.10)') i,clag(i,ilstat)
 C       end do
         Do jlStat = 1, nState
           If (ISCF.EQ.0) Then
@@ -1684,14 +1408,13 @@ C       end do
             Work(LCI2) = 1.0D+00
           End If
           Ovl = DDot_(nConf,Work(LCI1),1,Work(LCI2),1)
-C         Ovl = DDot_(nConf,CLag(1,ilStat),1,Work(LCI2),1)
-C         write (*,*) "projection coeff = ",ovl
+C         write(6,*) "projection coeff = ",ovl
           Call DaXpY_(nConf,-Ovl,Work(LCI2),1,CLag(1,ilStat),1)
         End Do
-C       write (*,*) "clag after projection"
-C       write (*,*) "state = ", ilstat
+C       write(6,*) "clag after projection"
+C       write(6,*) "state = ", ilstat
 C       do i = 1, nconf
-C         write (*,'(i3,f20.10)') i,clag(i,ilstat)
+C         write(6,'(i3,f20.10)') i,clag(i,ilstat)
 C       end do
       End Do
 C
@@ -1711,7 +1434,6 @@ C
 * MATRIX FOR A CASSCF WAVE FUNCTION.
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "pt2_guga.fh"
 #include "SysDef.fh"
@@ -1721,10 +1443,8 @@ C
       INTEGER LSGM1
 
       INTEGER I
-      REAL*8, EXTERNAL :: DDOT_,DNRM2_
       REAL*8 :: CLag(*), RDMEIG(*)
 
-      CALL QENTER('POLY1')
 
       IF(NLEV.GT.0) THEN
         CALL GETMEM('LSGM1','ALLO','REAL',LSGM1 ,MXCI)
@@ -1733,7 +1453,8 @@ C
 C     return !! for test purpose
 
 * REINITIALIZE USE OF DMAT.
-* The fields IADR10 and CLAB10 are kept in common included from pt2_guga.fh
+* The fields IADR10 and CLAB10 are kept in common included from
+! pt2_guga.fh
 * CLAB10 replaces older field called LABEL.
       DO I=1,64
         IADR10(I,1)=-1
@@ -1747,7 +1468,6 @@ C     return !! for test purpose
         CALL GETMEM('LSGM1','FREE','REAL',LSGM1 ,MXCI)
       END IF
 
-      CALL QEXIT('POLY1')
 
       RETURN
       END
@@ -1755,36 +1475,34 @@ C
 C-----------------------------------------------------------------------
 C
       SUBROUTINE DENS1_RPT2_CLag (CI,SGM1,CLag,RDMEIG)
+! #ifdef _MOLCAS_MPP_
+!       USE Para_Info, ONLY: Is_Real_Par, King
+! #endif
       IMPLICIT NONE
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "pt2_guga.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
 
-#include "para_info.fh"
       LOGICAL RSV_TSK
 
       REAL*8 CI(MXCI),SGM1(MXCI)
       REAL*8 CLag(nConf,nState),RDMEIG(NLEV,NLEV) !! Symmetry?
 
-      REAL*8 GTU
+C     REAL*8 GTU
 
       INTEGER ID
       INTEGER IST,ISU,ISTU
-      INTEGER IT,IU,LT,LU,LTU
+      INTEGER IT,IU,LT,LU
 
       INTEGER ITASK,LTASK,LTASK2T,LTASK2U,NTASKS
 
       INTEGER ISSG,NSGM
 
-      REAL*8, EXTERNAL :: DDOT_,DNRM2_
-
 * Purpose: Compute the 1-electron density matrix array G1.
 
-      CALL QENTER('DENS1_RPT2')
 
 * For the general cases, we use actual CI routine calls, and
 * have to take account of orbital order.
@@ -1844,18 +1562,17 @@ C     ENDDO
         IST=ISM(LT)
         IT=L2ACT(LT)
         LU=iWork(lTask2U+iTask-1)
-          LTU=iTask
           ISU=ISM(LU)
           IU=L2ACT(LU)
           ISTU=MUL(IST,ISU)
-          ISSG=MUL(ISTU,LSYM)
+          ISSG=MUL(ISTU,STSYM)
           NSGM=NCSF(ISSG)
           IF(NSGM.EQ.0) GOTO 500
 * GETSGM2 computes E_UT acting on CI and saves it on SGM1
-          CALL GETSGM2(LU,LT,LSYM,CI,SGM1)
+          CALL GETSGM2(LU,LT,STSYM,CI,SGM1)
           IF(ISTU.EQ.1) THEN
             ! Symmetry not yet
-C            write (*,*) "it,iu = ", it,iu
+C            write(6,*) "it,iu = ", it,iu
             Call DaXpY_(NSGM,RDMEIG(IT,IU),SGM1,1,CLag,1)
 C           if (IT.ne.IU)
 C    *        Call DaXpY_(NSGM,2.0d+00*RDMEIG(IT,IU),SGM1,1,CLag,1)
@@ -1866,43 +1583,42 @@ C           G1(IU,IT)=GTU
           END IF
 
 * SVC: The master node now continues to only handle task scheduling,
-*      needed to achieve better load balancing. So it exits from the task
+*     needed to achieve better load balancing. So it exits from the task
 *      list. It has to do it here since each process gets at least one
 *      task.
-#if defined (_MOLCAS_MPP_) && !defined (_GA_)
-      IF (IS_REAL_PAR().AND.KING().AND.(NPROCS.GT.1)) GOTO 501
-#endif
+! #if defined (_MOLCAS_MPP_) && !defined (_GA_)
+!       IF (IS_REAL_PAR().AND.KING().AND.(NPROCS.GT.1)) GOTO 501
+! #endif
 
       GOTO 500
  501  CONTINUE
-C      write (*,*) "clag1"
+C      write(6,*) "clag1"
 C      do itask = 1, nsgm
-C        write (*,'(i3,f20.10)') itask,clag(itask,1)
+C        write(6,'(i3,f20.10)') itask,clag(itask,1)
 C        clag(itask,1) = 0.0d+00
 C       end do
-C           write (*,*) "nsgm = ", nsgm
+C           write(6,*) "nsgm = ", nsgm
 C          do lu = 1, nlev
 C          do lt = 1, nlev
-C         CALL GETSGM2(LU,LT,LSYM,CI,SGM1)
-C         write (*,*) "lu,lt = ", lu,lt
-C           write (*,'(5f15.10)') (sgm1(itask),itask=1,nsgm)
+C         CALL GETSGM2(LU,LT,STSYM,CI,SGM1)
+C         write(6,*) "lu,lt = ", lu,lt
+C           write(6,'(5f15.10)') (sgm1(itask),itask=1,nsgm)
 C         Call DaXpY_(NSGM,2.0d+00*RDMEIG(lT,lU),SGM1,1,CLag,1)
 C           GTU=DDOT_(NSGM,CI,1,SGM1,1)
-C           write (*,'(2i3,f20.10)') lu,lt,gtu
+C           write(6,'(2i3,f20.10)') lu,lt,gtu
 C          end do
 C          end do
-C      write (*,*) "clag2"
+C      write(6,*) "clag2"
 C      do itask = 1, nsgm
-C        write (*,'(i3,f20.10)') itask,clag(itask,1)
+C        write(6,'(i3,f20.10)') itask,clag(itask,1)
 C       end do
 
       CALL Free_Tsk(ID)
 
       CALL GETMEM ('Tasks','FREE','INTE',lTask,2*nTasks)
 
-  99  CONTINUE
+C 99  CONTINUE
 
-      CALL QEXIT('DENS1_RPT2')
 
       RETURN
       END
@@ -1922,7 +1638,7 @@ C
         V=VAL1(L4)
         IY=1+INCY2*(L3-1)
         CALL DScal_(LEN1,V,X(IY),INCY1)
-        write (*,'(5i4,f20.10,2i4)') ilst,l1,l2,l3,l4,v,iy,incy1
+        write(6,'(5i4,f20.10,2i4)') ilst,l1,l2,l3,l4,v,iy,incy1
       END DO
       RETURN
       END
@@ -1950,7 +1666,6 @@ C
         NR1=NRAS1(ISYM)
         NR2=NRAS2(ISYM)
         NR3=NRAS3(ISYM)
-        NA=NASH(ISYM)
         NS=NSSH(ISYM)
 * Skip inactive transformation matrix:
         IOFF1=IOFF1+NI**2
@@ -1992,33 +1707,30 @@ C Transform SGM to use original MO:
       NSG=NCONF
       DO ISYM=1,NSYM
         NI=NISH(ISYM)
-        NA=NASH(ISYM)
         NR1=NRAS1(ISYM)
         NR2=NRAS2(ISYM)
         NR3=NRAS3(ISYM)
         NS=NSSH(ISYM)
-        NO=NORB(ISYM)
-        NB=NBAS(ISYM)
         ITOSTA=ITOEND+1
         ITOEND=ITOEND+NR1**2+NR2**2+NR3**2
 *        ITO=ITOSTA+NI**2
         ITO=ITOSTA
         IF(NR1.GT.0) THEN
           ISTART=NAES(ISYM)+1
-          CALL TRACI_RPT2(ISTART,NR1,WORK(LTAT-1+ITO),LSYM,
+          CALL TRACI_RPT2(ISTART,NR1,WORK(LTAT-1+ITO),STSYM,
      &                                         NSG,CI)
         END IF
         ITO=ITO+NR1**2
         IF(NR2.GT.0) THEN
           ISTART=NAES(ISYM)+NR1+1
-          CALL TRACI_RPT2(ISTART,NR2,WORK(LTAT-1+ITO),LSYM,
+          CALL TRACI_RPT2(ISTART,NR2,WORK(LTAT-1+ITO),STSYM,
      &                                         NSG,CI)
         END IF
         ITO=ITO+NR2**2
         IF(NR3.GT.0) THEN
           ISTART=NAES(ISYM)+NR1+NR2+1
          !! NR1 should be NR3?
-          CALL TRACI_RPT2(ISTART,NR3,WORK(LTAT-1+ITO),LSYM,
+          CALL TRACI_RPT2(ISTART,NR3,WORK(LTAT-1+ITO),STSYM,
      &                                         NSG,CI)
         END IF
       END DO
@@ -2089,8 +1801,8 @@ C
             Val1 = DG2(iI,iJ,iK,iL)
             Val2 = DG2(iL,iK,iJ,iI)
             Val  = (Val1+Val2)*0.5D+00
-            DG2(iI,iJ,iK,iL) = Val
-            DG2(iL,iK,iJ,iI) = Val
+          ! DG2(iI,iJ,iK,iL) = Val
+          ! DG2(iL,iK,iJ,iI) = Val
 C           if (ii.ne.il.and.ij.ne.ik) then
 C           DG2(iI,iJ,iK,iL) = 2.0d+00*val
 C           DG2(iL,iK,iJ,iI) = 0.0d+00
@@ -2098,8 +1810,8 @@ C           end if
             Val1 = DF2(iI,iJ,iK,iL)
             Val2 = DF2(iL,iK,iJ,iI)
             Val  = (Val1+Val2)*0.5D+00
-            DF2(iI,iJ,iK,iL) = Val
-            DF2(iL,iK,iJ,iI) = Val
+          ! DF2(iI,iJ,iK,iL) = Val
+          ! DF2(iL,iK,iJ,iI) = Val
 C           if (ii.ne.il.and.ij.ne.ik) then
 C           DF2(iI,iJ,iK,iL) = 2.0d+00*val
 C           DF2(iL,iK,iJ,iI) = 0.0d+00
@@ -2108,12 +1820,12 @@ C           end if
         End Do
         End Do
         End Do
-C       write (*,*) "asdf"
+C       write(6,*) "asdf"
 C       Do iI = 1, nAshT
 C       Do iJ = 1, iI
 C       Do iK = 1, iJ
 C       Do iL = 1, iK
-C       write (*,'(4i3,f20.10)') ii,ij,ik,il,dg2(ii,ij,ik,il)
+C       write(6,'(4i3,f20.10)') ii,ij,ik,il,dg2(ii,ij,ik,il)
 C       DG2(iI,iJ,iK,iL) = DG2(iI,iJ,iK,iL) + DG2(iL,iK,iJ,iI)
 C       if (ii.ne.il.and.ij.ne.ik) DG2(iL,iK,iJ,iI) = 0.0D+00
 C       DF2(iI,iJ,iK,iL) = DF2(iI,iJ,iK,iL) + DF2(iL,iK,iJ,iI)
@@ -2122,7 +1834,7 @@ C       End Do
 C       End Do
 C       End Do
 C       End Do
-C       write (*,*) "asdf end"
+C       write(6,*) "asdf end"
       end if
 C
       Do iI = 1, nAshT
@@ -2164,8 +1876,8 @@ C
 C-----------------------------------------------------------------------
 C
       Subroutine CLagDXA_FG3(iSym,nAS,NG3,BDER,SDER,
-     *                       DF1,DF2,DF3,DG1,DG2,DG3,DEASUM,DEPSA,
-     *                       G2,G3,SC,idxG3)
+     *                       DF1,DF2,DF3,DG1,DG2,DG3,DEPSA,
+     *                       G2,SC,idxG3)
 C
       USE SUPERINDEX
 C
@@ -2173,7 +1885,6 @@ C
 C
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
@@ -2182,7 +1893,7 @@ C
       Dimension DF1(nAshT,nAshT),DF2(nAshT,nAshT,nAshT,nAshT),
      *          DG1(nAshT,nAshT),DG2(nAshT,nAshT,nAshT,nAshT),
      *          DEPSA(nAshT,nAshT)
-      Dimension G2(nAshT,nAshT,nAshT,nAshT),G3(*)
+      Dimension G2(nAshT,nAshT,nAshT,nAshT)
       DIMENSION SC(*)
       INTEGER*1 idxG3(6,NG3)
 C
@@ -2334,7 +2045,7 @@ C
           NSEQ=MAX(iSup,jSup)*(MAX(iSup,jSup)-1)/2 + MIN(iSup,jSup)
           DEPSA(iW,iY) = DEPSA(iW,iY) - F3VAL*SC(NSEQ)
         End Do
-C       
+C
         !! derivative of <0|EtuEwv,xwEyz|0>*fww
         DF3(iG3) = DF3(iG3) + F3VAL
         !! derivative of <0|EtuEvxEyz|0>
@@ -2375,21 +2086,21 @@ C
 C
 C-----------------------------------------------------------------------
 C
-      Subroutine CLagDXA_DP(iSym,nAS,BDER,SDER,DF3,DG3,DF2,DG2,DF1,DG1,
+      Subroutine CLagDXA_DP(iSym,nAS,BDER,SDER,DF2,DG2,DF1,DG1,
      *                      DEPSA,DEASUM,iLo,iHi,jLo,jHi,LDA,g1,g2,sa)
 C
       USE SUPERINDEX
+      use caspt2_global, only:ipea_shift
 C
       Implicit Real*8 (A-H,O-Z)
 C
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
 C
-      Dimension BDER(*),SDER(*),DF3(*),DG3(*),
+      Dimension BDER(*),SDER(*),
      *          DF2(nAshT,nAshT,nAshT,nAshT),
      *          DG2(nAshT,nAshT,nAshT,nAshT),
      *          DF1(nAshT,nAshT),DG1(nAshT,nAshT),DEPSA(nAshT,nAshT)
@@ -2397,6 +2108,7 @@ C
 C     INTEGER*1 idxG3(6,NG3)
 C
       ISADR=0
+      if (isadr.ne.0) write (6,*) lda !! just for avoid compiling error
       DO 100 IXYZ=jLo,jHi
         IXYZABS=IXYZ+NTUVES(ISYM)
         IXABS=MTUV(1,IXYZABS)
@@ -2423,10 +2135,10 @@ C             VALUE=SC(ISADR)
             iSAdr=iTUV+nAS*(iXYZ-1)
             ValB=BDER(ISADR)
 C
-            If (iTUV.eq.iXYZ.and.BSHIFT.ne.0.0D+00) Then
-              !! BA in the next equation refers to the active overlap
-              !! BSHIFT*0.5d0*BA(ISADR)*(2.0d0-DREF(IDV)+DREF(IDT)+DREF(IDU))
-              bsBDER = BSHIFT*0.5D+00*ValB
+            If (iTUV.eq.iXYZ.and.ipea_shift.ne.0.0D+00) Then
+C             !! BA in the next equation refers to the active overlap
+C       ipea_shift*0.5d0*BA(ISADR)*(2.0d0-DREF(IDV)+DREF(IDT)+DREF(IDU))
+              bsBDER = ipea_shift*0.5D+00*ValB
               SDER(iSAdr) = SDER(iSAdr) + bsBDER*(2.0D+00
      *          +G1(iTabs,iTabs)+G1(iUabs,iUabs)-G1(iVabs,iVabs))
               iSAdr2 = iTUV*(iTUV+1)/2
@@ -2570,8 +2282,8 @@ C
 C-----------------------------------------------------------------------
 C
       Subroutine CLagDXC_FG3(iSym,nAS,NG3,BDER,SDER,
-     *                       DF1,DF2,DF3,DG1,DG2,DG3,DEASUM,DEPSA,
-     *                       G2,G3,SC,idxG3)
+     *                       DF1,DF2,DF3,DG1,DG2,DG3,DEPSA,
+     *                       G2,SC,idxG3)
 C
       USE SUPERINDEX
 C
@@ -2579,7 +2291,6 @@ C
 C
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
@@ -2588,7 +2299,7 @@ C
       Dimension DF1(nAshT,nAshT),DF2(nAshT,nAshT,nAshT,nAshT),
      *          DG1(nAshT,nAshT),DG2(nAshT,nAshT,nAshT,nAshT),
      *          DEPSA(nAshT,nAshT)
-      Dimension G2(nAshT,nAshT,nAshT,nAshT),G3(*)
+      Dimension G2(nAshT,nAshT,nAshT,nAshT)
       DIMENSION SC(*)
       INTEGER*1 idxG3(6,NG3)
 C
@@ -2738,7 +2449,7 @@ C
           NSEQ=MAX(iSup,jSup)*(MAX(iSup,jSup)-1)/2 + MIN(iSup,jSup)
           DEPSA(iW,iY) = DEPSA(iW,iY) - F3VAL*SC(NSEQ)
         End Do
-C       
+C
         !! derivative of <0|EtuEwv,xwEyz|0>*fww
         DF3(iG3) = DF3(iG3) + F3VAL
         !! derivative of <0|EtuEvxEyz|0>
@@ -2779,21 +2490,21 @@ C
 C
 C-----------------------------------------------------------------------
 C
-      Subroutine CLagDXC_DP(iSym,nAS,BDER,SDER,DF3,DG3,DF2,DG2,DF1,DG1,
-     *                      DEPSA,DEASUM,iLo,iHi,jLo,jHi,LDA,g1,g2,sc)
+      Subroutine CLagDXC_DP(iSym,nAS,BDER,SDER,DF2,DG2,DF1,DG1,
+     *                      DEPSA,DEASUM,iLo,iHi,jLo,jHi,LDC,g1,g2,sc)
 C
+      use caspt2_global, only:ipea_shift
       USE SUPERINDEX
 C
       Implicit Real*8 (A-H,O-Z)
 C
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
 C
-      Dimension BDER(*),SDER(*),DF3(*),DG3(*),
+      Dimension BDER(*),SDER(*),
      *          DF2(nAshT,nAshT,nAshT,nAshT),
      *          DG2(nAshT,nAshT,nAshT,nAshT),
      *          DF1(nAshT,nAshT),DG1(nAshT,nAshT),DEPSA(nAshT,nAshT)
@@ -2801,6 +2512,7 @@ C
 C     INTEGER*1 idxG3(6,NG3)
 C
       ISADR=0
+      if (isadr.ne.0) write (6,*) ldc !! just for avoid compiling error
       DO 100 IXYZ=jLo,jHi
         IXYZABS=IXYZ+NTUVES(ISYM)
         IXABS=MTUV(1,IXYZABS)
@@ -2825,10 +2537,10 @@ C             VALUE=SC(ISADR)
             iSAdr=iTUV+nAS*(iXYZ-1)
             ValB=BDER(ISADR)
 C
-            If (iTUV.eq.iXYZ.and.BSHIFT.ne.0.0D+00) Then
-              !! BC in the next equation refers to the active overlap
-              !! BSHIFT*0.5d0*BC(ISADR)*(4.0d0-DREF(IDT)-DREF(IDV)+DREF(IDU))
-              bsBDER = BSHIFT*0.5D+00*ValB
+            If (iTUV.eq.iXYZ.and.ipea_shift.ne.0.0D+00) Then
+C             !! BC in the next equation refers to the active overlap
+C    !! ipea_shift*0.5d0*BC(ISADR)*(4.0d0-DREF(IDT)-DREF(IDV)+DREF(IDU))
+              bsBDER = ipea_shift*0.5D+00*ValB
               SDER(iSAdr) = SDER(iSAdr) + bsBDER*(4.0D+00
      *         -G1(iTabs,iTabs)+G1(iUabs,iUabs)-G1(iVabs,iVabs))
               iSAdr2 = iTUV*(iTUV+1)/2
@@ -2923,52 +2635,63 @@ C
      *    DEPSA(iYabs,iXabs) = DEPSA(iYabs,iXabs) - ValB*G1(iVabs,iZabs)
  101    CONTINUE
  100  CONTINUE
-      !! Btuv,xyz
-      !! = (EatEuv)^\dagger Ew1w2 (EbxEyz) * fw1w2
-      !! = EvuEta Ew1w2 Ebx Eyz * fw1w2
-      !! = v+ u t+ a w1+ w2 b+ x y+ z * fw1w2
-      !! = v+ u t+ w1+ w2 x y+ z * fw1w2 (del(ab))
-      !!-> v+ u t+ a+ b x y+ z fab     (a,b active here)
+C     !! Btuv,xyz
+C     !! = (EatEuv)^\dagger Ew1w2 (EbxEyz) * fw1w2
+C     !! = EvuEta Ew1w2 Ebx Eyz * fw1w2
+C     !! = v+ u t+ a w1+ w2 b+ x y+ z * fw1w2
+C     !! = v+ u t+ w1+ w2 x y+ z * fw1w2 (del(ab))
+C     !!-> v+ u t+ a+ b x y+ z fab     (a,b active here)
 
-      !! = del(ut) del(xy) F1(vz) + del(ut) del(by) G2(vxaz) fab + del(ut) F2(vx,yz)
-      !! + del(ua) del(xy) G2(vbtz) fab + del(ua) del(by) G2(vztx) fab - del(ua) G3(tbvxyz) fab
-      !! + del(xy) F2(vutz) fab - del(by) G3(tuvxaz) fab + del(uy) F2(vztx) + F3(tuvxyz)
-
-
-      !! S(iap,ibp,icp,ia,ib,ic)
-      !! = DRDM3(ICP,IBP,IA,IAP,IB,IC) = DRDM3(ICP,IBP,IA,IAP,IB,IC) + VAL
-      !!   IF (IB.EQ.IA) DRDM2(ICP,IBP,IAP,IC) = DRDM2(ICP,IBP,IAP,IC) + VAL
-      !!   IF (IAP.EQ.IBP) DRDM2(ICP,IA,IB,IC) = DRDM2(ICP,IA,IB,IC) + VAL
-      !!   IF (IAP.EQ.IA) DRDM2(IBP,ICP,IB,IC) = DRDM2(IBP,ICP,IB,IC) + VAL
-      !!   IF (IAP.EQ.IBP.AND.IB.EQ.IA) DRDM1(ICP,IC) = DRDM1(ICP,IC) + VAL
-      !! S(tuv,xyz)
-      !! = v+ t u+ y x+ z
-      !! = del(tu) del(xy) Gvz - del(tu) v+ y x+ z - del(yx) v+ t u+ z + v+ u+ t x+ y z
-      !! = del(tu) del(xy) Gvz - del(tu) del(yx) Gvz + del(tu) v+ x+ y z
-      !! - del(yx) del(tu) Gvz + del(yx) v+ u+ t z + del(tx) v+ u+ y z - v+ u+ x+ t y z
-      !! = -del(yx)del(tu) Gvz + del(tu) Gvx,zy + del(yx) Gvu,zt + del(tx) Gvu,zy - Gvux,zyt
-      !! = -del(yx)del(tu) Gvz - del(tu) Gvx,yz - del(yx) Gvu,tz - del(tx) Gvu,zy - Gvux,zyt
+C     !! = del(ut) del(xy) F1(vz) + del(ut) del(by) G2(vxaz) fab
+C     !! + del(ut) F2(vx,yz) + del(ua) del(xy) G2(vbtz) fab
+C     !! + del(ua) del(by) G2(vztx) fab - del(ua) G3(tbvxyz) fab
+C     !! + del(xy) F2(vutz) fab - del(by) G3(tuvxaz) fab
+C     !! + del(uy) F2(vztx) + F3(tuvxyz)
 
 
-      !! S(tuvxyz)
-      !! = v+ u t+ x y+ z
-      !! = del(ut)del(xy) Gvz - del(ut) v+ x y+ z - del(xy) v+ u t+ z + v+ t+ u y+ x z
-      !! = del(ut)del(xy) Gvz - del(ut) del(xy) Gvz + del(ut) v+ y+ x z
-      !! - del(xy)del(ut) Gvz + del(xy) v+ t+ u z + del(uy) v+ t+ x z - v+ t+ y+ u x z
-      !! = -del(ut)del(xy) Gvz + del(ut) Gvy,zx + del(xy) Gvt,zu
-      !!   + del(uy) Gvt,zx - Gvty,zxu
+C     !! S(iap,ibp,icp,ia,ib,ic)
+C     !! = DRDM3(ICP,IBP,IA,IAP,IB,IC)=DRDM3(ICP,IBP,IA,IAP,IB,IC) +VAL
+C     !!   IF (IB.EQ.IA) DRDM2(ICP,IBP,IAP,IC)=DRDM2(ICP,IBP,IAP,IC)+VAL
+C     !!   IF (IAP.EQ.IBP) DRDM2(ICP,IA,IB,IC)=DRDM2(ICP,IA,IB,IC) +VAL
+C     !!   IF (IAP.EQ.IA) DRDM2(IBP,ICP,IB,IC)=DRDM2(IBP,ICP,IB,IC) +VAL
+C     !!   IF (IAP.EQ.IBP.AND.IB.EQ.IA) DRDM1(ICP,IC)=DRDM1(ICP,IC) +VAL
+C     !! S(tuv,xyz)
+C     !! = v+ t u+ y x+ z
+C     !! = del(tu) del(xy) Gvz - del(tu) v+ y x+ z
+C     !! - del(yx) v+ t u+ z + v+ u+ t x+ y z
+C     !! = del(tu) del(xy) Gvz - del(tu) del(yx) Gvz + del(tu) v+ x+ y z
+C     !! - del(yx) del(tu) Gvz + del(yx) v+ u+ t z
+C     !! + del(tx) v+ u+ y z - v+ u+ x+ t y z
+C     !! = -del(yx)del(tu) Gvz + del(tu) Gvx,zy + del(yx) Gvu,zt
+C     !! + del(tx) Gvu,zy - Gvux,zyt
+C     !! = -del(yx)del(tu) Gvz - del(tu) Gvx,yz - del(yx) Gvu,tz
+C     !! - del(tx) Gvu,zy - Gvux,zyt
 
-      !! = t+ u v+ x y+ z
-      !! = del(uv)del(xy)Gtz - del(uv) t+ x y+ z - del(xy) t+ u v+ z + t+ v+ u y+ x z
-      !! = del(uv)del(xy)Gtz - del(uv) del(xy) Gtz + del(uv) t+ y+ x z
-      !! - del(xy) del(uv) Gtz + del(xy) t+ v+ u z
-      !! + del(uy) t+ v+ x z - t+ v+ y+ u x z
-      !! = -del(u
+
+C     !! S(tuvxyz)
+C     !! = v+ u t+ x y+ z
+C     !! = del(ut)del(xy) Gvz - del(ut) v+ x y+ z
+C     !! - del(xy) v+ u t+ z + v+ t+ u y+ x z
+C     !! = del(ut)del(xy) Gvz - del(ut) del(xy) Gvz + del(ut) v+ y+ x z
+C     !! - del(xy)del(ut) Gvz + del(xy) v+ t+ u z
+C     !! + del(uy) v+ t+ x z - v+ t+ y+ u x z
+C     !! = -del(ut)del(xy) Gvz + del(ut) Gvy,zx + del(xy) Gvt,zu
+C     !!   + del(uy) Gvt,zx - Gvty,zxu
+
+C     !! = t+ u v+ x y+ z
+C     !! = del(uv)del(xy)Gtz - del(uv) t+ x y+ z
+C     !! - del(xy) t+ u v+ z + t+ v+ u y+ x z
+C     !! = del(uv)del(xy)Gtz - del(uv) del(xy) Gtz + del(uv) t+ y+ x z
+C     !! - del(xy) del(uv) Gtz + del(xy) t+ v+ u z
+C     !! + del(uy) t+ v+ x z - t+ v+ y+ u x z
+C     !! = -del(u
 C
       Return
 C
       End Subroutine CLagDXC_DP
-      Subroutine cnst_SA_CLag(G1,G2,DG1,DG2,eee)
+      Subroutine cnst_SA_CLag(same,G1,G2,DG1,DG2,eee)
+C
+      Use CHOVEC_IO
 C
       Implicit Real*8 (A-H,O-Z)
 C
@@ -2979,6 +2702,11 @@ C
       Dimension  G1(nAshT,nAshT), G2(nAshT,nAshT,nAshT,nAshT)
       Dimension DG1(nAshT,nAshT),DG2(nAshT,nAshT,nAshT,nAshT)
       Dimension wrk1(nbast,nbast),wrk2(nbast,nbast)
+      Logical   Same
+C
+      Integer Active, Inactive, Virtual
+      Parameter (Inactive=1, Active=2, Virtual=3)
+      Character(Len=8) Label
 C
       iSym = 1
 C
@@ -2996,7 +2724,8 @@ C
       IOPT=6
       ICOMP=1
       ISYLBL=1
-      CALL RDONE(IRC,IOPT,'OneHam  ',ICOMP,WORK(LWFLT),ISYLBL)
+      Label='OneHam  '
+      CALL RDONE(IRC,IOPT,Label,ICOMP,WORK(LWFLT),ISYLBL)
       !! triangular -> square transformation
       Call Square(Work(LWFLT),WRK1,1,nBasI,nBasI)
       !! AO -> MO transformation
@@ -3007,9 +2736,11 @@ C
      *            1.0D+00,WRK2,nBasT,Work(LCMOPT2),nBasT,
      *            0.0D+00,WRK1,nBasT)
       !! Put in DG1
-      Do iCorI = 1, nCorI
-        eee = eee + 2.0d+00*WRK1(iCorI,iCorI)
-      End Do
+      If (SAME) Then
+        Do iCorI = 1, nCorI
+          eee = eee + 2.0d+00*WRK1(iCorI,iCorI)
+        End Do
+      End If
       Do iAshI = 1, nAsh(iSym)
         Do jAshI = 1, nAsh(iSym)
           Val = WRK1(nCorI+iAshI,nCorI+jAshI)
@@ -3025,53 +2756,67 @@ C
       iSymI = 1
       iSymB = 1
       iSymJ = 1
-      Do iCorI = 1, nCorI
-        iOrb = iCorI
-        jOrb = iCorI
-        Call Coul(iSymA,iSymI,iSymB,iSymJ,iOrb,jOrb,WRK1,WRK2)
-        Do jCorI = 1, nCorI
-          eee = eee + 2.0d+00*WRK1(jCorI,jCorI)
-        End Do
-        Call Exch(iSymA,iSymI,iSymB,iSymJ,iOrb,jOrb,WRK1,WRK2)
-        Do jCorI = 1, nCorI
-          eee = eee - 1.0d+00*WRK1(jCorI,jCorI)
-        End Do
-      End Do
-C
-      Do iAshI = 1, nAsh(iSym)
-        iOrb = nCorI+iAshI
-        Do jAshI = 1, nAsh(iSym)
-          jOrb = nCorI+jAshI
-C
+      If (Same) Then
+        Do iCorI = 1, nCorI
+          iOrb = iCorI
+          jOrb = iCorI
           Call Coul(iSymA,iSymI,iSymB,iSymJ,iOrb,jOrb,WRK1,WRK2)
-          !! DG1
-          Do iCorI = 1, nCorI
-            DG1(iAshI,jAshI) = DG1(iAshI,jAshI)
-     *        + 2.0d+00*WRK1(iCorI,iCorI)
-            eee = eee + 2.0d+00*WRK1(iCorI,iCorI)*G1(iAshI,jAshI)
+          Do jCorI = 1, nCorI
+            eee = eee + 2.0d+00*WRK1(jCorI,jCorI)
           End Do
-          !! DG2
-          Do kAshI = 1, nAsh(iSym)
-            Do lAshI = 1, nAsh(iSym)
-              DG2(iAshI,jAshI,kAshI,lAshI)
-     *      = DG2(iAshI,jAshI,kAshI,lAshI)
-     *      + WRK1(nCorI+kAshI,nCorI+lAshI)*0.5d+00
-              eee = eee + 0.5d+00*G2(iAshI,jAshI,kAshI,lAshI)
-     *                           *WRK1(nCorI+kAshI,nCorI+lAshI)
-            End Do
-          End Do
-C
           Call Exch(iSymA,iSymI,iSymB,iSymJ,iOrb,jOrb,WRK1,WRK2)
-          !! DG1
-          Do iCorI = 1, nCorI
-            DG1(iAshI,jAshI) = DG1(iAshI,jAshI)
-     *        - 1.0D+00*WRK1(iCorI,iCorI)
-            eee = eee - 1.0d+00*WRK1(iCorI,iCorI)*G1(iAshI,jAshI)
+          Do jCorI = 1, nCorI
+            eee = eee - 1.0d+00*WRK1(jCorI,jCorI)
           End Do
         End Do
-      End Do
+      End If
 C
-      write (*,*) "energy = ", eee
+      If (IfChol) Then
+        Do JSYM=1,NSYM
+C         Call Get_Cholesky_Vectors(Active,Active,JSYM,
+C    &                              Work(LBRA),nBra,
+C    &                              IBSTA,IBEND)
+        END DO
+      Else
+        Do iAshI = 1, nAsh(iSym)
+          iOrb = nCorI+iAshI
+          Do jAshI = 1, nAsh(iSym)
+            jOrb = nCorI+jAshI
+C
+            Call Coul(iSymA,iSymI,iSymB,iSymJ,iOrb,jOrb,WRK1,WRK2)
+            !! DG1
+C           If (Same) Then
+              Do iCorI = 1, nCorI
+                DG1(iAshI,jAshI) = DG1(iAshI,jAshI)
+     *            + 2.0d+00*WRK1(iCorI,iCorI)
+                eee = eee + 2.0d+00*WRK1(iCorI,iCorI)*G1(iAshI,jAshI)
+              End Do
+C           End If
+            !! DG2
+            Do kAshI = 1, nAsh(iSym)
+              Do lAshI = 1, nAsh(iSym)
+                DG2(iAshI,jAshI,kAshI,lAshI)
+     *        = DG2(iAshI,jAshI,kAshI,lAshI)
+     *        + WRK1(nCorI+kAshI,nCorI+lAshI)*0.5d+00
+                eee = eee + 0.5d+00*G2(iAshI,jAshI,kAshI,lAshI)
+     *                             *WRK1(nCorI+kAshI,nCorI+lAshI)
+              End Do
+            End Do
+C
+C           If (Same) Then
+              Call Exch(iSymA,iSymI,iSymB,iSymJ,iOrb,jOrb,WRK1,WRK2)
+              !! DG1
+              Do iCorI = 1, nCorI
+                DG1(iAshI,jAshI) = DG1(iAshI,jAshI)
+     *            - 1.0D+00*WRK1(iCorI,iCorI)
+                eee = eee - 1.0d+00*WRK1(iCorI,iCorI)*G1(iAshI,jAshI)
+              End Do
+C           End If
+          End Do
+        End Do
+      End If
+C
+      write(6,*) "energy = ", eee
 C
       CALL GETMEM('WFLT','FREE','REAL',LWFLT,NBTRI)
 C
@@ -3081,6 +2826,7 @@ C-----------------------------------------------------------------------
 C
       Subroutine DEPSAOffC(CLag,DEPSA,FIFA,FIMO,WRK1,WRK2)
 C
+      use caspt2_output, only:iPrGlb,usual
       Implicit Real*8 (A-H,O-Z)
 C
 #include "rasdim.fh"
@@ -3130,7 +2876,7 @@ C
 C     rin_ene = 0.0D+00
       iSym = 1
       Call CnstInt(0,Work(ipINT1),Work(ipINT2))
-C     write (*,*) "nconf,mxci=",nconf,mxci
+C     write(6,*) "nconf,mxci=",nconf,mxci
 C     If (nFroT.ne.0.and.IfChol) Then
         !! We do not have Cholesky vectors for frozen orbitals,
         !! so may be it is not possible to get inactive energies?
@@ -3154,9 +2900,9 @@ C         write(*,*) (RIn_Ene+PotNuc-REFENE(iState))
 C         write(*,*) eact(istate)
         End Do
 
-C       write (*,*) "fimo"
+C       write(6,*) "fimo"
 C       call sqprt(fimo,nbast)
-C       write (*,*) "fifa"
+C       write(6,*) "fifa"
 C       call sqprt(fifa,nbast)
 C       ID = IDCIEX
 C       Eact(1)=0.0d+00
@@ -3164,12 +2910,12 @@ C     Call GetMem('INT22','ALLO','REAL',ipINT22,nAshT**4)
 C     Call GetMem('INT12','ALLO','REAL',ipINT12,nAshT**2)
 C       Call DDaFile(LUCIEX,2,Work(ipCIT),nConf,ID)
 C       Call TimesE2(Work(ipCIT),Work(ipS1),Work(ipINT1),Work(ipINT2))
-C       write (*,*) -0.5D+00*nState*
+C       write(6,*) -0.5D+00*nState*
 C    *      DDot_(nConf,Work(ipS1),1,Work(ipCIT),1)
 C      !Call dens1_rpt2(work(ipcit),work(ipst),work(ipint22))
 C       Call dens2_rpt2(work(ipcit),work(ipst),work(ips1),
 C    *                  work(ipint12),work(ipint22))
-C       write (*,*) -1.0D+00*nState*
+C       write(6,*) -1.0D+00*nState*
 C    *      DDot_(nasht**2,Work(ipINT1),1,Work(ipINT12),1)
 C    *              -1.0D+00*nState*
 C    *      DDot_(nasht**4,Work(ipINT2),1,Work(ipINT22),1)
@@ -3182,8 +2928,8 @@ C       call sqprt(work(ipint2),nasht**2)
 C       call sqprt(work(ipint22),nasht**2)
 C       Call dens2t_rpt2(work(ipcit),work(ipcit),work(ipst),work(ips1),
 C    *                   work(ipint12),work(ipint22))
-C       call dscal(nasht**2,0.5d+00,work(ipint12),1)
-C       call dscal(nasht**4,0.5d+00,work(ipint22),1)
+C       call dscal_(nasht**2,0.5d+00,work(ipint12),1)
+C       call dscal_(nasht**4,0.5d+00,work(ipint22),1)
 C       call sqprt(work(ipint12),nasht)
 C       call sqprt(work(ipint22),nasht**2)
 C       do i = 1, nasht
@@ -3192,7 +2938,7 @@ C       ij = i + nasht*(j-1)
 C       do k = 1, nasht
 C       do l = 1, nasht
 C       kl = k + nasht*(l-1)
-C       write (*,'(4i3,"//",2i3,f20.10)') i,j,k,l,ij,kl,
+C       write(6,'(4i3,"//",2i3,f20.10)') i,j,k,l,ij,kl,
 C    *  work(ipint22+i-1+nasht*(j-1+nasht*(k-1+nasht*(l-1))))
 C       end do
 C       end do
@@ -3200,7 +2946,7 @@ C       end do
 C       end do
 C       call abend
 
-        
+
 C     Else
 C       Do iState = 1, nState
 C         Eact(iState) = (RIn_Ene+PotNuc-REFENE(iState))
@@ -3212,9 +2958,9 @@ C
           !! asdf
 C         Call loadCI(Work(ipST),1)
 C         do i = 1, nconf
-C         write (*,'(i3,f20.10)') i,work(ipst+i-1)
+C         write(6,'(i3,f20.10)') i,work(ipst+i-1)
 C         end do
-C     call dscal(nconf*nstate,-1.0d+00,work(ipst),1)
+C     call dscal_(nconf*nstate,-1.0d+00,work(ipst),1)
 C
       !! z0 = M^{-1}*r0
 C     Call DMinvCI_sa(ipST,Work(ipIn(ipS2)),rdum,isym,work(ipS))
@@ -3222,8 +2968,9 @@ C     Call DMinvCI_sa(ipST,Work(ipIn(ipS2)),rdum,isym,work(ipS))
       !! p0 = z0
       Call DCopy_(nConf*nState,Work(ipS2),1,Work(ipCId),1)
       MaxIter = 100
+      Iter    = 1
       iSym    = 1
-      jspin   = 0
+      ! jspin   = 0
       ! r^T dot z
       ! r (residue) = ipST
       ! z (prec. r) = ipS2
@@ -3239,7 +2986,8 @@ C     Call DMinvCI_sa(ipST,Work(ipIn(ipS2)),rdum,isym,work(ipS))
       If (IPRGLB.GE.USUAL) Write(6,*)
      &      ' Iteration       Delta           Res(CI)        '//
      &      '  DeltaC'
-      Call DCopy_(nConf*nState,0.0D+00,0,Work(ipCIT),1)
+      Call DCopy_(nConf*nState,[0.0D+00],0,Work(ipCIT),1)
+      If (Delta0.le.Abs(Thres)) Go To 100
       Do Iter = 1, MaxIter
         If (nConf.EQ.1) Then
           Do iState = 1, nState
@@ -3280,10 +3028,12 @@ C
       End Do
 C
       If (Iter.eq.MaxIter+1) Then
-        write (*,*)
+        write(6,*)
      *  "CI iteration for non-invariant CASPT2 did not converge..."
         call abend
       End If
+C
+  100 CONTINUE
 C
       If (IPRGLB.GE.USUAL) Then
         CALL TIMING(CPTF1,CPE,TIOTF1,TIOE)
@@ -3295,9 +3045,9 @@ C
         Write (6,'(3X,"CPU and wall time (in s) = ",2F8.2)') CPUT,WALLT
         Write (6,*)
       End If
-C     write (*,*) "answer"
+C     write(6,*) "answer"
 C     do i = 1, nconf*nstate
-C       write (*,'(i3,2f20.10)') i,work(ipcit+i-1),clag(i,1)
+C       write(6,'(i3,2f20.10)') i,work(ipcit+i-1),clag(i,1)
 C     end do
 C
       CALL GETMEM('S1  ','FREE','REAL',ipS1 ,nConf*nState)
@@ -3354,8 +3104,8 @@ C
       Parameter (Inactive=1, Active=2, Virtual=3)
       Integer nSh(8,3)
 C
-      Call DCopy_(nAshT**2,0.0D+00,0,INT1,1)
-      Call DCopy_(nAshT**4,0.0D+00,0,INT2,1)
+      Call DCopy_(nAshT**2,[0.0D+00],0,INT1,1)
+      Call DCopy_(nAshT**4,[0.0D+00],0,INT2,1)
 C
       nFroI = nFro(iSym)
       nIshI = nIsh(iSym)
@@ -3396,7 +3146,7 @@ C     End Do
           INT1(iAshI,jAshI) = INT1(iAshI,jAshI) + Val
         End Do
       End Do
-C 
+C
 C     --- Two-Electron Integral
 C
       iSymA = 1
@@ -3436,18 +3186,18 @@ C
            IBGRP=IBGRP+1
           END DO
           NBGRP=MXBGRP
-C      
+C
           CALL MEMORY_ESTIMATE(JSYM,IWORK(LBGRP),NBGRP,
      &                         NCHOBUF,MXPIQK,NADDBUF)
           CALL GETMEM('KETBUF','ALLO','REAL',LKET,NCHOBUF)
-C         write (*,*) "nchobuf= ", nchobuf
-C         write (*,*) "nbgrp= ", nbgrp
-C         write (*,*) "nbtch= ", nbtch(jsym)
+C         write(6,*) "nchobuf= ", nchobuf
+C         write(6,*) "nbgrp= ", nbgrp
+C         write(6,*) "nbtch= ", nbtch(jsym)
           Do IBGRP=1,NBGRP
 C
             IBSTA=IWORK(LBGRP  +2*(IBGRP-1))
             IBEND=IWORK(LBGRP+1+2*(IBGRP-1))
-C           write (*,*) ibsta,ibend
+C           write(6,*) ibsta,ibend
 C
             NV=0
             DO IB=IBSTA,IBEND
@@ -3461,7 +3211,7 @@ C
      &                                IBSTA,IBEND)
 C
             CALL GETMEM('WRKCHO','ALLO','REAL',LWRKCHO,NV)
-            Call DCopy_(NV,0.0D+00,0,Work(LWRKCHO),1)
+            Call DCopy_(NV,[0.0D+00],0,Work(LWRKCHO),1)
             Call DGEMM_('N','T',NASH(JSYM)**2,NASH(JSYM)**2,NV,
      *                  0.5D+00,Work(LKET),NASH(JSYM)**2,
      *                          Work(LKET),NASH(JSYM)**2,
@@ -3500,7 +3250,7 @@ C           End Do
           End Do
         End Do
       End If
-C     write (*,*) "int2"
+C     write(6,*) "int2"
 C     call sqprt(int2,25)
 C     call sqprt(int1,5)
 C     call sqprt(fimo,12)
@@ -3537,15 +3287,16 @@ C-----------------------------------------------------------------------
 C
       !! dens2_rpt2.f
       Subroutine TimesE2(CIin,CIout,INT1,INT2)
-C
+! #ifdef _MOLCAS_MPP_
+!       USE Para_Info, ONLY: Is_Real_Par, King
+! #endif
+
       Implicit Real*8 (A-H,O-Z)
-C
-C#include "para_info.fh"
-C
+
       Dimension CIin(nConf,nState),CIout(nConf,nState)
       Real*8    INT1(nAshT,nAshT),INT2(nAshT,nAshT,nAshT,nAshT)
       LOGICAL   RSV_TSK
-      logical tras,uras,vras,xras
+      ! logical tras,uras,vras,xras
 C
 C     --- H_{IJ}*P_J
 C    <CI1|EtuEvx|CI2>=<CI1|Evx
@@ -3568,11 +3319,11 @@ C
       Call GetMem('SGM1','ALLO','REAL',LSGM1,nConf)
       Call GetMem('SGM2','ALLO','REAL',LSGM2,nConf)
 C
-      Call DCopy_(nConf*nState,0.0D+00,0,CIout,1)
-      Do iState = 1, nState
+      Call DCopy_(nConf*nState,[0.0D+00],0,CIout,1)
+      Do kState = 1, nState
 C       Wgt = Work(LDWgt+iState-1+nState*(iState-1))
         Wgt = 1.0D+00/nState
-        Call DScal_(nConf,Wgt,CIin(1,iState),1)
+        Call DScal_(nConf,Wgt,CIin(1,kState),1)
 C
         !! Start the actual part of dens2_rpt2
         Call Init_Tsk(ID, nTasks)
@@ -3580,63 +3331,63 @@ C
  500    If (.NOT.Rsv_Tsk (ID,iTask)) GOTO 501
 C
         LT=iWork(lTask2T+iTask-1)
-        tras=.false.
-        if (lt.le.nras1(1)) tras=.true.
+        ! tras=.false.
+        ! if (lt.le.nras1(1)) tras=.true.
           IST=ISM(LT)
           IT=L2ACT(LT)
           LU=iWork(lTask2U+iTask-1)
-          uras=.false.
-          if (lu.gt.nras1(1)+nras2(1)) uras=.true.
+          ! uras=.false.
+          ! if (lu.gt.nras1(1)+nras2(1)) uras=.true.
 C         if (tras.and.uras) go to 500
-            LTU=iTask
+            ! LTU=iTask
             ISU=ISM(LU)
             IU=L2ACT(LU)
             ISTU=MUL(IST,ISU)
-            ISSG=MUL(ISTU,LSYM)
+            ISSG=MUL(ISTU,STSYM)
             NSGM=NCSF(ISSG)
             IF(NSGM.EQ.0) GOTO 500
             !! <CIin|Etu
-            CALL GETSGM2(LU,LT,LSYM,CIin(1,iState),Work(LSGM1))
-C           CALL GETSGM2(LT,LU,LSYM,CIin(1,iState),Work(LSGM1))
+            CALL GETSGM2(LU,LT,STSYM,CIin(1,kState),Work(LSGM1))
+C           CALL GETSGM2(LT,LU,STSYM,CIin(1,iState),Work(LSGM1))
             IF(ISTU.EQ.1) THEN
               !! <CIin|Etu|CIout>*I1tu
               Call DaXpY_(NSGM,INT1(IT,IU),Work(LSGM1),1,
-     *                                     CIout(1,iState),1)
+     *                                     CIout(1,kState),1)
             END IF
             LVX=0
             DO LV=1,NLEV
               ISV=ISM(LV)
               IV=L2ACT(LV)
-              vras=.false.
-              if (lv.le.nras1(1)) vras=.true.
+              ! vras=.false.
+              ! if (lv.le.nras1(1)) vras=.true.
               DO LX=1,NLEV
                 LVX=LVX+1
                 ISX=ISM(LX)
                 ISVX=MUL(ISV,ISX)
-                xras=.false.
-                if (lx.gt.nras1(1)+nras2(1)) xras=.true.
+                ! xras=.false.
+                ! if (lx.gt.nras1(1)+nras2(1)) xras=.true.
 C               if (vras.and.xras) go to 110
                 IF(ISVX.NE.ISTU) GOTO 110
                 IX=L2ACT(LX)
                 CALL GETSGM2(LX,LV,ISSG,Work(LSGM1),Work(LSGM2))
 C               CALL GETSGM2(LV,LX,ISSG,Work(LSGM1),Work(LSGM2))
                 Call DaXpY_(NSGM,INT2(IT,IU,IV,IX),Work(LSGM2),1,
-     *                      CIout(1,iState),1)
+     *                      CIout(1,kState),1)
  110          CONTINUE
               END DO
             END DO
 
 C
-#if defined (_MOLCAS_MPP_) && !defined (_GA_)
-        IF (IS_REAL_PAR().AND.KING().AND.(NPROCS.GT.1)) GOTO 501
-#endif
+! #if defined (_MOLCAS_MPP_) && !defined (_GA_)
+!         IF (IS_REAL_PAR().AND.KING().AND.(NPROCS.GT.1)) GOTO 501
+! #endif
 C
         GOTO 500
  501    CONTINUE
         CALL Free_Tsk(ID)
         !! End the actual part of dens2_rpt2
 C
-        Call DScal_(nConf,1.0D+00/Wgt,CIin(1,iState),1)
+        Call DScal_(nConf,1.0D+00/Wgt,CIin(1,kState),1)
       End Do
 C
       CALL GETMEM ('Tasks','FREE','INTE',lTask,2*nTasks)
@@ -3645,12 +3396,12 @@ C
 C
 C     --- -E_{S}*CJ + zL_{KL}
 C
-      Do iState = 1, nState
+      Do kState = 1, nState
 C       Wgt = Work(LDWgt+iState-1+nState*(iState-1))
         Wgt = 1.0D+00/nState
 C       EC=(rin_ene+potnuc-REFENE(iState))*Wgt
-        EC=Eact(iState)*Wgt
-        Call Daxpy_(nConf,EC,CIin(1,iState),1,CIout(1,iState),1)
+        EC=Eact(kState)*Wgt
+        Call Daxpy_(nConf,EC,CIin(1,kState),1,CIout(1,kState),1)
       End Do
 C
       !! Do projection
@@ -3685,10 +3436,10 @@ C
      *          G2(nAshT,nAshT,nAshT,nAshT)
       Real*8    INT2(nAshT,nAshT,nAshT,nAshT)
 C
-      LOGICAL   RSV_TSK
+C     LOGICAL   RSV_TSK
 C
-      Call DCopy_(nAshT**2,0.0D+00,0,G1,1)
-      Call DCopy_(nAshT**4,0.0D+00,0,G2,1)
+      Call DCopy_(nAshT**2,[0.0D+00],0,G1,1)
+      Call DCopy_(nAshT**4,[0.0D+00],0,G2,1)
 C
       !! Construct transition(?) density matrix
       !! (<CI|Etu|CIT>+<CIT|Etu|CI>)/2, where CIT is the solution
@@ -3712,26 +3463,26 @@ C
       Call GetMem('GT1 ','ALLO','REAL',LG1T,NG1)
       Call GetMem('GT2 ','ALLO','REAL',LG2T,NG2)
 C
-      !! This is for CASSCF orbital Lagrangian, but this may not contribute
+C  !! This is for CASSCF orbital Lagrangian, but this may not contribute
 C     Call Dens2T_RPT2(CI(1,jState),CI(1,jState),
 C    *                 Work(LSGM1),Work(LSGM2),Work(LG1T),Work(LG2T))
 C     Call DaXpY_(NG1,-0.5D+00,Work(LG1T),1,G1,1)
 C     Call DaXpY_(NG2,-0.5D+00,Work(LG2T),1,G2,1)
 C
       iSLag = 0
-      Do iState = 1, nState
+      Do kState = 1, nState
 C       Wgt = Work(LDWgt+iState-1+nState*(iState-1))
         Wgt = 1.0D+00/nState
 C
         !! <CI|Etu|CIT>+<CIT|Etu|CI> and the t+ u+ x v variant
-        Call Dens2T_RPT2(CI(1,iState),CIT(1,iState),
+        Call Dens2T_RPT2(CI(1,kState),CIT(1,kState),
      *                   Work(LSGM1),Work(LSGM2),Work(LG1T),Work(LG2T))
         Call DaXpY_(NG1,WGT,Work(LG1T),1,G1,1)
         Call DaXpY_(NG2,WGT,Work(LG2T),1,G2,1)
 C
         !! For the orbital contribution of CASSCF Lagrangian
         !! Just add the SLag rotation contributions
-        ilState = iState
+        ilState = kState
         Do jlState = 1, ilState-1
           iSLag = iSLag + 1
           Call Dens2T_RPT2(CI(1,ilState),CI(1,jlState),
@@ -3751,7 +3502,7 @@ C
 C
       Call GetMem('GT1 ','FREE','REAL',LG1T,NG1)
       Call GetMem('GT2 ','FREE','REAL',LG2T,NG2)
-C     write (*,*) "finished TRDM2"
+C     write(6,*) "finished TRDM2"
 C     call sqprt(g1,nlev)
 C     call sqprt(g2,nlev**2)
 C
@@ -3774,7 +3525,7 @@ C
       !! Finally, construct the Fock matrix only for active-active
       !! Should be equivalent to FockGen in MCLR
       Call GetMem('FOCK ','ALLO','REAL',ipFock,nAshT**2)
-      Call DCopy_(nAshT**2,0.0D+00,0,Work(ipFock),1)
+      Call DCopy_(nAshT**2,[0.0D+00],0,Work(ipFock),1)
 C
       !! 1) FIMO term
       Do iS=1,nSym
@@ -3794,7 +3545,7 @@ C             ip2=nBas(iS)*(nIsh(js)+jA-1) +ipmat(is,js)
           End Do
         End If
       End Do
-C     write (*,*) "after 1"
+C     write(6,*) "after 1"
 C     call sqprt(work(ipfock),nasht)
 C
       !! 2) two-electron term (only CreQADD part)
@@ -3825,7 +3576,7 @@ C                   ipQ=ipMat(ipS,iS)+nOrb(ipS)*(iAA-1)
                     ipQ=nAsh(ipS)*(iAsh-1)
 C                   ipM=1+nIsh(jS)*nOrb(ipS)
                     Do jAsh=1,nAsh(jS)
-                      jAA=jAsh+nFro(jS)+nIsh(jS)
+                      ! jAA=jAsh+nFro(jS)+nIsh(jS)
                       ipM=nFro(ipS)+nIsh(ipS)
      *                   +(nFro(jS)+nIsh(jS)+jAsh-1)*nBas(ipS)
 C                     iij=nna*(jAsh+nA(jS)-1)+iAsh+nA(iS)
@@ -3856,7 +3607,7 @@ C    &                            WRK1(ipM+1,1),1,Work(ipFock+ipQ),1)
           End Do     ! jS
         End If
       End Do           ! iS
-C     write (*,*) "after 2"
+C     write(6,*) "after 2"
 C     call sqprt(work(ipfock),nasht)
 C
       !! 3) anti-symmetrize
@@ -3874,7 +3625,7 @@ C    &                nAsh(iS),nAsh(jS))
      &                Work(ipFock),nAsh(jS),'T',
      &                Work(ipFockOut),nAsh(iS),
      &                nAsh(iS),nAsh(jS))
-C         write (*,*) "after 3"
+C         write(6,*) "after 3"
 C         call sqprt(work(ipfockout),nasht)
 
 
@@ -3892,7 +3643,7 @@ C         call sqprt(work(ipfockout),nasht)
               DEPSA(jAsh,iAsh) = DEPSA(jAsh,iAsh) + Tmp
             End Do
           End Do
-C         write (*,*) "DEPSA in OffC"
+C         write(6,*) "DEPSA in OffC"
 C         call sqprt(depsa,nasht)
         End If
       End Do
@@ -3922,6 +3673,7 @@ C
       iMO  = 1
       DO iSym = 1, nSym
         nAshI = nAsh(iSym)
+        nOrbI = 0
         If (nAshI.ne.0) Then
           nOrbI = nBas(iSym)-nDel(iSym)
           nFroI = nFro(iSym)

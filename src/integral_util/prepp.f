@@ -15,17 +15,6 @@
 *                                                                      *
 * Object: to set up the handling of the 2nd order density matrix.      *
 *                                                                      *
-* Called from: Alaska                                                  *
-*                                                                      *
-* Calling    : QEnter                                                  *
-*              OpnOne                                                  *
-*              GetMem                                                  *
-*              RdOne                                                   *
-*              PrMtrx                                                  *
-*              ClsOne                                                  *
-*              ErrOne                                                  *
-*              QExit                                                   *
-*                                                                      *
 *     Author: Roland Lindh, Dept. of Theoretical Chemistry,            *
 *             University of Lund, SWEDEN                               *
 *             January '92                                              *
@@ -34,18 +23,19 @@
       use aces_stuff
       use pso_stuff
       use index_arrays, only: iSO2Sh
+      use Basis_Info, only: nBas
+      use Sizes_of_Seward, only: S
+      use Symmetry_Info, only: nIrrep
       Implicit Real*8 (A-H,O-Z)
-#include "itmax.fh"
-#include "info.fh"
 #include "print.fh"
 #include "real.fh"
-#include "WrkSpc.fh"
 #include "stdalloc.fh"
 #include "etwas.fh"
 #include "mp2alaska.fh"
 #include "nsd.fh"
 #include "dmrginfo_mclr.fh"
 #include "nac.fh"
+#include "mspdft.fh"
 *#define _CD_TIMING_
 #ifdef _CD_TIMING_
 #include "temptime.fh"
@@ -56,18 +46,21 @@
 ************************************************************************
       Integer nFro(0:7)
       Integer Columbus
-      Character*8 RlxLbl,Method, KSDFT*16
+      Character*8 RlxLbl,Method, KSDFT*80
       Logical lPrint
       Logical DoCholesky
       Real*8 CoefX,CoefR
-      Character*80 Fmt*60
+      Character Fmt*60
+      Real*8, Allocatable:: D1ao(:), D1AV(:), Tmp(:,:)
+*     hybrid MC-PDFT things
+      Logical Do_Hybrid
+      Real*8  WF_Ratio,PDFT_Ratio
 *
 *...  Prologue
 
       iRout = 250
       iPrint = nPrint(iRout)
       lPrint=iPrint.ge.6
-      Call qEnter('PrepP')
 #ifdef _CD_TIMING_
       Call CWTIME(PreppCPU1,PreppWall1)
 #endif
@@ -94,13 +87,14 @@
 *...  Get the method label
       Call Get_cArray('Relax Method',Method,8)
       Call Get_iScalar('Columbus',columbus)
-      nCMo = n2Tot
-      mCMo = n2Tot
+      nCMo = S%n2Tot
+      mCMo = S%n2Tot
       If (Method.eq. 'KS-DFT  ' .or.
      &    Method.eq. 'MCPDFT  ' .or.
+     &    Method.eq. 'MSPDFT  ' .or.
      &    Method.eq. 'CASDFT  ' ) Then
          Call Get_iScalar('Multiplicity',iSpin)
-         Call Get_cArray('DFT functional',KSDFT,16)
+         Call Get_cArray('DFT functional',KSDFT,80)
          Call Get_dScalar('DFT exch coeff',CoefX)
          Call Get_dScalar('DFT corr coeff',CoefR)
          ExFac=Get_ExFac(KSDFT)
@@ -206,6 +200,7 @@
      &          Method.eq.'CASSCF  ' .or.
      &          Method.eq.'GASSCF  ' .or.
      &          Method.eq.'MCPDFT  ' .or.
+     &          Method.eq.'MSPDFT  ' .or.
      &          Method.eq.'DMRGSCF ' .or.
      &          Method.eq.'CASDFT  ') then
 *
@@ -224,9 +219,15 @@
             Write (6,'(2A)') ' Wavefunction type: ', Method
             If (Method.eq.'CASDFT  ' .or. Method.eq.'MCPDFT  ')
      &         Write (6,'(2A)') ' Functional type:   ',KSDFT
+            If (Method.eq.'MSPDFT  ')
+     &         Write (6,'(2A)') ' MS-PDFT Functional type:   ',KSDFT
             Write (6,*)
          End If
          If (method.eq.'MCPDFT  ') lSA=.true.
+         If (method.eq.'MSPDFT  ') then
+          lSA=.true.
+          dogradmspd=.true.
+         End If
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -260,12 +261,11 @@
             Call DecideOnCholesky(DoCholesky)
 C           If(.not.DoCholesky) Then
                Gamma_On=.True.
-C              LuGamma=isfreeunit(LuGamma)
                !! It is opened, but not used actually. I just want to
                !! use the Gamma_On flag.
                !! Just to avoid error termination.
                !! Actual working arrys are allocated in drvg1.f
-               LuGamma=60
+               LuGamma=65
                Call DaName_MF_WA(LuGamma,'GAMMA')
                If (DoCholesky) Call mma_allocate(G_Toc,1,Label='G_Toc')
                Call mma_allocate(SO2cI,1,1,Label='SO2cI')
@@ -286,37 +286,20 @@ C           End If
 *
 *...  Read the (non) variational 1st order density matrix
 *...  density matrix in AO/SO basis
-         !! D0  : CASSCF density
-         !! Dvar: CASSCF+PT2 variational density
          nsa=1
-         If (lsa) nsa=4
-         If ( Method.eq.'MCPDFT  ') nsa=4
-C        If ( Method.eq.'CASPT2  ') nsa=4 !?
+         If (lsa) nsa=5
+         If ( Method.eq.'MCPDFT  ') nsa=5
+         If ( Method.eq.'MSPDFT  ') nsa=5
 !AMS modification: add a fifth density slot
          mDens=nsa+1
-         !! D0 and DVar are defined in Modules/pso_stuff.f
          Call mma_allocate(D0,nDens,mDens,Label='D0')
          D0(:,:)=Zero
          Call mma_allocate(DVar,nDens,nsa,Label='DVar')
-         if (.not.gamma_mrcisd) then
-         Call Get_D1ao(ipD1ao,length)
-         If ( length.ne.nDens ) Then
-            Call WarningMessage(2,'PrepP: length.ne.nDens')
-            Write (6,*) 'length=',length
-            Write (6,*) 'nDens=',nDens
-            Call Abend()
-         End If
-         call dcopy_(nDens,Work(ipD1ao),1,D0(1,1),1)
-         Call Free_Work(ipD1ao)
-         endif
+         if (.not.gamma_mrcisd)
+     &      Call Get_dArray_chk('D1ao',D0(1,1),nDens)
 *
 
-         Call Get_D1ao_Var(ipD1ao_Var,length)
-         call dcopy_(nDens,Work(ipD1ao_Var),1,DVar,1)
-*        if (gamma_mrcisd) then
-*         call dcopy_(nDens,Work(ipD1ao_Var),1,D0,1)
-*        endif
-         Call Free_Work(ipD1ao_Var)
+         Call Get_D1ao_Var(DVar,nDens)
 *
          Call mma_Allocate(DS,nDens,Label='DS')
          Call mma_Allocate(DSVar,nDens,Label='DSVar')
@@ -324,12 +307,8 @@ C        If ( Method.eq.'CASPT2  ') nsa=4 !?
      &       Method.eq.'ROHF    ' .or.
      &    (Method.eq.'KS-DFT  '.and.iSpin.ne.1) .or.
      &       Method.eq.'Corr. WF' ) Then
-            Call Get_D1sao(ipDS1,Length)
-            Call Get_D1sao_Var(ipDSVar1,Length)
-            Call DCopy_(Length,Work(ipDS1),1,DS,1)
-            Call DCopy_(Length,Work(ipDSVar1),1,DSVar,1)
-            Call GetMem('DS   ','Free','Real',ipDS1,nDens)
-            Call GetMem('DSVar','Free','Real',ipDSVar1,nDens)
+            Call Get_dArray_chk('D1sao',DS,nDens)
+            Call Get_D1sao_Var(DSVar,nDens)
          Else
             DS   (:)=Zero
             DSVar(:)=Zero
@@ -386,9 +365,7 @@ C        If ( Method.eq.'CASPT2  ') nsa=4 !?
          End If
          kCMO=nsa
          Call mma_allocate(CMO,mCMO,kCMO,Label='CMO')
-         Call Get_CMO(ipTemp,nTemp)
-         call dcopy_(nTemp,Work(ipTemp),1,CMO(1,1),1)
-         Call Free_Work(ipTemp)
+         Call Get_dArray_chk('Last orbitals',CMO(:,1),mCMO)
          If (iPrint.ge.99) Then
             ipTmp1 = 1
             Do iIrrep = 0, nIrrep-1
@@ -436,10 +413,8 @@ C        If ( Method.eq.'CASPT2  ') nsa=4 !?
          mG1=nsa
          Call mma_allocate(G1,nG1,mG1,Label='G1')
          If (nsa.gt.0) Then
-            Call Get_D1MO(ipTemp,nTemp)
-            call dcopy_(nTemp,Work(ipTemp),1,G1(1,1),1)
-            Call Free_Work(ipTemp)
-            If (iPrint.ge.99) Call TriPrt(' G1',' ',G1(1,1),nAct)
+            Call Get_dArray_chk('D1mo',G1(:,1),nG1)
+            If (iPrint.ge.99) Call TriPrt(' G1',' ',G1(:,1),nAct)
          End If
 *
 *...  Get the two body density for the active orbitals
@@ -449,13 +424,11 @@ C        If ( Method.eq.'CASPT2  ') nsa=4 !?
          mG2=nsa
          Call mma_allocate(G2,nG2,mG2,Label='G2')
 !       write(*,*) 'got the 2rdm, Ithink.'
-         if(Method.eq.'MCPDFT  ') then
-           Call Get_P2MOt(ipTemp,nTemp)!PDFT-modified 2-RDM
+         if(Method.eq.'MCPDFT  '.or.Method.eq.'MSPDFT  ') then
+           Call Get_dArray_chk('P2MOt',G2,nG2)!PDFT-modified 2-RDM
          else
-           Call Get_P2MO(ipTemp,nTemp)
+           Call Get_dArray_chk('P2mo',G2,nG2)
          end if
-         call dcopy_(nTemp,Work(ipTemp),1,G2(1,1),1)
-         Call Free_Work(ipTemp)
          If (iPrint.ge.99) Call TriPrt(' G2',' ',G2(1,1),nG1)
          If (lsa) Then
 
@@ -463,9 +436,7 @@ C        If ( Method.eq.'CASPT2  ') nsa=4 !?
 *
 *  CMO2 CMO*Kappa
 *
-           Call Get_LCMO(ipLCMO,Length)
-           call dcopy_(Length,Work(ipLCMO),1,CMO(1,2),1)
-           Call Free_Work(ipLCMO)
+           Call Get_dArray_chk('LCMO',CMO(:,2),mCMO)
            If (iPrint.ge.99) Then
             ipTmp1 = 1
             Do iIrrep = 0, nIrrep-1
@@ -481,8 +452,7 @@ C        If ( Method.eq.'CASPT2  ') nsa=4 !?
 *   P1=<i|e_pqrs|i> + sum_i <i|e_pqrs|i>+<i|e_pqrs|i>
 *   P2=sum_i <i|e_pqrs|i>
 *
-           Call Get_PLMO(ipPLMO,Length)
-           call dcopy_(Length,Work(ipPLMO),1,G2(1,2),1)
+           Call Get_dArray_chk('PLMO',G2(:,2),nG2)
            ndim1=0
            if(doDMRG)then
              ndim0=0  !yma
@@ -495,25 +465,12 @@ C        If ( Method.eq.'CASPT2  ') nsa=4 !?
                if(i.gt.ndim2) G2(i,2)=0.0D0
              end do
            end if
-           Call Free_Work(ipPLMO)
-           Call Daxpy_(ng2,One,G2(1,2),1,G2(1,1),1)
-           If(iPrint.ge.99)Call TriPrt(' G2L',' ',G2(1,2),nG1)
-           If(iPrint.ge.99)Call TriPrt(' G2T',' ',G2(1,1),nG1)
+           Call Daxpy_(ng2,One,G2(:,2),1,G2(:,1),1)
+           If(iPrint.ge.99)Call TriPrt(' G2L',' ',G2(:,2),nG1)
+           If(iPrint.ge.99)Call TriPrt(' G2T',' ',G2(:,1),nG1)
 *
-           Call Get_D2AV(ipD2AV,Length)
-           If (ng2.ne.Length) Then
-              Call WarningMessage(2,'Prepp: D2AV, ng2.ne.Length!')
-              Write (6,*) 'ng2,Length=',ng2,Length
-! DMRG with the reduced AS
-              if(doDMRG)then
-                Length=ng2 ! yma
-              else
-                Call Abend()
-              end if
-           End If
-           call dcopy_(Length,Work(ipD2AV),1,G2(1,2),1)
-           Call Free_Work(ipD2AV)
-           If (iPrint.ge.99) Call TriPrt('G2A',' ',G2(1,2),nG1)
+           Call Get_dArray_chk('D2av',G2(:,2),nG2)
+           If (iPrint.ge.99) Call TriPrt('G2A',' ',G2(:,2),nG1)
 *
 *
 *  Densities are stored as:
@@ -530,114 +487,92 @@ C        If ( Method.eq.'CASPT2  ') nsa=4 !?
 *
 *       G1 = <i|e_ab|i>
 *       G2 = sum i <i|e_ab|i>
-*        !! couples 1-2 and 3-4
-*        !! D0(1,1) :: Dref of inactive part? (D^I)
-*        !! D0(1,2) :: Dvar - Dref/2 = D^eff - D^I/2
-*        !! D0(1,3) :: Dref of active   part? (D^SA,A)
-*        !! D0(1,4) :: D^orb,I
-*        !! For CASPT2, D0(1,2) and D0(1,4) has to be explicitly modified.
-*        !!    D0(1,2) := D^eff - D^I/2 + D(PT2C)
-*        !!    D0(1,4) := D^orb,I + D(PT2)
-*        !! However, this is already done in mclr/out_pt2.f
 *
 !************************
          RlxLbl='D1AO    '
 !         Call PrMtrx(RlxLbl,iD0Lbl,iComp,[1],D0)
 
-
-           Call Getmem('TMP','ALLO','REAL',ipT,2*ndens)
-           Call Get_D1I(CMO(1,1),D0(1,1),Work(ipT),
-     &                  nish,nbas,nIrrep)
-C     write (*,*) "cmo"
-C     call sqprt(cmo,12)
-C     write (*,*) "1"
-C     call prtril(d0(1,1),12,0)
-C     write (*,*) "nfro = ", nfro(1)
-C     write (*,*) "nish = ", nish(1)
-           Call Getmem('TMP','FREE','REAL',ipT,2*ndens)
+           Call mma_allocate(Tmp,nDens,2,Label='Tmp')
+           Call Get_D1I(CMO(1,1),D0(1,1),Tmp,nIsh,nBas,nIrrep)
+           Call mma_deallocate(Tmp)
 
 !************************
          RlxLbl='D1AO    '
 !         Call PrMtrx(RlxLbl,iD0Lbl,iComp,[1],D0)
 *
-C         write (*,*) "Dvar"
-C          call prtril(dvar,12,0)
            Call dcopy_(ndens,DVar,1,D0(1,2),1)
            If (.not.isNAC) call daxpy_(ndens,-Half,D0(1,1),1,D0(1,2),1)
-!         RlxLbl='D1COMBO  '
-!         Call PrMtrx(RlxLbl,iD0Lbl,iComp,[1],D0(1,2))
+!          RlxLbl='D1COMBO  '
+!          Call PrMtrx(RlxLbl,iD0Lbl,iComp,[1],D0(1,2))
 *
 *   This is necessary for the kap-lag
 *
-           Call Get_D1AV(ipD1AV,Length)
-C          write (*,*) "ipD1AV"
-C          call sqprt(Work(ipD1AV),nash(1))
            nG1 = nAct*(nAct+1)/2
-           If (ng1.ne.Length) Then
-              Call WarningMessage(2,'PrepP: D1AV, nG1.ne.Length!')
-              Write (6,*) 'nG1,Length=',nG1,Length
-              if(doDMRG)then ! yma
-                If (length.ne.ng1) length=nG1
-              else
-                Call Abend()
-              end if
-              Call Abend()
-           End If
-           Call Get_D1A(CMO(1,1),Work(ipD1AV),D0(1,3),
+           Call mma_allocate(D1AV,nG1,Label='D1AV')
+           Call Get_dArray_chk('D1av',D1AV,nG1)
+           Call Get_D1A(CMO(1,1),D1AV,D0(1,3),
      &                 nIrrep,nbas,nish,nash,ndens)
-           Call Free_Work(ipD1AV)
+           Call mma_deallocate(D1AV)
 !************************
-         RlxLbl='D1AOA   '
-!         Call PrMtrx(RlxLbl,iD0Lbl,iComp,[1],D0(1,3))
+!          RlxLbl='D1AOA   '
+!          Call PrMtrx(RlxLbl,iD0Lbl,iComp,[1],D0(1,3))
 *
-           !! D0(1,4): constructed in mclr/out_pt2.f
-           Call Get_DLAO(ipDLAO,Length)
-           call dcopy_(Length,Work(ipDLAO),1,D0(1,4),1)
-C         write (*,*) "D0(1,1)"
-C          call prtril(d0(1,1),12,0)
-C         write (*,*) "D0(1,2)"
-C          call prtril(d0(1,2),12,0)
-C         write (*,*) "D0(1,3)"
-C          call prtril(d0(1,3),12,0)
-C         write (*,*) "D0(1,4)"
-C          call prtril(d0(1,4),12,0)
+           Call Get_dArray_chk('DLAO',D0(:,4),nDens)
 
+*        Getting conditions for hybrid MC-PDFT
+         Do_Hybrid=.false.
+         CALL qpg_DScalar('R_WF_HMC',Do_Hybrid)
+         If(Do_Hybrid) Then
+          CALL Get_DScalar('R_WF_HMC',WF_Ratio)
+          PDFT_Ratio=1.0d0-WF_Ratio
+         End If
 !ANDREW - modify D2: should contain only the correction pieces
-
          If ( Method.eq.'MCPDFT  ') then
 !Get the D_theta piece
-         Call Get_D1ao(ipD1ao,ndens)
-      ij = -1
-      Do  iIrrep = 0, nIrrep-1
-         Do iBas = 1, nBas(iIrrep)
-            Do jBas = 1, iBas-1
-               ij = ij + 1
-               Work(ipD1ao+ij) = Half*Work(ipD1ao+ij)
+            Call mma_allocate(D1ao,nDens)
+            Call Get_dArray_chk('D1ao',D1ao,ndens)
+            ij = 0
+            Do  iIrrep = 0, nIrrep-1
+               Do iBas = 1, nBas(iIrrep)
+                  Do jBas = 1, iBas-1
+                     ij = ij + 1
+                     D1ao(ij) = Half*D1ao(ij)
+                  end do
+                  ij = ij + 1
+                end do
             end do
-            ij = ij + 1
-          end do
-      end do
-          call daxpy_(ndens,-1d0,D0(1,1),1,Work(ipD1ao),1)
-!          write(*,*) 'do they match?'
-!          do i=1,ndens
-!            write(*,*) Work(ipd1ao-1+i),DO(i,3)
-!          end do
+            call daxpy_(ndens,-1d0,D0(1,1),1,D1ao,1)
+!           write(*,*) 'do they match?'
+!           do i=1,ndens
+!             write(*,*) d1ao(i),DO(i,3)
+!           end do
 
-          call daxpy_(ndens,-Half,D0(1,1),1,D0(1,2),1)
-          call daxpy_(ndens,-1.0d0,Work(ipD1ao),1,D0(1,2),1)
-!ANDREW - Generate new D5 piece:
-          D0(:,5)=Zero
-          call daxpy_(ndens,0.5d0,D0(1,1),1,D0(1,5),1)
-          call daxpy_(ndens,1.0d0,Work(ipD1ao),1,D0(1,5),1)
-         Call Free_Work(ipD1ao)
+            call daxpy_(ndens,-Half,D0(1,1),1,D0(1,2),1)
+            call daxpy_(ndens,-1.0d0,D1ao,1,D0(1,2),1)
+!ANDREW -   Generate new D5 piece:
+            D0(:,5)=Zero
+            call daxpy_(ndens,0.5d0,D0(1,1),1,D0(1,5),1)
+            call daxpy_(ndens,1.0d0,D1ao,1,D0(1,5),1)
+
+          if(do_hybrid) then
+*           add back the wave function parts that are subtracted
+*           this might be inefficient, but should have a clear logic
+            call daxpy_(ndens,Half*WF_Ratio,D0(1,1),1,D0(1,2),1)
+            call daxpy_(ndens,WF_Ratio,D1ao,1,D0(1,2),1)
+*           scale the pdft part
+            call dscal_(ndens,PDFT_Ratio,D0(1,5),1)
           end if
-
+            Call mma_deallocate(D1ao)
+          else If (Method.eq.'MSPDFT  ') Then
+            Call Get_DArray('MSPDFTD5        ',D0(1,5),nDens)
+            Call Get_DArray('MSPDFTD6        ',D0(1,6),nDens)
+            call daxpy_(ndens,-1.0d0,D0(1,5),1,D0(1,2),1)
+          end if
 
 !          call dcopy_(ndens*5,0.0d0,0,D0,1)
 !          call dcopy_(nG2,0.0d0,0,G2,1)
 
 
-           Call Free_Work(ipDLAO)
 !************************
            !Call dscal_(Length,0.5d0,D0(1,4),1)
            !Call dscal_(Length,0.0d0,D0(1,4),1)
@@ -645,9 +580,9 @@ C          call prtril(d0(1,4),12,0)
          RlxLbl='DLAO    '
 !         Call PrMtrx(RlxLbl,iD0Lbl,iComp,[1],D0(1,4))
 ! DMRG with the reduced AS
-           if(doDMRG)then
-             length=ndim1  !yma
-           end if
+           !if(doDMRG)then
+           !  length=ndim1  !yma
+           !end if
          End If
          If (iPrint.ge.99) Call TriPrt(' G2',' ',G2(1,1),nG1)
 *
@@ -660,7 +595,6 @@ C          call prtril(d0(1,4),12,0)
       Prepp_CPU  = PreppCPU2 - PreppCPU1
       Prepp_Wall = PreppWall2 - PreppWall1
 #endif
-      Call qExit('PrepP')
 
       Return
       End
@@ -697,60 +631,52 @@ C          call prtril(d0(1,4),12,0)
 
       Subroutine Get_D1A(CMO,D1A_MO,D1A_AO,
      &                    nsym,nbas,nish,nash,ndens)
-
-
       Implicit Real*8 (A-H,O-Z)
-
+#include "real.fh"
+#include "stdalloc.fh"
       Dimension CMO(*) , D1A_MO(*) , D1A_AO(*)
       Integer nbas(nsym),nish(nsym),nash(nsym)
+      Real*8, Allocatable:: Scr1(:), Tmp1(:,:), Tmp2(:,:)
 
-#include "WrkSpc.fh"
-#include "real.fh"
       itri(i,j)=Max(i,j)*(Max(i,j)-1)/2+Min(i,j)
 
-      Call qEnter('Get_D1A')
 
-      iOff1 = 1
       iOff2 = 1
       iOff3 = 1
       ii=0
-      Call GetMem('Scr1','Allo','Real',ip1,2*ndens)
+      Call mma_allocate(Scr1,2*nDens,Label='Scr1')
       Do iSym = 1,nSym
         iBas = nBas(iSym)
         iAsh = nAsh(iSym)
         iIsh = nIsh(iSym)
-        Call dCopy_(iBas*iBas,[Zero],0,Work(ip1-1+iOff3),1)
+        Call dCopy_(iBas*iBas,[Zero],0,Scr1(iOff3),1)
         If ( iAsh.ne.0 ) then
-          Call GetMem('Scr1','Allo','Real',iTmp1,iAsh*iAsh)
-          Call GetMem('Scr2','Allo','Real',iTmp2,iAsh*iBas)
-          ij=0
-          Do i=1,iash
-           Do j=1,iash
-            Work(iTmp1+ij)=D1A_MO(itri(i+ii,j+ii))
-            ij=ij+1
+          Call mma_allocate(Tmp1,iAsh,iAsh,Label='Tmp1')
+          Call mma_allocate(Tmp2,iBas,iAsh,Label='Tmp2')
+          Do i=1,iAsh
+           Do j=1,iAsh
+            Tmp1(j,i)=D1A_MO(itri(i+ii,j+ii))
            End do
           End do
           ii=ii+iash
           Call DGEMM_('N','T',
      &                iBas,iAsh,iAsh,
      &                One,CMO(iOff2+iIsh*iBas),iBas,
-     &                Work(iTmp1),iAsh,
-     &                Zero,Work(iTmp2),iBas)
+     &                    Tmp1,iAsh,
+     &               Zero,Tmp2,iBas)
           Call DGEMM_('N','T',
      &                iBas,iBas,iAsh,
-     &                One,Work(iTmp2),iBas,
-     &                CMO(iOff2+iIsh*iBas),iBas,
-     &                Zero,Work(ip1-1+iOff3),iBas)
-          Call GetMem('Scr2','Free','Real',iTmp2,iAsh*iBas)
-          Call GetMem('Scr1','Free','Real',iTmp1,iAsh*iAsh)
+     &                One,Tmp2,iBas,
+     &                    CMO(iOff2+iIsh*iBas),iBas,
+     &               Zero,Scr1(iOff3),iBas)
+          Call mma_deallocate(Tmp2)
+          Call mma_deallocate(Tmp1)
         End If
-        iOff1 = iOff1 + (iAsh*iAsh+iAsh)/2
         iOff2 = iOff2 + iBas*iBas
         iOff3 = iOff3 + iBas*iBas
       End Do
-      Call Fold2(nsym,nBas,work(ip1),D1A_AO)
-      Call GetMem('Scr1','FREE','Real',ip1,ndens)
-      Call qExit('Get_D1A')
+      Call Fold2(nSym,nBas,Scr1,D1A_AO)
+      Call mma_deallocate(Scr1)
       Return
       End
 

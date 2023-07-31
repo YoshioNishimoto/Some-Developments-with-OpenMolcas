@@ -28,7 +28,6 @@
       DIMENSION    IADR3(3)
       LOGICAL      lMaxHop,lAllowHop,fexist,lHopped
 *
-      CALL QENTER(ROUTINE)
 *
 C Skip the test if a hop has occurred
 C  (this should happen when testing for state n+1
@@ -110,7 +109,7 @@ C
       IF (fexist) THEN
          CALL DANAME(file,filnam)
          IF (IPGLOB.GE.VERBOSE)
-     &      WRITE(6,*) filnam(:mylen(filnam))//' file exists.'
+     &      WRITE(6,*) trim(filnam)//' file exists.'
       ELSE
 C If the file does not exist, create a new one with the
 C current vectors
@@ -131,7 +130,7 @@ C Write the real table of contents
          IAD3=0
          CALL IDAFILE(file,1,IADR3,3,IAD3)
          IF (IPGLOB.GE.VERBOSE)
-     &      WRITE(6,*) filnam(:mylen(filnam))//' file created.'
+     &      WRITE(6,*) trim(filnam)//' file created.'
       ENDIF
 C
 C Check for surface hop if the energy difference is smaller than
@@ -272,7 +271,6 @@ C Write the CI-vectors normally if no hop occurred
          CALL DACLOS(file)
       ENDIF
 *
-      CALL QEXIT(ROUTINE)
       RETURN
 3000  FORMAT(6X,A,F7.2)
 *

@@ -9,16 +9,15 @@
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
       SUBROUTINE GETDREF(DREF)
+      use caspt2_output, only:iPrGlb,debug
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
 #include "pt2_guga.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 ! #include "intgrl.fh"
       REAL*8 DREF(NDREF)
 
-      CALL QENTER('GETDREF')
 * Get active 1-el density matrix GAMMA1 and
 * construct DREF in a tringular storage.
 
@@ -43,7 +42,6 @@
 
   99  CONTINUE
 
-      CALL QEXIT('GETDREF')
       RETURN
       END
 

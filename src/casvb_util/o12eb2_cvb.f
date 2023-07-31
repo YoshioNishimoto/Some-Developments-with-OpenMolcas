@@ -8,7 +8,8 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine o12eb2_cvb(orbs,cvb,nparm1,nvb,
      >  nfrorb,
@@ -19,7 +20,7 @@
       logical strucopt,skip
       logical close2conv
       external asonc12e_cvb,ddres2upd10_cvb
-#include "malloc_cvb.fh"
+#include "WrkSpc.fh"
 #include "opt_cvb.fh"
 #include "locopt1_cvb.fh"
 #include "locopt2_cvb.fh"

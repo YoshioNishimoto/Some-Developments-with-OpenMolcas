@@ -8,13 +8,15 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine o123a_cvb(nparm)
       implicit real*8 (a-h,o-z)
-#include "malloc_cvb.fh"
+#include "WrkSpc.fh"
 #include "opt2_cvb.fh"
 
-      call o123a2_cvb(nparm,w(ix(2)),w(ix(3)),w(ix(4)),w(ix(6)))
+      call o123a2_cvb(nparm,work(ix(2)),work(ix(3)),work(ix(4)),
+     >                work(ix(6)))
       return
       end

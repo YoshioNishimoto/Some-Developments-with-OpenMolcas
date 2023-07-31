@@ -17,17 +17,19 @@
 * SWEDEN                                     *
 *--------------------------------------------*
       SUBROUTINE MKSMAT()
+      use caspt2_output, only:iPrGlb,verbose,debug
       IMPLICIT REAL*8 (A-H,O-Z)
 C     Set up S matrices for cases 1..13.
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
 #include "pt2_guga.fh"
 #include "SysDef.fh"
+#include "stdalloc.fh"
+      REAL*8 DUM(1)
+      INTEGER*1, ALLOCATABLE :: idxG3(:,:)
 
-      CALL QENTER('MKSMAT')
 
       IF(IPRGLB.GE.VERBOSE) THEN
         WRITE(6,*)
@@ -44,21 +46,17 @@ C For the cases A and C, begin by reading in the local storage
 C  part of the three-electron density matrix G3:
         CALL GETMEM('GAMMA3','ALLO','REAL',LG3,NG3)
         CALL PT2_GET(NG3,'GAMMA3',WORK(LG3))
-        iPad=ItoB-MOD(6*NG3,ItoB)
-        CALL GETMEM('idxG3','ALLO','CHAR',LidxG3,6*NG3+iPad)
+        CALL mma_allocate(idxG3,6,NG3,label='idxG3')
         iLUID=0
-        CALL CDAFILE(LUSOLV,2,cWORK(LidxG3),6*NG3+iPad,iLUID)
+        CALL I1DAFILE(LUSOLV,2,idxG3,6*NG3,iLUID)
 
         CALL MKSA(WORK(LDREF),WORK(LPREF),
-     &            NG3,WORK(LG3),i1WORK(LidxG3))
-      CALL GETMEM('GAMMA2','ALLO','REAL',LG2,NG2)
-      CALL PT2_GET(NG2,'GAMMA2',WORK(LG2))
+     &            NG3,WORK(LG3),idxG3)
         CALL MKSC(WORK(LDREF),WORK(LPREF),
-     &            NG3,WORK(LG3),i1WORK(LidxG3),work(lg2))
-      CALL GETMEM('GAMMA2','FREE','REAL',LG2,NG2)
+     &            NG3,WORK(LG3),idxG3)
 
         CALL GETMEM('GAMMA3','FREE','REAL',LG3,NG3)
-        CALL GETMEM('idxG3','FREE','CHAR',LidxG3,6*NG3+iPad)
+        CALL mma_deallocate(idxG3)
 
 C-SVC20100902: For the remaining cases that do not need G3, use replicate arrays
         CALL MKSB(WORK(LDREF),WORK(LPREF))
@@ -71,17 +69,17 @@ C-SVC20100902: For the remaining cases that do not need G3, use replicate arrays
 C For completeness, even case H has formally S and B
 C matrices. This costs nothing, and saves conditional
 C looping, etc in the rest  of the routines.
+      DUM(1)=1.0D00
       DO ISYM=1,NSYM
         DO ICASE=12,13
           NIN=NINDEP(ISYM,ICASE)
           IF(NIN.GT.0) THEN
             IDISK=IDSMAT(ISYM,ICASE)
-            CALL DDAFILE(LUSBT,1,[1.0D00],1,IDISK)
+            CALL DDAFILE(LUSBT,1,DUM,1,IDISK)
           END IF
         END DO
       END DO
 
-      CALL QEXIT('MKSMAT')
 
       RETURN
       END
@@ -91,14 +89,16 @@ C looping, etc in the rest  of the routines.
 ********************************************************************************
       SUBROUTINE MKSA(DREF,PREF,NG3,G3,idxG3)
       USE SUPERINDEX
+      use caspt2_output, only:iPrGlb,debug
+#ifdef _MOLCAS_MPP_
+      USE Para_Info, ONLY: Is_Real_Par
+#endif
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
-#include "para_info.fh"
 #ifdef _MOLCAS_MPP_
 #include "global.fh"
 #include "mafdecls.fh"
@@ -168,7 +168,6 @@ C         - dxu Gvtyz - dxu dyt Gvz +2 dtx Gvuyz + 2 dtx dyu Gvz
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
@@ -345,7 +344,6 @@ C  - G(xvzyut) -> SA(yvx,zut)
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
@@ -370,6 +368,8 @@ C  - G(xvzyut) -> SA(yvx,zut)
       INTEGER, PARAMETER :: I4=KIND(ONE4)
 
       INTEGER, ALLOCATABLE :: IBUF(:)
+
+#include "mpi_interfaces.fh"
 
       ! Since we are stuck with collective calls to MPI_Alltoallv in
       ! order to gather the elements, each process needs to loop over
@@ -805,7 +805,6 @@ C storage uses a triangular scheme, and the LDA passed is zero.
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
@@ -895,16 +894,18 @@ C Add -dyu Gvzxt
 ********************************************************************************
 * Case C (ICASE=4)
 ********************************************************************************
-      SUBROUTINE MKSC(DREF,PREF,NG3,G3,idxG3,g2)
+      SUBROUTINE MKSC(DREF,PREF,NG3,G3,idxG3)
+      use caspt2_output, only:iPrGlb,debug
       USE SUPERINDEX
+#ifdef _MOLCAS_MPP_
+      USE Para_Info, ONLY: Is_Real_Par
+#endif
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
-#include "para_info.fh"
 #ifdef _MOLCAS_MPP_
 #include "global.fh"
 #include "mafdecls.fh"
@@ -954,62 +955,9 @@ C    = Gvutxyz +dyu Gvztx + dyx Gvutz + dtu Gvxyz + dtu dyx Gvz
           CALL MKSC_DP(DREF,PREF,ISYM,WORK(lg_SC),1,NAS,1,NAS,0)
         END IF
 #else
-C     If (DoPT2Num) Then
-C       If (iVibPT2.eq.1) Then
-C         G3(iDiffPT2) = G3(iDiffPT2) + PT2Delta
-C       Else
-C         G3(iDiffPT2) = G3(iDiffPT2) - PT2Delta
-C       End If
-C     End If
         call MKSC_G3(ISYM,WORK(lg_SC),NG3,G3,idxG3)
-C     call dcopy(nas*(nas+1)/2,0.0d+00,0,work(lg_sc),1)
-C     If (DoPT2Num) Then
-C       If (iVibPT2.eq.1) Then
-C         DREF(iDiffPT2) = DREF(iDiffPT2) + PT2Delta
-C       Else
-C         DREF(iDiffPT2) = DREF(iDiffPT2) - PT2Delta
-C       End If
-C     End If
-        CALL MKSC_DP(DREF,PREF,ISYM,WORK(lg_SC),1,NAS,1,NAS,0,g2)
-C     If (DoPT2Num) Then
-C       If (iVibPT2.eq.1) Then
-C         DREF(iDiffPT2) = DREF(iDiffPT2) - PT2Delta
-C       Else
-C         DREF(iDiffPT2) = DREF(iDiffPT2) + PT2Delta
-C       End If
-C     End If
+        CALL MKSC_DP(DREF,PREF,ISYM,WORK(lg_SC),1,NAS,1,NAS,0)
 #endif
-C     If (DoPT2Num) Then
-C       If (iVibPT2.eq.1) Then
-C         Work(lg_SC+iDiffPT2-1) = Work(lg_SC+iDiffPT2-1) + PT2Delta
-C       Else
-C         Work(lg_SC+iDiffPT2-1) = Work(lg_SC+iDiffPT2-1) - PT2Delta
-C       End If
-C     End If
-C     write (*,*) "active overlap"
-C     do i = 1, 5
-C     do j = 1, 5
-C     do k = 1, 5
-C     ijk = i+5*(j-1)+25*(k-1)
-C     do l = 1, 5
-C     do m = 1, 5
-C     do n = 1, 5
-C     lmn = l+5*(m-1)+25*(n-1)
-C     if (ijk.ge.lmn) nseq = ijk*(ijk-1)/2+lmn-1
-C     if (ijk.lt.lmn) nseq = lmn*(lmn-1)/2+ijk-1
-C     write (*,'(6i2,f20.10)') i,j,k,l,m,n,work(lg_sc+nseq)
-C     end do
-C     end do
-C     end do
-C     end do
-C     end do
-C     end do
-C     call dcopy(nas*(nas+1)/2,0.0d+00,0,work(lg_sc),1)
-C     do i = 1, nas
-C       nseq = i*(i+1)/2
-C       work(lg_sc+nseq-1) = 1.0d+00
-C     end do
-      
 
         CALL PSBMAT_WRITE('S',iCase,iSYM,lg_SC,NAS)
 
@@ -1028,7 +976,6 @@ C     end do
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
@@ -1205,7 +1152,6 @@ C  - G(xvzyut) -> SC(zvx,yut)
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
@@ -1230,6 +1176,8 @@ C  - G(xvzyut) -> SC(zvx,yut)
       INTEGER, PARAMETER :: I4=KIND(ONE4)
 
       INTEGER, ALLOCATABLE :: IBUF(:)
+
+#include "mpi_interfaces.fh"
 
       ! Since we are stuck with collective calls to MPI_Alltoallv in
       ! order to gather the elements, each process needs to loop over
@@ -1657,7 +1605,7 @@ c Avoid unused argument warnings
       END
 #endif
 
-      SUBROUTINE MKSC_DP (DREF,PREF,iSYM,SC,iLo,iHi,jLo,jHi,LDC,g2)
+      SUBROUTINE MKSC_DP (DREF,PREF,iSYM,SC,iLo,iHi,jLo,jHi,LDC)
 C In parallel, this subroutine is called on a local chunk of memory
 C and LDC is set. In serial, the whole array is passed but then the
 C storage uses a triangular scheme, and the LDC passed is zero.
@@ -1665,17 +1613,14 @@ C storage uses a triangular scheme, and the LDC passed is zero.
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
 
       DIMENSION DREF(NDREF),PREF(NPREF)
       DIMENSION SC(*)
-      dimension g2(5,5,5,5)
 
       ISADR=0
-C     write (*,*) "begin of mksc_dp"
 C-SVC20100831: fill in the G2 and G1 corrections for this SC block
       DO 100 IXYZ=jLo,jHi
         IXYZABS=IXYZ+NTUVES(ISYM)
@@ -1714,9 +1659,6 @@ C Add  dyx Gvutz
             IP2=MIN(IVU,ITZ)
             IP=(IP1*(IP1-1))/2+IP2
             VALUE=VALUE+2.0D0*PREF(IP)
-C     diff = abs(2.0d+00*pref(ip)-g2(ivabs,iuabs,itabs,izabs))
-C     if (diff.ge.1.0d-08)
-C    *write (*,'(2f20.10)')2.0d+00*pref(ip),g2(ivabs,iuabs,itabs,izabs)
           END IF
 C Add  dtu Gvxyz + dtu dyx Gvz
           IF(ITABS.EQ.IUABS) THEN
@@ -1726,9 +1668,6 @@ C Add  dtu Gvxyz + dtu dyx Gvz
             IP2=MIN(IVX,IYZ)
             IP=(IP1*(IP1-1))/2+IP2
             VALUE=VALUE+2.0D0*PREF(IP)
-C     diff = abs(2.0d+00*pref(ip)-g2(ivabs,ixabs,iyabs,izabs))
-C     if (diff.ge.1.0d-08)
-C    *write (*,'(2f20.10)')2.0d+00*pref(ip),g2(ivabs,ixabs,iyabs,izabs)
             IF(IYABS.EQ.IXABS) THEN
               ID1=MAX(IVABS,IZABS)
               ID2=MIN(IVABS,IZABS)
@@ -1742,7 +1681,6 @@ C    *write (*,'(2f20.10)')2.0d+00*pref(ip),g2(ivabs,ixabs,iyabs,izabs)
           END IF
  101    CONTINUE
  100  CONTINUE
-C     write (*,*) "end of mksc_dp"
       END
 
 ********************************************************************************
@@ -1754,7 +1692,6 @@ C     write (*,*) "end of mksc_dp"
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 
@@ -1770,7 +1707,6 @@ C      -4dxu dyt + 2dxu Dyt
 C    SBP(tu,xy)=SB(tu,xy)+SB(tu,yx)
 C    SBM(tu,xy)=SB(tu,xy)-SB(tu,yx)
 
-      CALL QENTER('MKSB')
 
 C Loop over superindex symmetry.
       DO 1000 ISYM=1,NSYM
@@ -1892,7 +1828,6 @@ C Write to disk, and save size and address.
         END IF
  1000 CONTINUE
 
-      CALL QEXIT('MKSB')
 
       RETURN
       END
@@ -1903,7 +1838,6 @@ C Write to disk, and save size and address.
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 
@@ -1917,7 +1851,6 @@ C    SD(tu1,xy1)=2*(Gutxy + dxt Duy)
 C    SD(tu2,xy1)= -(Gutxy + dxt Duy)
 C    SD(tu2,xy2)= -Gxtuy +2*dxt Duy
 
-      CALL QENTER('MKSD')
 
 C Loop over superindex symmetry.
       DO 1000 ISYM=1,NSYM
@@ -1964,13 +1897,6 @@ C Loop over superindex symmetry.
               S11=S11+2.0D0*DUY
               S22=S22+2.0D0*DUY
             END IF
-        if (itu.eq.ixy) then
-C         s11=1.0d+00
-C         s22=1.0d+00
-        else
-C         s11=0.0d+00
-C         s22=0.0d+00
-        end if
 C    SD(tu1,xy1)=2*(Gutxy + dtx Duy)
             WORK(LSD-1+IS11)= S11
 C    SD(tu2,xy1)= -(Gutxy + dtx Duy)
@@ -1980,13 +1906,6 @@ C    SD(tu2,xy2)= -Gxtuy +2*dtx Duy
             WORK(LSD-1+IS22)= S22
  101      CONTINUE
  100    CONTINUE
-C     If (DoPT2Num) Then
-C       If (iVibPT2.eq.1) Then
-C         Work(LSD+iDiffPT2-1) = Work(LSD+iDiffPT2-1) + PT2Delta
-C       Else
-C         Work(LSD+iDiffPT2-1) = Work(LSD+iDiffPT2-1) - PT2Delta
-C       End If
-C     End If
 
 C Write to disk
         IF(NSD.GT.0) THEN
@@ -1998,7 +1917,6 @@ C Write to disk
         END IF
  1000 CONTINUE
 
-      CALL QEXIT('MKSD')
 
       RETURN
       END
@@ -2008,7 +1926,6 @@ C Write to disk
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 
@@ -2021,7 +1938,6 @@ C Formula used:
 C    SE(t,x)=2*dtx - Dtx
 
 
-      CALL QENTER('MKSE')
 
       DO 1000 ISYM=1,NSYM
         NINP=NINDEP(ISYM,6)
@@ -2056,7 +1972,6 @@ C Write to disk
         END IF
  1000 CONTINUE
 
-      CALL QEXIT('MKSE')
 
       RETURN
       END
@@ -2067,7 +1982,6 @@ C Write to disk
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 
@@ -2082,7 +1996,6 @@ C    SFP(tu,xy)=SF(tu,xy)+SF(tu,yx)
 C    SFM(tu,xy)=SF(tu,xy)-SF(tu,yx)
 
 
-      CALL QENTER('MKSF')
 
 C Loop over superindex symmetry.
       DO 1000 ISYM=1,NSYM
@@ -2157,12 +2070,6 @@ C Loop over superindex symmetry.
         IF(NSF.GT.0) THEN
           CALL GETMEM('SF','FREE','REAL',LSF,NSF)
         END IF
-C       call dcopy(nasp*(nasp+1)/2,0.0d+00,0,work(lsfp),1)
-C       nseq = 0
-C       do i = 1, nasp
-C         nseq = i*(i-1)/2+i
-C         work(lsfp+nseq-1) = 1.0d+00
-C       end do
 
 C Write to disk
         IF(NSFP.GT.0.and.NINDEP(ISYM,8).GT.0) THEN
@@ -2179,7 +2086,6 @@ C Write to disk
         END IF
  1000 CONTINUE
 
-      CALL QEXIT('MKSF')
 
       RETURN
       END
@@ -2189,7 +2095,6 @@ C Write to disk
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 
@@ -2201,7 +2106,6 @@ C Set up the matrix SG(t,x)
 C Formula used:
 C    SG(t,x)= Dtx
 
-      CALL QENTER('MKSG')
 
       DO 1000 ISYM=1,NSYM
         NINP=NINDEP(ISYM,10)
@@ -2217,17 +2121,8 @@ C    SG(t,x)= Dtx
             ISG=(IT*(IT-1))/2+IX
             ID=(ITABS*(ITABS-1))/2+IXABS
             WORK(LSG-1+ISG)= DREF(ID)
-C           if (it.eq.ix) then
-C             work(lsg-1+isg) = 1.0d+00
-C           else
-C             work(lsg-1+isg) = 0.0d+00
-C           end if
  101      CONTINUE
  100    CONTINUE
-C         write (*,*) "Overlap in mksmat"
-C       do i = 1, nsg
-C         write (*,'(i3,f20.10)') i,work(lsg+i-1)
-C       end do
 
 C Write to disk
         IF(NSG.GT.0.and.NINDEP(ISYM,10).GT.0) THEN
@@ -2241,7 +2136,6 @@ C Write to disk
         END IF
  1000 CONTINUE
 
-      CALL QEXIT('MKSG')
 
       RETURN
       END

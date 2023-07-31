@@ -18,7 +18,13 @@
 #include "crun.fh"
 #include "cstate.fh"
 #include "cands.fh"
-#include "cicisp.fh"
+!#include "cicisp.fh"
+      COMMON/CICISP/IDUMMY,NICISP,
+     &              NELCI(MXPICI),
+     &              XISPSM(MXPCSM,MXPICI),
+     &              ISMOST(MXPCSM,MXPCSM),MXSB,MXSOOB,
+     &              NBLKIC(MXPCSM,MXPICI),LCOLIC(MXPCSM,MXPICI),
+     &              MXNTTS,MXSOOB_AS
 #include "cprnt.fh"
 #include "stinf.fh"
 #include "strbas.fh"
@@ -44,7 +50,6 @@
       IATP = 1
       IBTP = 2
       NEL = NELFTP(IATP)+NELFTP(IBTP)
-      IWAY = 1
       IBASSPC(1)=0
       CALL OCCLS(1,NOCCLS,IOCCLS,NEL,NGAS,
      &     IGSOCC(1,1),IGSOCC(1,2),0,IBASSPC,NOBPT)
@@ -56,7 +61,6 @@
 *. and then the occupation classes
       CALL GETMEM('KLOCCL','ALLO','INTE',KLOCCLS,NGAS*NOCCLS)
       CALL GETMEM('BASSPC','ALLO','INTE',KLBASSPC,NOCCLS)
-      IWAY = 2
       CALL OCCLS(2,NOCCLS,iWORK(KLOCCLS),NEL,NGAS,
      &     IGSOCC(1,1),IGSOCC(1,2),1,iWORK(KLBASSPC),NOBPT)
       CALL GETMEM('BASSPC','FREE','INTE',KLBASSPC,NOCCLS)
@@ -69,7 +73,6 @@ C            CSFDIM_GAS(IOCCLS,NOCCLS,ISYM,IPRCIX)
 *. Prototype dets and csf's and CSF'SD matrices
 C            CSDTMT_GAS(IPDTCNF,IPCSCNF,DTOC,IPRCSF)
          CALL CSDTMT_GAS(iWORK(KDFTP),iWORK(KCFTP),WORK(KDTOC),IPRCIX)
-         NVAR = NCSF_PER_SYM(JSYM)
       END  IF
 *. Allocate memory for diagonalization
 c      IF(ISIMSYM.EQ.0) THEN
@@ -128,8 +131,6 @@ C??      WRITE(6,*) ' DETCTL : NTTS = ', NTTS
       CALL GETMEM('CLEBT ','FREE','INTE',KLCLEBT ,NTTS  )
       CALL GETMEM('CI1BT ','FREE','INTE',KLCI1BT,NTTS  )
       CALL GETMEM('CIBT  ','FREE','INTE',KLCIBT ,8*NTTS)
-*
-      IDUM = 0
 *. If PICO2/SBLOCK are used, three blocks are used in PICO2, so
 *...
 *. Sblock is used in general nowadays so,
@@ -250,7 +251,7 @@ c      END IF
      &     iwork(kiconf_occ(jsym)),iwork(KSDREO_I(jsym)),
      &     ndet, ncsf_per_sym, nsd_per_sym, nconf_per_sym, mxpcsm,
      &     mxporb, nconf_per_open, npdtcnf, npcscnf, mults,
-     &     iwork(knstso(iatp)), iwork(knstso(ibtp)), KICTS_POINTER,
+     &     KICTS_POINTER,
      &     nCSF_HEXS)
 
       CALL GETMEM('CIOIO ','FREE','INTE',KLCIOIO,NOCTPA*NOCTPB)

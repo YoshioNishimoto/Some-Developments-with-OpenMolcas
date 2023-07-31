@@ -9,14 +9,14 @@
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
       Subroutine Aces_Gamma()
+      use Basis_Info, only: nBas
       use Aces_Stuff
       use Index_arrays, only: iSO2Sh
+      use Gateway_Info, only: CutInt
+      use Symmetry_Info, only: nIrrep
       Implicit Real*8 (a-h,o-z)
-#include "itmax.fh"
-#include "info.fh"
 #include "setup.fh"
 #include "stdalloc.fh"
-#include "WrkSpc.fh"
        Integer, Allocatable:: iTable(:,:)
        Real*8, Allocatable:: Buf(:), Bin3(:,:,:)
 *                                                                      *
@@ -54,7 +54,7 @@
 *                                                                      *
 *---- Allocate memory for read buffer
 *
-      Call GetMem('Buff','Max','Real',iDummy,MaxMem)
+      Call mma_MaxDBLE(MaxMem)
       nReq=0
       Do iBlock = 1, nBlocks
          iType=iTable(1,iBlock)
@@ -84,7 +84,7 @@
 *                                                                      *
 *---- Allocate bins for shell quadruplets
 *
-      Call GetMem('Buff','Max','Real',iDummy,MaxMem)
+      Call mma_MaxDBLE(MaxMem)
       lBin=Min(MaxMem/(2*nQuad),1024)
       Call mma_allocate(Bin3,2,lBin,nQuad,Label='Bin3')
 *                                                                      *
@@ -101,7 +101,7 @@
 *---- Read the blocks off the Aces 2 file and put into half sorted bin
 *     file. The second half sort is done on the fly as needed.
 *
-      Call Read_Blocks(iTable,nBlocks,nBas,nIrrep,iOffSO,Buf,nReq,
+      Call Read_Blocks(iTable,nBlocks,nBas,nIrrep,Buf,nReq,
      &                 iSO2Sh,nSOs,Bin3,lBin,nQuad,G_Toc,SO2cI,CutInt)
 *                                                                      *
 ************************************************************************

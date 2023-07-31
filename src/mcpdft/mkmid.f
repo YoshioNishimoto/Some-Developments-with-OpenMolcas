@@ -17,14 +17,12 @@ C
 #include "rasdim.fh"
 #include "general.fh"
 #include "output_ras.fh"
-      Parameter(Routine='MKMID')
 C
       DIMENSION IDRT(NVERT,5)
       DIMENSION IDAW(NVERT,0:4)
       DIMENSION IRAW(NVERT,0:4)
       DIMENSION LTV(-1:NLEV)
 
-      Call qEnter(Routine)
 
 C
 C     SET UP A LEVEL-TO-VERTEX TABLE, LTV, AND IDENTIFY MIDVERTICES:
@@ -101,6 +99,5 @@ C
         Write(LF,*)
       ENDIF
 
-      Call qExit(Routine)
       RETURN
       END

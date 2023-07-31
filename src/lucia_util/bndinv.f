@@ -21,7 +21,7 @@ C*      REAL*8 A,EL,D,SQRT,C,S,DETERP
         INDSNL=0
         IF(N.LT.2)GO TO 140
         ISL2=0
-        K000FX=2
+C       K000FX=2
         IF(ISL2.EQ.0)INDSNL=2
         IF(ISL2.EQ.1)INDSNL=1
 C       CALL SLITET(2,INDSNL)
@@ -64,7 +64,6 @@ C       CALL OVERFL(K000FX)
 C       GO TO (140,51),K000FX
 C
 C       CALCULATE THE DETERMINANT
-        CONTINUE
         DETERP=A(1,1)
         DO I=2,N
          DETERP=DETERP*A(I,I)

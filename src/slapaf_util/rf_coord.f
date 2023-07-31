@@ -8,28 +8,27 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
+*#define _DEBUGPRINT_
       Subroutine RF_Coord(
-     &                 nq,nAtoms,iIter,nIter,Cx,iOper,nSym,jStab,
-     &                 nStab,nDim,Smmtrc,Process,Value,
-     &                 nB,iANr,qLbl,iRef,fconst,
-     &                 rMult,LuIC,Indq,dMass,iCoSet,
+     &                 nq,nsAtom,iIter,nIter,Cx,
+     &                 Process,Value,
+     &                 nB,qLbl,iRef,fconst,
+     &                 rMult,LuIC,Indq,
      &                 Proc_dB,mB_Tot,mdB_Tot,
      &                 BM,dBM,iBM,idBM,nB_Tot,ndB_Tot,nqB)
+      use Symmetry_Info, only: nIrrep, iOper, VarR, VarT
+      use Slapaf_Info, only: nStab, iCoSet, dMass
       Implicit Real*8 (a-h,o-z)
 #include "Molcas.fh"
 #include "stdalloc.fh"
 #include "real.fh"
-#include "sbs.fh"
 #include "print.fh"
-      Real*8 Cx(3,nAtoms,nIter),
-     &       dMass(nAtoms), fconst(nB), Value(nB,nIter), rMult(nB),
+      Real*8 Cx(3,nsAtom,nIter), fconst(nB), Value(nB,nIter), rMult(nB),
      &       Trans(3), RotVec(3), RotMat(3,3),
      &       BM(nB_Tot), dBM(ndB_Tot)
-      Integer   nStab(nAtoms), iOper(0:nSym-1), iCoSet(0:7,nAtoms),
-     &          jStab(0:7,nAtoms), iPhase(3,0:7), nqB(nB),
-     &          iANr(nAtoms), Indq(3,nB), iBM(nB_Tot), idBM(2,ndB_Tot)
-      Logical Smmtrc(3,nAtoms), Process, PSPrint,
-     &        TransVar, RotVar, Proc_dB, Invariant
+      Integer   nqB(nB),
+     &          Indq(3,nB), iBM(nB_Tot), idBM(2,ndB_Tot)
+      Logical Process, PSPrint, Proc_dB, Invariant
       Character*3 TR_type(6)
       Character*14 Label, qLbl(nB)
 #include "ddvdt_RF.fh"
@@ -38,18 +37,15 @@
      &                                       dRVdxyz, Hess
       Real*8, Dimension(:,:,:), Allocatable :: d2RV
       Integer, Dimension(:), Allocatable :: Ind, iDCR
-      Dimension dum(1)
       Data TR_type/'Tx ','Ty ','Tz ','Ryz','Rzx','Rxy'/
-      Data iPhase/ 1, 1, 1,   -1, 1, 1,   1,-1, 1,  -1,-1, 1,
-     &             1, 1,-1,   -1, 1,-1,   1,-1,-1,  -1,-1,-1/
 *
       iRout=151
       iPrint=nPrint(iRout)
-      Call QEnter('RF_Coords')
+#ifdef _DEBUGPRINT_
+      iPrint=99
+#endif
 *
-      TransVar=iAnd(iSBS,2**7).eq. 2**7
-      RotVar=iAnd(iSBS,2**8).eq. 2**8
-      If (.Not.RotVar.and..Not.TransVar) Go To 99
+      If (.Not.VarR.and..Not.VarT) Go To 99
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -61,8 +57,8 @@
 *---- Find nCent and allocate
 *
       nCent=0
-      Do iAtom = 1, nAtoms
-         nCent=nCent+nSym/nStab(iAtom)
+      Do iAtom = 1, nsAtom
+         nCent=nCent+nIrrep/nStab(iAtom)
       End Do
       mB = nCent*3
       Call mma_allocate(currXYZ,3,nCent,label='currXYZ')
@@ -77,38 +73,25 @@
 *---- Find index of RF center (origin), etc
 *
       iCent=0
-      Do iAtom = 1, nAtoms
-         x=Cx(1,iAtom,iIter)
-         y=Cx(2,iAtom,iIter)
-         z=Cx(3,iAtom,iIter)
+      Do iAtom = 1, nsAtom
 *
-         x_ref=Cx(1,iAtom,iRef)
-         y_ref=Cx(2,iAtom,iRef)
-         z_ref=Cx(3,iAtom,iRef)
-         Do i = 0, nSym/nStab(iAtom)-1
+         Do i = 0, nIrrep/nStab(iAtom)-1
             iCent = iCent + 1
-            iFacx=iPhase(1,iCoSet(i,iAtom))
-            iFacy=iPhase(2,iCoSet(i,iAtom))
-            iFacz=iPhase(3,iCoSet(i,iAtom))
-*
-            currXYZ(1,iCent)=DBLE(iFacx)*x
-            currXYZ(2,iCent)=DBLE(iFacy)*y
-            currXYZ(3,iCent)=DBLE(iFacz)*z
-*
-            Ref123(1,iCent)=DBLE(iFacx)*x_ref
-            Ref123(2,iCent)=DBLE(iFacy)*y_ref
-            Ref123(3,iCent)=DBLE(iFacz)*z_ref
+            Call OA(iCoSet(i,iAtom),Cx(1:3,iAtom,iIter),
+     &              CurrXYZ(1:3,iCent))
+            Call OA(iCoSet(i,iAtom),Cx(1:3,iAtom,iRef),
+     &              Ref123(1:3,iCent))
+
 *
             Ind(iCent)=iAtom
             iDCR(iCent)=iCoSet(i,iAtom)
          End Do
       End Do
-      nCurrXYZ=iCent
 *
-      Fact=One
-      If (.Not.RotVar) Fact=2.0D-2
+C     Fact=One
+C     If (.Not.VarR) Fact=2.0D-2
 *
-*     Write (6,*) 'nCent,nDim=',nCent,nDim
+*     Write (6,*) 'nCent=',nCent
 *     Write (6,*) (Ind(iCent),iCent=1,nCent)
 *
       TMass = Zero
@@ -123,7 +106,7 @@
 *
          Invariant=.False.
          iTest=2**(ixyz-1)
-         Do iSym = 0, nSym-1
+         Do iSym = 0, nIrrep-1
             If (iOper(iSym).eq.iTest) Invariant=.True.
          End Do
          If (Invariant) Go To 199
@@ -138,9 +121,7 @@
          End Do
          COM_xyz=COM_xyz/TMass
 *
-         If (.Not.TransVar) Go To 199
-         f_Const=One
-*        Write (6,*) ' RF Force Constant:',f_Const
+         If (.Not.VarT) Go To 199
 *
          iDeg=1
          Deg=Sqrt(DBLE(iDeg))
@@ -164,7 +145,9 @@
 *           Write (6,*) 'iAtom,iCOM=',iAtom,iCOM
             Grad(ixyz,iCent) = dMass(iAtom)/TMass
          End Do
-C        Call RecPrt('Grad (Trans)',' ',Grad,3,nCent)
+#ifdef _DEBUGPRINT_
+         Call RecPrt('Grad (Trans)',' ',Grad,3,nCent)
+#endif
 *
 *------- Second derivative is trivially zero!
 *
@@ -184,8 +167,8 @@ C           fconst(nq)=Sqrt(Fact*Trans_Const)
 *
 *--------   Project the gradient vector
 *
-            Call ProjSym(nAtoms,nCent,Ind,nStab,jStab,currXYZ,
-     &                   iDCR,Grad,Smmtrc,nDim,PSPrint,
+            Call ProjSym(nCent,Ind,currXYZ,
+     &                   iDCR,Grad,
      &                   Hess,mB_Tot,mdB_Tot,
      &                   BM,dBM,iBM,idBM,nB_Tot,ndB_Tot,
      &                   Proc_dB,nqB,nB,nq,rMult(nq))
@@ -197,8 +180,8 @@ C           fconst(nq)=Sqrt(Fact*Trans_Const)
 *                                                                      *
 ************************************************************************
 *                                                                      *
-C     Write (6,*) 'RotVar=',RotVar
-      If (.Not.RotVar) Go To 98
+C     Write (6,*) 'VarR=',VarR
+      If (.Not.VarR) Go To 98
 *
 *     A la Malmqvist
 *
@@ -207,12 +190,16 @@ C     Write (6,*) 'RotVar=',RotVar
       Call FZero(Trans,3)
       Call FZero(RotVec,3)
       Call mma_allocate(d2RV,3,3*nCent,3*nCent,label='d2RV')
-C     Call RecPrt('xMass',' ',xMass,1,nMass)
+#ifdef _DEBUGPRINT_
+      Call RecPrt('xMass',' ',xMass,1,nMass)
+#endif
       Call RotDer(nMass,xMass,currXYZ,ref123,trans,RotAng,
-     &            RotVec,RotMat,nOrder,dRVdXYZ,d2RV,dum,dum)
-C     Call RecPrt('RotVec',' ',RotVec,1,3)
-C     Call RecPrt('RotMat',' ',RotMat,3,3)
-C     Call RecPrt('dRVdXYZ',' ',dRVdXYZ,3,3*nMass)
+     &            RotVec,RotMat,nOrder,dRVdXYZ,d2RV)
+#ifdef _DEBUGPRINT_
+      Call RecPrt('RotVec',' ',RotVec,1,3)
+      Call RecPrt('RotMat',' ',RotMat,3,3)
+      Call RecPrt('dRVdXYZ',' ',dRVdXYZ,3,3*nMass)
+#endif
 *
       Do ixyz = 1, 3
 *
@@ -224,7 +211,7 @@ C     Call RecPrt('dRVdXYZ',' ',dRVdXYZ,3,3*nMass)
          Else
             iTest=3
          End If
-         Do iSym = 0, nSym-1
+         Do iSym = 0, nIrrep-1
             If (iOper(iSym).eq.iTest) Invariant=.True.
          End Do
          If (Invariant) Go To 299
@@ -251,7 +238,9 @@ C     Call RecPrt('dRVdXYZ',' ',dRVdXYZ,3,3*nMass)
 *
          call dcopy_(mB,[Zero],0,Grad,1)
          call dcopy_(mB,dRVdXYZ(ixyz,1),3,Grad,1)
-C        Call RecPrt('Grad (Rot)',' ',Grad,3,nCent)
+#ifdef _DEBUGPRINT_
+         Call RecPrt('Grad (Rot)',' ',Grad,3,nCent)
+#endif
 *
 *------- Second derivative
 *
@@ -272,8 +261,8 @@ C        Call RecPrt('Grad (Rot)',' ',Grad,3,nCent)
 *
 *--------   Project the gradient vector
 *
-            Call ProjSym(nAtoms,nCent,Ind,nStab,jStab,currXYZ,
-     &                   iDCR,Grad,Smmtrc,nDim,PSPrint,
+            Call ProjSym(nCent,Ind,currXYZ,
+     &                   iDCR,Grad,
      &                   Hess,mB_Tot,mdB_Tot,
      &                   BM,dBM,iBM,idBM,nB_Tot,ndB_Tot,
      &                   Proc_dB,nqB,nB,nq,rMult(nq))
@@ -297,8 +286,5 @@ C     Write (6,*) 'nqRF=',nqRF
       Call mma_deallocate(iDCR)
       Call mma_deallocate(Hess)
  99   Continue
-      Call QExit ('RF_Coords')
       Return
-c Avoid unused argument warnings
-      If (.False.) Call Unused_integer_array(iANr)
       End

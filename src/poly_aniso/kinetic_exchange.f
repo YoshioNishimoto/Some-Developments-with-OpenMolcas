@@ -14,7 +14,7 @@
      &                            MR1,SR1,MR2,SR2)
 c  compute KE, within various options :
       Implicit None
-      Integer, parameter            :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter        :: wp=kind(0.d0)
       Integer, intent(in)           :: lant,OPT
       Real(kind=8),intent(in)      :: tpar,upar
       !the Ln site
@@ -53,7 +53,6 @@ c  compute KE, within various options :
       Complex(kind=8) :: TMP(N1,N1)
       Real(kind=8)    :: gtens(4,3),maxes(4,3,3),wcr(n1)
       Logical          :: DBG
-      Call qEnter('PA_ke')
       DBG=.false.
 c determine the pseuDospin on each site (Z1 and Z2):
       Z1=(0.0_wp,0.0_wp)
@@ -365,7 +364,6 @@ c reWrite the exchnage matrix in the basis of local pseuDospins:
         MR2=M2
         SR2=S2
       End If
-      Call qExit('PA_ke')
       Return
       End
 

@@ -22,10 +22,8 @@
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "pt2_guga.fh"
-      COMMON /SEGTAB/ IC1(26),IC2(26),ITVPT(26),IBVPT(26),ISVC(26),
-     &                NIVR,LIVR,NSGMNT,LSGMNT
+#include "segtab.fh"
 C INPUT PARAMETERS:
       DIMENSION MVL(NMIDV,2),MVR(NMIDV,2)
       DIMENSION IDRT(NVERT,5),ISGMNT(NVERT,26)
@@ -200,7 +198,9 @@ C THIS IS AN UPPER WALK.
           NWALK=NWALK+NOW(2,ISYM,MV)
  254    CONTINUE
  253  CONTINUE
+#ifdef _DEBUGPRINT_
       NLW=NWALK-NUW
+#endif
 
       NICOUP=0
       DO 260 INDEO=1,MXEO
@@ -257,10 +257,10 @@ C
   550 CONTINUE
       CALL GETMEM('LSGTMP','ALLO','REAL',LSGTMP,NSGTMP)
 C
-#ifdef _DEBUG_
-      WRITE(6,551)MXUP,MXDWN,
+#ifdef _DEBUGPRINT_
+      WRITE(6,600)MXUP,MXDWN,
      &            NSGMX,NSGMX,NSGTMP
-  551 FORMAT(/,' MAXIMUM NUMBER OF WALKS',
+  600 FORMAT(/,' MAXIMUM NUMBER OF WALKS',
      &       /,' UPPER ',I6,' LOWER ',I6,
      &       /,' LENGTH OF LARGEST WORK ARRAYS IN SUBROUTINE SIGMA',
      &       /,' TEMPORARY SGM1 ',I7,

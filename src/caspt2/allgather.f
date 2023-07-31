@@ -18,6 +18,8 @@
         module procedure allgather_R, allgather_I
       end interface
 
+#include "mpi_interfaces.fh"
+
       contains
       SUBROUTINE ALLGATHER_R(SEND,NSEND,RECV,NRECV)
       use mpi
@@ -27,8 +29,7 @@
 *            each process into a buffer RECV of size NRECV.
 *            The receiving buffer is allocated by this subroutine.
 ************************************************************************
-#include "warnings.fh"
-#include "WrkSpc.fh"
+#include "warnings.h"
 
 #include "global.fh"
 #include "mafdecls.fh"
@@ -103,8 +104,7 @@
 *            each process into a buffer RECV of size NRECV.
 *            The receiving buffer is allocated by this subroutine.
 ************************************************************************
-#include "warnings.fh"
-#include "WrkSpc.fh"
+#include "warnings.h"
 
 #include "global.fh"
 #include "mafdecls.fh"

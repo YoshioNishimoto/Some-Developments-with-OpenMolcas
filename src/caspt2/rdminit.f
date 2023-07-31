@@ -12,17 +12,16 @@
 ************************************************************************
       subroutine rdminit
 
+      use caspt2_output, only:iPrGlb,debug
       implicit real(8) (A-H,O-Z)
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "pt2_guga.fh"
 #include "WrkSpc.fh"
 
       integer offset
 
-      call QENTER('rdminit')
 
       if (IPRGLB.GE.DEBUG) then
         write(6,*)' Entered rdminit.'
@@ -77,6 +76,5 @@
       call getmem('LCMO','FREE','REAL',LCMO,NCMO)
       call getmem('LCI','FREE','REAL',LCI,NCONF)
 
-      call QEXIT('rdminit')
       return
       end

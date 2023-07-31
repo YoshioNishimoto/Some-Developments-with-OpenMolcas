@@ -1,3 +1,15 @@
+************************************************************************
+* This file is part of OpenMolcas.                                     *
+*                                                                      *
+* OpenMolcas is free software; you can redistribute it and/or modify   *
+* it under the terms of the GNU Lesser General Public License, v. 2.1. *
+* OpenMolcas is distributed in the hope that it will be useful, but it *
+* is provided "as is" and without any express or implied warranties.   *
+* For more details see the full text of the license in the file        *
+* LICENSE or in <http://www.gnu.org/licenses/>.                        *
+*                                                                      *
+* Copyright (C) 2021, Yoshio Nishimoto                                 *
+************************************************************************
       SUBROUTINE OLagNS2(iSym,DPT2C,T2AO)
 C
       IMPLICIT REAL*8 (A-H,O-Z)
@@ -16,7 +28,7 @@ C
       Do jSym = 1, nSym
         nMaxOrb = Max(nMaxOrb,nBas(jSym))
       End Do
-C     write (*,*) "nmaxorb = ", nmaxorb
+C     write(6,*) "nmaxorb = ", nmaxorb
 C
       lInt = nMaxOrb*nMaxOrb
 C
@@ -25,9 +37,8 @@ C
       Call GetMem('Scr1','Allo','Real',ipScr1,lInt) !! work space
 
       Call GetMem('Amp1','Allo','Real',ipAmp1,lInt) !! for amplitude
-      Call GetMem('Amp2','Allo','Real',ipAmp2,lInt) !! for amplitude
 C
-      
+
       !! (ia|jb)
       Do iSymI = 1, nSym !! Symmetry of occupied (docc+act) orbitals
         !! Check, in particular nFro
@@ -46,14 +57,14 @@ C
 C               if (icase.ne.12.and.icase.ne.13) cycle
                 Call OLagNs_Hel2(iCase,iSym,iSymA,iSymB,iSymI,iSymJ,
      *                           nMaxOrb,Work(ipInt1),Work(ipInt2),
-     *                           Work(ipAmp1),Work(ipAmp2),Work(ipScr1),
+     *                           Work(ipAmp1),Work(ipScr1),
      *                           DPT2C,T2AO)
               End Do
             End Do
           End Do
         End Do
       End Do
-C     write (*,*) "olag before VVVO"
+C     write(6,*) "olag before VVVO"
 C     call sqprt(work(ipolag),12)
 C
       Call DScal_(nBasSq,1.0D+00/DBLE(MAX(1,NACTEL)),DPT2C,1)
@@ -64,14 +75,13 @@ C
       Call GetMem('Scr1','Free','Real',ipScr1,lInt)
 
       Call GetMem('Amp1','Free','Real',ipAmp1,lInt)
-      Call GetMem('Amp2','Free','Real',ipAmp2,lInt)
 C
       END SUBROUTINE OLagNS2
 C
 C-----------------------------------------------------------------------
 C
       SUBROUTINE OLagNS_Hel2(iCase,iSym,iSymA,iSymB,iSymI,iSymJ,nMaxOrb,
-     *                       ERI1,ERI2,Amp1,Amp2,Scr,DPT2C,T2AO)
+     *                       ERI1,ERI2,Amp1,Scr,DPT2C,T2AO)
       USE SUPERINDEX
       USE iSD_data
 C
@@ -82,13 +92,14 @@ C
 #include "eqsolv.fh"
 #include "caspt2_grad.fh"
 #include "nsd.fh"
-      DIMENSION ERI1(*),ERI2(*),
-     *          Amp1(nMaxOrb,nMaxOrb),Amp2(nMaxOrb,nMaxOrb),
+      DIMENSION ERI1(*),ERI2(*),Amp1(nMaxOrb,nMaxOrb),
      *          Scr(nMaxOrb,nMaxOrb)
       DIMENSION DPT2C(*),T2AO(*)
 C
-      LOGICAL   DoVVVO,PM
+      LOGICAL   PM
       DIMENSION IOFF1(8),IOFF2(8)
+      !! just to avoid the unused ... of ERI2
+      if (.false.) write (6,*) eri2(1)
 C
 C     DMNS_{ijkl}*d(ij|kl)/dx -> (pj|kl)*D_{qjkl} + (ip|kl)*D_{iqkl}
 C                              + (ij|pl)*D_{ijql} + (ij|kp)*D_{ijkq}
@@ -114,7 +125,7 @@ C
       !! the active orbital index (indices) must be transformed to the
       !! (quasi-)canonical MO (or contravatiant) basis.
       !! IC = SR (why?), contravariant = C
-C     write (*,*) "icase = ", icase
+C     write(6,*) "icase = ", icase
 C
       PM = .false.
       If (iCase.eq.2.or.iCase.eq.6.or.iCase.eq.8.or.
@@ -125,7 +136,7 @@ C
       SQ2    = SQRT(2.0D+00)
       SQI2   = 1.0D+00/SQ2
       SQ3    = SQRT(3.0D+00)
-      iVec   = iVecX
+      ! iVec   = iVecX
       IO1=0
       IO2=0
       DO iSymK = 1, nSym
@@ -138,27 +149,22 @@ C
 C
       !! Some setup
       !! Read T-amplitude, hopefully in contravariant form
+      nINP = 0
+      nINM = 0
+      nIN  = 0
       If (PM) Then
         nINP = nINDEP(iSym,iCase)
         nASP = nASup(iSym,iCase)
         nISP = nISup(iSym,iCase)
-        If (nINP.ne.0) Then
-          nVec = nINP*nISP
-          If (nVec.ne.0) Then
-            Call RHS_ALLO(nINP,nISP,ipTP)
-            Call RHS_READ_SR(ipTP,iCase,iSym,iVec)
-          End If
-        End If
+        ! If (nINP.ne.0) Then
+        !   nVec = nINP*nISP
+        ! End If
         nINM = nINDEP(iSym,iCase+1)
         nASM = nASup(iSym,iCase+1)
         nISM = nISup(iSym,iCase+1)
-        If (nINM.ne.0) Then
-          nVec = nINM*nISM
-          If (nVec.ne.0) Then
-            Call RHS_ALLO(nINM,nISM,ipTM)
-            Call RHS_READ_SR(ipTM,iCase+1,iSym,iVec)
-          End If
-        End If
+        ! If (nINM.ne.0) Then
+        !   nVec = nINM*nISM
+        ! End If
         If (nASP*nISP.ne.0) Then
           Call RHS_ALLO(nASP,nISP,ipTCP)
           CALL RHS_READ_C(ipTCP,iCase,iSym,iVecC2)
@@ -171,13 +177,9 @@ C
         nIN = nINDEP(iSym,iCase)
         nAS = nASup(iSym,iCase)
         nIS = nISup(iSym,iCase)
-        If (nIN.ne.0) Then
-          nVec = nIN*nIS
-          If (nVec.ne.0) Then
-            Call RHS_ALLO(nIN,nIS,ipT)
-            Call RHS_READ_SR(ipT,iCase,iSym,iVec)
-          End If
-        End If
+        ! If (nIN.ne.0) Then
+        !   nVec = nIN*nIS
+        ! End If
         If (nAS*nIS.ne.0) Then
           Call RHS_ALLO(nAS,nIS,ipTC)
           CALL RHS_READ_C(ipTC,iCase,iSym,iVecC2)
@@ -226,8 +228,6 @@ C
       nAshJ = nAsh(iSymJ)
       nAshA = nAsh(iSymA)
       nAshB = nAsh(iSymB)
-      nSshI = nSsh(iSymI)
-      nSshJ = nSsh(iSymJ)
       nSshA = nSsh(iSymA)
       nSshB = nSsh(iSymB)
       nBasI = nBas(iSymI)
@@ -239,22 +239,13 @@ C
       nCorJ = nFroJ+nIshJ
       nCorA = nFroA+nIshA
       nCorB = nFroB+nIshB
-      nOccI = nCorI+nAshI
-      nOccJ = nCorJ+nAshJ
       nOccA = nCorA+nAshA
       nOccB = nCorB+nAshB
-      nOccI2= nOccI-nFroI
-      nOccJ2= nOccJ-nFroJ
       nOccA2= nOccA-nFroA
       nOccB2= nOccB-nFroB
-      nOrbI = nOccI+nSshI
-      nOrbJ = nOccJ+nSshJ
       nOrbA = nOccA+nSshA
-      nOrbB = nOccB+nSshB
-      nOrbI = nOccI+nSshI
-      nOrbJ = nOccJ+nSshJ
 C
-      nOcc  = nFro(iSym)+nIsh(iSym)+nAsh(iSym)
+      ! nOcc  = nFro(iSym)+nIsh(iSym)+nAsh(iSym)
 C
       !! active+virtual part for the right index
 C     nJ = nFro(iSymJ)+nIsh(iSymJ)+nAsh(iSymJ)
@@ -282,12 +273,9 @@ C
 C
 C   1 CONTINUE
       If (PM) Then
-        If (nINP*nISP.ne.0) CALL RHS_FREE(nINP,nISP,ipTP)
-        If (nINM*nISM.ne.0) CALL RHS_FREE(nINM,nISM,ipTM)
         If (nASP*nISP.ne.0) Call RHS_FREE(nASP,nISP,ipTCP)
         If (nASM*nISM.ne.0) Call RHS_FREE(nASM,nISM,ipTCM)
       Else
-        If (nIN*nIS.ne.0) CALL RHS_FREE(nIN,nIS,ipT)
         If (nAS*nIS.ne.0) Call RHS_FREE(nAS,nIS,ipTC)
       End If
 C
@@ -316,10 +304,10 @@ C
 C
       If (nAshI.eq.0.or.nIshJ.eq.0.or.nAshA.eq.0.or.nAshB.eq.0) Return
 C
-      nJ = nIshJ
+      ! nJ = nIshJ
       Do iI = 1, nAshI
         iIabs = iI + nIshI + nAes(iSymI)
-        iItot = iI + nCorI
+        ! iItot = iI + nCorI
 C       If (iSymI.eq.iSymJ) nJ = iI
         Do iJ = 1, nIshJ
           iJabs = iJ + nIes(iSymJ)
@@ -338,11 +326,11 @@ C    *                iJ+nFroJ,iI+nFroI,
 C    *                ERI2,Scr)
 C         End If
 C
-          Call DCopy_(nAshA*nAshB,0.0D+00,0,AmpL1,1)
+          Call DCopy_(nAshA*nAshB,[0.0D+00],0,AmpL1,1)
 C
           Do iA = 1, nAshA
             iAabs = iA + nAes(iSymA)
-            iAtot = iA + nCorA
+            ! iAtot = iA + nCorA
             Do iB = 1, nAshB
               iBabs = iB + nAes(iSymB)
               iBtot = iB + nCorB
@@ -403,11 +391,11 @@ C
       nJ = nIshJ
       Do iI = 1, nIshI
         iIabs = iI + nIes(iSymI)
-        iItot = iI + nFroI
+        ! iItot = iI + nFroI
         If (iSymI.eq.iSymJ) nJ = iI
         Do iJ = 1, nJ
           iJabs = iJ + nIes(iSymJ)
-          iJtot = iJ + nFroJ
+          ! iJtot = iJ + nFroJ
           If (iIabs.lt.iJabs) Cycle
           Fac = 1.0D+00
 C         If ((iI.ne.iJ).and.(iSymI.eq.iSymJ)) Fac = 2.0d+00
@@ -422,14 +410,14 @@ C    *                iJ+nFroJ,iI+nFroI,
 C    *                ERI2,Scr)
 C         End If
 C
-          Call DCopy_(nAshA*nAshB,0.0D+00,0,AmpL1,1)
+          Call DCopy_(nAshA*nAshB,[0.0D+00],0,AmpL1,1)
 C
           Do iA = 1, nAshA
             iAabs = iA + nAes(iSymA)
-            iAtot = iA + nCorA
+            ! iAtot = iA + nCorA
             Do iB = 1, nAshB
               iBabs = iB + nAes(iSymB)
-              iBtot = iB + nCorB
+              ! iBtot = iB + nCorB
 C
               if (iaabs.gt.ibabs) then
                 iTabs = iAabs
@@ -502,14 +490,14 @@ C
 C
       If (nAshI.eq.0.or.nAshJ.eq.0.or.nSshA.eq.0.or.nAshB.eq.0) Return
 C
-      nJ = nIshJ
+      ! nJ = nIshJ
       Do iI = 1, nAshI
         iIabs = iI + nIshI + nAes(iSymI)
-        iItot = iI + nCorI
+        ! iItot = iI + nCorI
 C       If (iSymI.eq.iSymJ) nJ = iI
         Do iJ = 1, nAshJ
           iJabs = iJ + nIshJ + nAes(iSymJ)
-          iJtot = iJ + nCorJ
+          ! iJtot = iJ + nCorJ
           If (iIabs.lt.iJabs) Cycle
           Fac = 1.0D+00
 C         If ((iI.ne.iJ).and.(iSymI.eq.iSymJ)) Fac = 2.0d+00
@@ -524,7 +512,7 @@ C    *                iJ+nFroJ,iI+nFroI,
 C    *                ERI2,Scr)
 C         End If
 C
-          Call DCopy_((nAshA+nSshA)*(nAshB+nSshB),0.0D+00,0,AmpL1,1)
+          Call DCopy_((nAshA+nSshA)*(nAshB+nSshB),[0.0D+00],0,AmpL1,1)
 C
           Do iA = 1, nSshA
             iAabs = iA + nSes(iSymA)
@@ -536,9 +524,9 @@ C
               iTabs = iI + nAes(iSymI)
               iUabs = iBabs
               iVabs = iJ + nAes(iSymJ)
-C             write (*,*) itabs,iuabs,ivabs
+C             write(6,*) itabs,iuabs,ivabs
               !! (at|uv) -> (ai|bj) -> (at|uv)
-              IW1 = kTUV(iTabs,iUabs,iVabs) - nTUVes(iSym)
+              ! IW1 = kTUV(iTabs,iUabs,iVabs) - nTUVes(iSym)
               ValC1 = 0.0D+00
               ValC2 = 0.0D+00
 C             Do iICB = 1, nIN
@@ -640,7 +628,7 @@ C
 C
       If (nAshI.eq.0.or.nIshJ.eq.0.or.nSshA.eq.0.or.nAshB.eq.0) Return
 C
-      nJ = nIshJ
+      ! nJ = nIshJ
       Do iI = 1, nAshI
         iIabs = iI + nIshI + nAes(iSymI)
         iItot = iI + nCorI
@@ -662,13 +650,13 @@ C    *                iJ+nFroJ,iI+nFroI,
 C    *                ERI2,Scr)
 C         End If
 C
-          Call DCopy_((nAshA+nSshA)*(nAshB+nSshB),0.0D+00,0,AmpL1,1)
+          Call DCopy_((nAshA+nSshA)*(nAshB+nSshB),[0.0D+00],0,AmpL1,1)
 C
           Do iA = 1, nSshA
             iAabs = iA + nSes(iSymA)
             iAtot = iA + nFroA + nIshA + nAshA
             Do iB = 1, nAshB
-              iBabs = iB + nAes(iSymB)
+              ! iBabs = iB + nAes(iSymB)
               iBtot = iB + nCorB
 C
 C             iVi   = iJabs + nIshA*(iAabs-1)+IOFF1(iSymA)
@@ -736,11 +724,11 @@ C
       nJ = nIshJ
       Do iI = 1, nIshI
         iIabs = iI + nIes(iSymI)
-        iItot = iI
+        ! iItot = iI
         If (iSymI.eq.iSymJ) nJ = iI
         Do iJ = 1, nJ
           iJabs = iJ + nIes(iSymJ)
-          iJtot = iJ
+          ! iJtot = iJ
           If (iIabs.lt.iJabs) Cycle
           Fac = 1.0D+00
 C         If ((iI.ne.iJ).and.(iSymI.eq.iSymJ)) Fac = 2.0d+00
@@ -755,16 +743,16 @@ C    *                iJ+nFroJ,iI+nFroI,
 C    *                ERI2,Scr)
 C         End If
 C
-          Call DCopy_((nAshA+nSshA)*(nAshB+nSshB),0.0D+00,0,AmpL1,1)
+          Call DCopy_((nAshA+nSshA)*(nAshB+nSshB),[0.0D+00],0,AmpL1,1)
 C
           IgeJ  = kIgeJ(iIabs,iJabs) - nIgeJes(iSym) ! iSymIJ
           IgtJ  = kIgtJ(iIabs,iJabs) - nIgtJes(iSym) ! iSymIJ
           Do iA = 1, nSshA
             iAabs = iA + nSes(iSymA)
-            iAtot = iA + nIshA + nAshA
+            ! iAtot = iA + nIshA + nAshA
             Do iB = 1, nAshB
               iBabs = iB + nAes(iSymB)
-              iBtot = iB + nIshB
+              ! iBtot = iB + nIshB
 C
               iASP  = iBabs
               iISP  = iAabs + nSshA*(IgeJ-1)+iOFF1(iSymA)
@@ -811,14 +799,14 @@ C
 C
       If (nAshI.eq.0.or.nAshJ.eq.0.or.nSshA.eq.0.or.nSshB.eq.0) Return
 C
-      nJ = nIshJ
+      ! nJ = nIshJ
       Do iI = 1, nAshI
         iIabs = iI + nIshI + nAes(iSymI)
-        iItot = iI + nCorI
+        ! iItot = iI + nCorI
 C       If (iSymI.eq.iSymJ) nJ = iI
         Do iJ = 1, nAshI
           iJabs = iJ + nIshJ + nIes(iSymJ)
-          iJtot = iJ + nCorJ
+          ! iJtot = iJ + nCorJ
           If (iIabs.lt.iJabs) Cycle
           Fac = 1.0D+00
 C         If ((iI.ne.iJ).and.(iSymI.eq.iSymJ)) Fac = 2.0d+00
@@ -833,17 +821,17 @@ C    *                iJ+nFroJ,iI+nFroI,
 C    *                ERI2,Scr)
 C         End If
 C
-          Call DCopy_(nSshA*nSshB,0.0D+00,0,AmpL1,1)
+          Call DCopy_(nSshA*nSshB,[0.0D+00],0,AmpL1,1)
 C
           iTabs = iI + nAes(iSymI)
           iUabs = iJ + nAes(iSymJ)
           Do iA = 1, nSshA
             iAabs = iA + nSes(iSymA)
-            iAtot = iA + nIsh(iSymA) + nAsh(iSymA)
+            ! iAtot = iA + nIsh(iSymA) + nAsh(iSymA)
             Do iB = 1, nSshB
               iBabs = iB + nSes(iSymB)
               If (iAabs.lt.iBabs) Cycle
-              iBtot = iB + nIsh(iSymB) + nAsh(iSymB)
+              ! iBtot = iB + nIsh(iSymB) + nAsh(iSymB)
 C
               iASP  = kTgeU(iTabs,iUabs)-nTgeUes(iSym)
               iISP  = kAgeB(iAabs,iBabs)-nAgeBes(iSym)
@@ -893,14 +881,14 @@ C
 C
       If (nAshI.eq.0.or.nIshJ.eq.0.or.nSshA.eq.0.or.nSshB.eq.0) Return
 C
-      nJ = nIshJ
+      ! nJ = nIshJ
       Do iI = 1, nAshI
         iIabs = iI + nIshI + nAes(iSymI)
-        iItot = iI + nCorI
+        ! iItot = iI + nCorI
 C       If (iSymI.eq.iSymJ) nJ = iI
         Do iJ = 1, nIshI
           iJabs = iJ + nIes(iSymJ)
-          iJtot = iJ
+          ! iJtot = iJ
 C         If (iIabs.lt.iJabs) Cycle
           Fac = 1.0D+00
 C         If ((iI.ne.iJ).and.(iSymI.eq.iSymJ)) Fac = 2.0d+00
@@ -909,7 +897,7 @@ C
           Call Exch(iSymA,iSymI,iSymB,iSymJ,
      *              iI+nCorI,iJ+nFroJ,
      *              ERI1,Scr)
-C      write (*,*) "integral",ii+nfroi,ij+nfroj
+C      write(6,*) "integral",ii+nfroi,ij+nfroj
 C      call sqprt(eri1,12)
 C         If ((iI.ne.iJ).or.(iSymI.ne.iSymJ)) then
 C           Call Exch(iSymA,iSymJ,iSymB,iSymI,
@@ -917,15 +905,15 @@ C    *                iJ+nFroJ,iI+nFroI,
 C    *                ERI2,Scr)
 C         End If
 C
-          Call DCopy_(nSshA*nSshB,0.0D+00,0,AmpL1,1)
+          Call DCopy_(nSshA*nSshB,[0.0D+00],0,AmpL1,1)
 C
           Do iA = 1, nSshA
             iAabs = iA + nSes(iSymA)
-            iAtot = iA + nIsh(iSymA) + nAsh(iSymA)
+            ! iAtot = iA + nIsh(iSymA) + nAsh(iSymA)
             Do iB = 1, nSshB
               iBabs = iB + nSes(iSymB)
               If (iAabs.lt.iBabs) Cycle
-              iBtot = iB + nIsh(iSymB) + nAsh(iSymB)
+              ! iBtot = iB + nIsh(iSymB) + nAsh(iSymB)
 C
               iAgeB = kAgeB(iAabs,iBabs)-nAgeBes(iSym) !! iSymAB
               iVjP  = iJ + nIsh(iSymJ)*(iAgeB-1)+IOFF1(iSymJ)
@@ -981,11 +969,11 @@ C
       nJ = nIshJ
       Do iI = 1, nIshI
         iIabs = iI + nIes(iSymI)
-        iItot = iI
+        ! iItot = iI
         If (iSymI.eq.iSymJ) nJ = iI
         Do iJ = 1, nJ
           iJabs = iJ + nIes(iSymJ)
-          iJtot = iJ
+          ! iJtot = iJ
           If (iIabs.lt.iJabs) Cycle
           Fac = 1.0D+00
 C         If ((iI.ne.iJ).and.(iSymI.eq.iSymJ)) Fac = 2.0d+00
@@ -994,15 +982,13 @@ C
           Call Exch(iSymA,iSymI,iSymB,iSymJ,
      *              iI+nFroI,iJ+nFroJ,
      *              ERI1,Scr)
-C      write (*,*) "ij = ", ii,ij
-C      call sqprt(eri1,12)
 C         If ((iI.ne.iJ).or.(iSymI.ne.iSymJ)) then
 C           Call Exch(iSymA,iSymJ,iSymB,iSymI,
 C    *                iJ+nFroJ,iI+nFroI,
 C    *                ERI2,Scr)
 C         End If
 C
-          Call DCopy_(nSshA*nSshB,0.0D+00,0,AmpL1,1)
+          Call DCopy_(nSshA*nSshB,[0.0D+00],0,AmpL1,1)
 C
           iViHP0= kIgeJ(iIabs,iJabs) - nIgeJes(iSym)
           iViHP = nAgeB(iSym)*(iViHP0-1)
@@ -1010,22 +996,22 @@ C
           iViHM = nAgtB(iSym)*(iViHM0-1)
           Do iA = 1, nSshA
             iAabs = iA + nSes(iSymA)
-            iAtot = iA + nIsh(iSymA) + nAsh(iSymA)
+            ! iAtot = iA + nIsh(iSymA) + nAsh(iSymA)
             Do iB = 1, nSshB
               iBabs = iB + nSes(iSymB)
               If (iAabs.lt.iBabs) Cycle
-              iBtot = iB + nIsh(iSymB) + nAsh(iSymB)
+              ! iBtot = iB + nIsh(iSymB) + nAsh(iSymB)
               iVaHP = kAgeB(iAabs,iBabs) - nAgeBes(iSym)
               iVHP  = iVaHP + iViHP !! nAgeB(iSym)*(iViP-1)
 C
-              ValHP = Work(ipTP+iVHP-1)
+              ValHP = Work(ipTCP+iVHP-1)
               ValHM = 0.0D+00
               If (iIabs.ne.iJabs) Then
                 If (iAabs.ne.iBabs) Then
                   ValHP = ValHP * 2.0D+00
                   iVaHM = kAgtB(iAabs,iBabs) - nAgtBes(iSym)
                   iVHM  = iVaHM + iViHM !! nAgtB(iSym)*(iViM-1)
-                  ValHM = Work(ipTM+iVHM-1) * 2.0D+00*SQ3
+                  ValHM = Work(ipTCM+iVHM-1) * 2.0D+00*SQ3
                 Else
                   ValHP = ValHP * SQ2
                 End If
@@ -1033,7 +1019,7 @@ C
                 If (iAabs.ne.iBabs) ValHP = ValHP * SQ2
               End If
 C
-C     write (*,'(2i3,2f20.10)')ia,ib,valhp,valhm
+C     write(6,'(2i3,2f20.10)')ia,ib,valhp,valhm
               AmpL1(iA,iB) = AmpL1(iA,iB) + ValHP + ValHM
               AmpL1(iB,iA) = AmpL1(iB,iA) + ValHP - ValHM
             End Do
@@ -1092,6 +1078,10 @@ C
 C
       Dimension ERI(*),AmpMO(*)
 C
+      nSkpA = 0
+      nSkpB = 0
+      nDimA = 0
+      nDimB = 0
       If (iLeft .eq.1) Then
         nDimA = nAshA
         nSkpA = nCorA
@@ -1178,6 +1168,7 @@ C
 C
 C-----------------------------------------------------------------------
 C
+! MO->AO or AO->MO transformation of 1-RDM
       Subroutine OLagTrf(mode,iSym,CMO,DPT2,DPT2AO,WRK)
 C
       Implicit Real*8 (A-H,O-Z)

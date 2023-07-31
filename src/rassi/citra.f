@@ -53,7 +53,6 @@
       CHARACTER*8 WFTP
       DIMENSION ISGS(NSGSIZE),ICIS(NCISIZE),IXS(NXSIZE)
 
-      CALL QENTER(ROUTINE)
 
 #ifdef DEBUG_MPSSI
       write(6,*)' Entering CITRA. norm=',ddot_(NCO,CI,1,CI,1)
@@ -81,7 +80,7 @@ C  FIRST TRANSFORM THE INACTIVE ORBITALS:
 !     write(6,*)' CITRA. inactive done CI='
 !     write(6,'(1x,5f16.8)')(CI(I),I=1,NCO)
 C  THEN THE ACTIVE ONES:
-      IF(WFTP.EQ.'EMPTY   ') GOTO 100
+      if (WFTP /= 'EMPTY   ') then
 * The HISPIN case may be buggy and is not presently used.
       IF(WFTP.EQ.'HISPIN  '.or.WFTP.EQ.'CLOSED  ') THEN
         ISTA=1
@@ -119,7 +118,6 @@ C The general case:
 !     write(6,*)' CITRA completely done. CI='
 !     write(6,'(1x,5f16.8)')(CI(I),I=1,NCO)
 
- 100  CONTINUE
-      CALL QEXIT(ROUTINE)
+      end if
       RETURN
       END

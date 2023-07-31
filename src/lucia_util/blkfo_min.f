@@ -35,21 +35,19 @@
 #include "csm.fh"
 #include "strbas.fh"
 #include "crun.fh"
-      COMMON/CANDS/ICSM,ISSM,ICSPC,ISSPC ! Jesper
+#include "cands.fh"
 
 *. Output : Should outside be dimensioned as MXNTTS
       INTEGER LEN_BLK(*)
-      INTEGER IDUMMY(1)
+      INTEGER I_DUMMY(1)
 *
-      IDUMMY = 0 ! jwk-cleanup
+      I_DUMMY(1) = 0 ! jwk-cleanup
       IATP = 1
       IBTP = 2
 *
       NOCTPA = NOCTYP(IATP)
       NOCTPB = NOCTYP(IBTP)
 *. Pointers to local arrays
-      IDUM=0
-      NTTS = MXNTTS
       CALL GETMEM('CLBT  ','ALLO','INTE',KPCLBT ,MXNTTS)
       CALL GETMEM('CLEBT ','ALLO','INTE',KPCLEBT,MXNTTS)
       CALL GETMEM('CI1BT ','ALLO','INTE',KPCI1BT,MXNTTS)
@@ -58,7 +56,7 @@
 *. Info needed for generation of block info
       CALL GETMEM('CIOIO ','ALLO','INTE',KLCIOIO,NOCTPA*NOCTPB)
       CALL IAIBCM(ISSPC,iWORK(KLCIOIO)) ! Jesper
-      CALL ZBLTP(ISMOST(1,ISM),NSMST,IDC,IWORK(KPCBLTP),IDUMMY)
+      CALL ZBLTP(ISMOST(1,ISM),NSMST,IDC,IWORK(KPCBLTP),I_DUMMY)
 *. Allowed length of each batch( not important for final output )
       LBLOCK = MAX(MXSOOB,LCSBLK)
 *. Batches  of C vector

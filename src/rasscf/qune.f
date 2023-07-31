@@ -20,11 +20,9 @@ C
 
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "output_ras.fh"
-      Parameter (ROUTINE='XXXXXXXX')
-
       CHARACTER*2 QNSTEP
       CHARACTER*3 QNUPDT
-      Character*16 KSDFT
+      Character*80 KSDFT
       DIMENSION BK(NDIM),XSX(NDIM),VL(NDIM),VM(NDIM)
       DIMENSION XQN(NDIM),XOLD(NDIM),V1(NDIM),V2(NDIM)
       SAVE ALPHA,BETA,ELAST,FPLAST,NVEC,NLS

@@ -8,19 +8,20 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine axexsol_cvb(ap,dum,itdav,maxdav,nfrdim1,
      >  solp,solp_res,eig,eig_res)
 c  Diagonalize Hamiltonian in Davidson subspace:
       implicit real*8 (a-h,o-z)
-#include "malloc_cvb.fh"
+#include "WrkSpc.fh"
       dimension ap(maxdav,maxdav),solp(maxdav),solp_res(maxdav)
 
       i1 = mstackr_cvb(itdav)
       i2 = mstackr_cvb(itdav*itdav)
 
-      call axexsol2_cvb(ap,w(i1),w(i2),dum,itdav,maxdav,
+      call axexsol2_cvb(ap,work(i1),work(i2),dum,itdav,maxdav,
      >  solp,solp_res,eig,eig_res)
 
       call mfreer_cvb(i1)

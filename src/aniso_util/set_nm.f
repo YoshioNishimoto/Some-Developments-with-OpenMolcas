@@ -13,9 +13,9 @@
      &                   nM, EM, dbg )
 
       Implicit None
-#include "warnings.fh"
+#include "warnings.h"
 c input data:
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter        :: wp=kind(0.d0)
       Integer, intent(in)        :: exch, ncut, encut_definition, nk,
      &                              mg, nTempMagn
       Real(kind=8), intent(in)  :: hmax, W(exch), encut_rate,
@@ -28,7 +28,6 @@ c local variables:
       Integer       :: i
       Real(kind=8) :: diff, T_High
       Real(kind=8) :: boltz_k, mu_bohr
-      Call qEnter('set_nm')
 
       ! Constants:
       boltz_k=0.6950356_wp                    !   in cm^-1*K-1
@@ -102,7 +101,6 @@ c local variables:
 
 309   Continue
 
-      Call qExit('set_nm')
       Return
       End subroutine set_nm
 

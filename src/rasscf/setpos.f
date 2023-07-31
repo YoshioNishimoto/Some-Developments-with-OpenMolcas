@@ -14,14 +14,12 @@
       Character*(*) Line
       Character*16 Command
       Character*16 Key
-#include "warnings.fh"
+#include "warnings.h"
 #include "rasdim.fh"
 #include "input_ras.fh"
 #include "output_ras.fh"
-      Parameter(ROUTINE='SetPos  ')
       Intrinsic len, min
 
-      Call QENTER(ROUTINE)
 
 * Read until, and including, a line beginning with a particular
 * string in an ASCII file, assumed already opened, with unit

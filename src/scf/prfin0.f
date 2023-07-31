@@ -32,39 +32,30 @@
 *     history: none                                                    *
 *                                                                      *
 ************************************************************************
+#ifdef _HDF5_
+      Use mh5, Only: mh5_put_dset
+#endif
+      Use KSDFT_Info, Only: CoefR, CoefX
+      use OFembed, only: Do_OFemb
+#ifdef _FDE_
+      use Embedding_Global, only: Eemb, embPot
+#endif
+      use SpinAV, only: Do_SpinAV
+      use InfSCF
       Implicit Real*8 (a-h,o-z)
 *
       Real*8 Dens(nDT),Dens_ab(nDT), EOrb(nEO),CMO(nCMO), KntE(nDT)
       Integer iSpn, iMult
 *
 #include "real.fh"
-#include "mxdm.fh"
-#include "infscf.fh"
 #include "ldfscf.fh"
 #include "file.fh"
 #include "rctfld.fh"
 #include "oneswi.fh"
-#ifdef _FDE_
-#include "embpotdata.fh"
-#endif
 #include "scfwfn.fh"
-#include "ksdft.fh"
 
-      Logical Do_OFemb,KEonly,OFE_first
-      COMMON  / OFembed_L / Do_OFemb,KEonly,OFE_first
-      Logical Do_Tw
-      COMMON  / Tw_corr_L   / Do_Tw
-      Character*16  ADDC_KSDFT
-      COMMON  / ADDcorr_C   / ADDC_KSDFT
-      Logical Do_Addc
-      COMMON  / ADDcorr_L   / Do_Addc
-      COMMON  / ADDcorr_R   / DE_KSDFT_c
-      Real*8 Erest_xc
-      COMMON /dCSCF_xc/ Erest_xc
-      Real*8 s2CNO
-      COMMON /dCSCF_s2/ s2CNO
-      Logical Do_SpinAV
-      COMMON  / SPAVE_L  / Do_SpinAV
+#include "addcorr.fh"
+#include "dcscf.fh"
 
       Integer  Cho_X_GetTol
       External Cho_X_GetTol

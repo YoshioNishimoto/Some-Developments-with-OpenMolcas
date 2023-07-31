@@ -8,22 +8,22 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine all2free_cvb(vecfrom,vecto,nvec)
       implicit real*8 (a-h,o-z)
-#include "ext_cvb.fh"
 #include "main_cvb.fh"
 #include "optze_cvb.fh"
 #include "files_cvb.fh"
 #include "print_cvb.fh"
 
-#include "malloc_cvb.fh"
+#include "WrkSpc.fh"
       dimension vecfrom(npr,nvec),vecto(nfr,nvec)
 
       do 100 ivec=1,nvec
       if(.not.orbfr_is_unit)then
-        call mxattb_cvb(w(ls(14)),vecfrom(1,ivec),
+        call mxattb_cvb(work(ls(14)),vecfrom(1,ivec),
      >    nfrorb,nprorb,1,vecto(1,ivec))
       else
         if(nprorb.gt.0) call fmove_cvb(vecfrom(1,ivec),

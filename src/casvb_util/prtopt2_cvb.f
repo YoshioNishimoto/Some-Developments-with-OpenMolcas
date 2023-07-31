@@ -8,19 +8,19 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine prtopt2_cvb(iopt1,ioptim,italter,noptim,
      >  iorts,ifxorb,ifxstr,idelstr)
       implicit real*8 (a-h,o-z)
-#include "ext_cvb.fh"
 #include "main_cvb.fh"
 #include "optze_cvb.fh"
 #include "files_cvb.fh"
 #include "print_cvb.fh"
 
 #include "spinb_cvb.fh"
-#include "malloc_cvb.fh"
+#include "WrkSpc.fh"
       parameter(nmeth=12)
       character*3 ayn
       character*8 methkw(nmeth)
@@ -80,11 +80,11 @@
             do 700 i=1,norb
             if(ifxorb(i).ge.0.and.ifxorb(i).le.norb)then
               ifx=ifx+1
-              iw(ifx+itmp-1)=i
+              iwork(ifx+itmp-1)=i
             endif
 700         continue
             nfxorb=ifx
-            write(6,'(14i3)')(iw(ii+itmp-1),ii=1,nfxorb)
+            write(6,'(14i3)')(iwork(ii+itmp-1),ii=1,nfxorb)
             call mfreei_cvb(itmp)
           endif
           if(nfxvb.gt.0.and.lfxvb.eq.0)then

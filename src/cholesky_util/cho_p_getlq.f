@@ -12,12 +12,25 @@
 
       Implicit None
       Integer l_QVec, nQSP
-      Real*8  QVec(l_Qvec)
+      Real*8, Target::  QVec(l_Qvec)
       Integer LstQSP(nQSP)
 #include "cho_para_info.fh"
 
       Character*11 SecNam
       Parameter (SecNam = 'Cho_P_GetLQ')
+*                                                                      *
+************************************************************************
+*                                                                      *
+      Interface
+      SubRoutine Cho_GetLQ(QVec,l_QVec,LstQSP,nQSP)
+      Integer l_QVec, nQSP
+      Real*8, Target::  QVec(l_Qvec)
+      Integer LstQSP(nQSP)
+      End SubRoutine Cho_GetLQ
+      End Interface
+*                                                                      *
+************************************************************************
+*                                                                      *
 
 C --- In parallel:
 C --- This code only works if MxShpr is set to 1
@@ -29,7 +42,7 @@ C ---      "synchronization" would be needed
          If (nQSP .gt. 1) Then
             Call Cho_Quit('Oops! Bug detected in '//SecNam,103)
          End If
-         Call Cho_dZero(QVec,l_Qvec)
+         Call FZero(QVec,l_Qvec)
          Call Cho_p_QualSwp()
          Call Cho_GetLQ(QVec,l_QVec,LstQSP,nQSP)
          Call Cho_p_QualSwp()

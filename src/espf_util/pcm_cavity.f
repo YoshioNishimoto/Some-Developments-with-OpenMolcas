@@ -8,7 +8,7 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
-      Subroutine PCM_Cavity(iPrint,ICharg,NAtm,ToAng,AtmC,IAtm,IsAtMM,
+      Subroutine PCM_Cavity(iPrint,ICharg,NAtm,AtmC,IAtm,IsAtMM,
      &                      LcAtmC,LcIAtm,JSurf)
       use PCM_arrays
       Implicit Real*8 (a-h,o-z)
@@ -24,7 +24,6 @@
       Real*8, Allocatable:: Xs(:), Ys(:), Zs(:), Rs(:)
       Integer, Allocatable:: pNs(:)
 *
-      Call qEnter('PCM_Cavity')
 *
 *     Build the cavity.
 *
@@ -76,12 +75,12 @@
       Call mma_allocate(pNs,MxSph,Label='pNs')
 *
       NSinit = 0
-      Call FndSph(LcNAtm,ICharg,ToAng,LcAtmC,LcIAtm,ISlPar(9),
-     &            ISlPar(14),RSlPar(9),Xs,Ys,Zs,Rs,pNs,iPrint)
+      Call FndSph(LcNAtm,ICharg,LcAtmC,LcIAtm,ISlPar(9),
+     &            ISlPar(14),RSlPar(9),Xs,Ys,Zs,Rs,pNs,MxSph,iPrint)
 *
 *---- Define surface tesserae
 *
-      Call FndTess(iPrint,ToAng,LcNAtm,Xs,Ys,Zs,Rs,pNs,MxSph)
+      Call FndTess(iPrint,Xs,Ys,Zs,Rs,pNs,MxSph)
 *
       Call mma_deallocate(pNs)
       Call mma_deallocate(Rs)
@@ -99,7 +98,7 @@
          Call mma_allocate(dRad,nS ,LcNAtm,3,Label='dRad')
          Call mma_allocate(dCntr,nS ,LcNAtm,3,3,Label='dCntr')
          Call mma_allocate(PCM_SQ,2,nTs,Label='PCM_SQ')
-         Call Deriva(0,ToAng,LcNAtm,nTs,nS,nSInit,RSolv,
+         Call Deriva(0,LcNAtm,nTs,nS,nSInit,RSolv,
      $               PCMTess,Vert,Centr,PCMSph,PCMiSph,IntSph,
      $               PCM_N,NVert,NewSph,dTes,dPnt,dRad,dCntr)
          If (nPCM_info.eq.0) Then
@@ -109,6 +108,5 @@
          End If
       EndIf
 *
-      Call qExit('PCM_Cavity')
       Return
       End

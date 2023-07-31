@@ -15,10 +15,9 @@
 #endif
       use OccSets
       use Orb_Type
+      use InfSCF
       Implicit Real*8 (a-h,o-z)
 #include "real.fh"
-#include "mxdm.fh"
-#include "infscf.fh"
 #include "stdalloc.fh"
       Real*8 Occ(mmB,nD)
       Real*8, Target::  CMO(mBB,nD)
@@ -34,8 +33,8 @@
 *
       If (OnlyProp) Return
 *
-*define _DEBUG_
-#ifdef _DEBUG_
+!#define _DEBUGPRINT_
+#ifdef _DEBUGPRINT_
       Do iD = 1, nD
          Write (6,*) 'iD=',iD
          Write(6,'(a,8i5)') 'sorb: nOcc   ',(nOcc(i,iD),i=1,nSym)
@@ -201,8 +200,8 @@
             End Do ! iSym
 *
          End Do    ! iD
-*define _SPECIAL_DEBUG_
-#ifdef _SPECIAL_DEBUG_
+!#define _SPECIAL_DEBUGPRINT_
+#ifdef _SPECIAL_DEBUGPRINT_
          Call DebugCMO(CMO,mBB,nD,Occ,mmB,nBas,nOrb,nSym,iFerm,
      &                 '@ the last position')
 #endif
@@ -224,8 +223,8 @@
 *     they are virtual.
 *
       Do iD = 1, nD
-*define _DEBUG_
-#ifdef _DEBUG_
+*define _DEBUGPRINT_
+#ifdef _DEBUGPRINT_
          Write (6,*) 'iD=',iD
          Write (6,*) 'nOccs(original):'
          Write (6,*) (nOcc(iSym,iD),iSym=1,nSym)
@@ -240,7 +239,8 @@
             iOcc = 0
             Do iOrb = 1, nOrb(iSym)-1
                jOrb = iOrb + 1
-               If (Occ(jOrb+jOff,iD).gt.Occ(iOrb+jOff,iD)) Then
+               If (Occ(iOrb+jOff,iD)==Zero .and.
+     &             Occ(jOrb+jOff,iD).gt.Occ(iOrb+jOff,iD)) Then
 *
                   iTmp=OrbType(iOrb+jOff,iD)
                   OrbType(iOrb+jOff,iD)=OrbType(jOrb+jOff,iD)
@@ -261,7 +261,7 @@
             jOff=jOff+nOrb(iSym)
             iOff=iOff+nBas(iSym)*nOrb(iSym)
          End Do
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
          Write (6,*) 'iD=',iD
          Write (6,*) 'nOccs(new):'
          Write (6,*) (nOcc(iSym,iD),iSym=1,nSym)
@@ -277,6 +277,8 @@
 *     Recompute sizes since the nOcc array might have changed.
 *
       nOV = 0
+      mOV    = 0
+      kOV(:) = 0
       Do iSym = 1, nSym
          If (nD.eq.1) Then
              maxnOcc=nOcc(iSym,1)
@@ -285,14 +287,17 @@
              maxnOcc=max(nOcc(iSym,1),nOcc(iSym,2))
              minnOcc=min(nOcc(iSym,1),nOcc(iSym,2))
          End If
+         kOV(:) = kOV(:) + (nOcc(iSym,:)-nFro(iSym))*
+     &                     (nOrb(iSym)-nOcc(iSym,:))
          nOV    = nOV  + (maxnOcc-nFro(iSym))*
      &                   (nOrb(iSym)-minnOcc)
       End Do
+      mOV=kOV(1)+kOV(2)
 *                                                                      *
 ************************************************************************
 *                                                                      *
-*define _DEBUG_
-#ifdef _DEBUG_
+*define _DEBUGPRINT_
+#ifdef _DEBUGPRINT_
       Do iD = 1, nD
          iOff=1
          jOff=1
@@ -310,7 +315,7 @@
 #endif
       Return
       End
-#ifdef _SPECIAL_DEBUG_
+#ifdef _SPECIAL_DEBUGPRINT_
       Subroutine DebugCMO(CMO,nCMO,nD,Occ,nnB,nBas,nOrb,nSym,iFerm,
      &                    Label)
       Implicit Real*8 (a-h,o-z)
@@ -318,6 +323,7 @@
       Integer nBas(nSym),nOrb(nSym), iFerm(nnB)
       Character*(*) Label
 *
+      Write (6,*) Label
       Do iD = 1, nD
          Write (6,*)
          If (iD.eq.1) Then

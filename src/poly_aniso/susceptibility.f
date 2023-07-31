@@ -18,7 +18,7 @@
 
 c       chi*t ----------- the units are cgsemu: [ cm^3*k/mol ]
       Implicit None
-      Integer, parameter        :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter        :: wp=kind(0.d0)
 
       Integer, intent(in) :: nLoc, nCenter, nTempMagn, nT, mem
       Integer, intent(in) :: exch, nneq, neqv, iopt
@@ -104,7 +104,6 @@ c local variables
       Character(len=50) :: label
       Real(wp), external :: dnrm2_
 
-      Call qEnter('PA_suscept')
 
       mem_local=0
       dbg=.false.
@@ -652,8 +651,8 @@ c printing the results
 c  calcualtion of the standard deviation:
       If (tinput) Then
          Write(6,'(a,5x, f20.14)') 'ST.DEV.CHIT:',
-     &        dev( (nT-nTempMagn), chit_theta( (1+nTempMagn):(nT) ),
-     &                                  XTexp( (1+nTempMagn):(nT) )  )
+     &        dev( nT, chit_theta( (1+nTempMagn):(nT+nTempMagn) ),
+     &                      XTexp( (1+nTempMagn):(nT+nTempMagn) )  )
       End If !tinput
 
 
@@ -661,14 +660,14 @@ c  calcualtion of the standard deviation:
       WRITE(label,'(A)') "no_field"
       IF ( DoPlot ) THEN
          IF ( tinput ) THEN
-            Call plot_XT_with_Exp(label, nT-nTempMagn,
-     &                                 T((1+nTempMagn):(nT) ),
-     &                        chit_theta((1+nTempMagn):(nT) ),
-     &                             XTexp((1+nTempMagn):(nT)), zJ )
+            Call plot_XT_with_Exp(label, nT,
+     &                          T((1+nTempMagn):(nT+nTempMagn) ),
+     &                 chit_theta((1+nTempMagn):(nT+nTempMagn) ),
+     &                      XTexp((1+nTempMagn):(nT+nTempMagn) ), zJ )
          ELSE
-            Call plot_XT_no_Exp( label, nT-nTempMagn,
-     &                                 T((1+nTempMagn):(nT) ),
-     &                        chit_theta((1+nTempMagn):(nT) ), zJ )
+            Call plot_XT_no_Exp( label, nT,
+     &                          T((1+nTempMagn):(nT+nTempMagn) ),
+     &                 chit_theta((1+nTempMagn):(nT+nTempMagn) ), zJ )
          END IF
       END IF
 ! ------------------------- END PLOTs -------------------------------------!
@@ -778,7 +777,6 @@ c-------------------------------------------------------------------------------
      &                  'tensor were not calculated.'
       Write(6,*)
   190 continue
-      Call qExit('PA_suscept')
       Return
       End
 

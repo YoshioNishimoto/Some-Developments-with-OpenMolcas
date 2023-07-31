@@ -18,7 +18,7 @@ c  N --  dimension of the barrier
 
       Implicit None
 #include "stdalloc.fh"
-      Integer, parameter           :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter           :: wp=kind(0.d0)
       Integer, intent(in)          :: nBlock, nMult, iprint, imanifold
       Integer, intent(in)          :: nDim(nMult)
       Real(kind=8), intent(in)    :: W(nBlock)
@@ -56,7 +56,6 @@ c  N --  dimension of the barrier
       Complex(kind=8), allocatable :: dipso5(:,:,:,:,:)
 !                                            (3,nmult,10,nmult,10)
 !-----------------------------------------------------------------------
-      Call qEnter('barrier')
 
       If((nmult>0).and.(nBlock>0)) Then
          Call mma_allocate(ibas,nmult,nBlock,'ibas')
@@ -275,11 +274,11 @@ c     &                   dipso5(  l,i1,j1,i2,j2), i,j
 
       If(doPLOT) then
          CALL plot_barrier(nBlock,nMult,nDIM,W,dipso5)
-         Write(6,'(A)') 'The following files '
-         Write(6,'(A)') '#-->  $WorkDir/BARRIER.plt'
-         Write(6,'(A)') '#-->  $WorkDir/BARRIER_ENE.dat'
-         Write(6,'(A)') '#-->  $WorkDir/BARREIR_TME.dat'
-         Write(6,'(A)') '#-->  $WorkDir/BARREIR.plt'
+         Write(6,'(A)') 'The following files'
+         Write(6,'(A)') '#-->  $WorkDir/$Project.BARRIER.plt'
+         Write(6,'(A)') '#-->  $WorkDir/$Project.BARRIER_ENE.dat'
+         Write(6,'(A)') '#-->  $WorkDir/$Project.BARRIER_TME.dat'
+         Write(6,'(A)') '#-->  $WorkDir/$Project.BARRIER.plt'
          Write(6,'(A)') 'Have been generated successfully.'
       End If
 
@@ -834,7 +833,6 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       Call mma_deallocate(MM)
       Call mma_deallocate(maxes)
 
-      Call qExit('barrier')
 
       Return
       End
@@ -844,7 +842,7 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
       Subroutine prbar(ist,s1,s2,M)
 
       Implicit none
-      Integer, parameter           :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter           :: wp=kind(0.d0)
       Integer, intent(in)          :: ist
       Character(len=5), intent(in) :: s1, s2
       Complex(kind=8), intent(in) :: M(3)

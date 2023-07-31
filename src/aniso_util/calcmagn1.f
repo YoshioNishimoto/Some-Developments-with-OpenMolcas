@@ -21,7 +21,7 @@
 !     Z =  Boltzmann statistical sum, real scalar
 !----------------------------------------------------------------------
       Implicit None
-      Integer, parameter          :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter          :: wp=kind(0.d0)
       Integer, intent(in)         :: N
       Real(kind=8),intent(in)    :: E(N), T
       Complex(kind=8),intent(in) :: M(N,N)
@@ -31,7 +31,6 @@
       Integer                 :: im,mp1,i
       Real(kind=8)           :: kB
 !----------------------------------------------------------------------
-      Call qEnter('calcmagn1')
       kB=0.6950356000_wp !   in cm^-1*K-1
       Z =0.0_wp
       MT=0.0_wp
@@ -79,7 +78,6 @@
 
       MT=MT/Z
 
-      Call qExit('calcmagn1')
       Return
       End
 

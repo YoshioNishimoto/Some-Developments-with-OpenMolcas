@@ -13,7 +13,7 @@
      &                  T, XTexp )
 
       Implicit None
-      Integer, parameter        :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter        :: wp=kind(0.d0)
 c input:
       Integer, intent(in)       :: nT, nTempMagn
       Logical, intent(in)       :: TINPUT
@@ -24,7 +24,6 @@ c local variables:
       Integer :: i
       Real(kind=8) :: dltt
 
-      Call qEnter('set_T')
 
       ! set nT, T(i) and XTexp(i) arrays:
       T=0.0_wp
@@ -81,6 +80,5 @@ c local variables:
         End If
       End Do
 
-      Call qExit('set_T')
       Return
       End subroutine set_T

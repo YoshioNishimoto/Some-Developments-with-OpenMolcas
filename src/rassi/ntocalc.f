@@ -42,6 +42,8 @@
 *                                             2018/08/09
 
       SUBROUTINE   NTOCalc(JOB1,JOB2,ISTATE,JSTATE,TRAD,TRASD,ISpin)
+
+      use fortran_strings, only : str
 #include "rasdim.fh"
 #include "rasdef.fh"
 #include "symmul.fh"
@@ -50,7 +52,6 @@
 #include "WrkSpc.fh"
 #include "Files.fh"
 #include "Struct.fh"
-#include "rassiwfn.fh"
 
       Integer ISpin,JOB1,JOB2
       Real*8,DIMENSION(NASHT**2)::TRAD,TRASD
@@ -79,17 +80,21 @@
       INTEGER, DIMENSION(NISHT+NASHT) :: OrbBas,OrbSym
       !OrbBas() is the number of basis function for IOrb
       !OrbSym() is the index of symmetry/irrep  for IOrb
+      ! The strings below should be converted to
+      ! character(len=:), allocatable format, but currently
+      ! gfortran has problems with this
       CHARACTER (len=128) FILENAME
       CHARACTER (len=8)  NTOType
-      CHARACTER (len=5)  STATENAME,StateNameTmp
+      CHARACTER (len=9)  STATENAME
       Character*3 lIrrep(8)
       Logical DOTEST
       INTEGER LU,ISFREEUNIT
-      COMMON SumEigVal
-      EXTERNAL ISFREEUNIT
+#include "ntocom.fh"
+      EXTERNAL ISFREEUNIT, Molden_interface
 
       LU=233
 
+      statename=''
       DoTest=.false.
       Zero=0.0D0
       Two=2.0D0
@@ -213,10 +218,7 @@ C     &    NUsedBF(OrbUsedSym(IOrb)),I,J,WORK(LCMO1+J),WORK(LCMO2+J)
       End If
 C     end of building up the super-CMO matrix
 C     Start and initialize spaces
-      write(StateName,'(I3)') ISTATE
-      write(StateNameTmp,'(I3,a1,a)')
-     & JSTATE,'_',trim(adjustl(STATENAME))
-      write (STATENAME,'(a)') trim(adjustl(StateNameTmp))
+      statename = str(JSTATE)//'_'//str(ISTATE)
       NDge=NASHT**2
       CALL GETMEM ('Umat','Allo','Real',LNTOUmat,NDge)
       CALL GETMEM ('Vmat','Allo','Real',LNTOVmat,NDge)
@@ -393,7 +395,7 @@ C     End of Printing NTOs
 
       Call Get_cArray('Irreps',lIrrep,24)
       Do iSym = 1, nSym
-         Call RightAd(lIrrep(iSym))
+         lIrrep(iSym) = adjustr(lIrrep(iSym))
       End Do
 
 C     Putting particle-hole pairs in the output
@@ -468,7 +470,6 @@ C     Putting particle-hole pairs in the output
 #include "WrkSpc.fh"
 #include "Files.fh"
 #include "Struct.fh"
-#include "rassiwfn.fh"
 
 C     input variables
       INTEGER NUseSym,LNTO,LEigVal
@@ -476,7 +477,7 @@ C     input variables
       CHARACTER (len=8) NTOType
       CHARACTER (len=1) Spin
       CHARACTER (len=5)  STATENAME
-      CHARACTER (len=128) FILENAME
+      CHARACTER (len=128) FILENAME, molden_name
 C     Loop control
       INTEGER I, J, ICount
 C     Variables needed for judging the symmetry of a NTO
@@ -492,7 +493,7 @@ C     OrbSymIndex gives the original orbital index for a orbital in iusesym
 C     If SquareSum(IUseSym) > Threshold, then print the coefficients in IUseSym symmetry
 C     If there are more than one symmetry with SquareSum(IUseSym) > Threshold,
 C     then give a warning message and print the one with the largest SquareSum
-      COMMON SumEigVal
+#include "ntocom.fh"
       INTEGER NPCMO,IPCMO
       Real*8,DIMENSION(:),allocatable::PCMO
 C     Printing control
@@ -502,10 +503,8 @@ C
       Real*8,DIMENSION(2) :: vDum
       INTEGER,DIMENSION(7,8) :: v2Dum
       CHARACTER(len=72)Note
-      Logical DoTest
       External ISFREEUNIT
 
-      DoTest=.false.
       Threshold=0.0D-10
       Zero=0.0D0
 
@@ -628,8 +627,11 @@ C Recording Printed NTO (PCMO)
       Note='*  Natural Transition Orbitals'
       WRITE(FILENAME,'(6(a))')
      & 'NTORB.',trim(adjustl(STATENAME)),'.',Spin,'.',NTOType
+      WRITE(molden_name,'(6(a))')
+     & 'MD_NTO.',trim(adjustl(STATENAME)),'.',Spin,'.',NTOType
       CALL WRVEC_(FILENAME,LU,'CO',0,NSYM,NBASF,NBASF,PCMO,vDum,
      & EigValArray,vDum,vDum,vDum,v2Dum,Note,0)
+      CALL Molden_interface(0,trim(FILENAME),trim(molden_name))
 
       deallocate(PCMO)
       RETURN

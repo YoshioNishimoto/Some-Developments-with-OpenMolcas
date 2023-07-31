@@ -15,6 +15,7 @@
       SUBROUTINE SODYSORB(NSS,USOR,USOI,DYSAMPS,NZ,SOENE)
       use rassi_global_arrays, only: SFDYS, SODYSAMPS,
      &                               SODYSAMPSR, SODYSAMPSI, JBNUM
+      use OneDat, only: sNoNuc, sNoOri
 
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "Molcas.fh"
@@ -46,6 +47,7 @@
       DIMENSION DYSEN(NSS)
       DIMENSION AMPS(NSS)
       Character*30 Filename
+      character(len=8) :: Label
 
 ! +++ J.Norell 2018
 
@@ -70,7 +72,6 @@ C And MSPROJS which saves their ms projections for later use
       CALL GETMEM('SO2SF','ALLO','INTE',SO2SFNUM,NSS)
       MSPROJS=0
       CALL GETMEM('MSPROJS','ALLO','REAL',MSPROJS,NSS)
-      ISS=0
       SOTOT=0
       SFTOT=0
       DO ISTATE=1,NSTATE
@@ -136,10 +137,11 @@ C Compute the magnitude of the complex amplitudes as an approximation
 10    CONTINUE
       CALL GETMEM('SZZ   ','ALLO','REAL',LSZZ,NSZZ)
       IRC=-1
-      IOPT=6
+      IOPT=ibset(ibset(0,sNoOri),sNoNuc)
       ICMP=1
       ISYLAB=1
-      CALL RDONE(IRC,IOPT,'MLTPL  0',ICMP,WORK(LSZZ),ISYLAB)
+      Label='MLTPL  0'
+      CALL RDONE(IRC,IOPT,Label,ICMP,WORK(LSZZ),ISYLAB)
       IF ( IRC.NE.0 ) THEN
         WRITE(6,*)
         WRITE(6,*)'      *** ERROR IN SUBROUTINE SODYSORB ***'
@@ -183,7 +185,6 @@ C SO Dyson orbitals
          ! For each initial state JSTATE up to DYSEXPSFSO we will
          ! gather all the obtained Dysorbs
          ! and export to a shared .molden file
-         IFILE=1
          SODYSCIND=0 ! Orbital coeff. index
          ORBNUM=0 ! Dysorb index for given JSTATE
          SODYSCMOR=0.0D0 ! Real orbital coefficients
@@ -270,9 +271,9 @@ C SO Dyson orbitals
 ! If at least one orbital was found, export it/them
         IF(ORBNUM.GT.0) THEN
          Write(filename,'(A16,I0,A3)') 'Dyson.SO.molden.',JSTATE,'.Re'
-         Call Molden_DysOrb(0,filename,DYSEN,AMPS,SODYSCMOR,ORBNUM,NZ)
+         Call Molden_DysOrb(filename,DYSEN,AMPS,SODYSCMOR,ORBNUM,NZ)
          Write(filename,'(A16,I0,A3)') 'Dyson.SO.molden.',JSTATE,'.Im'
-         Call Molden_DysOrb(0,filename,DYSEN,AMPS,SODYSCMOI,ORBNUM,NZ)
+         Call Molden_DysOrb(filename,DYSEN,AMPS,SODYSCMOI,ORBNUM,NZ)
         END IF
 
        END DO ! JSTATE

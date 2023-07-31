@@ -17,11 +17,6 @@
 *     Object : to compute some data which is needed for the one-       *
 *              electron integrals.                                     *
 *                                                                      *
-* Called from: OneEl                                                   *
-*                                                                      *
-* Calling    : RecPrt                                                  *
-*              GetMem                                                  *
-*                                                                      *
 *     Author: Roland Lindh, IBM Almaden Research Center, San Jose, CA  *
 *             January '90                                              *
 ************************************************************************
@@ -33,7 +28,6 @@
 *
       iRout = 114
       iPrint = nPrint(iRout)
-*     Call qEnter('SetUp1')
       ab  = (A(1)-B(1))**2 + (A(2)-B(2))**2 + (A(3)-B(3))**2
       If (ab.ne.Zero) Then
       Do 10 iPrim = 1, nPrim
@@ -60,8 +54,6 @@
          Call RecPrt(' ***   Py  ***',' ',Pcoor(1,1,2),nPrim,mPrim)
          Call RecPrt(' ***   Pz  ***',' ',Pcoor(1,1,3),nPrim,mPrim)
       End If
-*     Call GetMem('SetUp1','CHECK','REAL',iDum,iDum)
 *
-*     Call qExit('SetUp1')
       Return
       End

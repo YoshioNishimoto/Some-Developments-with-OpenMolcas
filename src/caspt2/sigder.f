@@ -17,22 +17,18 @@
 * SWEDEN                                     *
 *--------------------------------------------*
 C     SUBROUTINE TRDNS2O(IVEC,JVEC,DPT2)
-      SUBROUTINE SIGDER(IVEC,JVEC)
+      SUBROUTINE SIGDER(IVEC,JVEC,SCAL)
+      use Fockof
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
 #include "eqsolv.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
+#include "stdalloc.fh"
 #include "sigma.fh"
 #include "SysDef.fh"
 #include "caspt2_grad.fh"
       COMMON /CPLCAS/ IFCOUP(MXCASE,MXCASE)
-      COMMON /FOCKOF/ LFIT,LFIA,LFTA,LFTI,LFAI,LFAT,
-     &                IOFFIT(8),IOFFIA(8),IOFFTA(8)
-C
-C     Real*8, Target  :: Work
-C     Real*8, Pointer :: SDER1(:,:),SDER2(:,:)
 C
 C     Work in the MO basis
 C     We need both explicit and implicit overlap derivatives. The latter
@@ -60,7 +56,6 @@ C     contravariant form (T*C),
 C     With IMLTOP=1: the vector for the first  argument has to be
 C     covariant form (T*SC),
 C
-      CALL QENTER('SIGDER')
 C
 C     Allocate some matrices for storing overlap and transformation
 C     derivatives. Here constructs these derivatives in the MO basis,
@@ -75,16 +70,17 @@ C
       End Do
 C
       Call GETMEM('WRK','ALLO','REAL',ipWRK,MaxLen)
-      Call DCopy_(MaxLen,0.0D+00,0,Work(ipWRK),1)
+      Call DCopy_(MaxLen,[0.0D+00],0,Work(ipWRK),1)
 C
       idSD = 1
       Do iCase = 1, 11
         Do iSym = 1, nSym
           idSDMat(iSym,iCase) = idSD
           nAS = nASUP(iSym,iCase)
-          CALL DDAFILE(LuSTD,0,      DUMMY,nAS*nAS,idSD)
+          CALL DDAFILE(LuSTD,0,Work(ipWRK),nAS*nAS,idSD)
           idSDer = idSDMat(iSym,iCase)
-          CALL DDAFILE(LuSTD,1,Work(ipWRK),nAS*nAS,idSDer) ! idSDMat(iSym,iCase))
+          ! idSDMat(iSym,iCase))
+          CALL DDAFILE(LuSTD,1,Work(ipWRK),nAS*nAS,idSDer)
         End Do
       End Do
       Call GETMEM('WRK','FREE','REAL',ipWRK,MaxLen)
@@ -156,12 +152,14 @@ C SVC: add transposed fock matrix blocks
       NFIA=NFIA+1
       NFTA=NFTA+1
 
-      CALL GETMEM('FIT','ALLO','REAL',LFIT,NFIT)
-      CALL GETMEM('FIA','ALLO','REAL',LFIA,NFIA)
-      CALL GETMEM('FTA','ALLO','REAL',LFTA,NFTA)
-      CALL GETMEM('FTI','ALLO','REAL',LFTI,NFIT)
-      CALL GETMEM('FAI','ALLO','REAL',LFAI,NFIA)
-      CALL GETMEM('FAT','ALLO','REAL',LFAT,NFTA)
+      Call mma_allocate(FIT_Full,NFIT,Label='FIT_Full')
+      Call mma_allocate(FTI_Full,NFIT,Label='FTI_Full')
+
+      Call mma_allocate(FIA_Full,NFIA,Label='FIA_Full')
+      Call mma_allocate(FAI_Full,NFIA,Label='FAI_Full')
+
+      Call mma_allocate(FTA_Full,NFTA,Label='FTA_Full')
+      Call mma_allocate(FAT_Full,NFTA,Label='FAT_Full')
 
       IFIFA=0
       DO ISYM=1,NSYM
@@ -169,26 +167,42 @@ C SVC: add transposed fock matrix blocks
         NA=NASH(ISYM)
         NS=NSSH(ISYM)
         NO=NORB(ISYM)
+
+        FIT(ISYM)%A(1:NA*NI) =>
+     &     FIT_Full(IOFFIT(ISYM)+1:IOFFIT(ISYM)+NA*NI)
+        FTI(ISYM)%A(1:NA*NI) =>
+     &     FTI_Full(IOFFIT(ISYM)+1:IOFFIT(ISYM)+NA*NI)
+
+        FIA(ISYM)%A(1:NS*NI) =>
+     &     FIA_Full(IOFFIA(ISYM)+1:IOFFIA(ISYM)+NS*NI)
+        FAI(ISYM)%A(1:NS*NI) =>
+     &     FAI_Full(IOFFIA(ISYM)+1:IOFFIA(ISYM)+NS*NI)
+
+        FTA(ISYM)%A(1:NS*NA) =>
+     &     FTA_Full(IOFFTA(ISYM)+1:IOFFTA(ISYM)+NS*NA)
+        FAT(ISYM)%A(1:NS*NA) =>
+     &     FAT_Full(IOFFTA(ISYM)+1:IOFFTA(ISYM)+NS*NA)
+
         CALL FBLOCK(WORK(LFIFA+IFIFA),NO,NI,NA,NS,
-     &       WORK(LFIT+IOFFIT(ISYM)),WORK(LFTI+IOFFIT(ISYM)),
-     &       WORK(LFIA+IOFFIA(ISYM)),WORK(LFAI+IOFFIA(ISYM)),
-     &       WORK(LFTA+IOFFTA(ISYM)),WORK(LFAT+IOFFTA(ISYM)))
+     &              FIT(ISYM)%A(:),FTI(ISYM)%A(:),
+     &              FIA(ISYM)%A(:),FAI(ISYM)%A(:),
+     &              FTA(ISYM)%A(:),FAT(ISYM)%A(:))
+
         IFIFA=IFIFA+(NO*(NO+1))/2
+
       END DO
 
       CALL TIMING(CPU0,CPU,TIO0,TIO)
-C
-C
-C
+
       NLOOP=2
       DO 1000 ILOOP=1,NLOOP
-        IF(ILOOP.EQ.1) THEN
-          IBRA=IVEC
-          IKET=JVEC
-        ELSE
-          IBRA=JVEC
-          IKET=IVEC
-        END IF
+        ! IF(ILOOP.EQ.1) THEN
+        !   IBRA=IVEC
+        !   IKET=JVEC
+        ! ELSE
+        !   IBRA=JVEC
+        !   IKET=IVEC
+        ! END IF
 
 C Loop over types and symmetry block of VEC1 vector:
       DO 400 ICASE1=1,13
@@ -202,8 +216,9 @@ C Loop over types and symmetry block of VEC1 vector:
 C Form VEC1 from the BRA vector, transformed to covariant form.
           !! Prepare vectors
           IMLTOP=1
+          !! IBRA)
           Call PrepVec1(IMLTOP,NAS1,NIS1,ICASE1,ISYM1,NWEC1,
-     *                  LVEC1,LWEC1,LVEC1S,LWEC1S,IVEC,ILOOP.EQ.1) !! IBRA)
+     *                  LVEC1,LWEC1,LVEC1S,LWEC1S,IVEC,ILOOP.EQ.1)
           If (ICASE1.LE.11) Then
             idSDer = idSDMat(iSym1,iCase1)
             CALL DDAFILE(LuSTD,2,Work(ipSDER1),nAS1*nAS1,idSDer)
@@ -223,8 +238,9 @@ C           if (icase1.ne. 6.or.icase2.ne.12) cycle
               IF(NVEC2.EQ.0) GOTO 200
 C
               IMLTOP=1
+              !! IKET)
               Call PrepVec1(IMLTOP,NAS2,NIS2,ICASE2,ISYM2,NWEC2,
-     *                      LVEC2,LWEC2,LVEC2S,LWEC2S,IVEC,ILOOP.EQ.2) !! IKET)
+     *                      LVEC2,LWEC2,LVEC2S,LWEC2S,IVEC,ILOOP.EQ.2)
 C
               !! S1*C1 derivative
               If (iCase1.LE.11) Call C1S1DER(Work(ipSDER1))
@@ -265,19 +281,26 @@ C
       Call GETMEM('SDER1','FREE','REAL',ipSDER1,MaxLen)
       Call GETMEM('SDER2','FREE','REAL',ipSDER2,MaxLen)
 C
-      CALL GETMEM('FIT','FREE','REAL',LFIT,NFIT)
-      CALL GETMEM('FIA','FREE','REAL',LFIA,NFIA)
-      CALL GETMEM('FTA','FREE','REAL',LFTA,NFTA)
-      CALL GETMEM('FTI','FREE','REAL',LFTI,NFIT)
-      CALL GETMEM('FAI','FREE','REAL',LFAI,NFIA)
-      CALL GETMEM('FAT','FREE','REAL',LFAT,NFTA)
+      Call mma_deallocate(FIT_Full)
+      Call mma_deallocate(FTI_Full)
+      Call mma_deallocate(FIA_Full)
+      Call mma_deallocate(FAI_Full)
+      Call mma_deallocate(FTA_Full)
+      Call mma_deallocate(FAT_Full)
+      Do iSym = 1, nSym
+         FIT(iSym)%A => Null()
+         FTI(iSym)%A => Null()
+         FIA(iSym)%A => Null()
+         FAI(iSym)%A => Null()
+         FTA(iSym)%A => Null()
+         FAT(iSym)%A => Null()
+      End Do
 
 C Transform contrav C  to eigenbasis of H0(diag):
       CALL PTRTOSR(1,IVEC,IVEC)
       IF(IVEC.NE.JVEC) CALL PTRTOSR(1,JVEC,JVEC)
 
-  99  CONTINUE
-      CALL QEXIT('SIGDER')
+C 99  CONTINUE
       RETURN
 
       Contains
@@ -296,6 +319,7 @@ C
       CALL RHS_READ(nAS_,nIS_,lVec_,iCase_,iSym_,iVec_)
       If (IVEC.NE.JVEC.and.ADDLAM) Then
         !! T = T + \lambda
+        If (SCAL.ne.1.0D+00) Call DScal_(nAS_*nIS_,SCAL,Work(lVec_),1)
         CALL RHS_ALLO(nAS_,nIS_,LTMP)
         CALL RHS_READ(nAS_,nIS_,LTMP,iCase_,iSym_,JVEC)
         Call DaXpY_(nAS_*nIS_,1.0D+00,Work(LTMP),1,Work(lVec_),1)
@@ -311,32 +335,6 @@ C
       IF(nWec_.GT.0) THEN
         CALL GETMEM('WEC1','ALLO','REAL',lWec_,nWec_)
         CALL DCOPY_(nWec_,[0.0D0],0,WORK(lWec_),1)
-#ifdef _MOLCAS_MPP_
-C       IF (IS_REAL_PAR()) THEN
-C           CALL GETMEM('TMP1','ALLO','REAL',LTMP1,NVEC1)
-C           CALL RHS_GET(NAS1,NIS1,LVEC1,WORK(LTMP1))
-C           IF(ICASE1.EQ.1) THEN
-C             CALL SPEC1A(IMLTOP,FACT,ISYM1,WORK(LTMP1),
-C    &                WORK(LWEC1))
-C           ELSE IF(ICASE1.EQ.4) THEN
-C             CALL SPEC1C(IMLTOP,FACT,ISYM1,WORK(LTMP1),
-C    &                WORK(LWEC1))
-C           ELSE IF(ICASE1.EQ.5.AND.ISYM1.EQ.1) THEN
-C             CALL SPEC1D(IMLTOP,FACT,WORK(LTMP1),WORK(LWEC1))
-C           END IF
-C           CALL GETMEM('TMP1','FREE','REAL',LTMP1,NVEC1)
-C       ELSE
-C         IF(ICASE1.EQ.1) THEN
-C           CALL SPEC1A(IMLTOP,FACT,ISYM1,WORK(LVEC1),
-C    &                WORK(LWEC1))
-C         ELSE IF(ICASE1.EQ.4) THEN
-C           CALL SPEC1C(IMLTOP,FACT,ISYM1,WORK(LVEC1),
-C    &                WORK(LWEC1))
-C         ELSE IF(ICASE1.EQ.5.AND.ISYM1.EQ.1) THEN
-C           CALL SPEC1D(IMLTOP,FACT,WORK(LVEC1),WORK(LWEC1))
-C         END IF
-C       END IF
-#else
         IF(iCase_.EQ.1) THEN
           CALL SPEC1A(IMLTOP_,FACT,iSym_,WORK(lVec_),WORK(lWec_))
         ELSE IF(iCase_.EQ.4) THEN
@@ -344,7 +342,6 @@ C       END IF
         ELSE IF(iCase_.EQ.5.AND.iSym_.EQ.1) THEN
           CALL SPEC1D(IMLTOP_,FACT,WORK(lVec_),WORK(lWec_))
         END IF
-#endif
       END IF
 C
 C
@@ -363,36 +360,9 @@ C
       CALL RHS_SCAL(nAS_,nIS_,lVecS_,0.0D+00)
       CALL RHS_STRANS (nAS_,nIS_,1.0D+00,lVec_,lVecS_,iCase_,iSym_)
 C
-      !! Consider parallelization later...
       IF(nWec_.GT.0) THEN
         CALL GETMEM('WEC1S','ALLO','REAL',lWecS_,nWec_)
         CALL DCOPY_(nWec_,[0.0D0],0,WORK(lWecS_),1)
-#ifdef _MOLCAS_MPP_
-C       IF (IS_REAL_PAR()) THEN
-C           CALL GETMEM('TMP1','ALLO','REAL',LTMP1,NVEC1)
-C           CALL RHS_GET(NAS1,NIS1,LVEC1,WORK(LTMP1))
-C           IF(ICASE1.EQ.1) THEN
-C             CALL SPEC1A(IMLTOP,FACT,ISYM1,WORK(LTMP1),
-C    &                WORK(LWEC1))
-C           ELSE IF(ICASE1.EQ.4) THEN
-C             CALL SPEC1C(IMLTOP,FACT,ISYM1,WORK(LTMP1),
-C    &                WORK(LWEC1))
-C           ELSE IF(ICASE1.EQ.5.AND.ISYM1.EQ.1) THEN
-C             CALL SPEC1D(IMLTOP,FACT,WORK(LTMP1),WORK(LWEC1))
-C           END IF
-C           CALL GETMEM('TMP1','FREE','REAL',LTMP1,NVEC1)
-C       ELSE
-C         IF(ICASE1.EQ.1) THEN
-C           CALL SPEC1A(IMLTOP,FACT,ISYM1,WORK(LVEC1),
-C    &                WORK(LWEC1))
-C         ELSE IF(ICASE1.EQ.4) THEN
-C           CALL SPEC1C(IMLTOP,FACT,ISYM1,WORK(LVEC1),
-C    &                WORK(LWEC1))
-C         ELSE IF(ICASE1.EQ.5.AND.ISYM1.EQ.1) THEN
-C           CALL SPEC1D(IMLTOP,FACT,WORK(LVEC1),WORK(LWEC1))
-C         END IF
-C       END IF
-#else
         IF(iCase_.EQ.1) THEN
           CALL SPEC1A(IMLTOP_,FACT,iSym_,WORK(lVecS_),WORK(lWecS_))
         ELSE IF(iCase_.EQ.4) THEN
@@ -400,7 +370,6 @@ C       END IF
         ELSE IF(iCase_.EQ.5.AND.iSym_.EQ.1) THEN
           CALL SPEC1D(IMLTOP_,FACT,WORK(lVecS_),WORK(lWecS_))
         END IF
-#endif
       END IF
 C
       End Subroutine PrepVec1
@@ -438,8 +407,8 @@ C
       !! initialize
       CALL GETMEM('TMP2','ALLO','REAL',LTMP2,NVEC1)
       CALL DCOPY_(NVEC1,[0.0D0],0,WORK(LTMP2),1)
+      CALL GETMEM('TMP1','ALLO','REAL',LTMP1,MAX(1,NWEC1))
       IF(NWEC1.GT.0) THEN
-        CALL GETMEM('TMP1','ALLO','REAL',LTMP1,NWEC1)
         CALL DCOPY_(NWEC1,[0.0D0],0,WORK(LTMP1),1)
       END IF
 C
@@ -447,7 +416,7 @@ C
       IMLTOP=0
       CALL SGM(IMLTOP,ISYM1,ICASE1,ISYM2,ICASE2,
      &         WORK(LTMP1),LTMP2,LVEC2,iWORK(LLISTS))
-C 
+C
       IF(NWEC1.GT.0) THEN
         FACT=1.0D00/(DBLE(MAX(1,NACTEL)))
         IF (ICASE1.EQ.1) THEN
@@ -459,8 +428,8 @@ C
         ELSE IF(ICASE1.EQ.5.AND.ISYM1.EQ.1) THEN
           CALL SPEC1D(IMLTOP,FACT,WORK(LTMP2),WORK(LTMP1))
         END IF
-        CALL GETMEM('TMP1','FREE','REAL',LTMP1,NWEC1)
       END IF
+      CALL GETMEM('TMP1','FREE','REAL',LTMP1,MAX(1,NWEC1))
 C
       !! Finalize the derivative of S1
       !! 2S. (T2Ct2*f) * T1Ct1
@@ -477,7 +446,7 @@ C
       ITYPE=0
       CALL RHS_SR2C (ITYPE,0,NAS1,NIS1,NIN1,LTMP1,LTMP2,ICASE1,ISYM1)
       CALL RHS_FREE(NIN1,NIS1,LTMP1)
-C 
+C
       !! 4C. (T1Ct1*f) * (T2Ct2St2*f*C1*Ct1)
       Call DGEMM_('N','T',NAS1,NAS1,NIS1,
      *           -1.0D+00,WORK(LVEC1),NAS1,WORK(LTMP2),NAS1,
@@ -523,4 +492,4 @@ C
 C
       End Subroutine C2DER
 C
-      END
+      End subroutine sigder

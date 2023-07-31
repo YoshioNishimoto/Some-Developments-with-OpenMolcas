@@ -42,22 +42,12 @@
 *                                                                      *
 ************************************************************************
 *
+      use InfSCF
       Implicit Real*8 (a-h,o-z)
 *
       Real*8 TrMat(nTrMat),Ovlp(mBT),OneHam(mBT)
 *
 #include "real.fh"
-
-#include "mxdm.fh"
-#include "infscf.fh"
-*
-*----------------------------------------------------------------------*
-*     Start                                                            *
-*----------------------------------------------------------------------*
-*
-#ifdef _DEBUG_
-      Call qEnter('TrGen')
-#endif
 *
       ind=0
       Do iSym = 1, nSym
@@ -88,13 +78,4 @@
 *---- Orthogonalize final orbitals
       Call Ortho(TrMat,nBO,Ovlp,nBT)
 *
-#ifdef _DEBUG_
-      Call qExit('TrGen')
-#endif
-*
-*----------------------------------------------------------------------*
-*     Exit                                                             *
-*----------------------------------------------------------------------*
-*
-      Return
-      End
+      End subroutine TrGen

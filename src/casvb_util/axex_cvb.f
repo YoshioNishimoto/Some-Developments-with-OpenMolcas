@@ -8,7 +8,8 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine axex_cvb(asonc,ddres2upd,vec,
      >  resthr_inp,ioptc,iter,fx_exp)
@@ -18,7 +19,7 @@ c  *  DIRDIAG front-end for solving  A x = E x .                       *
 c  *                                                                   *
 c  *********************************************************************
       implicit real*8 (a-h,o-z)
-#include "malloc_cvb.fh"
+#include "WrkSpc.fh"
 #include "direct_cvb.fh"
       external asonc,ddres2upd
 
@@ -26,7 +27,7 @@ c  *********************************************************************
 
       call axesx2_cvb(asonc,ddres2upd,vec,
      >  resthr_inp,ioptc,iter,fx_exp,
-     >  w(idd(1)),w(idd(2)),w(idd(1)),.true.,w(idd(3)),
-     >  w(idd(4)),w(idd(5)),w(idd(6)))
+     >  work(idd(1)),work(idd(2)),work(idd(1)),.true.,work(idd(3)),
+     >  work(idd(4)),work(idd(5)),work(idd(6)))
       return
       end

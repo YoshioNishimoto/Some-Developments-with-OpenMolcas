@@ -11,20 +11,19 @@
 * Copyright (C) 1998, Roland Lindh                                     *
 ************************************************************************
       SubRoutine IniBuf(nDisc,nCore)
-************************************************************************
-*                                                                      *
-*  Object: Initiate I/O buffer for semi-direct SCF                     *
-*                                                                      *
-* Called from:                                                         *
-*                                                                      *
-* Calling    :                                                         *
-*                                                                      *
-*     Author: Roland Lindh, Dept. of Chemical Physics,                 *
-*             University of Lund, Sweden. October '98                  *
-************************************************************************
+!***********************************************************************
+!                                                                      *
+!  Object: Initiate I/O buffer for semi-direct SCF                     *
+!                                                                      *
+! Called from:                                                         *
+!                                                                      *
+! Calling    :                                                         *
+!                                                                      *
+!     Author: Roland Lindh, Dept. of Chemical Physics,                 *
+!             University of Lund, Sweden. October '98                  *
+!***********************************************************************
       use IOBUF
       Implicit Real*8 (A-H,O-Z)
-#include "WrkSpc.fh"
 #include "stdalloc.fh"
       External AllocDisk
       Integer AllocDisk
@@ -33,9 +32,6 @@
 *     nDisc in units of MByte
 *     nCore in units of kByte
 *
-#ifdef _DEBUG_
-      Call qEnter('IniBuf')
-#endif
 *
 *     The maximum number of bytes on disk. The file size limit times
 *     the number of multi files.
@@ -63,7 +59,7 @@
 *
       If (OnDisk.or.InCore) Then
          MemMin_Seward=1024**2 ! Real*8
-         Call GetMem('IniBuf','Max','Real',iDum,MaxMem)
+         Call mma_maxDBLE(MaxMem)
 *        lBuf in units of Real*8 per buffer
          lBuf=(1024*nCore)/(8*nBuf)
          if(InCore) then
@@ -93,8 +89,4 @@ C        Write (6,*) 'lBuf=',lBuf
          Call mma_allocate(Buffer,lBuf,nBuf,Label='Buffer')
       End If
 *
-#ifdef _DEBUG_
-      Call QExit('IniBuf')
-#endif
-      Return
       End

@@ -12,27 +12,22 @@
 C
 C     Purpose: set max. shell pair data for selection procedure.
 C
+      use ChoArr, only: iSP2F, iAtomShl
+      use ChoSwp, only: nnBstRSh, iiBstRSh, IndRed
 #include "implicit.fh"
-      DIMENSION DIAG(*), DIASH(*)
+      REAL*8 DIAG(*), DIASH(*)
       INTEGER   ISYSH(*)
+#include "real.fh"
 #include "cholesky.fh"
-#include "choptr.fh"
-#include "WrkSpc.fh"
 
       CHARACTER*13 SECNAM
       PARAMETER (SECNAM = 'CHO_SETMAXSHL')
 
-      INDRED(I,J)=IWORK(ip_INDRED-1+MMBSTRT*(J-1)+I)
-      IIBSTRSH(I,J,K)=IWORK(ip_IIBSTRSH-1+NSYM*NNSHL*(K-1)+NSYM*(J-1)+I)
-      NNBSTRSH(I,J,K)=IWORK(ip_NNBSTRSH-1+NSYM*NNSHL*(K-1)+NSYM*(J-1)+I)
-      ISP2F(I)=IWORK(ip_iSP2F-1+I)
-      IATOMSHL(I)=IWORK(ip_IATOMSHL-1+I)
-
 C     Initialize the largest diagonal in each shell pair.
 C     ---------------------------------------------------
 
-      CALL CHO_DZERO(DIASH,NNSHL)
-      CALL CHO_IZERO(ISYSH,NNSHL)
+      DIASH(1:NNSHL)=Zero
+      ISYSH(1:NNSHL)=0
 
 C     Find largest diagonal in each shell pair. Loop only
 C     over those that are included in the reduced set at hand.
@@ -45,10 +40,8 @@ C     --------------------------------------------------------
      &              + IIBSTRSH(ISYMAB,ISHLAB,IRED) + 1
                IAB2 = IAB1 + NNBSTRSH(ISYMAB,ISHLAB,IRED) - 1
                DO IAB = IAB1,IAB2
-                  IF (DIASH(ISHLAB) .LT. DIAG(IAB)) THEN
-                     DIASH(ISHLAB) = DIAG(IAB)
-                     ISYSH(ISHLAB) = ISYMAB
-                  END IF
+                  DIASH(ISHLAB) = Max(DIASH(ISHLAB),DIAG(IAB))
+                  If (DIASH(ISHLAB)==DIAG(IAB)) ISYSH(ISHLAB)=ISYMAB
                END DO
             END DO
          END DO
@@ -60,10 +53,8 @@ C     --------------------------------------------------------
                JAB2 = JAB1 + NNBSTRSH(ISYMAB,ISHLAB,IRED) - 1
                DO JAB = JAB1,JAB2
                   IAB = INDRED(JAB,IRED)
-                  IF (DIASH(ISHLAB) .LT. DIAG(IAB)) THEN
-                     DIASH(ISHLAB) = DIAG(IAB)
-                     ISYSH(ISHLAB) = ISYMAB
-                  END IF
+                  DIASH(ISHLAB) = Max(DIASH(ISHLAB),DIAG(IAB))
+                  If (DIASH(ISHLAB)==DIAG(IAB)) ISYSH(ISHLAB)=ISYMAB
                END DO
             END DO
          END DO

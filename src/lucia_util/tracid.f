@@ -32,18 +32,15 @@
 #include "lucinp.fh"
 #include "orbinp.fh"
 #include "io_util.fh"
-      COMMON/CANDS/ICSM,ISSM,ICSPC,ISSPC
+#include "cands.fh"
       REAL*8 INPRDD
 *. Input
       DIMENSION T(*)
 *. Scratch blocks ( two of them)
       DIMENSION VEC1(*),VEC2(*)
 *
-      IDUM=0
-*
       NTEST = 000
       LBLK = -1
-      IDUM = 1
 *. Transfer vector on LUCIN to LUSC1
 C           COPVCD(LUIN,LUOUT,SEGMNT,IREW,LBLK)
       CALL  COPVCD(LUCIN,LUSC1,VEC1,1,LBLK)

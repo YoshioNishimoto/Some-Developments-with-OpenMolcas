@@ -16,22 +16,19 @@
 * UNIVERSITY OF LUND                         *
 * SWEDEN                                     *
 *--------------------------------------------*
-      SUBROUTINE TRDNS2O(IVEC,JVEC,DPT2)
+      SUBROUTINE TRDNS2O(IVEC,JVEC,DPT2,SCAL)
+#ifdef _MOLCAS_MPP_
+      USE Para_Info, ONLY: Is_Real_Par
+#endif
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
 #include "sigma.fh"
       DIMENSION DPT2(*)
       DIMENSION IFCOUP(13,13)
-#include "para_info.fh"
-#ifdef _MOLCAS_MPP_
-#include "global.fh"
-#include "mafdecls.fh"
-#endif
 
 C Remove this after debugging:
 C     WRITE(*,*)' TRDNS2O Warning: Inactive-Active, Active-'//
@@ -40,7 +37,6 @@ C     WRITE(*,*)' of CASPT2 density matrix contribution to '//
 C    & '2nd order in perturbation'
 C     WRITE(*,*)' theory are presently not properly debugged.'
 C     RETURN
-      CALL QENTER('TRDNS2O')
 
 C Enter coupling cases for non-diagonal blocks:
       DO I=1,NCASES
@@ -102,13 +98,13 @@ C Transform to standard representation, contravariant form.
       NLOOP=2
       IF(IVEC.EQ.JVEC) NLOOP=1
       DO 1000 ILOOP=1,NLOOP
-        IF(ILOOP.EQ.1) THEN
-          IBRA=IVEC
-          IKET=JVEC
-        ELSE
-          IBRA=JVEC
-          IKET=IVEC
-        END IF
+        ! IF(ILOOP.EQ.1) THEN
+        !   IBRA=IVEC
+        !   IKET=JVEC
+        ! ELSE
+        !   IBRA=JVEC
+        !   IKET=IVEC
+        ! END IF
 
 C Loop over types and symmetry block of VEC1 vector:
       DO 400 ICASE1=1,13
@@ -125,6 +121,7 @@ C Form VEC1 from the BRA vector, transformed to covariant form.
            CALL RHS_ALLO(NAS1,NIS1,LSCR)
            CALL RHS_READ(NAS1,NIS1,LSCR,ICASE1,ISYM1,IVEC) !! IBRA)
            IF (IVEC.NE.JVEC.AND.ILOOP.EQ.1) THEN
+            IF (SCAL.ne.1.0D+00) CALL DSCAL_(NVEC1,SCAL,WORK(LSCR),1)
             CALL RHS_ALLO(NAS1,NIS1,LSCR2)
             CALL RHS_READ(NAS1,NIS1,LSCR2,ICASE1,ISYM1,JVEC)
             Call DaXpY_(NAS1*NIS1,1.0D+00,Work(LSCR2),1,Work(LSCR),1)
@@ -135,6 +132,7 @@ C Form VEC1 from the BRA vector, transformed to covariant form.
           ELSE
            CALL RHS_READ(NAS1,NIS1,LVEC1,ICASE1,ISYM1,IVEC) !! IBRA)
            IF (IVEC.NE.JVEC.AND.ILOOP.EQ.1) THEN
+            IF (SCAL.ne.1.0D+00) CALL DSCAL_(NVEC1,SCAL,WORK(LVEC1),1)
             CALL RHS_ALLO(NAS1,NIS1,LSCR2)
             CALL RHS_READ(NAS1,NIS1,LSCR2,ICASE1,ISYM1,JVEC)
             Call DaXpY_(NAS1*NIS1,1.0D+00,Work(LSCR2),1,Work(LVEC1),1)
@@ -202,6 +200,7 @@ C (p,q)=(t,i), (a,t), and (a,i), resp.
               CALL RHS_ALLO(NAS2,NIS2,LVEC2)
               CALL RHS_READ(NAS2,NIS2,LVEC2,ICASE2,ISYM2,IVEC) !! IKET)
               IF (IVEC.NE.JVEC.AND.ILOOP.EQ.2) THEN
+              IF (SCAL.ne.1.0D+00) CALL DSCAL_(NVEC2,SCAL,WORK(LVEC2),1)
                CALL RHS_ALLO(NAS2,NIS2,LSCR2)
                CALL RHS_READ(NAS2,NIS2,LSCR2,ICASE2,ISYM2,JVEC)
               Call DaXpY_(NAS2*NIS2,1.0D+00,Work(LSCR2),1,Work(LVEC2),1)
@@ -274,6 +273,5 @@ C Fill in lower-triangular block elements by symmetry.
         END DO
       END IF
 
-      CALL QEXIT('TRDNS2O')
       RETURN
       END

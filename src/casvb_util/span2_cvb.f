@@ -8,17 +8,18 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine span2_cvb(c,nvec,s,n,metr)
       implicit real*8 (a-h,o-z)
-#include "malloc_cvb.fh"
-      common /span_comcvb/iaddr,nvecmx,nvtot
+#include "WrkSpc.fh"
+#include "span_comcvb.fh"
       dimension c(n,nvec),s(*)
 
       if(nvtot.ne.0)then
-        call span_cvb(w(iaddr),nvtot,nvtot,s,n,metr)
-        call fmove_cvb(w(iaddr),c,n*nvtot)
+        call span_cvb(work(iaddr),nvtot,nvtot,s,n,metr)
+        call fmove_cvb(work(iaddr),c,n*nvtot)
       endif
       nvec=nvtot
       call mfreer_cvb(iaddr)

@@ -9,17 +9,18 @@
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
       SUBROUTINE H0SPCT
+      use caspt2_output, only:iPrGlb,verbose
+      use caspt2_output, only:dnmThr,cntThr,cmpThr
 #ifdef _MOLCAS_MPP_
       use allgather_wrapper, only : allgather
+      USE Para_Info, ONLY: Is_Real_Par
 #endif
       IMPLICIT REAL*8 (A-H,O-Z)
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
-#include "para_info.fh"
 
 #ifdef _MOLCAS_MPP_
 #include "global.fh"
@@ -27,12 +28,11 @@
 #endif
 
 #include "SysDef.fh"
-      CHARACTER(80) LINE
+      CHARACTER(LEN=80) LINE
 
 C Write pertinent warnings and statistics for the energy
 C denominators, i.e. the spectrum of (H0(diag)-E0).
 
-      CALL QENTER('H0SPCT')
 
       WRITE(6,*)
       Call CollapseOutput(1,'Denominators, etc.')
@@ -242,7 +242,6 @@ C End of very long loop over symmetry and case:
 
       Call CollapseOutput(0,'Denominators, etc.')
 
-      CALL QEXIT('H0SPCT')
 
       RETURN
       END

@@ -19,7 +19,7 @@
       SUBROUTINE PT2_PUT(NSIZE,LAB,VEC)
       IMPLICIT REAL*8 (A-H,O-Z)
       DIMENSION VEC(*)
-      CHARACTER(8) LAB1
+      CHARACTER(len=8) LAB1
       CHARACTER(len=*) LAB
 #include "rasdim.fh"
 #include "caspt2.fh"
@@ -57,6 +57,5 @@ C FIND DISK ADDRESS:
       RETURN
   98  WRITE(6,*)' ATTEMPT TO INCREASE SIZE OF A FIELD.'
   99  WRITE(6,*)' SUBROUTINE PUT FAILS.'
-      CALL ERRTRA
       CALL ABEND()
       END

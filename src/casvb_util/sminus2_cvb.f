@@ -8,16 +8,18 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine sminus2_cvb(bikfrom,bikto,
      >  nel,nalffrom,ndetfrom,nalfto,ndetto,nvec,
      >  xdetto,ioccfrom,ioccto)
       implicit real*8 (a-h,o-w,y-z),integer(x)
       dimension bikfrom(ndetfrom,nvec),bikto(ndetto,nvec)
+      integer xdetto
       dimension xdetto(0:nel,0:nalfto)
       dimension ioccfrom(nalffrom),ioccto(nalfto)
-#include "malloc_cvb.fh"
+#include "WrkSpc.fh"
 
       call fzero(bikto,ndetto*nvec)
 

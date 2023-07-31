@@ -8,11 +8,13 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine cnfprint_cvb()
       implicit real*8 (a-h,o-z)
-#include "ext_cvb.fh"
+c ... Make: up to date? ...
+      logical, external :: up2date_cvb
 #include "main_cvb.fh"
 #include "optze_cvb.fh"
 #include "files_cvb.fh"
@@ -20,7 +22,7 @@
 
 #include "inpmod_cvb.fh"
 #include "frag_cvb.fh"
-#include "malloc_cvb.fh"
+#include "WrkSpc.fh"
       logical recinpcmp_cvb
       dimension idum(1)
 
@@ -30,18 +32,18 @@
         i1 = mstacki_cvb(max(noe,noe*nconf))
         call rdioff_cvb(1,recinp,ioffs)
         call rdis_cvb(idum,1,recinp,ioffs)
-        noe1=idum(1)
+        !noe1=idum(1)
         call rdis_cvb(idum,1,recinp,ioffs)
-        nconf1=idum(1)
+        !nconf1=idum(1)
         call rdis_cvb(idum,1,recinp,ioffs)
-        kbasiscvb1=idum(1)
-        call rdis_cvb(iw(i1),noe*nconf,recinp,ioffs)
+        !kbasiscvb1=idum(1)
+        call rdis_cvb(iwork(i1),noe*nconf,recinp,ioffs)
         if(nconf.eq.0)then
           do 225 i=1,min(nel,norb)
-          iw(i+i1-1)=1
+          iwork(i+i1-1)=1
 225       continue
           do 250 i=1,nel-norb
-          iw(i+i1-1)=2
+          iwork(i+i1-1)=2
 250       continue
         endif
         nconf_off=0
@@ -51,7 +53,7 @@
         write(6,'(/,a)')' Spatial VB configurations'
         write(6,'(a)')' -------------------------'
         write(6,'(a)')'     Conf. =>   Orbitals'
-        call cnfprt_cvb(iw(noe*nconf_off+i1),
+        call cnfprt_cvb(iwork(noe*nconf_off+i1),
      >    nconf_fr(ifrag),nel_fr(ifrag))
         write(6,'(/,a,i6)')' Number of VB configurations :',
      >    nconf_fr(ifrag)

@@ -10,10 +10,16 @@
 ************************************************************************
       SUBROUTINE READIN_RASSI()
       use rassi_global_arrays, only: HAM, ESHFT, HDIAG, JBNUM, LROOT
+      use frenkel_global_vars, only: excl, iTyp, valst, corest, nesta,
+     &                               nestb, nestla, nestlb, doexch,
+     &                               DoExcitonics, DoCoul, labA, labB,
+     &                               rixs
       use kVectors
 #ifdef _DMRG_
+      use rasscf_data, only: doDMRG
       use qcmaquis_interface_cfg
 #endif
+      use Fock_util_global, only: Deco, Estimate, PseudoChoMOs, Update
 
       IMPLICIT NONE
 #include "prgm.fh"
@@ -29,20 +35,16 @@
       INTEGER MXPLST
       PARAMETER (MXPLST=50)
       CHARACTER*8 TRYNAME
-      Integer ALGO,Nscreen
-      Real*8  dmpk, tmp
-      Logical timings, Estimate, Update, Deco, PseudoChoMOs
+      Real*8 tmp
       Logical lExists
-      Common /CHORASSI / ALGO,Nscreen,dmpk
-      COMMON /CHOTIME / timings
-      COMMON /LKSCREEN / Estimate, Update, Deco, PseudoChoMOs
+#include "chorassi.fh"
+#include "chotime.fh"
       Integer I, J, ISTATE, JSTATE, IJOB, ILINE, LINENR
       Integer LuIn
       Integer NFLS
 
       character(len=7) :: input_id = '&RASSI '
 
-      CALL QENTER(ROUTINE)
 
       Call SpoolInp(LuIn)
 
@@ -61,12 +63,14 @@ C --- Default settings for Cholesky
       ChFracMem=0.0d0
 #endif
 
+      ITYP=0
+      VALST=1
+      COREST=0
       !> set some defaults for MPSSI
       QDPT2SC = .true.
       QDPT2EV = .false.
 #ifdef _DMRG_
       !> make sure that we read checkpoint names from xxx.h5 files, for example: rasscf.h5, nevpt2.h5, caspt2.h5, ...
-      doMPSSICheckpoints = .true.
       if(doDMRG) input_id = '&MPSSI '
 #endif
 
@@ -156,6 +160,75 @@ C --- Cholesky with customized settings
         GOTO 100
       END IF
 C -- FA 2005 end----------------------------
+       IF(LINE(1:4).EQ.'EXAL') THEN
+        EXCL =.true.
+        NESTA=0
+        Read(LuIn,*,ERR=997) NESTA
+        Call mma_allocate(NESTLA,NESTA)
+        LINENR=LINENR+1
+        Read(LuIn,*,ERR=997) (NESTLA(I),I=1,NESTA)
+        ! write(6,*) 'list of excit. initial states'
+        ! write(6,*) 'mon A nr states', NESTA
+        ! write(6,'(I2)') (NESTLA(I),I=1,NESTA)
+        GOTO 100
+      END IF
+
+      IF(LINE(1:4).EQ.'EXBL') THEN
+       EXCL =.true.
+       NESTB=0
+       Read(LuIn,*,ERR=997) NESTB
+       Call mma_allocate(NESTLB,NESTB)
+       LINENR=LINENR+1
+       Read(LuIn,*,ERR=997) (NESTLB(I),I=1,NESTB)
+       ! write(6,*) 'list of excit. initial states'
+       ! write(6,*) 'mon B nr states', NESTB
+       ! write(6,'(I2)') (NESTLB(I),I=1,NESTB)
+       GOTO 100
+      END IF
+
+      IF(LINE(1:4).EQ.'EXCI') THEN
+        DoExcitonics=.true.
+        GOTO 100
+      END IF
+      IF(LINE(1:4).EQ.'KCOU') THEN
+        DoExch=.true.
+        GOTO 100
+      END IF
+      IF(LINE(1:4).EQ.'MONA') THEN
+        DoCoul=.true.
+        labA =.true.
+        If (iTyp.eq.2) Then
+           write(6,*) ' Warning: switching to monomer-A.'
+        EndIf
+        iTyp=1
+        If (.not.IFTRD1) Then
+           IFTRD1=.TRUE.
+           LINENR=LINENR+1
+           write(6,*) ' TRD1 activated by MONA.'
+        EndIf
+        GOTO 100
+      END IF
+      IF(LINE(1:4).EQ.'MONB') THEN
+        labB =.true.
+        DoCoul=.true.
+        If (iTyp.eq.1) Then
+           write(6,*) ' Warning: switching to monomer-B.'
+        EndIf
+        iTyp=2
+        If (.not.IFTRD1) Then
+           IFTRD1=.TRUE.
+           LINENR=LINENR+1
+           write(6,*) ' TRD1 activated by MONB.'
+        EndIf
+        GOTO 100
+      END IF
+      IF(LINE(1:4).EQ.'RIXS')THEN
+        RIXS=.TRUE.
+        Read(LuIn,*,ERR=997) valst, corest
+        LINENR=LINENR+1
+        GOTO 100
+      END IF
+C --- FA 2016 end---------------------------
       IF(LINE(1:4).EQ.'SOPR') THEN
         Read(LuIn,*,ERR=997) NSOPR,(SOPRNM(I),ISOCMP(I),
      &                            I=1,MIN(MXPROP,NSOPR))
@@ -221,6 +294,16 @@ C ------------------------------------------
 C ------------------------------------------
       IF (LINE(1:4).EQ.'CIPR') THEN
         PRCI=.TRUE.
+        GOTO 100
+      END IF
+C ------------------------------------------
+      IF (LINE(1:4).EQ.'CIH5') THEN
+        if (NJOB <= 2) then
+          CIH5 = .True.
+        else
+          call WarningMessage(2,'CIH5 allows no more than 2 JOBIPHs')
+          call abend()
+        end if
         GOTO 100
       END IF
 C ------------------------------------------
@@ -408,6 +491,8 @@ c BP - Hyperfine calculations
       If(Line(1:4).eq.'EPRA') then
       !write(6,*)"EPRA read"
         IFACAL=.TRUE.
+        Read(LuIn,*,ERR=997) EPRATHR
+        IF (EPRATHR .LT. 0.0D0) EPRATHR=0.0D0
         Linenr=Linenr+1
         GoTo 100
       Endif
@@ -522,6 +607,23 @@ c BP Natural orbitals options
         GoTo 100
       Endif
 c END BP OPTIONS
+c RF SO-NTO
+      If(line(1:4).eq.'SONT') then
+        read(LuIn,*,ERR=997) SONTOSTATES
+        CALL GETMEM('SONTO','ALLO','INTE',LSONTO,2*SONTOSTATES)
+        linenr=linenr+1
+        do ILINE=1,SONTOSTATES
+          read(LuIn,*,ERR=997) (iwork(LSONTO+J-1),J=ILINE*2-1,ILINE*2)
+          linenr=linenr+1
+        enddo
+        goto 100
+      Endif
+      If(line(1:4).eq.'ARGU') then
+        IFARGU=.TRUE.
+        Linenr=Linenr+1
+        goto 100
+      Endif
+c END RF
 C-SVC 2007 2008------------------------------
       If(Line(1:4).eq.'MAGN') then
         IFXCAL=.TRUE.
@@ -640,7 +742,7 @@ C--------------------------------------------
       ENDIF
 C--------------------------------------------
       IF(LINE(1:4).EQ.'QIPR')THEN
-! Printing threshold for quadrupole intensities. Current default 1.0D-8
+! Printing threshold for quadrupole intensities. Current default 1.0D-5
         QIPR=.TRUE.
         Read(LuIn,*,ERR=997) OSTHR_QIPR
         LINENR=LINENR+1
@@ -654,6 +756,14 @@ C ------------------------------------------
         GOTO 100
       END IF
 C--------------------------------------------
+      IF(LINE(1:4).EQ.'RSPR') THEN
+! Printing threshold for rotatory strength. Current default 1.0D-7
+        RSPR=.TRUE.
+        Read(LuIn,*,ERR=997) RSTHR
+        LINENR=LINENR+1
+        GOTO 100
+      END IF
+C ------------------------------------------
       IF(LINE(1:4).EQ.'CD  ') THEN
 ! Perform regular circular dichroism - velocity and mixed gauge
         DOCD = .TRUE.
@@ -672,6 +782,25 @@ C ------------------------------------------
 ! Enable Dyson orbital calculations
         DYSEXPORT=.TRUE.
         Read(LuIn,*,ERR=997) DYSEXPSF,DYSEXPSO
+        LINENR=LINENR+1
+        GOTO 100
+      END IF
+C ------------------------------------------
+      IF(LINE(1:4).EQ.'TDYS')THEN
+! Enable 2particle Dyson matrix calculations
+        TDYS=.TRUE.
+        Read(LuIn,*,ERR=997) OCAN
+        DO I=1,OCAN
+         Read(LuIn,'(A)',ERR=997) OCAA(I)
+        END DO
+        LINENR=LINENR+1
+        GOTO 100
+      END IF
+C ------------------------------------------
+      IF(LINE(1:4).EQ.'DCHS')THEN
+! Enable computation of DCH intensities
+        DCHS=.TRUE.
+        Read(LuIn,*,ERR=997) DCHO
         LINENR=LINENR+1
         GOTO 100
       END IF
@@ -759,8 +888,15 @@ C--------------------------------------------
         Read(LuIn,*,ERR=997) (e_Vector(i),i=1,3)
         GoTo 100
       Endif
-#ifdef _DMRG_
 C--------------------------------------------
+C VKochetov 2021 enable saving more data to hdf5
+      if (Line(1:4).eq.'RHOD') then
+        rhodyn=.true.
+        Linenr=Linenr+1
+        GoTo 100
+      endif
+C--------------------------------------------
+#ifdef _DMRG_
       if (Line(1:4).eq.'QDSC') then
         QDPT2SC = .true.
         goto 100
@@ -832,6 +968,15 @@ cnf
          Write(6,*) ' specific k-vector directions.'
          Do_Pol = .False.
       End If
+! Prints warning if rot. str. threshold is defined without any calculations
+      If(RSPR) Then
+        If (.NOT.DOCD .AND. .NOT.Do_TMOM) Then
+          Call WarningMessage(1,'Input request was ignored.')
+          WRITE(6,*)
+     &     'Warning: Rotatory strength threshold specified (RSPR) '//
+     &     'without calculating rotatory strength'
+        End if
+      End if
 * Determine file names, if undefined.
       IF(JBNAME(1).EQ.'UNDEFINE') THEN
 * The first (perhaps only) jobiph file is named 'JOB001', or maybe 'JOBIPH'
@@ -910,6 +1055,5 @@ cnf
 
       Call Close_LuSpool(LuIn)
 
-      CALL QEXIT(ROUTINE)
       RETURN
       END

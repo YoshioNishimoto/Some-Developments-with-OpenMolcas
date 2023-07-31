@@ -16,15 +16,23 @@
      &                               PROP, ESHFT, HDIAG, JBNUM, LROOT
       use rassi_aux
       use kVectors
+      use frenkel_global_vars, only: doCoul, eNucB, vNucB, nh1, aux2,
+     &                               doExcitonics
+      use Symmetry_Info, only: nIrrep
+      use Basis_Info, only: nBas
 #ifdef _HDF5_
       use Dens2HDF5
+      use mh5, only: mh5_put_dset
 #endif
 #ifdef _DMRG_
       use qcmaquis_interface_cfg
-      use qcmaquis_interface_environment, only: finalize_dmrg
+      use qcmaquis_interface, only: qcmaquis_interface_deinit
       use qcmaquis_info, only : qcmaquis_info_deinit
+      use rasscf_data, only: doDMRG
 #endif
+      use Fock_util_global, only: Fake_CMO2
       use mspt2_eigenvectors, only : deinit_mspt2_eigenvectors
+      use Data_Structures
 
       IMPLICIT REAL*8 (A-H,O-Z)
 C Matrix elements over RAS wave functions.
@@ -44,15 +52,13 @@ C RAS state interaction.
 #include "stdalloc.fh"
       CHARACTER*16 ROUTINE
       PARAMETER (ROUTINE='RASSI')
-      Logical Fake_CMO2,CLOSEONE
-      COMMON / CHO_JOBS / Fake_CMO2
-      INTEGER IRC,ISFREEUNIT
-      EXTERNAL ISFREEUNIT
+      Logical CLOSEONE
+      INTEGER IRC
       Real*8, Allocatable:: USOR(:,:),
      &                      USOI(:,:), OVLP(:,:), DYSAMPS(:,:),
      &                      ENERGY(:), DMAT(:), TDMZZ(:),
      &                      VNAT(:),OCC(:), SOENE(:)
-      Integer, Allocatable:: IDDET1(:)
+      integer, allocatable:: IDDET1(:), IDDET2(:)
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -64,14 +70,14 @@ C RAS state interaction.
 
       CALL GETPRINTLEVEL
 
-      CALL QENTER(ROUTINE)
 
 C Greetings. Default settings. Initialize data sets.
       CALL INIT_RASSI()
 
       CLOSEONE=.FALSE.
       IRC=-1
-      CALL OPNONE(IRC,0,'ONEINT',LUONE)
+      IOPT=0
+      CALL OPNONE(IRC,IOPT,'ONEINT',LUONE)
       IF (IRC.NE.0) Then
          WRITE (6,*) 'RASSI: Error opening file'
          CALL ABEND()
@@ -90,16 +96,14 @@ C elements required for the input RASSCF state pairs.
 C Needed generalized transition density matrices are computed by
 C GTDMCTL. They are written on unit LUTDM.
 C Needed matrix elements are computed by PROPER.
-      NSTATE2=NSTATE*NSTATE
       Call mma_allocate(OVLP,NSTATE,NSTATE,Label='OVLP')
       Call mma_allocate(DYSAMPS,NSTATE,NSTATE,Label='DYSAMPS')
       Call mma_allocate(EigVec,nState,nState,Label='EigVec')
       Call mma_allocate(ENERGY,nState,Label='Energy')
       Call mma_allocate(TocM,NSTATE*(NSTATE+1)/2,Label='TocM')
-
-      NPROPSZ=NSTATE*NSTATE*NPROP
       Call mma_allocate(PROP,NSTATE,NSTATE,NPROP,LABEL='Prop')
       Prop(:,:,:)=0.0D0
+      DYSAMPS(:,:)=0.0D0
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -110,9 +114,29 @@ C Number of basis functions
       END DO
       IF (DYSO) Call mma_allocate(SFDYS,nZ,nState,nState,Label='SFDYS')
 
-*
-C Loop over jobiphs JOB1:
+      if (doCoul) then
+        call mma_allocate(eNucB,mxroot*(mxroot+1)/2,Label='eNuc')
+        eNucB(:) = 0.0D0
+        NZcoul = 0  ! (NBAS is already used...)
+        nh1 = 0
+        inquire(file='AUXRFIL2', exist=aux2)
+        if (aux2) then
+          call NameRun('AUXRFIL2')
+        else
+          call NameRun('AUXRFIL1')
+        end if
+        call get_iArray('nBas', nBas, nIrrep)
+        NZcoul = nBas(0)
+        nh1 = NZcoul*(NZcoul+1)/2
+        call mma_allocate(vNucB, nh1, Label='Attr PotB')
+        call Get_dArray('Nuc Potential', vNucB, nh1)
+        call NameRun('#Pop')    ! switch back to old RUNFILE
+      end if
+
+C Loop over jobiphs:
       Call mma_allocate(IDDET1,nState,Label='IDDET1')
+      Call mma_allocate(IDDET2,nState,Label='IDDET2')
+
       IDISK=0  ! Initialize disk address for TDMs.
       DO JOB1=1,NJOB
         DO JOB2=1,JOB1
@@ -120,14 +144,15 @@ C Loop over jobiphs JOB1:
         Fake_CMO2 = JOB1.eq.JOB2  ! MOs1 = MOs2  ==> Fake_CMO2=.true.
 
 C Compute generalized transition density matrices, as needed:
-          CALL GTDMCTL(PROP,JOB1,JOB2,OVLP,DYSAMPS,NZ,IDDET1,IDISK)
+          CALL GTDMCTL(PROP,JOB1,JOB2,OVLP,DYSAMPS,NZ,IDDET1,
+     &                 IDDET2,IDISK)
         END DO
       END DO
       Call mma_deallocate(IDDET1)
+      Call mma_deallocate(IDDET2)
 
 #ifdef _HDF5_
-      CALL mh5_put_dset_array_real(wfn_overlap,
-     &     OVLP,[NSTATE,NSTATE],[0,0])
+      CALL mh5_put_dset(wfn_overlap,OVLP,[NSTATE,NSTATE],[0,0])
 #endif
       Call Put_dArray('State Overlaps',OVLP,NSTATE*NSTATE)
 
@@ -169,7 +194,6 @@ C Hamiltonian matrix elements, eigenvectors:
         CALL EIGCTL(PROP,OVLP,DYSAMPS,HAM,EIGVEC,ENERGY)
       END IF
 
-
 ! +++ J. Creutzberg, J. Norell - 2018
 ! Write the spin-free Dyson orbitals to .DysOrb and .molden
 ! files if requested
@@ -177,11 +201,17 @@ C Hamiltonian matrix elements, eigenvectors:
 
       IF (DYSEXPORT) THEN
 
+C Bruno Tenorio, 2020. It writes now the new Dyson norms
+C See e.g. DYSNORM.f subroutine.
        CALL WRITEDYS(DYSAMPS,SFDYS,NZ,ENERGY)
-
       END IF
 ! +++
 
+C Loop over states to compute Excitonic Couplings
+
+      if (DoExcitonics) then
+        call EXCCOUPL()
+      end if
 
 *---------------------------------------------------------------------*
 C Natural orbitals, if requested:
@@ -258,10 +288,15 @@ C Make the SO Dyson orbitals and amplitudes from the SF ones
       CALL PRPROP(PROP,USOR,USOI,SOENE,NSS,OVLP,
      &            ENERGY,JBNUM,EigVec)
 
+
 C Plot SO-Natural Orbitals if requested
 C Will also handle mixing of states (sodiag.f)
       IF(SONATNSTATE.GT.0) THEN
         CALL DO_SONATORB(NSS,USOR,USOI)
+      END IF
+C Plot SO-Natural Transition Orbitals if requested
+      IF(SONTOSTATES.GT.0) THEN
+        CALL DO_SONTO(NSS,USOR,USOI)
       END IF
 
       Call mma_deallocate(USOR)
@@ -305,6 +340,24 @@ C Will also handle mixing of states (sodiag.f)
 ************************************************************************
 *                                                                      *
  100  CONTINUE
+
+      if (DoCoul) then
+        if (.not. aux2) then
+          call NameRun('AUXRFIL1')
+          call Put_dArray('<rhoB|VnucA>', eNucB, mxroot*(mxroot+1)/2)
+          call Cho_X_Final(irc)
+          call NameRun('#Pop') ! switch back to old RUNFILE
+          call mma_deallocate(VNucB)
+          call mma_deallocate(eNucB)
+        else
+          call NameRun('AUXRFIL1')
+          call Cho_X_Final(irc)
+          call NameRun('#Pop')
+          call mma_deallocate(VNucB)
+          call mma_deallocate(eNucB)
+        end if
+      end if
+
       Call mma_deallocate(Ovlp)
       Call mma_deallocate(DYSAMPS)
       Call mma_deallocate(HAM)
@@ -332,7 +385,7 @@ C Will also handle mixing of states (sodiag.f)
 #ifdef _DMRG_
 !     !> finalize MPS-SI interface
       if (doDMRG)then
-        call finalize_dmrg()
+        call qcmaquis_interface_deinit
         call qcmaquis_info_deinit
       end if
 #endif
@@ -343,7 +396,6 @@ C Will also handle mixing of states (sodiag.f)
 *                                                                      *
 *     Close dafiles.
 *
-      Call DaClos(LuScr)
       IF (SaveDens) Then
          Call DaClos(LuTDM)
          If (Allocated(JOB_INDEX)) Call mma_deallocate(JOB_INDEX)
@@ -361,6 +413,5 @@ C Will also handle mixing of states (sodiag.f)
 
       Call StatusLine('RASSI:','Finished.')
       IRETURN=0
-      CALL QEXIT(ROUTINE)
       RETURN
       END

@@ -77,9 +77,9 @@ C
 #include "rasscf.fh"
 #include "WrkSpc.fh"
 #include "general.fh"
-      Common /IDSXCI/ IDXCI(mxAct),IDXSX(mxAct)
+#include "sxci_mcpdft.fh"
+      REAL*8 DUM(1)
 
-      Call qEnter('CREIPH')
 
       DO I=1,15
        IADR15(I)=0
@@ -92,7 +92,7 @@ C New layout scheme; length is 30 integers.
 C
 C     DUMMY WRITE THE REMAINING RECORDS TO OBTAIN ADDRESSES
 C
-      CALL WR_RASSCF_Info(JOBIPH,1,iAD15,NACTEL,ISPIN,NSYM,LSYM,
+      CALL WR_RASSCF_Info(JOBIPH,1,iAD15,NACTEL,ISPIN,NSYM,STSYM,
      &            NFRO,NISH,NASH,NDEL,NBAS,MxSym,
      &            NAME,LENIN8*mxOrb,NCONF,HEADER,144,
      &            TITLE,4*18*mxTit,POTNUC,LROOTS,NROOTS,
@@ -100,19 +100,19 @@ C
      &            NHOLE1,NELEC3,IPT2,WEIGHT)
       IADR15(2)=IAD15
 C
-      DUM=0
-      CALL DDAFILE(JOBIPH,0,[DUM],NTOT2,IAD15)
-      CALL DDAFILE(JOBIPH,0,[DUM],NTOT,IAD15)
+      DUM(1)=0.0d0
+      CALL DDAFILE(JOBIPH,0,DUM,NTOT2,IAD15)
+      CALL DDAFILE(JOBIPH,0,DUM,NTOT,IAD15)
       IADR15(3)=IAD15
       Do i = 1,lRoots
-        Call DDafIle(JOBIPH,0,[Dum],NACPAR,IAD15)
-        Call DDafIle(JOBIPH,0,[Dum],NACPAR,IAD15)
-        Call DDafIle(JOBIPH,0,[Dum],NACPR2,IAD15)
-        Call DDafIle(JOBIPH,0,[Dum],NACPR2,IAD15)
+        Call DDafIle(JOBIPH,0,Dum,NACPAR,IAD15)
+        Call DDafIle(JOBIPH,0,Dum,NACPAR,IAD15)
+        Call DDafIle(JOBIPH,0,Dum,NACPR2,IAD15)
+        Call DDafIle(JOBIPH,0,Dum,NACPR2,IAD15)
       End Do
       IADR15(4)=IAD15
       Do i = 1,lRoots
-        Call DDafIle(JOBIPH,0,[Dum],nConf,IAD15)
+        Call DDafIle(JOBIPH,0,Dum,nConf,IAD15)
       End Do
       IADR15(5)=IAD15
       NFOCK=0
@@ -120,29 +120,29 @@ C
        NOO=NISH(ISYM)+NASH(ISYM)
        NFOCK=NFOCK+NOO**2
       END DO
-      CALL DDAFILE(JOBIPH,0,[DUM],NFOCK,IAD15)
+      CALL DDAFILE(JOBIPH,0,DUM,NFOCK,IAD15)
       IADR15(6)=IAD15
-      CALL DDAFILE(JOBIPH,0,[DUM],mxRoot*mxIter,IAD15)
+      CALL DDAFILE(JOBIPH,0,DUM,mxRoot*mxIter,IAD15)
       IADR15(7)=IAD15
-      CALL DDAFILE(JOBIPH,0,[DUM],6*mxIter,IAD15)
+      CALL DDAFILE(JOBIPH,0,DUM,6*mxIter,IAD15)
       IADR15(8)=IAD15
       IADR15(9)=IAD15
-      CALL DDAFILE(JOBIPH,0,[DUM],NTOT2,IAD15)
+      CALL DDAFILE(JOBIPH,0,DUM,NTOT2,IAD15)
       IADR15(10)=IAD15
-      CALL DDAFILE(JOBIPH,0,[DUM],NTOT3,IAD15)
-      CALL DDAFILE(JOBIPH,0,[DUM],NTOT3,IAD15)
+      CALL DDAFILE(JOBIPH,0,DUM,NTOT3,IAD15)
+      CALL DDAFILE(JOBIPH,0,DUM,NTOT3,IAD15)
       IADR15(11)=IAD15
-      CALL DDAFILE(JOBIPH,0,[DUM],NORBT,IAD15)
+      CALL DDAFILE(JOBIPH,0,DUM,NORBT,IAD15)
       IADR15(12)=IAD15
       Do i = 1,lRoots
-        CALL DDAFILE(JOBIPH,0,[DUM],NTOT2,IAD15)
-        CALL DDAFILE(JOBIPH,0,[DUM],NTOT,IAD15)
+        CALL DDAFILE(JOBIPH,0,DUM,NTOT2,IAD15)
+        CALL DDAFILE(JOBIPH,0,DUM,NTOT,IAD15)
       End Do
       IADR15(13)=IAD15
       IADR15(14)=IAD15
       Do i=1,lroots
-        CALL DDAFILE(JOBIPH,0,[DUM],NTOT2,IAD15)
-        CALL DDAFILE(JOBIPH,0,[DUM],NTOT,IAD15)
+        CALL DDAFILE(JOBIPH,0,DUM,NTOT2,IAD15)
+        CALL DDAFILE(JOBIPH,0,DUM,NTOT,IAD15)
       End Do
 C New layout scheme:
       IADR15(15)=-1
@@ -172,6 +172,5 @@ C
       IAD15=0
       CALL IDAFILE(JOBIPH,1,IADR15,30,IAD15)
 C
-      Call qExit('CREIPH')
       RETURN
       END

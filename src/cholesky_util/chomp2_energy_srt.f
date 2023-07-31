@@ -17,13 +17,13 @@ C
 C     Purpose: compute MP2 energy contribution using presorted MO
 C              Cholesky vectors on disk.
 C
+      use ChoMP2, only: LnOcc, LnT1am, LiT1am, LiMatij, lUnit
 #include "implicit.fh"
       Logical Delete
       Real*8  EOcc(*), EVir(*), Wrk(lWrk)
 #include "cholesky.fh"
 #include "chomp2_cfg.fh"
 #include "chomp2.fh"
-#include "WrkSpc.fh"
 
       Character*10 ThisNm
       Character*17 SecNam
@@ -37,15 +37,9 @@ C
       Real*8 X(0:1)
       Data X /0.0D0,1.0D0/
 
-      lUnit(i,j)=iWork(ip_lUnit-1+nSym*(j-1)+i)
-      LnT1am(i,j)=iWork(ip_LnT1am-1+nSym*(j-1)+i)
-      LiT1am(i,j,k)=iWork(ip_LiT1am-1+nSym*nSym*(k-1)+nSym*(j-1)+i)
-      LiMatij(i,j,k)=iWork(ip_LiMatij-1+nSym*nSym*(k-1)+nSym*(j-1)+i)
-      LnOcc(i,j)=iWork(ip_LnOcc-1+nSym*(j-1)+i)
       MulD2h(i,j)=iEor(i-1,j-1)+1
       iTri(i,j)=max(i,j)*(max(i,j)-3)/2+i+j
 
-      Call qEnter(ThisNm)
       irc = 0
 
 C     Set number of vectors.
@@ -97,7 +91,7 @@ C           --------------------------------------------------------
             If (jBatch.eq.iBatch .and. ChoAlg.eq.2) Then
 
                kMabij = kXaibj  ! rename pointer
-               Call Cho_dZero(Wrk(kMabij),LnT2am) ! initialize
+               Call FZero(Wrk(kMabij),LnT2am) ! initialize
 
 C              Loop over Cholesky vector symmetries.
 C              -------------------------------------
@@ -428,5 +422,4 @@ C     ----------------------
 
       EMP2 = -EMP2
 
-      Call qExit(ThisNm)
       End

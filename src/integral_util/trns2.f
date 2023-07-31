@@ -27,14 +27,11 @@
 #include "print.fh"
       Real*8 Win(nvec,nc,nc), Wout(nvec,nc,nc)
 *
-      iRout = 72
-      iPrint = nPrint(iRout)
 *     Write (*,*) ' In Trns2, nvec,nc=',nVec,nc
       Do 10 ic = 1, nc
          Do 20 id = 1, nc
             call dcopy_(nvec,Win(1,ic,id),1,Wout(1,id,ic),1)
  20      Continue
  10   Continue
-*     Call GetMem(' Exit Trns2','CHECK','REAL',iDum,iDum)
       Return
       End

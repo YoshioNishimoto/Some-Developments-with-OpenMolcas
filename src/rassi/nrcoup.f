@@ -17,8 +17,7 @@
 #include "prgm.fh"
       CHARACTER*16 ROUTINE
       PARAMETER (ROUTINE='NRCOUP')
-      COMMON /SEGTAB/ IC1(26),IC2(26),ITVPT(26),IBVPT(26),ISVC(26),
-     *                NIVR,LIVR,NSGMNT,LSGMNT
+#include "segtab.fh"
 C INPUT PARAMETERS:
 CAR   ADD MVR MVL
 #include "Struct.fh"
@@ -40,7 +39,6 @@ C SCRATCH PARAMETERS:
 
 
 
-      CALL QENTER(ROUTINE)
 
 C Dereference ISGSTRUCT, ICISTRUCT for some other data
       NLEV  =ISGSTRUCT(2)
@@ -370,6 +368,5 @@ C Put sizes in structures iCIStruct, iXStruct:
       IXSTRUCT(13)=NT4MX
       IXSTRUCT(14)=NT5MX
 
-      CALL QEXIT(ROUTINE)
       RETURN
       END

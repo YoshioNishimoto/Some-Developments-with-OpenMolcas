@@ -12,7 +12,7 @@
 *               1992, Markus P. Fuelscher                              *
 *               1992, Piotr Borowski                                   *
 *               2003, Valera Veryazov                                  *
-*               2016, Roland Lindh                                     *
+*               2016,2022, Roland Lindh                                *
 ************************************************************************
       SubRoutine DIIS_i(CInter,nCI,TrDh,TrDP,TrDD,nTr,nD,iOpt_DIIS,Ind)
 ************************************************************************
@@ -47,16 +47,17 @@
 *     history: UHF - V.Veryazov, 2003                                  *
 *                                                                      *
 ************************************************************************
-      Implicit Real*8 (a-h,o-z)
-#include "real.fh"
-#include "mxdm.fh"
-#include "infscf.fh"
+      use SpinAV, only: Do_SpinAV
+      use InfSCF, only: kOptim, AccCon, Iter, EmConv, WarnPOcc, Elst,
+     &                  TimFld
+      use Constants, only: Zero, Half, One
+      use MxDM, only: MxOptm, MxIter
+      Implicit None
 #include "stdalloc.fh"
 *
+      Integer nCI, nD, nTr
       Real*8 CInter(nCI,nD),TrDh(nTr,nTr,nD),TrDP(nTr,nTr,nD),
      &                      TrDD(nTr,nTr,nD)
-      Logical Do_SpinAV
-      COMMON  / SPAVE_L  / Do_SpinAV
 *
 *---- Define local variables
       Real*8 Eline(MxOptm,2),Equad(MxOptm**2,2),DD(MxOptm**2,2)
@@ -66,21 +67,25 @@
       Logical Ignore
 #endif
 *     Save Eline,Equad
-      Real*8 EPred(MxIter+1), h, r_SO
-      Save h, EPred
-      Data h/0.35D0/
+      Real*8 r_SO
+      Real*8 , Save :: EPred(MxIter+1), h=0.35D0
+      Integer iOpt_DIIS, i, j, iD, ii, jj, kk, n1, nn, n_Min
+      Real*8 DiFi, DiFj, DjFi, DjFj, DiFn, DnFj, DnFn
+      Real*8 Tmp_A, Tmp_B, BigOne, BigTwo, Big
+      Real*8 E_Pred, E_n1, E_n, E_Min, E_Tot
+      Real*8 R2, CSUM, CPU1, CPU2, Tim1, Tim2, Tim3
 *
 *----------------------------------------------------------------------*
 *     Start                                                            *
 *----------------------------------------------------------------------*
 *
       Call Timing(Cpu1,Tim1,Tim2,Tim3)
-*define _DEBUG_
+*define _DEBUGPRINT_
 *                                                                      *
 ************************************************************************
 ************************************************************************
 *                                                                      *
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       Write (6,*)
       Write (6,*) 'E_pred=',(EPred(i),i=1,iter)
       If (nD.eq.1) Then
@@ -89,6 +94,10 @@
          Write (6,*) 'E_actu=',(Elst(i,1)+Elst(i,2),i=1,iter)
       End If
 #endif
+      If (kOptim==1) Then
+         AccCon = 'None     '
+         Return
+      End If
       If (iOpt_DIIS.eq.1) Then
          AccCon = 'EDIIS    '
       Else
@@ -128,7 +137,7 @@
 *
       Do iD = 1, nD
 *
-*        EDIIS optimization, DOI: 10.1063/1.1470195, Eq. (8)
+*        EDIIS optimization, doi:10.1063/1.1470195, Eq. (8)
 *
 *        Noticed the change in sign - in optim the quadratic terms,
 *        however, are added in the evaluation of Eq. (8). Additionally,
@@ -235,7 +244,7 @@
       Call Optim(E_Pred,Eline,Equad,CInter(1,1),kOptim,kOptim)
       EPred(iter+1)=E_Pred
 *
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
          Write(6,*)' Interpolation coefficients:'
          Write(6,'(5f16.8)')(CInter(i,1), i = 1, kOptim)
 #endif
@@ -244,7 +253,7 @@
 *
       If (nD.eq.2) Call DCopy_(nCI,CInter(1,1),1,CInter(1,2),1)
 *
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       Write(6,*)' Interpolation coefficients:'
       Write(6,'(5f16.8)')(CInter(i,1), i = 1, kOptim)
 #endif
@@ -265,7 +274,7 @@
             E_n  = E_n  + Elst(iter-1,iD)
          End Do
 *
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
          Write (6,*) 'iter=',iter
          Write (6,*) 'Energy of iter  =',E_n1
          Write (6,*) 'E_pred of iter  =',E_Pred
@@ -364,7 +373,6 @@
          If (Abs(CSum - One).gt.1.0D-5) Then
             Write (6,*) 'diis_i: Abs(CSum - One).gt.1.0D-5'
             Write (6,*) 'CSum=',CSum
-            Call QTrace
             Call Abend()
          End If
 *

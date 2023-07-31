@@ -8,14 +8,16 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine input3_cvb(
      >  iorbrel,mxdimrel,ifxorb,ifxstr,
      >  izrstr,iorts,irots,izeta,
      >  ip_iconfs,orbs,irdorbs,ip_cvb,ip_symelm,kbasiscvb_inp)
       implicit real*8 (a-h,o-z)
-#include "ext_cvb.fh"
+c ... Files/Hamiltonian available ...
+      logical, external :: valid_cvb
 #include "main_cvb.fh"
 #include "optze_cvb.fh"
 #include "files_cvb.fh"
@@ -23,7 +25,7 @@
 
 #include "inpmod_cvb.fh"
 #include "spinb_cvb.fh"
-#include "malloc_cvb.fh"
+#include "WrkSpc.fh"
       parameter (nglob=5,nstrin=51,nendvb=3,nspec=3,
      >  ncrit=2,nmeth=12,nwkw=5,ncmp=4)
       character*8 global,string,endvb,specl
@@ -277,10 +279,10 @@ c 'NOSYMPROJ'
       elseif(istr.eq.20)then
 c 'FIXORB'
         itmp = mstacki_cvb(mxorb)
-        call intchk_cvb(iw(itmp),mxorb,nfxorb,0,'FIXORB',-1)
+        call intchk_cvb(iwork(itmp),mxorb,nfxorb,0,'FIXORB',-1)
         call izero(ifxorb,mxorb)
         do 15340 i=1,nfxorb
-        ifxorb(iw(i+itmp-1))=1
+        ifxorb(iwork(i+itmp-1))=1
 15340   continue
         call mfreei_cvb(itmp)
       elseif(istr.eq.21)then
@@ -289,7 +291,7 @@ c 'FIXSTRUC'
         call mhpfreei_cvb(ifxstr)
         mxread=mavaili_cvb()/2
         ifxstr=mheapi_cvb(mxread)
-        call intchk_cvb(iw(ifxstr),mxread,nfxvb,0,'FIXSTRUC',lfxvb)
+        call intchk_cvb(iwork(ifxstr),mxread,nfxvb,0,'FIXSTRUC',lfxvb)
         call mrealloci_cvb(ifxstr,nfxvb)
       elseif(istr.eq.22)then
 c 'DELSTRUC'
@@ -297,21 +299,21 @@ c 'DELSTRUC'
         call mhpfreei_cvb(izrstr)
         mxread=mavaili_cvb()/2
         izrstr=mheapi_cvb(mxread)
-        call intchk_cvb(iw(izrstr),mxread,nzrvb,0,'DELSTRUC',lzrvb)
+        call intchk_cvb(iwork(izrstr),mxread,nzrvb,0,'DELSTRUC',lzrvb)
         call mrealloci_cvb(izrstr,nzrvb)
       elseif(istr.eq.23)then
 c 'FREORB' - not implemented
         itmp = mstacki_cvb(mxorb)
-        call intchk_cvb(iw(itmp),mxorb,nfrorb1,0,'FREORB',-1)
+        call intchk_cvb(iwork(itmp),mxorb,nfrorb1,0,'FREORB',-1)
         itmp2 = mstackiz_cvb(mxorb)
         do i=1,nfrorb1
-        iw(iw(i+itmp-1)+itmp2-1)=1
+        iwork(iwork(i+itmp-1)+itmp2-1)=1
         enddo
         nfxorb1=0
         do i=1,mxorb
-        if(iw(i+itmp2-1).eq.1)then
+        if(iwork(i+itmp2-1).eq.1)then
           nfxorb1=nfxorb1+1
-          iw(nfxorb1+itmp-1)=i
+          iwork(nfxorb1+itmp-1)=i
         endif
         enddo
         call mfreei_cvb(itmp)
@@ -322,7 +324,7 @@ c 'FRESTRUC' - not implemented (and code incomplete)
         call mhpfreei_cvb(ifxstr)
         mxread=mavaili_cvb()/2
         ifxstr=mheapi_cvb(mxread)
-        call intchk_cvb(iw(ifxstr),mxread,nfxvb,0,'FRESTRUC',lfxvb)
+        call intchk_cvb(iwork(ifxstr),mxread,nfxvb,0,'FRESTRUC',lfxvb)
         call mrealloci_cvb(ifxstr,nfxvb)
       elseif(istr.eq.25)then
 c 'ORTHCON'
@@ -333,8 +335,8 @@ c 'ORTHCON'
         itmpb = mstacki_cvb(mxorb*mxgroup)
         itmpc = mstacki_cvb(mxgroup)
         itmpd = mstacki_cvb(mxortl)
-        call orthcon_cvb(iorts,iw(itmpa),iw(itmpb),iw(itmpc),
-     >  iw(itmpd),mxortl,mxpair)
+        call orthcon_cvb(iorts,iwork(itmpa),iwork(itmpb),iwork(itmpc),
+     >  iwork(itmpd),mxortl,mxpair)
         call mfreei_cvb(itmpa)
       elseif(istr.eq.26)then
 c 'SADDLE'

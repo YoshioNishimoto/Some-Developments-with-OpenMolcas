@@ -14,7 +14,7 @@
      &                       WLIN, WDIP, WKEX, WDMO, WITO, W, Z, iPrint)
 c this function prints the energies and eigenvectors of the interaction Hamiltonians:
       Implicit None
-      Integer, parameter           :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter        :: wp=kind(0.d0)
       Integer, intent(in)          :: exch
       Integer, intent(in)          :: lmax
       Integer, intent(in)          :: iPrint
@@ -38,7 +38,6 @@ c local variables
       Integer           :: i,m,ipar,nf,j,jEnd,iss
       Character(len=80) :: fmtline
       Logical           :: dbg
-      Call qEnter('PA_preigen')
 
       Write(6,*)
       Write(6,'(100a)') (('%'),i=1,100)
@@ -630,6 +629,5 @@ ccc  eigenvectors
       End If
 
 
-      Call qExit('PA_preigen')
       Return
       End

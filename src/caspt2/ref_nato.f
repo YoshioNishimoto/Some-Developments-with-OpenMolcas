@@ -22,7 +22,6 @@
 * coefficients of  natural orbitals. Frozen, inactive and virtual
 C orbitals are copied unchanged.
 
-      CALL QENTER('REF_NATO')
 
       IDREF=0
       IOCC=0
@@ -55,7 +54,7 @@ C For correct ordering, change sign.
             LIJ=LIJ+1
            END DO
           END DO
-          CALL NIDiag(WORK(LTMP),CNAT(ICMO+1),NA,NB,0)
+          CALL NIDiag(WORK(LTMP),CNAT(ICMO+1),NA,NB)
           CALL JACORD(WORK(LTMP),CNAT(ICMO+1),NA,NB)
           CALL VEIG(NA,WORK(LTMP),OCC(IOCC+1))
           CALL GETMEM('TMP','FREE','REAL',LTMP,NTMP)
@@ -84,7 +83,6 @@ C Secondary and deleted orbitals:
         END IF
       END DO
 
-      CALL QEXIT('REF_NATO')
 
       RETURN
       END

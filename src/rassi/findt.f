@@ -27,7 +27,6 @@
 #include "symmul.fh"
 #include "rassi.fh"
 #include "WrkSpc.fh"
-      Call qEnter('FINDT')
 C BEGIN BY COMPUTING MO OVERLAPS, SXY.
 C MO OVERLAP MATRIX HAS SAME STRUCTURE AS TRA1,TRA2:
       NSXY=NTRA
@@ -66,6 +65,14 @@ C CALL TRAORB(NSYM,NOSH,NBASF,NCXA,CXA,NCMO,CMO)
       CALL MKCXA(NSYM,NOSH,NCYB,TRA2,WORK(LCYB))
       CALL TRAORB(NSYM,NOSH,NBASF,NCYB,WORK(LCYB),NCMO,CMO2)
       CALL GETMEM('      ','FREE','REAL',LCYB,NCYB)
-      Call qExit('FINDT')
+C print transformed MOs
+      if (PRORB) then
+        write(6,*)
+        call WRMAT('TRANSFORMED MO COEFFICIENTS FOR STATE ONE (CMO1):',
+     &               1,NBASF,NOSH,NCMO,CMO1)
+        write(6,*)
+        call WRMAT('TRANSFORMED MO COEFFICIENTS FOR STATE TWO (CMO2):',
+     &               1,NBASF,NOSH,NCMO,CMO2)
+      end if
       RETURN
       END

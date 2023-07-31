@@ -18,31 +18,27 @@ C     Purpose: define all entries in include files
 C              choprint.fh
 C              choorb.fh
 C              cholesky.fh
-C              choptr.fh
-C              choptr2.fh
 C              chosew.fh
-C              cholq.fh
-C              chovecbuf.fh
+C              chovecbuf.f90
 C              chosubscr.fh
-C              chosimri.fh
-C              chopar.fh
+C              chpari.fh
 C              cho_para_info.fh
-C              chobkm.fh
+C              and some in the Module choarr.f90
 C
+      use ChoArr, only: nDim_Batch, nQual_L, n_MySP
+      use ChoBkm, only:  nRow_BkmVec, nCol_BkmVec,
+     &                   nRow_BkmThr, nCol_BkmThr
+      use ChoVecBuf, only: ip_CHVBUF_SYM, l_CHVBUF_SYM,
+     &                     ip_CHVBFI_SYM, l_CHVBFI_SYM,
+     &                     nVec_in_Buf
+      use ChoSubScr, only: Cho_SScreen, SSTau, SubScrStat, SSNorm
       Implicit None
       Integer irc
 #include "choorb.fh"
 #include "choprint.fh"
 #include "cholesky.fh"
-#include "chovecbuf.fh"
-#include "choptr2.fh"
-#include "chosew.fh"
-#include "cholq.fh"
-#include "chosubscr.fh"
-#include "chosimri.fh"
-#include "chopar.fh"
+#include "chpari.fh"
 #include "cho_para_info.fh"
-#include "chobkm.fh"
 
       Integer iLarge
       Parameter (iLarge = 99999999)
@@ -63,9 +59,9 @@ C     -------------
 C     choorb.fh.
 C     -----------
 
-      Call Cho_iZero(iBas,8)
-      Call Cho_iZero(nBas,8)
-      Call Cho_iZero(XnBas,8)
+      Call iZero(iBas,8)
+      Call iZero(nBas,8)
+      Call iZero(XnBas,8)
       nBasT = 0
 
 C     cholesky.fh.
@@ -109,9 +105,9 @@ C     -------------
       HaltIt  = .false.
       Trace_Idle = .false.
 
-      Call Cho_iZero(LuCho,8)
-      Call Cho_iZero(LuSel,8)
-      Call Cho_iZero(LuTmp,8)
+      Call iZero(LuCho,8)
+      Call iZero(LuSel,8)
+      Call iZero(LuTmp,8)
       LuPri = 0
       LuScr = 0
       LuRed = 0
@@ -123,17 +119,17 @@ C     -------------
       nnShl = 0
       MxORSh = 0
       Mx2Sh  = 0
-      Call Cho_iZero(iiBstR,8*3)
-      Call Cho_iZero(nnBstR,8*3)
-      Call Cho_iZero(nnBstRT,3)
+      Call iZero(iiBstR,8*3)
+      Call iZero(nnBstR,8*3)
+      Call iZero(nnBstRT,3)
       mmBstRT = 0
-      Call Cho_iZero(nQual,8)
-      Call Cho_iZero(iOffQ,8)
+      nQual_L(:)=0
+      Call iZero(iOffQ,8)
 
-      Call Cho_dZero(DiaMax,8)
-      Call Cho_dZero(DiaMaxT,8)
-      Call Cho_dZero(DiaMin,8)
-      Call Cho_dZero(Damp,2)
+      Call FZero(DiaMax,8)
+      Call FZero(DiaMaxT,8)
+      Call FZero(DiaMin,8)
+      Call FZero(Damp,2)
       Span   = Large
       XlDiag = Large
       DiaMnZ = Large
@@ -141,7 +137,7 @@ C     -------------
       iABMnZ = -iLarge
       nnZTot = 0
 
-      Call Cho_iZero(NumCho,8)
+      Call iZero(NumCho,8)
       NumChT = 0
       MaxVec = 0
       MaxRed = 0
@@ -154,11 +150,11 @@ C     -------------
       ShAB = -iLarge
       ShCD = -iLarge
       nColAB = -iLarge
-      Call Cho_iZero(iOff_Col,8)
+      Call iZero(iOff_Col,8)
 
       XThrCom  = Large
       XThrDiag = Large
-      Call Cho_dZero(XDamp,2)
+      Call FZero(XDamp,2)
       XSpan    = Large
       XThrNeg  = Large
       XWarNeg  = Large
@@ -170,15 +166,15 @@ C     -------------
       XScDiag  = .false.
       XCho_AdrVec = -iLarge
 
-      Call Cho_iZero(iChkQ,4*(nChkQ+1))
+      Call iZero(iChkQ,4*(nChkQ+1))
       nCol_Chk = -iLarge
-      Call Cho_dZero(TimSec,4*nSection)
-      Call Cho_dZero(tInteg,2*nInteg)
-      Call Cho_dZero(tDecom,2*nDecom)
-      Call Cho_dZero(tMisc,2*nMisc)
-      Call Cho_dZero(tDecDrv,2)
+      Call FZero(TimSec,4*nSection)
+      Call FZero(tInteg,2*nInteg)
+      Call FZero(tDecom,2*nDecom)
+      Call FZero(tMisc,2*nMisc)
+      Call FZero(tDecDrv,2)
 
-      Call Cho_iZero(nVecRS1,8)
+      Call iZero(nVecRS1,8)
 
       Cho_AdrVec= -iLarge
       Cho_IOVec = -iLarge
@@ -193,58 +189,23 @@ C     -------------
 
       Frac_ChVBuf = 0.0d0
 
-C     Zero memory in pointers in chosew.fh.
-C     --------------------------------------
+      nDim_Batch(:)=0
 
-      ip_iShP2RS = 0
-      l_iShP2RS  = 0
-      ip_iShP2Q = 0
-      l_iShP2Q  = 0
-      ip_iOff_Batch = 0
-      l_iOff_Batch  = 0
-      Call Cho_iZero(nDim_Batch,8)
+      nQual_L(:)=0
 
-C     cholq.fh.
-C     ----------
+      n_MySP=0
 
-      Call Cho_iZero(nQual_L,8)
-      Call Cho_iZero(ip_LQ_Sym,8)
-      Call Cho_iZero(l_LQ_Sym,8)
-      Call Cho_iZero(ldLQ,8)
-      ip_iQuAB_L = 0
-      l_iQuAB_L  = 0
-      ip_iQL2G = 0
-      l_iQL2G  = 0
-      ip_LQ = 0
-      l_LQ  = 0
+      Cho_SimRI = .false.
+      Thr_SimRI = -Large
 
-C     Zero memory pointers in choptr2.fh.
-C     ------------------------------------
-
-      ip_mySP=0
-      l_mySP=0
-      n_mySP=0
-      ip_Idle=0
-      l_Idle=0
-
-C     Zero memory pointers in choptr.fh.
-C     -----------------------------------
-
-      Call Cho_PtrIni(irc)
-      If (irc .ne. 0) Return
-
-C     chovecbuf.fh.
+C     chovecbuf.f90.
 C     --------------
 
-      ip_ChVBuf = 0
-      l_ChvBuf  = 0
-      ip_ChVBfI = 0
-      l_ChvBfI  = 0
-      Call Cho_iZero(ip_ChVBuf_Sym,8)
-      Call Cho_iZero(l_ChVBuf_Sym,8)
-      Call Cho_iZero(ip_ChVBfI_Sym,8)
-      Call Cho_iZero(l_ChVBfI_Sym,8)
-      Call Cho_iZero(nVec_in_Buf,8)
+      Call iZero(ip_ChVBuf_Sym,8)
+      Call iZero(l_ChVBuf_Sym,8)
+      Call iZero(ip_ChVBfI_Sym,8)
+      Call iZero(l_ChVBfI_Sym,8)
+      Call iZero(nVec_in_Buf,8)
 
 C     chosubscr.fh.
 C     --------------
@@ -253,41 +214,23 @@ C     --------------
       SSTau       = 0.0d0
       SubScrStat(1) = 0.0d0
       SubScrStat(2) = 0.0d0
-      ip_DSubScr  = 0
-      l_DSubScr   = 0
-      ip_DSPNm    = 0
-      l_DSPNm     = 0
       SSNorm      = 'tbp'
 
-C     chosimri.fh.
-C     -------------
-
-      Cho_SimRI = .false.
-      ip_iSimRI = 0
-      l_iSimRI  = 0
-      Thr_SimRI = -Large
-
-C     chopar.fh.
+C     chpari.fh.
 C     -----------
 
-      Call Cho_iZero(NumCho_Bak,8)
-      ip_InfVec_Bak = 0
-      l_InfVec_Bak = 0
+      Call iZero(NumCho_Bak,8)
 
 C     cho_para_info.fh.
 C     ------------------
 
       Cho_Real_Par = .false.
 
-C     chobkm.fh.
+C     chobkm.f90
 C     -----------
 
-      ip_BkmVec=0
-      l_BkmVec=0
       nRow_BkmVec=0
       nCol_BkmVec=0
-      ip_BkmThr=0
-      l_BkmThr=0
       nRow_BkmThr=0
       nCol_BkmThr=0
 

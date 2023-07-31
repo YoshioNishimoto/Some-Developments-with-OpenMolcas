@@ -22,14 +22,13 @@
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 
 #include "SysDef.fh"
 
 C Read coefficient vector from LUSOLV (C repres).
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
         WRITE(6,*)' RDSCTC (Normal repres.)'
         WRITE(6,'(a,i2,a,a,a,i2,a,i2)')' Vector nr.',IVEC,
      &          '  Case ',CASES(ICASE),' Symm ',ISYM,
@@ -46,7 +45,7 @@ C Read coefficient vector from LUSOLV (C repres).
       NCOL=MIN(NIS-MDVEC*(ISCT-1),MDVEC)
       NSCT=NAS*NCOL
       CALL DDAFILE(LUSOLV,2,VSCT,NSCT,IDS)
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
         WRITE(6,*)' First few elements:'
         WRITE(6,'(1x,5f15.6)')(VSCT(I),I=1,MIN(NSCT,10))
 #endif
@@ -59,14 +58,13 @@ C Read coefficient vector from LUSOLV (C repres).
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 
 #include "SysDef.fh"
 
 C Read coefficient vector from LUSOLV (C repres).
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
         WRITE(6,*)' RDBLKC (Normal repres.)'
         WRITE(6,'(a,i2,a,a,a,i2)')' Vector nr.',IVEC,
      &          '  Case ',CASES(ICASE),' Symm ',ISYM
@@ -86,7 +84,7 @@ C Read coefficient vector from LUSOLV (C repres).
         CALL DDAFILE(LUSOLV,2,VEC(LVEC),NBLK,IDV)
         LVEC=LVEC+NBLK
   10  CONTINUE
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
         WRITE(6,*)' First few elements:'
         WRITE(6,'(1x,5f15.6)')(VEC(I),I=1,MIN(NCOEF,10))
 #endif
@@ -105,7 +103,6 @@ C Read coefficient vector from LUSOLV (C repres).
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
 
@@ -116,11 +113,15 @@ C Read coefficient vector from LUSOLV (C repres).
       INTEGER ICASE,ISYM,NIN,NIS
       INTEGER lg_V
 
+      REAL*8 SIGMA2, RHS_DDOT
+      EXTERNAL RHS_DDOT
+
 C Scale vector nr IVEC with scale factor FACT and put the result in
 C vector nr JVEC: |JVEC> <- FACT * |IVEC>
       CALL TIMING(CPU0,CPU,TIO0,TIO)
 
       IF(FACT.EQ.1.0D00.AND.IVEC.EQ.JVEC) RETURN
+      SIGMA2=0.0D0
       DO ICASE=1,NCASES
         DO ISYM=1,NSYM
           NIN=NINDEP(ISYM,ICASE)
@@ -129,11 +130,16 @@ C vector nr JVEC: |JVEC> <- FACT * |IVEC>
             CALL RHS_ALLO (NIN,NIS,lg_V)
             CALL RHS_READ (NIN,NIS,lg_V,ICASE,ISYM,IVEC)
             CALL RHS_SCAL (NIN,NIS,lg_V,FACT)
+            IF(FACT.EQ.-1.0D00)SIGMA2=SIGMA2+RHS_DDOT(NIN,NIS,lg_V,lg_V)
             CALL RHS_SAVE (NIN,NIS,lg_V,ICASE,ISYM,JVEC)
             CALL RHS_FREE (NIN,NIS,lg_V)
           END IF
         END DO
       END DO
+      IF (FACT.EQ.-1.0D00) THEN ! it is at ITER=0
+         WRITE(6,*)
+         WRITE(6,'(1x,a,f18.10)') 'Variance of |WF0>: ',SIGMA2
+      END IF
 
       CALL TIMING(CPU1,CPU,TIO1,TIO)
       CPUSCA=CPUSCA+(CPU1-CPU0)
@@ -147,7 +153,6 @@ C vector nr JVEC: |JVEC> <- FACT * |IVEC>
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
 
@@ -163,7 +168,6 @@ C sum in OVLAPS(0,0).
       DO ISYM=1,NSYM
         OVLAPS(ISYM,0)=0.0D0
       END DO
-C     if (iprglb.ne.silent)write (*,*) "skip e and overlap (in POVLVEC)"
       DO ICASE=1,NCASES
         OVLSUM=0.0D0
         DO ISYM=1,NSYM
@@ -180,15 +184,6 @@ C     if (iprglb.ne.silent)write (*,*) "skip e and overlap (in POVLVEC)"
               lg_V2=lg_V1
             END IF
             OVL=RHS_DDOT(NIN,NIS,lg_V1,lg_V2)
-C           if (icase.eq.5) then
-C             do i = 1, nis
-C               write (*,*) "ir = ", i
-C               do j = 1, nin
-C                 write (*,'(i3,2f20.10)')
-C    *             j,work(lg_v2+j-1+nin*(i-1)),work(lg_v1+j-1+nin*(i-1))
-C               end do
-C             end do
-C           end if
             CALL RHS_FREE (NIN,NIS,lg_V1)
             IF (IVEC.NE.JVEC) THEN
               CALL RHS_FREE (NIN,NIS,lg_V2)
@@ -198,17 +193,6 @@ C           end if
           OVLAPS(ISYM,0)=OVLAPS(ISYM,0)+OVL
           OVLSUM=OVLSUM+OVL
         END DO
-C       if (icase.ne.12.and.icase.ne.13) ovlsum = 0.0d+00 ! H
-C       if (icase.ne.10.and.icase.ne.11) ovlsum = 0.0d+00 ! G
-C       if (icase.ne.10)                 ovlsum = 0.0d+00 ! GP
-C       if (icase.ne. 6.and.icase.ne. 7) ovlsum = 0.0d+00 ! E
-C       if (icase.ne. 8.and.icase.ne. 9) ovlsum = 0.0d+00 ! F
-C       if (icase.ne. 8)                 ovlsum = 0.0d+00 ! FP
-C       if (icase.ne. 2.and.icase.ne. 3) ovlsum = 0.0d+00 ! B
-C       if (icase.ne. 2)                 ovlsum = 0.0d+00 ! BP
-C       if (icase.ne. 5)                 ovlsum = 0.0d+00 ! D
-C       if (icase.ne. 4)                 ovlsum = 0.0d+00 ! C
-C       if (icase.ne. 1)                 ovlsum = 0.0d+00 ! A
         OVLAPS(0,ICASE)=OVLSUM
         OVLTOT=OVLTOT+OVLSUM
       END DO
@@ -227,7 +211,6 @@ C       if (icase.ne. 1)                 ovlsum = 0.0d+00 ! A
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
 
@@ -267,7 +250,7 @@ C |JVEC> := BETA*|JVEC> + ALPHA*|IVEC>, IVEC and JVEC in SR format!
           CALL RHS_SAVE (NIN,NIS,lg_V2,ICASE,ISYM,JVEC)
 
           CALL RHS_FREE (NIN,NIS,lg_V2)
-          IF(ALPHA.NE.0.0D0) THEN
+          IF(BETA.NE.0.0D0.AND.ALPHA.NE.0.0D0) THEN
             CALL RHS_FREE (NIN,NIS,lg_V1)
           END IF
  101    CONTINUE
@@ -286,7 +269,6 @@ C |JVEC> := BETA*|JVEC> + ALPHA*|IVEC>, IVEC and JVEC in SR format!
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
 
@@ -338,7 +320,6 @@ C ITYPE=0 uses only T matrix, ITYPE=1 uses S*T matrix
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
 

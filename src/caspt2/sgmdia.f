@@ -21,14 +21,13 @@
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
 
 #include "SysDef.fh"
 
 C Compute |JVEC> := BETA*|JVEC> + ALPHA*(H0(diag)-E0)*|IVEC>
-C If SHIFT.ne.0.0d0 or SHIFTI.ne.0.0d0, use a modified H0
+C If real_shift.ne.0.0d0 or imag_shift.ne.0.0d0, use a modified H0
 
       DO 100 ICASE=1,13
         DO 101 ISYM=1,NSYM

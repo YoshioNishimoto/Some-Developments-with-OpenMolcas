@@ -14,7 +14,7 @@ c moment(l,dim,dim) (input)
 c z - pseuDospin eigenfunctions (output)
       Implicit None
 #include "stdalloc.fh"
-      Integer, parameter            :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter        :: wp=kind(0.d0)
       Integer, intent(in)           :: dim, iprint
       Integer, intent(in)           :: iDir, iOpt
       Complex(kind=8), intent(in)  :: M(3,dim,dim)
@@ -27,7 +27,6 @@ c z - pseuDospin eigenfunctions (output)
       External                      :: dznrm2_
       Logical                       :: dbg
 ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
-      Call qEnter('pseudospin')
 
       Call mma_allocate(W,dim,'W')
       Call mma_allocate(Z1,dim,dim,'Z1')
@@ -66,7 +65,6 @@ ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
  199  Continue
       Call mma_deallocate(W)
       Call mma_deallocate(Z1)
-      Call qExit('pseudospin')
       Return
       End
 

@@ -16,12 +16,15 @@
 
         implicit none
         private
-        public :: OrbFiles, get_typeidx, putOrbFile
+        public :: OrbFiles, get_typeidx, putOrbFile,
+     &      write_orb_per_iter
         save
 
         interface get_typeidx
           module procedure RAS_get_typeidx, GAS_get_typeidx
         end interface
+
+        logical :: write_orb_per_iter = .false.
 
         interface
           integer function isfreeunit(iseed)
@@ -39,14 +42,12 @@
       use rasscf_data, only : iToc, name, header, title, lRoots, nRoots,
      &  iRoot, LENIN8, mXORB, mxTit, mXroot, iPt2, Weight, iOrbTyp,
      &  FDiag, E2Act, mxiter, maxorbout
-      use general_data, only : nActel, iSpin, lSym, mXSym,
+      use general_data, only : nActel, iSpin, stSym, mXSym,
      &  nFro, nIsh, nAsh, nDel, nBas, nRs1, nRs2, nRs3, nHole1, nElec3,
      &  nTot, nTot2, nConf
-      use gugx_data, only : ifCas
       use gas_data, only : nGssh
 
 #include "output_ras.fh"
-      Parameter (ROUTINE='ORBFILES')
 #include "WrkSpc.fh"
       integer, intent(in) :: JobIph, iPrlev
 
@@ -56,16 +57,12 @@
 
       character(len=80) :: VecTyp
       character(len=128) :: Filename
-#ifndef _DMRG_
-      logical :: doDMRG = .false.
-#endif
       interface
         integer function isfreeunit(iseed)
           integer, intent(in) :: iseed
         end function
       end interface
 
-      call qEnter(routine)
 * This routine is used at normal end of a RASSCF optimization, or
 * when using the OrbOnly keyword to create orbital files.
 *-------------------------------------------------------------------
@@ -86,7 +83,7 @@
       Call iDaFile(JobIph,2,iToc,15,iDisk)
       iDisk = iToc(1)
       Call WR_RASSCF_Info(JobIph,2,iDisk,
-     &                    nActEl,iSpin,nSym,lSym,
+     &                    nActEl,iSpin,nSym,stSym,
      &                    nFro,nIsh,nAsh,nDel,
      &                    nBas,mxSym,Name,LENIN8*mxOrb,nConf,
      &                    Header,144,Title,4*18*mxTit,PotNucDummy,
@@ -164,12 +161,6 @@ c     & Work(lCMO), Work(ipOcc), FDIAG, IndType,VecTyp)
       iDisk=iToc(12)
       DO IRT=1, MIN(MAXORBOUT, LROOTS, 999)
         energy=Work(ipEne+IRT-1)
-
-        if(doDMRG)then
-#ifdef _DMRG_
-          energy = dmrg_energy%dmrg_state_specific(irt)
-#endif
-        end if
         filename = 'RASORB.'//merge(str(IRT), 'x', irt < 999)
         Call dDaFile(JobIph,2,Work(lCMO),ntot2,iDisk)
         Call dDaFile(JobIph,2,Work(ipOcc),ntot,iDisk)
@@ -224,7 +215,6 @@ c     & Work(lCMO), Work(ipOcc), FDIAG, IndType,VecTyp)
       call getmem('CMO','free','real',LCMO,ntot2)
       call getmem('Occ','free','real',ipOcc,ntot)
 
-      Call qExit(routine)
       Return
       End subroutine
 
@@ -266,12 +256,12 @@ c     & Work(lCMO), Work(ipOcc), FDIAG, IndType,VecTyp)
 
       subroutine putOrbFile(CMO, orbital_E, iDoGAS)
         use general_data, only : ntot,
-     &    nFro, nIsh, nRs1, nRs2, nRs3, nDel, nAsh, nBas
+     &    nFro, nIsh, nRs1, nRs2, nRs3, nDel, nBas
         use gas_data, only : nGSSH
         real*8, intent(in) :: CMO(:), orbital_E(:)
         logical, intent(in) :: iDoGAS
 
-        character(*), parameter :: filename = 'ORTHORB'
+        character(len=*), parameter :: filename = 'ORTHORB'
         real*8, allocatable :: occ_number(:)
         integer, parameter :: arbitrary_magic_number = 50
         integer :: file_id, typeidx(7, 8)

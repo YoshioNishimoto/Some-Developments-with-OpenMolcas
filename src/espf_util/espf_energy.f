@@ -11,6 +11,7 @@
       Subroutine espf_energy (nBas0,natom,nGrdPt,ipExt,ipGrid,ipB,h1,
      &                        nh1,RepNuc,EnergyCl,DoTinker,DoGromacs,
      &                        DynExtPot)
+      use OneDat, only: sOpSiz
       Implicit Real*8 (A-H,O-Z)
 *
 *      Compute the integrals <mu|B/R_grid|nu>, where B weights every
@@ -25,7 +26,6 @@
       Real*8 h1(nh1)
       Dimension opnuc(1),idum(1)
 *
-      Call QEnter('espf_energy')
       iPL = iPL_espf()
 *
 * Read the MM contribution to the total energy and add it
@@ -76,21 +76,21 @@
       iComp = 1
       iSyLbl = 1
       iRc = -1
-      Call iRdOne(iRc,1,Label,iComp,idum,iSyLbl)
+      iOpt = ibset(0,sOpSiz)
+      Call iRdOne(iRc,iOpt,Label,iComp,idum,iSyLbl)
       nInts=idum(1)
       If (iRc.ne.0) Then
          Write (6,'(A)')' ESPF: Error reading ONEINT'
          Write (6,'(A,A8)')' Label = ',Label
-         Call QTrace()
          Call Abend()
       End If
       If (nInts+4.ne.nSize) Then
          Write (6,'(A,2I5)')' ESPF: nInts+4.ne.nSize',nInts+4,nSize
-         Call QTrace
          Call Abend()
       End If
       Call GetMem('IntOnGrid','Allo','Real',ipInt,nSize)
-      Call RdOne(iRc,0,Label,iComp,Work(ipInt),iSyLbl)
+      iOpt=0
+      Call RdOne(iRc,iOpt,Label,iComp,Work(ipInt),iSyLbl)
       If(iPL .ge. 4) Call TriPrt(Label,' ',Work(ipInt),nBas0)
 *
 *     The core Hamiltonian must be updated
@@ -117,6 +117,5 @@
         Call Add_Info('PotNuc',[RepNuc],1,12)
       End If
 *
-      Call QExit('espf_energy')
       Return
       End

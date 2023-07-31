@@ -33,7 +33,6 @@
 *>
 *> @param[in] IndexE  SF states sorted by energy
 *> @param[in] nSS     number of SO states
-*> @param[in] nSS     number of SO states
 *> @param[in] USOR    SO coefficients in SF basis (real part)
 *> @param[in] USOI    SO coefficients in SF basis (imaginary part)
 *> @param[in] MapSt   map of SF states expanded by multiplicity
@@ -118,6 +117,7 @@
       Subroutine StoreDens(EigVec)
       Use rassi_aux, Only : iDisk_TDM
       Use rassi_global_arrays, Only : JbNum
+      Use mh5, Only: mh5_put_dset
       Implicit None
 #include "rassi.fh"
 #include "Molcas.fh"
@@ -202,15 +202,15 @@ C Transform TDMs to SF eigenstates
             nThisTDMZZ=nThisTDMZZ+NBASF(iSym1)*NBASF(iSym2)
           End Do
           If (.not.isZero(1)) Then
-            call mh5_put_dset_array_real(wfn_sfs_tdm,
+            call mh5_put_dset(wfn_sfs_tdm,
      &        TDMIJ,[nThisTDMZZ,1,1], [0,iState-1,jState-1])
           End If
           If (.not.isZero(2)) Then
-          call mh5_put_dset_array_real(wfn_sfs_tsdm,
+          call mh5_put_dset(wfn_sfs_tsdm,
      &      TSDMIJ,[nThisTDMZZ,1,1], [0,iState-1,jState-1])
           End If
           If (IFSO.and.(.not.isZero(3))) Then
-            call mh5_put_dset_array_real(wfn_sfs_wetdm,
+            call mh5_put_dset(wfn_sfs_wetdm,
      &        WDMIJ,[nThisTDMZZ,1,1], [0,iState-1,jState-1])
           End If
         End Do

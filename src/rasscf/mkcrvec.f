@@ -11,6 +11,7 @@
 * Copyright (C) 2019, Per Ake Malmqvist                                *
 ************************************************************************
       SUBROUTINE MKCRVEC(CMO_0,CRVEC)
+      use OneDat, only: sNoNuc, sNoOri
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "rasscf.fh"
@@ -31,7 +32,7 @@
 
       Call GetMem('STRI','Allo','Real',LSTRI,NTOT1+4)
       IRC=0
-      IOPT=6
+      IOPT=ibset(ibset(0,sNoOri),sNoNuc)
       LABEL='Mltpl  0'
       ICOMP=1
       ISYMLBL=1
@@ -44,7 +45,6 @@
       End If
       NB=NBAS(1)
       NFI=NFRO(1)+NISH(1)
-      NA=NASH(1)
       Call GetMem('SAO','Allo','Real',LSAO,NB**2)
       Call Square(Work(LSTRI),Work(LSAO),1,NB,NB)
       Call GetMem('STRI','Free','Real',LSTRI,NTOT1+4)

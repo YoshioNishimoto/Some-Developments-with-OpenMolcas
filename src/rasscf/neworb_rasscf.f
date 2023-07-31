@@ -50,6 +50,9 @@ C     Calling arguments:
 #ifdef _DMRG_
       use qcmaquis_interface_cfg
 #endif
+#ifdef _HDF5_
+      use mh5, only: mh5_put_dset
+#endif
       IMPLICIT REAL*8 (A-H,O-Z)
 
 #include "rasdim.fh"
@@ -57,6 +60,7 @@ C     Calling arguments:
 #include "general.fh"
 #include "gas.fh"
 #include "output_ras.fh"
+      Character*16 ROUTINE
       Parameter (ROUTINE='NEWORB  ')
 #include "SysDef.fh"
 #include "raswfn.fh"
@@ -65,7 +69,6 @@ C     Calling arguments:
       DIMENSION CMOO(*),CMON(*),FP(*),FTR(*),VEC(*),
      *          WO(*),SQ(*),D(*),OCCN(*),CMOX(*)
 
-      Call qEnter(routine)
 C Local print level (if any)
       IPRLEV=IPRLOC(4)
       IF(IPRLEV.ge.DEBUG) THEN
@@ -183,7 +186,7 @@ C       MOVE D TO TRIANGULAR FORM
         ntud=istd+itri(ioff+1)
         DO NT=1,ngssh(igas,isym)
          ntud=ntud+ioff
-C YM: change ntt --> nttr for the confict if include rctfld.fh
+C YM: change ntt --> nttr for the conflict if include rctfld.fh
          nttr=nt+nio+ioff
          DO NU=1,NT
           nut=nu+nio+ioff
@@ -284,14 +287,17 @@ C NN.14 Just copy CMO(Old) to CMO(new)
          CALL DCOPY_(NBF*ngssh(igas,isym),CMOO(ISTMOA),1,CMON(ISTMOA),1)
         End If
 C
-C       Move eigenvalues to OCCN and set energies to zero (not defined).
+C       Move eigenvalues to OCCN
+C  FA:  no longer setting energies to 0 (though in principle ill-def).
 C
         II=0
         NO1=IB+NFO+NIO+ioff
+        NFI_=(NFO+NIO)*(NFO+NIO+1)/2
         DO NT=1,ngssh(igas,isym)
          II=II+NT
          OCCN(NO1+NT)=FTR(II)
          FDIAG(NO1+NT)=0.0D0
+C        FDIAG(NO1+NT)=FP(II+NFO+NIO+NFI_+ISTFCK)
         END DO
 
        ENDIF  ! end of if(NGAS(1).ne.0)
@@ -430,6 +436,5 @@ C
       call mh5_put_dset(wfn_orbene,FDIAG)
 #endif
 
-      CALL QEXIT('NEWORB')
       RETURN
       END

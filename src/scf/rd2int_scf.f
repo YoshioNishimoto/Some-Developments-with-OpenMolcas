@@ -12,44 +12,22 @@
 *               1992, Markus P. Fuelscher                              *
 *               1992, Piotr Borowski                                   *
 ************************************************************************
-      Subroutine Rd2Int_SCF
+      Subroutine Rd2Int_SCF()
 ************************************************************************
 *                                                                      *
 *     purpose: Read basis set informations from two-electron file      *
 *              and compare them with those read from 2-el. file        *
 *                                                                      *
-*     called from: ReadIn                                              *
-*                                                                      *
-*----------------------------------------------------------------------*
-*                                                                      *
-*     written by:                                                      *
-*     P.O. Widmark, M.P. Fuelscher and P. Borowski                     *
-*     University of Lund, Sweden, 1992                                 *
-*                                                                      *
-*----------------------------------------------------------------------*
-*                                                                      *
-*     history: none                                                    *
-*                                                                      *
 ************************************************************************
-*
-      Implicit Real*8 (a-h,o-z)
-*
-
-#include "mxdm.fh"
-#include "infscf.fh"
+      use InfSCF, only: nSym, nBas, nSkip
+      Implicit None
+#include "Molcas.fh"
 *
 *---- Define local variables
-      Dimension nBasX(MxSym)
+      Integer iRC, nSymX, iSym
+      Integer nBasX(MxSym)
       Logical SqI2
-*
-*----------------------------------------------------------------------*
-*     Start                                                            *
-*----------------------------------------------------------------------*
-*
-#ifdef _DEBUG_
-      Call qEnter('Rd2Int')
-#endif
-*
+
       iRc=-1
       Call GetOrd(iRc,SqI2,nSymX,nBasX,nSkip)
       If (iRc.ne.0) Then
@@ -69,14 +47,5 @@
             Call Abend
          End If
       End Do
-*
-#ifdef _DEBUG_
-      Call qExit('Rd2Int')
-#endif
-*
-*----------------------------------------------------------------------*
-*     Exit                                                             *
-*----------------------------------------------------------------------*
-*
-      Return
-      End
+
+      End subroutine Rd2Int_SCF

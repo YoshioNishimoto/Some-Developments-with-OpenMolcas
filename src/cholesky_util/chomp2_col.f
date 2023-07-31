@@ -24,9 +24,8 @@ C
 #include "chomp2.fh"
 #include "WrkSpc.fh"
 
-      Character*3  ThisNm
-      Character*10 SecNam
-      Parameter (SecNam = 'ChoMP2_Col', ThisNm = 'Col')
+      Character(LEN=3), Parameter:: ThisNm = 'Col'
+      Character(LEN=10), Parameter:: SecNam = 'ChoMP2_Col'
 
       Integer iSym
 
@@ -36,7 +35,6 @@ C     ------------
       If (nCol.lt.1 .or. nDim.lt.1) Return
       iSym = NowSym
       If (nDim .ne. nT1am(iSym)) Then
-         Call qEnter(ThisNm)
          Write(6,*) SecNam,': inconsistent dimension. Expected: ',
      &              nT1am(iSym),'   Received: ',nDim
          Write(6,*) SecNam,': symmetry from chomp2_dec.fh: ',iSym
@@ -72,7 +70,6 @@ C
 #include "chomp2_dec.fh"
 #include "chomp2.fh"
 #include "cholesky.fh"
-#include "WrkSpc.fh"
 
       Integer iSym, bj_, bj, b, iSymb, j, iSymj, iSymi, iSyma, i, ai0
       Integer a, ai
@@ -107,6 +104,7 @@ C     Renamed (from ChoMP2_Col), Thomas Bondo Pedersen, Dec. 2007.
 C
 C     Purpose: compute specified (ai|bj) columns.
 C
+      use ChoMP2, only: OldVec
 #include "implicit.fh"
       Real*8  Col(nDim,nCol), Buf(l_Buf)
       Integer iCol(nCol)
@@ -114,16 +112,18 @@ C
 #include "chomp2.fh"
 #include "chomp2_dec.fh"
 #include "WrkSpc.fh"
+#include "stdalloc.fh"
 
-      Character*6  ThisNm
-      Character*13 SecNam
-      Parameter (SecNam = 'ChoMP2_IntCol', ThisNm = 'IntCol')
+      Character(LEN=6), Parameter:: ThisNm = 'IntCol'
+      Character(LEN=13), Parameter:: SecNam = 'ChoMP2_IntCol'
 
       Logical DoClose
 
+      Real*8, Allocatable:: Wrk(:)
+
       iSym = NowSym
       If (NumCho(iSym) .lt. 1) Then
-         Call Cho_dZero(Col,nDim*nCol)
+         Call FZero(Col,nDim*nCol)
          Return
       End If
 
@@ -133,10 +133,9 @@ C
 
          Fac = 0.0D0
          Call ChoMP2_Col_Comp(Col,nDim,iCol,nCol,
-     &                        Work(ip_OldVec),NumCho(iSym),
+     &                        OldVec,NumCho(iSym),
      &                        Buf,l_Buf,Fac,irc)
          If (irc .ne. 0) Then
-            Call qEnter(ThisNm)
             Write(6,*) SecNam,': ChoMP2_Col_Comp returned ',irc
             Call ChoMP2_Quit(SecNam,'ChoMP2_Col_Comp error','[1]')
          End If
@@ -149,13 +148,12 @@ C
             DoClose = .true.
          End If
 
-         Call GetMem('MaxCol','Max ','Real',ipWrk,lWrk)
+         Call mma_maxDBLE(lWrk)
 
          If (l_Buf .gt. lWrk) Then ! use Buf as work space
 
             nVec = min(l_Buf/(nDim+1),NumCho(iSym))
             If (nVec .lt. 1) Then
-               Call qEnter(ThisNm)
                Write(6,*) SecNam,': insufficient memory for batch!'
                Call ChoMP2_Quit(SecNam,'insufficient memory','[1]')
                nBat = 0
@@ -186,11 +184,11 @@ C
                lScr = l_Buf - lTot
                If (lWrk .gt. lScr) Then
                   lWsav = lWrk
-                  Call GetMem('ColScr','Allo','Real',ipWrk,lWrk)
+                  Call mma_allocate(Wrk,lWrk,Label='Wrk')
                   Call ChoMP2_Col_Comp(Col,nDim,iCol,nCol,
      &                                 Buf(1),NumV,
-     &                                 Work(ipWrk),lWrk,Fac,irc)
-                  Call GetMem('ColScr','Free','Real',ipWrk,lWrk)
+     &                                 Wrk,lWrk,Fac,irc)
+                  Call mma_deallocate(Wrk)
                   lWrk = lWsav
                Else
                   Call ChoMP2_Col_Comp(Col,nDim,iCol,nCol,
@@ -198,7 +196,6 @@ C
      &                                 Buf(1+lTot),lScr,Fac,irc)
                End If
                If (irc .ne. 0) Then
-                  Call qEnter(ThisNm)
                   Write(6,*) SecNam,': ChoMP2_Col_Comp returned ',irc
                   Call ChoMP2_Quit(SecNam,'ChoMP2_Col_Comp error','[2]')
                End If
@@ -207,11 +204,10 @@ C
 
          Else ! use Work as work space
 
-            Call GetMem('ColWrk','Allo','Real',ipWrk,lWrk)
+            Call mma_allocate(Wrk,lWrk,Label='Wrk')
 
             nVec = min(lWrk/nDim,NumCho(iSym))
             If (nVec .lt. 1) Then
-               Call qEnter(ThisNm)
                Write(6,*) SecNam,': insufficient memory for batch!'
                Call ChoMP2_Quit(SecNam,'insufficient memory','[2]')
                nBat = 0
@@ -231,7 +227,7 @@ C
                iOpt = 2
                lTot = nDim*NumV
                iAdr = nDim*(iVec1 - 1) + 1
-               Call ddaFile(lUnit_F(iSym,1),iOpt,Work(ipWrk),lTot,iAdr)
+               Call ddaFile(lUnit_F(iSym,1),iOpt,Wrk,lTot,iAdr)
 
                If (iBat .eq. 1) Then
                   Fac = 0.0D0
@@ -242,22 +238,21 @@ C
                lScr = lWrk - lTot
                If (l_Buf .gt. lScr) Then
                   Call ChoMP2_Col_Comp(Col,nDim,iCol,nCol,
-     &                                 Work(ipWrk),NumV,
+     &                                 Wrk,NumV,
      &                                 Buf(1),l_Buf,Fac,irc)
                Else
                   Call ChoMP2_Col_Comp(Col,nDim,iCol,nCol,
-     &                                 Work(ipWrk),NumV,
-     &                                 Work(ipWrk+lTot),lScr,Fac,irc)
+     &                                 Wrk,NumV,
+     &                                 Wrk(1+lTot),lScr,Fac,irc)
                End If
                If (irc .ne. 0) Then
-                  Call qEnter(ThisNm)
                   Write(6,*) SecNam,': ChoMP2_Col_Comp returned ',irc
                   Call ChoMP2_Quit(SecNam,'ChoMP2_Col_Comp error','[3]')
                End If
 
             End Do
 
-            Call GetMem('ColWrk','Free','Real',ipWrk,lWrk)
+            Call mma_deallocate(Wrk)
 
          End If
 

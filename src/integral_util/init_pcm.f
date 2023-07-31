@@ -12,34 +12,22 @@
 ************************************************************************
       SubRoutine Init_PCM(NonEq,iCharg)
 ************************************************************************
-*                                                                      *
-* Object:                                                              *
-*                                                                      *
-* Called from:                                                         *
-*                                                                      *
-* Calling    : QEnter                                                  *
-*              QExit                                                   *
-*                                                                      *
 *     Author: Roland Lindh, Dept. of Theoretical Chemistry,            *
 *             University of Lund, SWEDEN                               *
 *                                                                      *
 *             Modified for Langevin polarizabilities, March 2000 (RL)  *
 ************************************************************************
+      Use Iso_C_Binding
       use PCM_arrays
+      use UnixInfo, only: ProgName
       Implicit Real*8 (A-H,O-Z)
-#include "itmax.fh"
-#include "info.fh"
-#include "angstr.fh"
+#include "Molcas.fh"
 #include "print.fh"
 #include "real.fh"
 #include "rctfld.fh"
-#include "WrkSpc.fh"
 #include "stdalloc.fh"
-#include "unixinfo.fh"
       Character*2 Elements(MxAtom*8)
       Logical NonEq
-      Integer  iix(2)
-      Real*8   rix(2)
 #include "periodic_table.fh"
       Real*8, Allocatable:: Coor(:,:), LcCoor(:,:)
       Integer, Allocatable:: ANr(:), LcANr(:)
@@ -48,14 +36,10 @@
 *
       iRout=1
       iPrint=nPrint(iRout)
-      Call qEnter('Init_PCM')
-*
-      nbyte_i = iiloc(iix(2)) - iiloc(iix(1))
-      nbyte_r = idloc(rix(2)) - idloc(rix(1))
 *                                                                      *
 ************************************************************************
 *                                                                      *
-*---- Reinitiate always for gradient calculations
+*---- Reinitialize always for gradient calculations
 *
       DoDeriv=.False.
 cpcm_solvent
@@ -67,7 +51,6 @@ c added mckinley for pcm in second derivatives
 cpcm_solvent end
       If (DoDeriv) Then
          LcNAtm = ISlPar(42)
-         nDeg=3*LcNAtm
          Call mma_allocate(dTes,nTs,lcNAtm,3,Label='dTes')
          Call mma_allocate(dPnt,nTs,lcNAtm,3,3,Label='dPnt')
          Call mma_allocate(dRad,nS ,lcNAtm,3,Label='dRad')
@@ -84,6 +67,13 @@ cpcm_solvent end
       Call Get_iScalar('PCM info length',nPCM_info)
       If (nPCM_info.ne.0) Then
 *
+*------- nonequilibrium model for the case of ionization:
+*        redo PCM initiation but with the fake charge corresponding to
+*        the one of the ground (reference) state
+         If (iCharge_ref.lt.iCharg.and.NonEq) Then
+           iCharg = iCharge_ref
+           Go To 888
+         End If
 *------- If charge or NonEq/Eq status in retrieved data not the same as
 *        for request redo the PCM initiation.
 *
@@ -141,9 +131,8 @@ cpcm_solvent end
 *     iPrint: Print level
 *     ICharg: Molecular charge
 *     nAtoms: total number of atoms
-*     angstr: conversion factor from bohr to Angstrom
 *     Coor: Coordinates of atoms
-*    MxVert*nTs ANr: atomic numbers
+*     MxVert*nTs ANr: atomic numbers
 *     LcCoor: local array for atomic coordinates
 *     LcANr: local array for atomic numbers
 *     Solvent: string with explicit solvent name
@@ -153,8 +142,8 @@ cpcm_solvent end
 *     ip_Ts: pointer to tesserae
 *     nTs  : number of tesserae
 *
-      Call PCM_Init(iPrint,ICharg,nAtoms,angstr,Coor,ANr,LcCoor,
-     &              LcANr,nIrrep,NonEq)
+      Call PCM_Init(iPrint,ICharg,nAtoms,Coor,ANr,LcCoor,
+     &              LcANr,NonEq)
       If (iPrint.gt.5) Then
          Write (6,*)
          Write (6,*)
@@ -177,13 +166,11 @@ cpcm_solvent end
 ************************************************************************
 *                                                                      *
  999    Continue
-       Call qExit('Init_PCM')
       Return
 *
 *     This is to allow type punning without an explicit interface
       Contains
       SubRoutine Save_PCM_Info(cRFStrt,iRFStrt,lRFStrt,rRFStrt)
-      Use Iso_C_Binding
       Integer, Target :: cRFStrt,iRFStrt,lRFStrt
       Real*8, Target :: rRFStrt
       Integer, Pointer :: p_cRF(:),p_iRF(:),p_lRF(:)
@@ -208,23 +195,19 @@ cpcm_solvent end
 *
 *---- Put the reaction field common blocks on disk again!
 *
-      Len = ilLoc(lRFEnd)-ilLoc(lRFStrt)
-      Len = (Len+nByte_i)/nByte_i
+      Len = ip_of_iWork(lRFEnd)-ip_of_iWork(lRFStrt)+1
       Call C_F_Pointer(C_Loc(lRFStrt),p_lRF,[Len])
       Call Put_iArray('RFlInfo',p_lRF,Len)
 *
-      Len = idLoc(rRFEnd)-idLoc(rRFStrt)
-      Len = (Len+nByte_r)/nByte_r
+      Len = ip_of_Work(rRFEnd)-ip_of_Work(rRFStrt)+1
       Call C_F_Pointer(C_Loc(rRFStrt),p_rRF,[Len])
       Call Put_dArray('RFrInfo',p_rRF,Len)
 *
-      Len = iiLoc(iRFEnd)-iiLoc(iRFStrt)
-      Len = (Len+nByte_i)/nByte_i
+      Len = ip_of_iWork(iRFEnd)-ip_of_iWork(iRFStrt)+1
       Call C_F_Pointer(C_Loc(iRFStrt),p_iRF,[Len])
       Call Put_iArray('RFiInfo',p_iRF,Len)
 *
-      Len = iiLoc(cRFEnd)-iiLoc(cRFStrt)
-      Len = (Len+nByte_i)/nByte_i
+      Len = ip_of_iWork(cRFEnd)-ip_of_iWork(cRFStrt)+1
       Call C_F_Pointer(C_Loc(cRFStrt),p_cRF,[Len])
       Call Put_iArray('RFcInfo',p_cRF,Len)
 *

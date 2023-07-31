@@ -9,6 +9,9 @@
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
       SUBROUTINE INIT_RASSI
+
+      use rasscf_data, only: doDMRG
+
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "prgm.fh"
       CHARACTER*16 ROUTINE
@@ -20,11 +23,15 @@
 #include "stdalloc.fh"
 #include "WrkSpc.fh"
 #include "rassi.fh"
+#include "hfc_logical.fh"
       Character*256 STRING
       Logical FoundTwoEls,DoCholesky
 
-      CALL QENTER(ROUTINE)
 
+* Initialise doDMRG if compiled without QCMaquis
+#ifndef _DMRG_
+      DoDMRG = .false.
+#endif
 
 C SET UP SYMMETRY MULTIPLICATION TABLE:
       MUL(1,1)=1
@@ -48,8 +55,6 @@ C UNIT NUMBERS AND NAMES
       LUCOM=33
       FNCOM='COMFILE'
       LUIPH=15
-      LUSCR=20
-      FNSCR='SCRATCH'
       LUEXC=22
       FNEXC='ANNI'
       LUEXT=21
@@ -69,12 +74,9 @@ C UNIT NUMBERS AND NAMES
         WRITE(6,*)' Unit numbers and names:'
         WRITE(6,'(1x,I8,5x,A8)')LUONE,FNONE
         WRITE(6,'(1x,I8,5x,A8)')LUORD,FNORD
-        WRITE(6,'(1x,I8,5x,A8)')LUSCR,FNSCR
         WRITE(6,'(1x,I8,5x,A8)')LUEXC,FNEXC
       END IF
 
-      IF(IPGLOB.GT.VERBOSE) WRITE(6,*)' OPENING ',FNSCR
-      CALL DANAME(LUSCR,FNSCR)
       IF(IPGLOB.GT.VERBOSE) WRITE(6,*)' OPENING ',FNEXC
       CALL DANAME(LUEXC,FNEXC)
 
@@ -120,6 +122,7 @@ C DEFAULT FLAGS:
       PRORB=.FALSE.
       PRTRA=.FALSE.
       PRCI=.FALSE.
+      CIH5=.FALSE.
       IFHAM=.FALSE.
       IFEJOB=.FALSE.
       IFSHFT=.FALSE.
@@ -146,12 +149,13 @@ C DEFAULT FLAGS:
       PRMES=.FALSE.
       IFGCAL=.FALSE.
       EPRTHR=0.0D0
+      EPRATHR=0.0D0
       IFXCAL=.FALSE.
       IFMCAL=.FALSE.
       HOP=.FALSE.
       TRACK=.FALSE.
       ONLY_OVERLAPS=.FALSE.
-* Intesities
+* Intensities
       DIPR=.FALSE.
       OSTHR_DIPR = 0.0D0
       QIPR=.FALSE.
@@ -159,6 +163,10 @@ C DEFAULT FLAGS:
       QIALL=.FALSE.
       DYSO=.FALSE.
       DYSEXPORT=.FALSE.
+      TDYS=.FALSE.
+      OCAN=1
+      DCHS=.FALSE.
+      DCHO=1
 * Exact operator
       Do_TMOM=.FALSE.
       PRRAW=.FALSE.
@@ -172,6 +180,8 @@ C DEFAULT FLAGS:
       L_Eff=5
 C CD - velocity and mixed gauge
       DOCD = .FALSE.
+      RSTHR = 0.0D0
+      RSPR=.FALSE.
 C Force that TDMs are not stored in the AO basis.
       Force_NON_AO_TDM=.False.
       CALL GETENVF('MOLCAS_FORCE_NON_AO_TDM',STRING)
@@ -183,6 +193,8 @@ cnf
 C tjd- BMII: Print out spin-orbit properties to files
       LPRPR=.FALSE.
       LHAMI=.FALSE.
+c Feng: test control
+      MAG_X2C=.FALSE.
 
 C K. Sharkas  BEG
       IFATCALSA=.FALSE.
@@ -191,6 +203,7 @@ C K. Sharkas  BEG
 C K. Sharkas  END
 
 c BP - Hyperfine tensor and SONATORB initialization
+c RF - SO-NTO initialization
       IFACAL=.FALSE.
       IFACALFC=.TRUE.
       IFACALSD=.TRUE.
@@ -199,7 +212,10 @@ c BP - Hyperfine tensor and SONATORB initialization
       SONATNSTATE=0
       SODIAGNSTATE=0
 
+      SONTOSTATES=0
+
       IFCURD=.FALSE.
+      IFARGU=.FALSE.
 
 
 * Nr of states for which natural orbitals will be computed:
@@ -256,6 +272,5 @@ C DEFAULT WAVE FUNCTION TYPE:
       WFTYPE='GENERAL '
       IF(IPGLOB.GT.VERBOSE) WRITE(6,*)' ***** INIT ENDS **********'
 
-      CALL QEXIT(ROUTINE)
       RETURN
       END

@@ -8,41 +8,48 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
-      Subroutine RdCtl_Slapaf(iRow,iInt,nFix,LuSpool,Dummy_Call)
+      Subroutine RdCtl_Slapaf(LuSpool,Dummy_Call)
       use kriging_mod
+      use ThermoChem
+      use Symmetry_Info, only: Symmetry_Info_Get
+      use Slapaf_Info, only: Cx, Gx, Weights, MF, Atom, nSup, RefGeo,
+     &                       GradRef, nStab, Lbl, mRowH, Coor
+      use Slapaf_Parameters, only: iRow, iRow_c, ddV_Schlegel, HWRS,
+     &                             iOptH, HrmFrq_Show, IRC, Curvilinear,
+     &                             Redundant, FindTS, nBVec, User_Def,
+     &                             MaxItr, iOptC, rHidden, CnstWght,
+     &                             lOld, Beta, Beta_Disp, Line_Search,
+     &                             TSConstraints, GNrm_Threshold, Mode,
+     &                             ThrEne, ThrGrd, nLambda, ThrCons,
+     &                             ThrMEP, Baker, eMEPTest, rMEP, MEP,
+     &                             nMEP, MEPNum, MEPCons, dMEPStep,
+     &                             MEP_Type, MEP_Algo, Max_Center,
+     &                             Delta, RtRnc, rFuzz, lNmHss, Cubic,
+     &                             Request_Alaska, CallLast, lCtoF,
+     &                             Track, isFalcon, MxItr, nWndw, Iter,
+     &                             WeightedConstraints, NADC
+      use UnixInfo, only: SuperName
       Implicit Real*8 (a-h,o-z)
 #include "real.fh"
-#include "WrkSpc.fh"
-#include "info_slapaf.fh"
-#include "nadc.fh"
-#include "weighting.fh"
+#include "stdalloc.fh"
 #include "print.fh"
+      Integer iDum(1)
       Logical Found, Dummy_Call
-      Character*8 Command
-      Character*180 Get_Ln
+      Character(LEN=180) Get_Ln
       Character*16 FilNam
       Character*3 MEPLab
-      External Get_SuperName
-      Character*100 Get_SuperName
-      Character*100 SuperName
-*
-*     Compare with inputil.f. Note that here Line is defined in
-*     info:slapaf.fh. Otherwise the common cgetln should be
-*     identical in size.
-*
-* mxn should be len(line)/2+1
-      parameter (mxn=91)
-      common/cgetln/ ncol, jstrt(mxn),jend(mxn)
-      Integer StrnLn
-      External Get_Ln, StrnLn
-      Logical External_UDC, External_Case,
-     &        Explicit_IRC, Expert, ThrInp, FirstNum
+      Character(LEN=180), Parameter:: BLine=''
+      Character(LEN=180):: Key='', Char=''
+      Real*8, Allocatable:: DIR(:,:), Tmp(:), TmpRx(:)
+#include "cgetl.fh"
+      External Get_Ln
+      Logical External_UDC,
+     &        Explicit_IRC, Expert, ThrInp, FirstNum, Manual_Beta
 #include "angstr.fh"
 *                                                                      *
 ************************************************************************
 *                                                                      *
       iRout=2
-      Call QEnter('RdCtl_Slapaf')
       Expert=.False.
       Lu=6
 *                                                                      *
@@ -51,17 +58,16 @@
 *
 *-----Initiate some parameters
 *
-      Call Init_Slapaf(iRow)
+      Call Symmetry_Info_Get()
+      Call Init_Slapaf()
+      nsAtom=SIZE(Coor,2)
       iPrint=nPrint(iRout)
       iSetAll=2**30 - 1
 *
       Call f_Inquire('UDC.Gateway',External_UDC)
-      LuRd2=LuSpool
-      External_Case=.False.
 *
       iMEP=0
       Explicit_IRC=.False.
-      lCtoF=.False.
       WeightedConstraints=.False.
       ThrInp=.False.
       Call Qpg_iScalar('nMEP',Found)
@@ -70,13 +76,13 @@
          iOff_Iter=0
          Call Put_iScalar('iOff_Iter',iOff_Iter)
       End If
+      Manual_Beta=.False.
 *                                                                      *
 ************************************************************************
 *                                                                      *
 *     When called from outside Slapaf or as a dummy call, process no
 *     input but proceed with default values only.
 *
-      SuperName= Get_Supername()
       If ((SuperName.ne.'slapaf').or.Dummy_Call) Then
          Char='END '
          Go To 666
@@ -88,23 +94,21 @@
 *                                                                      *
       LuRd=LuSpool
       Call RdNlst(LuRd,'SLAPAF')
-      Command='&SLAPAF'
  999  Char=Get_Ln(LuRd)
  666  Continue
       Call UpCase(Char)
-      Command=Char(1:8)
 C     Write (Lu,'(A)') Char
 C     Write (Lu,*) iOptC
       If (Char.eq.BLine) Go To 999
       If (Char(1:1).eq.'*') Go To 999
 !     If (Char(1:4).eq.'AIL ') Go To 102
-!     If (Char(1:4).eq.'AINX') Go To 103
 !     If (Char(1:4).eq.'AIP ') Go To 104
 !     If (Char(1:4).eq.'AISP') Go To 105
 !     If (Char(1:4).eq.'AIME') Go To 107
 !     If (Char(1:4).eq.'AIBL') Go To 108
 !     If (Char(1:4).eq.'AIMB') Go To 109
 !     If (Char(1:4).eq.'L-VA') Go To 112
+      If (Char(1:4).eq.'NDEL') Go To 113
       If (Char(1:4).eq.'BAKE') Go To 926
       If (Char(1:4).eq.'C1-D') Go To 936
       If (Char(1:4).eq.'C2-D') Go To 937
@@ -167,7 +171,6 @@ C     Write (Lu,*) iOptC
       If (Char(1:4).eq.'RMEP') Go To 980
       If (Char(1:4).eq.'RS-P') Go To 967
       If (Char(1:4).eq.'RTRN') Go To 962
-      If (Char(1:4).eq.'SCHL') Go To 927
       If (Char(1:4).eq.'SUPS') Go To 911
       If (Char(1:4).eq.'TFOF') Go To 110
       If (Char(1:4).eq.'THER') Go To 9451
@@ -201,11 +204,11 @@ C     Write (Lu,*) iOptC
       New_Line=1
       Lu_UDIC=91
       FilNam='UDIC'
-cc      Open(Lu_UDIC,File=FilNam,Form='FORMATTED',Status='UNKNOWN')
       call molcas_open(Lu_UDIC,FilNam)
       ReWind(Lu_UDIC)
 *
 *     mInt is the number of internal coordinates you will define.
+*     mInt = nDimBC - mTROld
 *     Subroutine DefInt defines the B matrix.
 *     The matrix B relates a shift in an internal coordinate to
 *     shifts in cartesian coordinates,
@@ -214,9 +217,9 @@ cc      Open(Lu_UDIC,File=FilNam,Form='FORMATTED',Status='UNKNOWN')
 *                      =
 *     and has the dimension (3*nsAtom x mInt).
  992  Continue
-         Line=Get_Ln(LuRd)
-         Call UpCase(Line)
-         If (Line(1:4).eq.'END ') Then
+         Key=Get_Ln(LuRd)
+         Call UpCase(Key)
+         If (Key(1:4).eq.'END ') Then
             Close(Lu_UDIC)
             Go To 999
          End If
@@ -226,16 +229,16 @@ cc      Open(Lu_UDIC,File=FilNam,Form='FORMATTED',Status='UNKNOWN')
 *
 *        Lines with VARY or FIX doesn't have equal signs
 *
-         If (Line(1:4).eq.'VARY') nBVec=iRow
-         If (Line(1:4).eq.'VARY'.or.
-     &       Line(1:3).eq.'FIX' .or.
-     &       Line(1:4).eq.'ROWH') Then
+         If (Key(1:4).eq.'VARY') nBVec=iRow
+         If (Key(1:4).eq.'VARY'.or.
+     &       Key(1:3).eq.'FIX' .or.
+     &       Key(1:4).eq.'ROWH') Then
             New_Line=0
          End If
 *
  111     Continue
          If (New_Line.eq.1) Then
-            If (Index(Line,'=').eq.0) Call FixEqualSign2(Line,LuRd,
+            If (Index(Key,'=').eq.0) Call FixEqualSign2(Key,LuRd,
      &                                                   Lu_UDIC,iRow,
      &                                                   New_Line)
             If (New_Line.eq.2) Then
@@ -247,11 +250,11 @@ cc      Open(Lu_UDIC,File=FilNam,Form='FORMATTED',Status='UNKNOWN')
 *
          iRow = iRow + 1
 *
-         Write (Lu_UDIC,'(A)') Line
+         Write (Lu_UDIC,'(A)') Key
 *
 *        If this line does not have a continuation the next line should
 *        have a equal sign!
-         If (Index(Line,'&').eq.0) New_Line=1
+         If (Index(Key,'&').eq.0) New_Line=1
       Go To 992
 *                                                                      *
 ****** CTOF ************************************************************
@@ -275,10 +278,10 @@ cc      Open(Lu_UDIC,File=FilNam,Form='FORMATTED',Status='UNKNOWN')
       FilNam='UDIC'
       call molcas_open(Lu_UDIC,FilNam)
       ReWind(Lu_UDIC)
-      Line=Get_Ln(LuRd)
-      Call UpCase(Line)
-      Call FixEqualSign2(Line,LuRd,Lu_UDIC,iNull,New_Line)
-      Write (Lu_UDIC,'(A)') Line
+      Key=Get_Ln(LuRd)
+      Call UpCase(Key)
+      Call FixEqualSign2(Key,LuRd,Lu_UDIC,iNull,New_Line)
+      Write (Lu_UDIC,'(A)') Key
       Close(Lu_UDIC)
       Go To 999
 *                                                                      *
@@ -314,11 +317,11 @@ cc      Open(Lu_UDIC,File=FilNam,Form='FORMATTED',Status='UNKNOWN')
       Lu_UDC=IsFreeUnit(Lu_UDC)
       Call Molcas_Open(Lu_UDC,FilNam)
  318  Continue
-      Line=Get_Ln(LuRd)
-      Call UpCase(Line)
-      Call LeftAd(Line)
-      Write(Lu_UDC,'(A)') Trim(Line)
-      If (Line(1:4).ne.'END') Go To 318
+      Key=Get_Ln(LuRd)
+      Call UpCase(Key)
+      Key = adjustl(Key)
+      Write(Lu_UDC,'(A)') Trim(Key)
+      If (Key(1:4).ne.'END') Go To 318
       Close(Lu_UDC)
       Go To 999
 *                                                                      *
@@ -390,19 +393,18 @@ cc      Open(Lu_UDIC,File=FilNam,Form='FORMATTED',Status='UNKNOWN')
 *     Introduce supersymmetry
 *     Input format
 *     nsg                (number of super groups)
-*     Reapeat nsg times
+*     Repeat nsg times
 *     nmem, (ind.., i = 1, nmem)
 *
- 911  LSup = .True.
-      Char=Get_Ln(LuRd)
+ 911  Char=Get_Ln(LuRd)
       Call Get_I1(1,nSupSy)
-      Call GetMem(' NSup ','Allo','Inte',ipNSup,NSUPSY)
-      Call GetMem('iAtom ','Allo','Inte',ipAtom,nsAtom)
-      iStrt = ipAtom
-      Do 950 i = ipNSup, ipNSup+nSupSy-1
-         Read(LuRd,*,Err=9630)iWork(i),
-     &       (iWork(j),j=iStrt,iStrt+iWork(i)-1)
-         iStrt = iStrt + iWork(i)
+      Call mma_allocate(nSup,NSUPSY,Label='nSup')
+      Call mma_allocate(Atom,nsAtom,Label='Atom')
+      jStrt = 1
+      Do 950 i = 1, nSupSy
+         Read(LuRd,*,Err=9630) nSup(i),
+     &       (Atom(j),j=jStrt,jStrt+nSup(i)-1)
+         jStrt = jStrt + nSup(i)
  950  Continue
       Go To 999
 9630  Call WarningMessage(2,'Error in RdCtl_Slapaf')
@@ -455,6 +457,7 @@ c        iOptH = iOr(2,iAnd(iOptH,32))
       If (Char.eq.BLine) Go To 916
       If (Char(1:1).eq.'*') Go To 916
       Call Get_F1(1,Beta_Disp)
+      Manual_Beta=.True.
       Go To 999
 *                                                                      *
 ****** PRIN ************************************************************
@@ -522,14 +525,6 @@ c        iOptH = iOr(2,iAnd(iOptH,32))
 !      Call Get_F(1,lb,3)
 !      Go To 999
 !*                                                                      *
-!****** AINX ************************************************************
-!*                                                                      *
-!*     The resolution of the predicted path
-!*
-!103   Char=Get_Ln(LuRd)
-!      Call Get_I1(1,npxAI)
-!      Go To 999
-!*                                                                      *
 !****** AIP  ************************************************************
 !*                                                                      *
 !*     Parameter of differentiability for Matern function
@@ -549,10 +544,10 @@ c        iOptH = iOr(2,iAnd(iOptH,32))
 *                                                                      *
 ****** MXMI ************************************************************
 *                                                                      *
-*     Maximum number of Iterations for the AI method
+*     Maximum number of Iterations for the Kriging method
 *
 106   Char=Get_Ln(LuRd)
-      Call Get_I1(1,miAI)
+      Call Get_I1(1,Max_Microiterations)
       Go To 999
 !*                                                                      *
 !****** AIME ************************************************************
@@ -561,7 +556,7 @@ c        iOptH = iOr(2,iAnd(iOptH,32))
 !*     (loop exit condition)
 !*
 !107   Char=Get_Ln(LuRd)
-!      Call Get_F1(1,meAI)
+!      Call Get_F1(1,Thr_microiterations)
 !      Go To 999
 !*                                                                      *
 !****** AIBL ************************************************************
@@ -603,14 +598,15 @@ c        iOptH = iOr(2,iAnd(iOptH,32))
 !      If (.Not.Found) Call Put_dScalar('Value_l',Value_l)
 !      Go To 999
 *                                                                      *
+****** NDELta **********************************************************
+*                                                                      *
+113   Char=Get_Ln(LuRd)
+      Call Get_I1(1,nD_In)
+      Go To 999
+*                                                                      *
 ****** BAKE ************************************************************
 *                                                                      *
 926   Baker = .True.
-      Go To 999
-*                                                                      *
-****** SCHL ************************************************************
-*                                                                      *
-927   Schlegel = .True.
       Go To 999
 *                                                                      *
 ****** DDVS ************************************************************
@@ -631,7 +627,7 @@ c        iOptH = iOr(2,iAnd(iOptH,32))
 ****** LAST ************************************************************
 *                                                                      *
 9280  Char=Get_Ln(LuRd)
-      Call LeftAd(Char)
+      Char = adjustl(Char)
       If (Char.eq.BLine) Go To 9280
       If (Char(1:1).eq.'*') Go To 9280
       Call UpCase(Char)
@@ -798,11 +794,11 @@ c        iOptH = iOr(2,iAnd(iOptH,32))
       FilNam='TSC'
       LuTS=IsFreeUnit(LuTS)
       Call Molcas_Open(LuTS,FilNam)
- 319  Line=Get_Ln(LuRd)
-      Call UpCase(Line)
-      Call LeftAd(Line)
-      Write(LuTS,'(A)') Trim(Line)
-      If (Line(1:4).ne.'END') Go To 319
+ 319  Key=Get_Ln(LuRd)
+      Call UpCase(Key)
+      Key = adjustl(Key)
+      Write(LuTS,'(A)') Trim(Key)
+      If (Key(1:4).ne.'END') Go To 319
       Close(LuTS)
       TSConstraints=.True.
       Go To 999
@@ -874,8 +870,8 @@ c        iOptH = iOr(2,iAnd(iOptH,32))
 *                                                                      *
 ****** REFE ************************************************************
 *                                                                      *
- 966  Call GetMem('RefGeom','Allo','Real',ipRef,3*nsAtom)
-      Call Read_v(LuRd,Work(ipRef),1,3*nsAtom,1,iErr)
+ 966  Call mma_allocate(RefGeo,3,nsAtom,Label='RefGeo')
+      Call Read_v(LuRd,RefGeo,1,3*nsAtom,1,iErr)
       If (iErr.ne.0) Then
          Call WarningMessage(2,'Error in RdCtl_Slapaf')
          Write (Lu,*)
@@ -884,7 +880,6 @@ c        iOptH = iOr(2,iAnd(iOptH,32))
          Write (Lu,*) '**********************************'
          Call Quit_OnUserError()
       End If
-      Ref_Geom=.True.
       Go To 999
 *                                                                      *
 ****** RS-P ************************************************************
@@ -902,9 +897,9 @@ c        iOptH = iOr(2,iAnd(iOptH,32))
 *                                                                      *
 ****** GRAD ************************************************************
 *                                                                      *
- 979  Call GetMem('ReGradient','Allo','Real',ipGradRef,nDimbc)
+ 979  Call mma_allocate(GradRef,3,nsAtom,Label='GradRef')
 
-      Call Read_v(LuRd,Work(ipGradRef),1,nDimbc,1,iErr)
+      Call Read_v(LuRd,GradRef,1,3*nsAtom,1,iErr)
       If (iErr.ne.0) Then
          Call WarningMessage(2,'Error in RdCtl_Slapaf')
          Write (Lu,*)
@@ -917,7 +912,7 @@ c        iOptH = iOr(2,iAnd(iOptH,32))
 *     If there is a transverse vector stored, we are not using this one
 *
       Call qpg_dArray('Transverse',Found,nRP)
-      If (.Not. Found) Ref_Grad=.True.
+      If (Found) Call mma_deallocate(GradRef)
       Go To 999
 *                                                                      *
 ****** rMEP ************************************************************
@@ -928,8 +923,8 @@ c        iOptH = iOr(2,iAnd(iOptH,32))
 *                                                                      *
 ****** rHidden *********************************************************
 *                                                                      *
- 988  Line = Get_Ln(LuRd)
-      Call UpCase(Line)
+ 988  Key = Get_Ln(LuRd)
+      Call UpCase(Key)
       Call Get_F1(1,rHidden)
       If (rHidden.lt.Zero) Then
          Call WarningMessage(2,'Error in RdCtl_Slapaf')
@@ -939,7 +934,7 @@ c        iOptH = iOr(2,iAnd(iOptH,32))
          Write (Lu,*) '************************************'
          Call Quit_OnUserError()
       End If
-      If (Index(Line,'ANGSTROM').ne.0) rHidden = rHidden/angstr
+      If (Index(Key,'ANGSTROM').ne.0) rHidden = rHidden/angstr
       Go To 999
 *                                                                      *
 ****** IRC *************************************************************
@@ -970,8 +965,8 @@ c        iOptH = iOr(2,iAnd(iOptH,32))
 ****** REAC ************************************************************
 *                                                                      *
  996  Explicit_IRC=.True.
-      Call GetMem('TmpRx','Allo','Real',ipTmpRx,3*nsAtom)
-      Call Read_v(LuRd,Work(ipTmpRx),1,3*nsAtom,1,iErr)
+      Call mma_allocate(TmpRx,3*nsAtom,Label='TmpRx')
+      Call Read_v(LuRd,TmpRx,1,3*nsAtom,1,iErr)
       If (IErr.ne.0) Then
          Call WarningMessage(2,'Error in RdCtl_Slapaf')
          Write (Lu,*)
@@ -1107,7 +1102,7 @@ c        iOptH = iOr(2,iAnd(iOptH,32))
 *
 *     Final fixes
 *
-      Call Fix_UDC(iRow_c,nLambda,AtomLbl,nsAtom,nStab,.True.)
+      Call Fix_UDC(iRow_c,nLambda,nsAtom,nStab,.True.)
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -1115,16 +1110,16 @@ c        iOptH = iOr(2,iAnd(iOptH,32))
 *     been read.
 *
       If ((.Not.ThrInp).and.(.Not.Baker)) ThrEne=Zero
-      Call Init2
+      Call Init2()
 *     Gradients are not needed at the first iteration of a numerical
 *     Hessian procedure (and only that, i.e. MxItr=0)
-      FirstNum = (lRowH.or.lNmHss.or.Cubic)
+      FirstNum = (Allocated(mRowH).or.lNmHss.or.Cubic)
      &           .and.(Iter.eq.1).and.(MxItr.eq.0)
       If ((SuperName.eq.'slapaf').and.(.not.FirstNum)) Then
          If (Track) Then
             Call Process_Track()
          Else
-            Call Put_iArray('Root Mapping',RootMap,0)
+            Call Put_iArray('Root Mapping',iDum,0)
          End If
          Call Process_Gradients()
       End If
@@ -1144,22 +1139,22 @@ c        iOptH = iOr(2,iAnd(iOptH,32))
 *
          If (Explicit_IRC.and.iMEP.eq.0) Then
 *           Case 1)
-            call dcopy_(3*nsAtom,Work(ipTmpRx),1,Work(ipMF),1)
+            call dcopy_(3*nsAtom,TmpRx,1,MF,1)
          Else If (iMEP.eq.0) Then
             Call NameRun('RUNOLD')
             Call qpg_dArray('Reaction Vector',Found,nRx)
 C           Write (6,*) 'RUNOLD: Found=',Found
             If (Found) Then
 *              Case 2)
-               Call Get_dArray('Reaction Vector',Work(ipMF),3*nsAtom)
-               Call NameRun('RUNFILE')
+               Call Get_dArray('Reaction Vector',MF,3*nsAtom)
+               Call NameRun('#Pop')
             Else
-               Call NameRun('RUNFILE')
+               Call NameRun('#Pop')
                Call qpg_dArray('Reaction Vector',Found,nRx)
 C              Write (6,*) 'RUNFILE: Found=',Found
                If (Found) Then
 *                 Case 3)
-                  Call Get_dArray('Reaction Vector',Work(ipMF),3*nsAtom)
+                  Call Get_dArray('Reaction Vector',MF,3*nsAtom)
                Else
                   Call WarningMessage(2,'Error in RdCtl_Slapaf')
                   Write (6,*)
@@ -1173,10 +1168,9 @@ C              Write (6,*) 'RUNFILE: Found=',Found
 *
 *        Fix the direction forward/backwards
 *
-         If (iMEP.eq.0.and.iRC.eq.-1) Call DScal_(3*nsAtom,-1.0D0,
-     &                                           Work(ipMF),1)
+         If (iMEP.eq.0.and.iRC.eq.-1) Call DScal_(3*nsAtom,-1.0D0,MF,1)
          If (iMEP.eq.0.and.MEP_Type.eq.'TRANSVERSE')
-     &      Call Put_dArray('Transverse',Work(ipMF),3*nsAtom)
+     &      Call Put_dArray('Transverse',MF,3*nsAtom)
 *
       End If
 *                                                                      *
@@ -1197,29 +1191,26 @@ C              Write (6,*) 'RUNFILE: Found=',Found
 *        If no initial direction given, use the gradient (force)
 *
          Call qpg_dArray('Transverse',Found,nRP)
-         If (.Not.Found.And..Not.Ref_Grad) Then
+         If (.Not.Found) Then
 *        Assume the initial reaction vector is already massaged
             If (Explicit_IRC) Then
-               Call Put_dArray('Transverse',Work(ipTmpRx),3*nsAtom)
+               Call Put_dArray('Transverse',TmpRx,3*nsAtom)
             Else
 *        The direction is given by the gradient, but in weighted coordinates
-               Call Allocate_Work(ipDir,3*nsAtom)
-               iOff=0
-               ip_Grd=ipGx+(iter-1)*3*nsAtom
+               Call mma_allocate(Dir,3,nsAtom,Label='Dir')
                Do iAtom=1,nsAtom
-                  xWeight=Work(ipWeights+iAtom-1)
+                  xWeight=Weights(iAtom)
                   Do ixyz=1,3
-                     Work(ipDir+iOff)=Work(ip_Grd+iOff)/xWeight
-                     iOff=iOff+1
+                     Dir(ixyz,iAtom)=Gx(ixyz,iAtom,iter)/xWeight
                   End Do
                End Do
-               Call Put_dArray('Transverse',Work(ipDir),3*nsAtom)
-               Call Free_Work(ipDir)
+               Call Put_dArray('Transverse',Dir,3*nsAtom)
+               Call mma_deallocate(Dir)
             End If
          End If
       End If
 *
-      If (Explicit_IRC) Call Free_Work(ipTmpRx)
+      If (Explicit_IRC) Call mma_deallocate(TmpRx)
 *
 *     Activate MPS update of Hessian if FindTS
 *
@@ -1246,7 +1237,6 @@ C              Write (6,*) 'RUNFILE: Found=',Found
 *
       If (iAnd(iOptC,128).ne.128) Then
          If (iAnd(iOptH,8).ne.8) iOptH=iOr(16,iAnd(iOptH,32)) ! MSP
-         ThrB=0.01D+00
          Line_search=.False.
       End If
 *                                                                      *
@@ -1256,11 +1246,11 @@ C              Write (6,*) 'RUNFILE: Found=',Found
 *
       Call qpg_dArray('Saddle',Found,nSaddle)
       If (Found.and.nSaddle.ne.0) Then
-         Call Allocate_Work(ipTmp,nSaddle)
-         Call Get_dArray('Saddle',Work(ipTmp),nSaddle)
-         HSR0=Work(ipTmp+nSaddle-3)
-         HSR=Work(ipTmp+nSaddle-2)
-         Update=Work(ipTmp+nSaddle-1)
+         Call mma_allocate(Tmp,nSaddle,Label='Tmp')
+         Call Get_dArray('Saddle',Tmp,nSaddle)
+         HSR0  =Tmp(nSaddle-2)
+         HSR   =Tmp(nSaddle-1)
+         Update=Tmp(nSaddle)
          If (Update.eq.2.0d0) Then
 *
 *           Enable FindTS procedure
@@ -1295,8 +1285,13 @@ C           Write (6,*) 'Enable FindTS procedure'
      &                             nLambda,iRow_c)
 
          End If
-         Call Free_Work(ipTmp)
+         Call mma_deallocate(Tmp)
       End If
+*                                                                      *
+************************************************************************
+*                                                                      *
+      nLbl=Max(3*nsAtom+nLambda,iRow+iRow_c)
+      Call mma_allocate(Lbl,nLbl,Label='Lbl')
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -1324,7 +1319,7 @@ CGGd: Coherency with patch 7.1.615 !      If (lNmHss) nPrint(122)=10
 *.....Do some preprocessing due to input choice
 *
       If (Request_Alaska) nPrint(51)=0
-      Call PrePro(iRow,iInt,nFix,nsAtom,mInt,Work(ipCoor))
+      Call PrePro(nsAtom,Cx(1,1,iter))
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -1335,7 +1330,23 @@ CGGd: Coherency with patch 7.1.615 !      If (lNmHss) nPrint(122)=10
 *     However, the default window for kriging is twice as large as
 *     for conventional calculations.
 *
-      If (Kriging) nWndw=4*nWndw  ! 2*2=4
+      If (Kriging) Then
+         nWndw=4*nWndw  ! 2*2=4
+*
+*        No micro iterations the first MEP iteration
+*
+         If ((MEP.or.rMEP).and.(iter.eq.1)) Max_Microiterations=0
+*
+*        Reduce default maximum dispersion during the initial
+*        stage of a FindTS calculation: we don't want to fulfil the
+*        constraints too early
+*
+         Call Qpg_iScalar('TS Search',Found)
+         If (Found) Call Get_lScalar('TS Search',Found)
+         If (FindTS.and.(.not.(Found.or.Manual_Beta))) Then
+            Beta_Disp=0.1D0
+         End If
+      End If
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -1343,7 +1354,7 @@ CGGd: Coherency with patch 7.1.615 !      If (lNmHss) nPrint(122)=10
 *     gradients on the runfile. We will come back!!!
 *
       If (SuperName.eq.'slapaf') Then
-         If (.Not.Request_Alaska) Call WrInp_sl(iRow)
+         If (.Not.Request_Alaska) Call WrInp_sl()
       End If
 *                                                                      *
 ************************************************************************
@@ -1353,7 +1364,7 @@ CGGd: Coherency with patch 7.1.615 !      If (lNmHss) nPrint(122)=10
 *                                                                      *
 ************************************************************************
 *                                                                      *
-      If (lNmHss.and.lRowH) then
+      If (lNmHss.and.Allocated(mRowH)) then
          Call WarningMessage(2,'Error in RdCtl_Slapaf')
        Write (Lu,*)
        Write (Lu,*) '**************************************************'
@@ -1373,7 +1384,6 @@ CGGd: Coherency with patch 7.1.615 !      If (lNmHss) nPrint(122)=10
 *                                                                      *
 ************************************************************************
 *                                                                      *
-      Call QExit('RdCtl_Slapaf')
       Return
 *
       End
@@ -1389,14 +1399,13 @@ CGGd: Coherency with patch 7.1.615 !      If (lNmHss) nPrint(122)=10
          Call Abend()
       End If
 *
-      Temp_Line=Line
-      Call LeftAd(Temp_Line)
+      Temp_Line=adjustl(Line)
       ix = iCLast(Temp_Line,nLine)
       Temp_Line(ix+2:ix+2)='='
       ix = ix + 2
 *
       Line=Get_Ln(LuRd)
-      Call LeftAd(Line)
+      Line = adjustl(Line)
       iy = iCLast(Line,nLine)
       If (ix+2+iy.gt.nLine) Then
          Call WarningMessage(2,'Problems merging lines!')
@@ -1421,8 +1430,7 @@ CGGd: Coherency with patch 7.1.615 !      If (lNmHss) nPrint(122)=10
          Call Abend()
       End If
 *
-      Temp_Line=Line
-      Call LeftAd(Temp_Line)
+      Temp_Line=adjustl(Line)
       ix = iCLast(Temp_Line,nLine)
 *                                                                      *
 ************************************************************************
@@ -1430,7 +1438,7 @@ CGGd: Coherency with patch 7.1.615 !      If (lNmHss) nPrint(122)=10
 *     Read the next line and determine if the lines should be merged.
 *
       Line=Get_Ln(LuRd)
-      Call LeftAd(Line)
+      Line = adjustl(Line)
       iy = iCLast(Line,nLine)
       Call UpCase(Line)
 *                                                                      *

@@ -17,14 +17,6 @@
 *     Object: to compute the auxiliary functions in quadruple precision*
 *             for a number of arguments.                               *
 *                                                                      *
-* Called from: RtsWgh                                                  *
-*                                                                      *
-* Calling    : QEnter                                                  *
-*              Fm                                                      *
-*              RecPrt                                                  *
-*              GetMem                                                  *
-*              QExit                                                   *
-*                                                                      *
 *     Author: Roland Lindh, IBM Almaden Research Center, San Jose, CA  *
 *             March '90                                                *
 ************************************************************************
@@ -33,13 +25,9 @@
 #include "real.fh"
       REAL*8 Fm(nT,0:mHigh), T(nT)
 *
-      iRout = 53
-      iPrint = nPrint(iRout)
-      Call qEnter('Auxil')
-*
       Call HighFm(Fm(1,mHigh),T,mHigh,nT)
 *
-*     Now use recusion formula for Fm, 0<=m<mHigh
+*     Now use recursion formula for Fm, 0<=m<mHigh
 *
       Do 30  i = 1, nT
          Ti=T(i)
@@ -48,8 +36,6 @@
  31      Continue
  30   Continue
 *     Call RecPrt(' Fm',' ',Fm,nT,mHigh+1)
-*     Call GetMem('Auxil','CHECK','REAL',iDum,iDum)
 *
-      Call qExit('Auxil')
       Return
       End

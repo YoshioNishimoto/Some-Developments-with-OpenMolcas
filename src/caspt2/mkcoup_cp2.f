@@ -25,10 +25,8 @@
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "pt2_guga.fh"
-      COMMON /SEGTAB/ IC1(26),IC2(26),ITVPT(26),IBVPT(26),ISVC(26),
-     &                NIVR,LIVR,NSGMNT,LSGMNT
+#include "segtab.fh"
 
 C INPUT PARAMETERS:
       DIMENSION IVR(NVERT,2),IMAW(NVERT,0:3)
@@ -222,7 +220,7 @@ C RENUMBER THE COUPLING COEFFICIENT INDICES BY LUND SCHEME:
         ICOUP(2,ICOP)=ILNDW(I2)
       END DO
 
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
         ICOP1=0
         ICOP2=0
         WRITE(6,*)' NR OF DIFFERENT VALUES OF COUP:',NVTAB_FINAL

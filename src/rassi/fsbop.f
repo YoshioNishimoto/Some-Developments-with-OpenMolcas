@@ -15,7 +15,7 @@
       INTEGER IFSBTAB(*)
       INTEGER IMODE,ISORB,KOINFO,ISPART,INSBPT,MORSBITS
       INTEGER KSSTAN,KSSTCR
-      INTEGER KSSTOP,NTAB1,ITYPE,NFSB1,NASPRT1
+      INTEGER KSSTOP,ITYPE,NFSB1,NASPRT1
       INTEGER KSTARR1,NTAB2,NTAB2NEW,NASPRT2
       INTEGER LFSBOP,KSTARR2,IFSB2,IDET2,IFSB1,KPOS1
       INTEGER ISST1,ISST2,KPOS2,NDETS2,NHEAD
@@ -42,7 +42,6 @@ C The substring table:
       END IF
 
 C The FS blocks of the PSI wave function:
-      NTAB1  =IFSBTAB(1)
       ITYPE  =IFSBTAB(2)
       NFSB1  =IFSBTAB(3)
       NASPRT1=IFSBTAB(4)
@@ -61,7 +60,7 @@ C The substring type to be annihilated from or created in:
         ISST1=IFSBTAB(KPOS1-1+ISPART)
 C The resulting substring type:
         ISST2=ISSTAB(KSSTOP-1+INSBPT+MORSBITS*(ISST1-1))
-        IF(ISST2.EQ.0) GOTO 99
+        if (ISST2 == 0) cycle
         IFSB2=IFSB2+1
         KPOS2=KSTARR2+(NASPRT2+2)*(IFSB2-1)
 C Replace substring type:
@@ -72,7 +71,6 @@ C Old vs. new nr of substrings:
 CTEST      write(*,'(1x,a,8I8)')'NSBS1,NSBS2:',NSBS1,NSBS2
 CTEST      write(*,'(1x,a,8I8)')'NDET1,NDET2:',NDET1,NDET2
         IDET2=IDET2+NDET2
-  99    CONTINUE
       END DO
       NFSB2=IFSB2
       NDETS2=IDET2
@@ -106,7 +104,7 @@ C The substring type to be annihilated from or created in:
         ISST1=IFSBTAB(KPOS1-1+ISPART)
 C The resulting substring type:
         ISST2=ISSTAB(KSSTOP-1+INSBPT+MORSBITS*(ISST1-1))
-        IF(ISST2.EQ.0) GOTO 100
+        if (ISST2 == 0) cycle
         IFSB2=IFSB2+1
         KPOS2=KSTARR2+(NASPRT2+2)*(IFSB2-1)
         CALL ICOPY(NASPRT1,IFSBTAB(KPOS1),1,IWORK(LFSBOP-1+KPOS2),1)
@@ -121,7 +119,6 @@ C Old vs. new nr of substrings:
 CTEST      write(*,'(1x,a,8I8)')'NSBS1,NSBS2:',NSBS1,NSBS2
 CTEST      write(*,'(1x,a,8I8)')'NDET1,NDET2:',NDET1,NDET2
         IDET2=IDET2+NDET2
- 100    CONTINUE
       END DO
 CTEST      write(*,'(1x,a,8I8)')'finished, with NFSB2=',NFSB2
 CTEST      write(*,'(1x,a,8I8)')'              NDETS2=',NDETS2

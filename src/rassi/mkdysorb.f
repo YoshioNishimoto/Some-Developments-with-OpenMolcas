@@ -23,9 +23,8 @@
       INTEGER NDETS1,NDETS2
       INTEGER LFSBANN1,LFSBANN2
       INTEGER JSORB,LANN1,LANN2
-      INTEGER KOINFO
-      INTEGER ISMLAB,ISPLAB
       LOGICAL IF10,IF01
+
 #include "SysDef.fh"
 #include "WrkSpc.fh"
 #include "symmul.fh"
@@ -46,13 +45,10 @@ C Nr of active spin-orbitals
 
 C IF10 = Eliminate to the left (state 1)
       IF(IF10) THEN
-       KOINFO=19
 
 C Loop over all spin orbitals ISORB:
        DO ISORB=1,NASORB
         OVLP=0.0
-        ISMLAB=IORBTAB(KOINFO+1+8*(ISORB-1))
-        ISPLAB=IORBTAB(KOINFO+3+8*(ISORB-1))
 
 C Annihilate a single orbital:
         COEFF=1.0D0
@@ -88,6 +84,7 @@ C Annihilate a single orbital:
          IMODE=-1
          LFSBANN2=FSBOP(IMODE,JSORB,IORBTAB,ISSTAB,IFSBTAB2)
          NDETS2=IWORK(LFSBANN2+4)
+C BRN
          CALL GETMEM('ANN2','Allo','Real',LANN2,NDETS2)
          CALL DCOPY_(NDETS2,[0.0D0],0,WORK(LANN2),1)
          CALL PRIMSGM(IMODE,JSORB,IORBTAB,ISSTAB,IWORK(LFSBANN2),
@@ -115,7 +112,6 @@ C The eventual PES amplitude is given by the squared norm,
 C but for transformation of the D_ij elements we need to remove the
 C square for now
       DYSAMP = SQRT(DYSAMP)
-
       RETURN
 
       END

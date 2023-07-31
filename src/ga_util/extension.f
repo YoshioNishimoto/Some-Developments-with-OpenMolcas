@@ -15,10 +15,14 @@
       Return
       End
       Subroutine Ext_PID(FileName)
+#ifdef _MOLCAS_MPP_
+      use UnixInfo, only: PID
+#endif
       Implicit Real*8 (a-h,o-z)
+#ifdef _MOLCAS_MPP_
       External StrnLn
       Integer StrnLn
-#include "unixinfo.fh"
+#endif
       Character*(*) FileName
 
 #ifdef _MOLCAS_MPP_
@@ -33,10 +37,14 @@ c Avoid unused argument warnings
       Return
       End
       Subroutine Ext_Rank(FileName)
+#ifdef _MOLCAS_MPP_
+      Use Para_Info, Only: MyRank
+#endif
       Implicit Real*8 (a-h,o-z)
+#ifdef _MOLCAS_MPP_
       External StrnLn
       Integer StrnLn
-#include "para_info.fh"
+#endif
       Character*(*) FileName
 
 #ifdef _MOLCAS_MPP_

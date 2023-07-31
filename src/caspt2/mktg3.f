@@ -13,8 +13,6 @@
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
-
 #include "SysDef.fh"
 #include "WrkSpc.fh"
 #include "pt2_guga.fh"
@@ -42,7 +40,6 @@ C tu stands for the pair index tu= t + NASHT*(u-1), etc., and t is
 C the usual active orbital number, when they are enumerated across
 C all the symmetries (The ''absolute'' active index).
 
-      CALL QENTER('MKTG3')
 
 C Put in zeroes. Recognize special cases:
       OVL=1.0D0
@@ -268,7 +265,6 @@ C LTAU  will be start element of Tau=E(VX) Sigma2=E(VX) E(YZ) Psi2
      &     IWORK(LNOCP),IWORK(LIOCP),IWORK(LICOUP),
      &     WORK(LVTAB),IWORK(LMVL),IWORK(LMVR))
           IF(ISTAU.EQ.LSYM1) THEN
-C     write (*,'(4i3)') iv,ix,iy,iz
            TG2(IV,IX,IY,IZ)=DDOT_(NTAU,WORK(LTAU),1,CI1,1)
           END IF
           DO IP1=MAX(IP2,IP1STA),IP1END
@@ -424,6 +420,5 @@ C -D(V,U)*TG2(T,X,Y,Z) C -D(Y,U)*TG2(V,X,T,Z)
       CALL GETMEM('IPTOLEV','FREE','INTE',LP2LEV,2*NASHT**2)
 
  999  CONTINUE
-      CALL QEXIT('MKTG3')
       RETURN
       END

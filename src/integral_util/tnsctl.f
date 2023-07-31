@@ -22,27 +22,22 @@
 *         Note that the position in memory of the final set is not     *
 *         fixed.                                                       *
 *                                                                      *
-* Called from: TwoEl                                                   *
-*                                                                      *
-* Calling    : QEnter                                                  *
-*              HrrMtrx                                                 *
-*              Sp_Mlt                                                  *
-*              QExit                                                   *
-*                                                                      *
 *     Author: Roland Lindh, Dept. of Theoretical Chemistry,            *
 *             University of Lund, SWEDEN                               *
 *             Modified by R.L Februrary, 1999.                         *
 ************************************************************************
       use Real_Spherical
+      use Basis_Info
       Implicit Real*8 (A-H,O-Z)
+#include "itmax.fh"
 #include "print.fh"
 #include "real.fh"
-#include "itmax.fh"
-#include "info.fh"
-#include "WrkSpc.fh"
       Parameter(lab=iTabMx*2+1,npMax=lab*(lab+1)*(lab+2)/6)
       Real*8 HMtrxAB(*),HMtrxCD(*)
-      Real*8 Wrk(nWrk), Coora(3,4)
+      Real*8, Intent(inout) :: Wrk(nWrk)
+      Real*8 Coora(3,4)
+      Integer, Intent(out) :: i_out
+      ![all others are intent(in)]
 *
 *---- Integral are stored as e,f,IJKL in Wrk
 *
@@ -66,10 +61,10 @@
 *---- Transpose if no transformation is needed.
 *
       If ((la*lb.eq.0).and.(lc*ld.eq.0).and.
-     &    .Not.Transf(iShlla) .and.
-     &    .Not.Transf(jShllb) .and.
-     &    .Not.Transf(kShllc) .and.
-     &    .Not.Transf(lShlld) ) Then
+     &    .Not.Shells(iShlla)%Transf .and.
+     &    .Not.Shells(jShllb)%Transf .and.
+     &    .Not.Shells(kShllc)%Transf .and.
+     &    .Not.Shells(lShlld)%Transf ) Then
          Call DGeTMO(Wrk(iW2),ne*nf,ne*nf,nijkl,Wrk(iW3),nijkl)
          i_out=iW3
          Return
@@ -83,8 +78,8 @@
          i_in=iW2
          i_out=iW3
       Else If ((la*lb.eq.0).and.
-     &    .Not.Transf(iShlla) .and.
-     &    .Not.Transf(jShllb)) Then
+     &    .Not.Shells(iShlla)%Transf .and.
+     &    .Not.Shells(jShllb)%Transf) Then
          Call DGeTMO(Wrk(iW2),ne,ne,nf*nijkl,Wrk(iW3),nf*nijkl)
          i_in=iW3
          i_out=iW2
@@ -106,8 +101,8 @@
       If (lc+ld.eq.0) Then
          i_out=i_in
       Else If ((lc*ld.eq.0).and.
-     &    .Not.Transf(kShllc) .and.
-     &    .Not.Transf(lShlld)) Then
+     &    .Not.Shells(kShllc)%Transf .and.
+     &    .Not.Shells(lShlld)%Transf) Then
          Call DGeTMO(Wrk(i_in),nf,nf,nijkl*iCmpa*jCmpb,Wrk(i_out),
      &               nijkl*iCmpa*jCmpb)
       Else

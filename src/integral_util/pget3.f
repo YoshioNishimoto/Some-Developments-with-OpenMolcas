@@ -10,12 +10,13 @@
 *                                                                      *
 * Copyright (C) 1992, Roland Lindh                                     *
 ************************************************************************
-      SubRoutine PGet3(PAO,ijkl,nPAO,iCmp,iShell,
+      SubRoutine PGet3(PAO,ijkl,nPAO,iCmp,
      &                 iAO,iAOst,Shijij,iBas,jBas,kBas,lBas,kOp,
      &                 DAO,nDAO,
      &                 PAOPam,n1,n2,n3,n4,iPam,MapPam,mDim,
      &                 Cred,nCred,Scr1,nScr1,Scr2,nScr2,PMax)
 ************************************************************************
+*                                                                      *
 *  Object: to assemble the index list of the batch of the 2nd order    *
 *          density matrix.                                             *
 *                                                                      *
@@ -23,36 +24,26 @@
 *          Hence we must take special care in order to regain the can- *
 *          onical order.                                               *
 *                                                                      *
-* Called from: PGet0                                                   *
-*                                                                      *
-* Calling    : QEnter                                                  *
-*              QExit                                                   *
-*                                                                      *
 *     Author: Roland Lindh, Dept. of Theoretical Chemistry, University *
 *             of Lund, SWEDEN.                                         *
 *             January '92.                                             *
 *             Modified from PGet1, June '92                            *
 ************************************************************************
+      use SOAO_Info, only: iAOtSO, iOffSO
       use pso_stuff
       use aces_stuff, only: Gamma_On,G_Toc
       Implicit Real*8 (A-H,O-Z)
-#include "itmax.fh"
-#include "info.fh"
 #include "real.fh"
 #include "print.fh"
-#include "WrkSpc.fh"
       Real*8 PAO(ijkl,nPAO), PAOPam(n1,n2,n3,n4), DAO(nDAO),
      &       Cred(nCred), Scr1(nScr1,2), Scr2(nScr2)
-      Integer iShell(4), iAO(4), kOp(4),
-     &          iAOst(4), nPam(4), iiBas(4), iCmp(4)
+      Integer iAO(4), kOp(4), iAOst(4), nPam(4), iiBas(4), iCmp(4)
       Real*8 iPam(n1+n2+n3+n4), MapPam(4,mDim)
       Logical Shijij
 *
       iRout = 39
       iPrint = nPrint(iRout)
-*     Call qEnter('PGet3   ')
       If (iPrint.ge.99) Then
-         iComp = 1
          Write (6,*) ' nBases..=',iBas,jBas,kBas,lBas
       End If
 *
@@ -68,28 +59,18 @@
 *     with the number of basis functions in nPam.
 *
       Call ICopy(4,[0],0,nPam,1)
-C     write (*,*) "aaaaa"
       in1 = 0
       Do 9 jPam = 1, 4
          in2 = 0
-         Do 11 i1 = 1, iCmp(jPam) !! azimuthal number loop (1,3,5,...)
+         Do 11 i1 = 1, iCmp(jPam)
             iSO = iAOtSO(iAO(jPam)+i1,0)
-     &          + iAOst(jPam) !! iAOst(jPam) is zero (dependent on symmetry?)
+     &          + iAOst(jPam)
             nPam(jPam) = nPam(jPam) + iiBas(jPam)
-C        if (jpam.eq.1) then
-C          write (*,*) "i1 = ", i1
-C         write (*,*)iAOtSO(iAO(jPam)+i1,0),iAOst(jPam),iso
-C         write (*,*) "number =", iibas(jpam)
-C        end if
-            Do 12 iAOi = 0, iiBas(jPam)-1 !! duplicated AO loop
+            Do 12 iAOi = 0, iiBas(jPam)-1
                iSOi = iSO + iAOi
                in2 = in2 + 1
                iPam(in1+in2) = DBLE(iSOi)
                MapPam(jPam,iSOi) = DBLE(in2)
-C           if (jpam.eq.1) then
-C             write (*,*) "iaoi = ", iaoi
-C             write (*,*) "isoi = ",isoi
-C           end if
  12         Continue
  11      Continue
          in1 = in1 + in2
@@ -107,10 +88,6 @@ C           end if
      &            DAO,PAOPam,nPSOPam,G1,nG1,G2,nG2,
      &            Cred,nCred,Scr1,nScr1,Scr2,nScr2)
       End If
-*
-      If (Gamma_On) Then
-      End If
-C     write (*,*) "in pget3: ijkl, nPAO = ", ijkl,nPAO
 *
 *     Quadruple loop over elements of the basis functions angular
 *     description.
@@ -149,34 +126,11 @@ C     write (*,*) "in pget3: ijkl, nPAO = ", ijkl,nPAO
                             PMax=Max(PMax,Abs(PAOPam(k1,k2,k3,k4)))
                             PAO(nijkl,iPAO) = PAOPam(k1,k2,k3,k4)
                             If (Gamma_On) Then
-C                             Loc = k2+n2*(k4-1+n4*(k1-1+n1*(k3-1)))
-C    *                            + n1*n2*n3*n4*(iPAO-1)
-C                             Loc =     jAOj + jBas*(i2-1)
-C    *                            + n2*(lAOl + lBas*(i4-1)
-C    *                            + n4*(iAOi + iBas*(i1-1)
-C    *                            + n1*(kAOk + kBas*(i3-1))))
-                              Loc =     i2-1 + iCmp(2)*jAOj
-     *                            + n2*(i4-1 + iCmp(4)*lAOl
-     *                            + n4*(i1-1 + iCmp(1)*iAOi
-     *                            + n1*(i3-1 + iCmp(3)*kAOk)))
                               Loc =     k2-1
      *                            + n2*(k4-1
      *                            + n4*(k1-1
      *                            + n1*(k3-1)))
                               Val = G_Toc(Loc+1)
-C                             Loc1=     k2-1
-C    *                            + n2*(k4-1
-C    *                            + n4*(k1-1
-C    *                            + n1*(k3-1)))
-C                             Loc2=     k2-1
-C    *                            + n2*(k4-1
-C    *                            + n4*(k3-1
-C    *                            + n3*(k1-1)))
-C                             Val = G_Toc(Loc1+1)+G_Toc(Loc2+1)
-C               write (*,'(4i4,f20.10)')
-C    *jaoj+jbas*(i2-1)+1,laol+lbas*(i4-1)+1,
-C    * iaoi+ibas*(i1-1)+1,kaok+kbas*(i3-1)+1,val
-C       write (*,'(4i3,f20.10)') k1,k2,k3,k4,val*8.0d+00
                               PAO(nijkl,iPAO) = PAO(nijkl,iPAO)*1 + Val
                             End If
 *
@@ -194,12 +148,9 @@ C       write (*,'(4i3,f20.10)') k1,k2,k3,k4,val*8.0d+00
         Call Abend()
       End If
 *
-*     Call GetMem(' Exit PGet3','CHECK','REAL',iDum,iDum)
-*     Call qExit('PGet3')
       Return
 c Avoid unused argument warnings
       If (.False.) Then
-         Call Unused_integer_array(iShell)
          Call Unused_logical(Shijij)
       End If
       End

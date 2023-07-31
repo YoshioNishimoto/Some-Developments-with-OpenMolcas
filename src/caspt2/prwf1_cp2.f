@@ -21,12 +21,11 @@
       DIMENSION NOCSF(NSYM,NMIDV,NSYM),IOCSF(NSYM,NMIDV,NSYM)
       DIMENSION NOW(2,NSYM,NMIDV),IOW(2,NSYM,NMIDV)
       DIMENSION CI(*)
-      CHARACTER(256) LINE
-      CHARACTER(1) CODE(0:3)
+      CHARACTER(LEN=256) LINE
+      CHARACTER(LEN=1) CODE(0:3)
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "pt2_guga.fh"
 #include "WrkSpc.fh"
       DIMENSION ICS(MXLEV)
@@ -144,7 +143,7 @@ c     Specify projected spin in half integer units
 C     Default: use maximum spin projection
                IMS = ISPIN-1
                WRITE(6,*)
-               CALL EXPCSF (ICS, NLEV, IMS, IWORK(LLEX))
+               CALL EXPCSF (ICS, NLEV, IMS, IWORK(LLEX), coef, 0)
                WRITE(6,*)
               ENDIF
   31        CONTINUE

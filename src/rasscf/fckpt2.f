@@ -31,10 +31,14 @@
 * ********** IBM-3090 Release 88 09 07 **********
 *
 
+#ifdef _HDF5_
+      use mh5, only: mh5_put_dset
+#endif
       IMPLICIT REAL*8 (A-H,O-Z)
 
 #ifdef _ENABLE_CHEMPS2_DMRG_
       Integer iChMolpro(8)
+      Character*3 Label
 #endif
 
 
@@ -44,12 +48,12 @@
 #include "output_ras.fh"
 #include "WrkSpc.fh"
 #include "raswfn.fh"
+      Character*16 ROUTINE
       Parameter (ROUTINE='FCKPT2  ')
 
       DIMENSION CMOO(*),CMON(*),FI(*),FP(*),FTR(*),VEC(*),
      &          WO(*),SQ(*),CMOX(*)
 
-      CALL QENTER(ROUTINE)
 * Local print level (if any)
       IPRLEV=IPRLOC(4)
       IF(IPRLEV.ge.DEBUG) THEN
@@ -69,7 +73,7 @@
       enddo
 
 * Get character table to convert MOLPRO symmetry format
-      Call MOLPRO_ChTab_BIS(nSym,Label,iChMolpro)
+      Call MOLPRO_ChTab(nSym,Label,iChMolpro)
 
 * Convert orbital symmetry into MOLPRO format
       Call Getmem('OrbSym','Allo','Inte',lOrbSym,NAC)
@@ -80,7 +84,7 @@
           iOrb=iOrb+1
         End Do
       End Do
-      lSymMolpro=iChMolpro(lSym)
+      lSymMolpro=iChMolpro(stSym)
 
       LuFCK=isFreeUnit(27)
 *      open ( unit = LuFCK, file = "FOCK_CHEMPS2",
@@ -588,6 +592,5 @@
       CALL DDAFILE(JOBIPH,1,FP,NTOT3,IAD15)
       CALL DDAFILE(JOBIPH,1,SQ,NORBT,IAD15)
 *
-      CALL QEXIT(ROUTINE)
       RETURN
       END

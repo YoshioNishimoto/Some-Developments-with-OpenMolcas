@@ -20,6 +20,7 @@
 *     University of Lund, Sweden, 1993                                 *
 *                                                                      *
 ************************************************************************
+      use caspt2_output, only:iPrGlb,silent
       Implicit real*8 (a-h,o-z)
 *----------------------------------------------------------------------*
 *     Start                                                            *
@@ -27,8 +28,6 @@
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
-      Call qEnter('ClsFls')
       Call DaClos(LUCIEX)
 * PAM08
 *      Call DaClos(LUMORB)
@@ -42,7 +41,7 @@
       Call DaClos(LUDMAT)
       Call DaClos(LUSOLV)
       Call DaClos(LUSBT)
-      DO IVEC=1,6
+      DO IVEC=1,8
         CALL DaClos(LURHS(IVEC))
       END DO
       DO IMAT=1,4
@@ -51,8 +50,7 @@
 *---  close the ORDINT file -------------------------------------------*
       If (.not.IfChol) then
          iRc=-1
-         iOpt=0
-         Call ClsOrd(iRc,iOpt)
+         Call ClsOrd(iRc)
          IF(IRC.NE.0 .AND. IPRGLB.GT.SILENT) THEN
           Call WarningMessage(1,'Failed to close ORDINT file.')
          END IF
@@ -60,6 +58,5 @@
 *----------------------------------------------------------------------*
 *     Exit                                                             *
 *----------------------------------------------------------------------*
-      Call qExit('ClsFls')
       Return
       End

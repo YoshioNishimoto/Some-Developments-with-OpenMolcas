@@ -8,7 +8,8 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine svd2_cvb(ainp,val,vec,vmat,n1,n2,n12,
      >  a,w,u,v,rv1,indx)
@@ -61,7 +62,7 @@ c  Sort singular values in ascending order:
       end
       function detm_cvb(a,n)
       implicit real*8 (a-h,o-z)
-#include "malloc_cvb.fh"
+#include "WrkSpc.fh"
       dimension a(n*n)
       dimension det(2)
 cstart linpack_determinant
@@ -79,23 +80,23 @@ cend
       i1 = mstackr_cvb(n*n)
       i2 = mstacki_cvb(n)
       ierr=0
-      call fmove_cvb(a,w(i1),n*n)
-      call dgetrf_(n,n,w(i1),n,iw(i2),ierr)
+      call fmove_cvb(a,work(i1),n*n)
+      call dgetrf_(n,n,work(i1),n,iwork(i2),ierr)
 cstart linpack_determinant
-c      call dgefa(w(i1),n,n,iw(i2),ierr)
+c      call dgefa(work(i1),n,n,iwork(i2),ierr)
       i3 = mstackr_cvb(n*n)
       if(ierr.ne.0)then
         detm_cvb=zero
         call mfreer_cvb(i1)
         return
       endif
-      call dgedi(w(i1),n,n,iw(i2),det,w(i3),10)
+      call dgedi(work(i1),n,n,iwork(i2),det,work(i3),10)
 celse
 c;      dl=0d0
 c;      ds=1d0
 c;      do k=0,n-1
-c;        dl=dl+log10(abs(w(i1+k*(n+1))))
-c;        if(w(i1+k*(n+1)).lt.0d0)ds=-ds
+c;        dl=dl+log10(abs(work(i1+k*(n+1))))
+c;        if(work(i1+k*(n+1)).lt.0d0)ds=-ds
 c;      end do
 c;      det(2)=dble(int(dl))
 c;      det(1)=ds*(10d0**(dl-det(2)))

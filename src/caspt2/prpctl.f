@@ -16,27 +16,28 @@
 * UNIVERSITY OF LUND                         *
 * SWEDEN                                     *
 *--------------------------------------------*
-      SUBROUTINE PRPCTL
+      SUBROUTINE PRPCTL(UEFF)
       USE PT2WFN
+      use caspt2_output, only:iPrGlb,usual,verbose
+      use OneDat, only: sNoNuc, sNoOri
+#ifdef _MOLCAS_MPP_
+      USE Para_Info, ONLY: Is_Real_Par
+#endif
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
 #include "SysDef.fh"
-      Logical FullMlk,lSave,Do_ESPF,AddFragments
-#ifdef _MOLCAS_MPP_
-      LOGICAL Is_Real_Par
-#endif
+      Logical FullMlk,lSave,Do_ESPF
 
-      Character(8) Label
-      Character(128) FILENAME,MDNAME
-      Character(80) Note
+      Character(Len=8) Label
+      Character(Len=128) FILENAME,MDNAME
+      Character(Len=80) Note
       Integer IndType(56)
       Real*8 Dummy(2),DUM(1)
+      Dimension UEFF(*)
 
-      CALL QENTER('PRPCTL')
 
 #ifdef _MOLCAS_MPP_
       IF (Is_Real_Par()) THEN
@@ -94,7 +95,7 @@ C This density matrix may be approximated in several ways, see DENS.
       CALL DCOPY_(NDMAT,[0.0D0],0,WORK(LDMAT),1)
       CALL GETMEM('LISTS','ALLO','INTE',LLISTS,NLSTOT)
       CALL MKLIST(iWORK(LLISTS))
-      CALL DENS(IVECX,IVECR,WORK(LDMAT))
+      CALL DENS(IVECX,WORK(LDMAT),UEFF)
       CALL GETMEM('LISTS','FREE','INTE',LLISTS,NLSTOT)
 
 C Compute natural orbitals of CASPT2 wave function.
@@ -165,9 +166,8 @@ C Write natural orbitals as standard orbital file on LUMORB.
 
       CALL WRVEC(FILENAME,LUTMP,'COI',NSYM,NBAS,NBAS,
      &  WORK(LCNAT), WORK(LOCC),Dummy  ,IndType,Note)
-      AddFragments=.True.
       iUHF=0
-      Call Molden_Interface(iUHF,FILENAME,MDNAME,AddFragments)
+      Call Molden_Interface(iUHF,FILENAME,MDNAME)
 
 C Write natural orbitals to standard output.
       IF ( IPRGLB.GE.VERBOSE) THEN
@@ -186,7 +186,6 @@ C Write natural orbitals to standard output.
          ELSE IF ( OUTFMT.EQ.'DEFAULT ' ) THEN
            THRENE=5.0d+00
            THROCC=5.0d-04
-      throcc = 0.0d+00
          END IF
          CALL PRIMO('Output orbitals from CASPT2',
      &           .TRUE.,.FALSE.,THROCC,THRENE,NSYM,NBAS,
@@ -204,7 +203,7 @@ C Write natural orbitals to standard output.
 
         Call GetMem('Scr1','Allo','Real',LXXX,NBAST**2)
         iRc=-1
-        iOpt=6
+        iOpt=ibset(ibset(0,sNoOri),sNoNuc)
         iComp=1
         iSyLbl=1
         Label='Mltpl  0'
@@ -225,13 +224,6 @@ C Write natural orbitals to standard output.
         WRITE(6,'(6X,A)') '-----------------------------------------'
       END IF
 
-* The PRPT source code gives the following formula for the
-* scratch space needed:
-      NCOMP=6
-      NTCOMP=15
-      NSCR=(NBSQT+NBAST)/2+6+4*NCOMP+(NBAST*(NBAST+1))/2
-     &      +4+2*NTCOMP*(NTCOMP+1)
-
       nDens=0
       Do i = 1, nSym
          nDens=nDens+nBas(i)*(nBas(i)+1)/2
@@ -239,11 +231,7 @@ C Write natural orbitals to standard output.
       Call GetMem('Scr2','Allo','Real',LXXX,NDENS)
 *
       Call DOne_Caspt2(WORK(LCNAT),WORK(LOCC),Work(LXXX))
-C     write (*,*) "writing D1AO: ndens=",ndens
-C     do i = 1, ndens
-C       write (*,'(i4,f20.10)') i,work(lxxx+i-1)
-C     end do
-      Call Put_D1AO(WORK(LXXX),nDens)
+      Call Put_dArray('D1ao',WORK(LXXX),nDens)
 *
       Note='Temporary orbital file used by prpt.'
       LuTmp=50
@@ -269,6 +257,5 @@ cnf
 
  999  CONTINUE
 
-      CALL QEXIT('PRPCTL')
       RETURN
       END

@@ -16,7 +16,8 @@
      &                  iAO,iAOst,iBas,jBas,kBas,lBas,
      &                  DoCoul,DoExch,Dij,Dkl,Dik,Dil,Djk,Djl,ExFac)
 ************************************************************************
-*  Object: to accumulate contibutions from the AO integrals directly   *
+*                                                                      *
+*  Object: to accumulate contributions from the AO integrals directly  *
 *          to the symmetry adapted Fock matrix.                        *
 *                                                                      *
 *          This version uses square density and fock matrices          *
@@ -38,25 +39,14 @@
 *          The density matrix is not folded if the shell indices and   *
 *          the angular indices are identical.                          *
 *                                                                      *
-* Called from: TwoEl                                                   *
-*                                                                      *
-* Calling    : QEnter                                                  *
-*              RecPrt                                                  *
-*              DCopy   (ESSL)                                          *
-*              DNrm2_  (ESSL)                                          *
-*              DGeTMO  (ESSL)                                          *
-*              DGeMV   (ESSL)                                          *
-*              FckDst                                                  *
-*              GetMem                                                  *
-*              QExit                                                   *
-*                                                                      *
 *     Author: Roland Lindh, Dept. of Theoretical Chemistry, University *
 *             of Lund, Sweden. February '93                            *
 ************************************************************************
+      use SOAO_Info, only: iAOtSO
+      use Basis_Info, only: nBas
+      use Gateway_Info, only: ThrInt
       Implicit Real*8 (A-H,O-Z)
-      Intrinsic Max, Min
-#include "itmax.fh"
-#include "info.fh"
+      Intrinsic Max
 #include "real.fh"
 #include "print.fh"
       Real*8 AOInt(nijkl,iCmp,jCmp,kCmp,lCmp), FMat(nDens),
@@ -72,10 +62,10 @@
 ************************************************************************
 *                                                                      *
       If (.Not.DoExch.and..Not.DoCoul) Return
+#ifdef _DEBUGPRINT_
       iRout = 38
       iPrint = nPrint(iRout)
 *
-#ifdef _DEBUG_
 *     Write (*,*) DDot_(nijkl*iCmp*jCmp*kCmp*lCmp,AOInt,1,AOInt,1),
 *    &            DDot_(nijkl*iCmp*jCmp*kCmp*lCmp,AOInt,1,One  ,0)
       If (iPrint.ge.49) Then
@@ -140,7 +130,6 @@ C     If (nijkl.ne.ibas*jbas*kbas*lbas) Call SysHalt( 'fckacc_nosym' )
          End Do
       End Do
 *
-      nkl=kBas*lBas
       nij=iBas*jBas
 *
       If (.Not.DoExch) Then
@@ -286,9 +275,8 @@ C        Write (*,*) 'FMAT,DMAT=',DDot_(nDens,FMat,1,One,0),
 C    &                            DDot_(nDens,DMat,1,One,0)
 c     End If
 *
-*     Call GetMem(' Exit FckAcc','CHECK','REAL',iDum,iDum)
       Return
-#ifndef _DEBUG_
+#ifndef _DEBUGPRINT_
 c Avoid unused argument warnings
       If (.False.) Then
          Call Unused_integer_array(iAng)
@@ -302,7 +290,8 @@ c Avoid unused argument warnings
      &                  AOInt,FMat,DMat,nDens,
      &                  iAO,iAOst,iBas,jBas,kBas,lBas,ExFac)
 ************************************************************************
-*  Object: to accumulate contibutions from the AO integrals directly   *
+*                                                                      *
+*  Object: to accumulate contributions from the AO integrals directly  *
 *          to the symmetry adapted Fock matrix.                        *
 *                                                                      *
 *          The indices has been scrambled before calling this routine. *
@@ -321,24 +310,12 @@ c Avoid unused argument warnings
 *          The density matrix is not folded if the shell indices and   *
 *          the angular indices are identical.                          *
 *                                                                      *
-* Called from: TwoEl                                                   *
-*                                                                      *
-* Calling    : QEnter                                                  *
-*              RecPrt                                                  *
-*              DCopy   (ESSL)                                          *
-*              DNrm2_  (ESSL)                                          *
-*              DGeTMO  (ESSL)                                          *
-*              DGeMV   (ESSL)                                          *
-*              FckDst                                                  *
-*              GetMem                                                  *
-*              QExit                                                   *
-*                                                                      *
 *     Author: Roland Lindh, Dept. of Theoretical Chemistry, University *
 *             of Lund, Sweden. February '93                            *
 ************************************************************************
+      use SOAO_Info, only: iAOtSO
+      use Gateway_Info, only: CutInt
       Implicit Real*8 (A-H,O-Z)
-#include "itmax.fh"
-#include "info.fh"
 #include "real.fh"
 #include "print.fh"
       Real*8 AOInt(nijkl,iCmp,jCmp,kCmp,lCmp), FMat(nDens),
@@ -352,8 +329,8 @@ c Avoid unused argument warnings
 *
       iTri(i,j) = Max(i,j)*(Max(i,j)-1)/2 + Min(i,j)
 *
-      iRout = 38
-      iPrint = nPrint(iRout)
+*     iRout = 38
+*     iPrint = nPrint(iRout)
 *
 *     Write (*,*) DDot_(nijkl*iCmp*jCmp*kCmp*lCmp,AOInt,1,AOInt,1),
 *    &            DDot_(nijkl*iCmp*jCmp*kCmp*lCmp,AOInt,1,One  ,0)
@@ -438,7 +415,6 @@ c Avoid unused argument warnings
  200     Continue
  100  Continue
 *
-*     Call GetMem(' Exit FckAcc','CHECK','REAL',iDum,iDum)
       Return
 c Avoid unused argument warnings
       If (.False.) Then

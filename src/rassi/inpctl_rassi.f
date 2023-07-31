@@ -11,33 +11,28 @@
       SUBROUTINE INPCTL_RASSI()
       use rassi_global_arrays, only: HAM, ESHFT, HDIAG, JBNUM, LROOT
 #ifdef _DMRG_
+      use rasscf_data, only: doDMRG
       use qcmaquis_interface_cfg
-      use qcmaquis_interface_environment,
-     & only: initialize_dmrg_rassi
-      use qcmaquis_info
+      use qcmaquis_info, only: qcmaquis_info_init, qcm_prefixes
+      use qcmaquis_interface_mpssi, only: qcmaquis_mpssi_init
 #endif
       use mspt2_eigenvectors
       IMPLICIT NONE
 #include "prgm.fh"
       CHARACTER*16 ROUTINE
       PARAMETER (ROUTINE='INPCTL')
+#include "Molcas.fh"
 #include "WrkSpc.fh"
 #include "stdalloc.fh"
 #include "rassi.fh"
 #include "symmul.fh"
-#include "itmax.fh"
-#include "info.fh"
 #include "centra.fh"
 #include "rasdef.fh"
 #include "cntrl.fh"
-#ifdef _HDF5_
-#  include "mh5.fh"
-#endif
 
       LOGICAL READ_STATES
       INTEGER JOB, i
 
-      CALL QENTER(ROUTINE)
 
 * get basic info from runfile
       Call Get_iScalar('nSym',nSym)
@@ -83,7 +78,7 @@ C Read (and do some checking) the standard input.
 * Allocate a bunch of stuff
       Call GetMem('REFENE','Allo','Real',LREFENE,NSTATE)
       Call GetMem('HEFF','Allo','Real',L_HEFF,NSTATE**2)
-      Call dzero(Work(L_HEFF),NSTATE**2)
+      Call fzero(Work(L_HEFF),NSTATE**2)
       If (.not.IFHEXT) Then
         Call mma_allocate(HAM,nState,nState,Label='HAM')
         HAM(:,:)=0.0D0
@@ -104,10 +99,27 @@ C handle different active spaces per JobIph, but this is checked elsewhere
 #ifdef _DMRG_
       if (doDMRG)then
         !> stupid info.h defines "sum", so I cannot use the intrinsic sum function here...
-        dmrg_external%norb = 0; do i = 1, nsym; dmrg_external%norb =
-     &  dmrg_external%norb + nash(i); end do
-        !> initialize the MPS-SI interface
-        call initialize_dmrg_rassi(nstate)
+        qcmaquis_param%L = 0; do i = 1, nsym; qcmaquis_param%L =
+     &  qcmaquis_param%L + nash(i); end do
+
+        ! Initialise the new MPSSI interface
+        call qcmaquis_mpssi_init(qcm_prefixes,
+     &                           LROOT,NSTAT(1),NJOB)
+
+      ! Check if number of active electrons is the same for all job files
+      ! Otherwise, quit on error, as Dyson orbitals are not supported yet with DMRG
+      if (NJOB.gt.1) then
+        JOB=NACTE(1)
+        do i=2,NJOB
+          if (NACTE(i).ne.JOB) then
+            Call WarningMessage(2,'Number of active electrons')
+            Write(6,*)' is not the same in different JOBIPH files'
+            Write(6,*)' Dyson orbitals are not yet supported in MPSSI.'
+            Call Quit_OnUserError()
+          end if
+        end do
+      end if
+
       end if
 #endif
 
@@ -121,6 +133,8 @@ C Addition of NJOB,MSJOB and MLTPLT on RunFile.
       CALL Put_iscalar('MXJOB_SINGLE',MXJOB)
       CALL Put_iArray('MLTP_SINGLE',MLTPLT,MXJOB)
 
+      CALL Put_iArray('NSTAT_SINGLE',NSTAT,MXJOB)
+!     CALL Put_iArray('ISTAT_SINGLE',ISTAT,MXJOB)
 C
 C .. and print it out
 CTEST      CALL PRINF()
@@ -138,6 +152,5 @@ C Additional input processing. Start writing report.
       Call GetMem('REFENE','Free','Real',LREFENE,NSTATE)
       Call GetMem('HEFF','Free','Real',L_HEFF,NSTATE**2)
 C
-      CALL QEXIT(ROUTINE)
       RETURN
       END

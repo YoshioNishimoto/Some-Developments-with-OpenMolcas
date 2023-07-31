@@ -20,7 +20,7 @@ C RECORDS WITH LENGTH NBLOCK.
       DIMENSION A(*)
 C-jwk-cleanup      INTEGER START,STOP
       REAL*8 INPROD
-      INTEGER ISCR(2)
+      INTEGER ISCR(2), IDUMMY(1)
 *
       PARAMETER(LPBLK=50000)
       INTEGER IPAK(LPBLK)
@@ -49,9 +49,6 @@ C       CALL ITODS(ISCR,2,MMBLOCK,IFIL)
         IF(IMZERO.EQ.1) GOTO 1001
       END IF
 *
-C
-      NBLOCK = MBLOCK
-      IF ( MBLOCK .LE. 0 ) NBLOCK = NDIM
 *. Loop over packed records of dimension LPBLK
       IELMNT = 0
  1000 CONTINUE
@@ -71,15 +68,18 @@ C
        GOTO 999
 *. Send to DISC
  998   CONTINUE
-       CALL IDAFILE(IFIL,1,[LBATCH],1,IDISK(IFIL))
+       IDUMMY(1)=LBATCH
+       CALL IDAFILE(IFIL,1,IDUMMY,1,IDISK(IFIL))
        IF(LBATCH.GT.0) THEN
          CALL IDAFILE(IFIL,1,IPAK,LBATCH,IDISK(IFIL))
          CALL DDAFILE(IFIL,1,XPAK,LBATCH,IDISK(IFIL))
        END IF
        IF(IELMNT.EQ.NDIM) THEN
-         CALL IDAFILE(IFIL,1,[-1],1,IDISK(IFIL))
+         IDUMMY(1)=-1
+         CALL IDAFILE(IFIL,1,IDUMMY,1,IDISK(IFIL))
        ELSE
-         CALL IDAFILE(IFIL,1,[0],1,IDISK(IFIL))
+         IDUMMY(1)=0
+         CALL IDAFILE(IFIL,1,IDUMMY,1,IDISK(IFIL))
          GOTO 1000
        END IF
 *. End of loop over records of truncated elements

@@ -8,14 +8,15 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine intchk_cvb(iarr,nmax,nread,ifc,a,lflag)
       implicit real*8 (a-h,o-z)
       parameter (nkeyw=3,ncmp=4)
       character*8 keyword(nkeyw)
       character*(*) a
-#include "malloc_cvb.fh"
+#include "WrkSpc.fh"
       dimension iarr(*),ito(1)
       save keyword
       data keyword/'NONE    ','ALL     ','TO      '/

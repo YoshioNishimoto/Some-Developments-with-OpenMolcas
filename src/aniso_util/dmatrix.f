@@ -10,13 +10,13 @@
 ************************************************************************
       Subroutine DMATRIX(E,F,Z,IPRINT)
 
-C   THIS ROUTINE COMPUTES THE USUAL D-TENSOR ON THA BASIS OF COEFFICINETS
-C   OF THE STEWENS OPERATORS OF ORDER 2 (ES AND FS) AND DIAGONALIZE IT
+C   THIS ROUTINE COMPUTES THE USUAL D-TENSOR ON THE BASIS OF COEFFICIENTS
+C   OF THE STEVENS OPERATORS OF ORDER 2 (ES AND FS) AND DIAGONALIZE IT
 C   TO OBTAIN THE MAIN ANISOTROPY AXES
 C
 
       Implicit None
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter         :: wp=kind(0.d0)
       Integer, intent(in)        :: iprint
       Real(kind=8),intent(in)   :: Z(3,3)
       Complex(kind=8),intent(in):: E(0:2), F(0:2)
@@ -27,7 +27,6 @@ C
      &                              E_factor, diff12, diff23, ZD2(3,3)
       Complex(kind=8)           :: DMAT(3,3)
 
-      Call qEnter('dmatrix')
 
       CF=sqrt(3.0_wp/2.0_wp)
 
@@ -324,6 +323,5 @@ c the WD(3) and ZD(i,3) correspond to gtens(3) and maxes(i,3)
         Write(6,'(a,F9.4)') 'E = ', E_factor
       End If
 
-      Call qExit('dmatrix')
       Return
       End

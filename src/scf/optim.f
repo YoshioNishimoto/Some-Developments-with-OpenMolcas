@@ -28,7 +28,7 @@
 *----------------------------------------------------------------------*
 *                                                                      *
 * The KISS method is employed here. Do a scan of the energy surface    *
-* along lines paralell to the edges. Reduce the steplength gradually.  *
+* along lines parallel to the edges. Reduce the steplength gradually.  *
 *                                                                      *
 *----------------------------------------------------------------------*
 *                                                                      *
@@ -51,7 +51,7 @@
 * Local variables.                                                     *
 *----------------------------------------------------------------------*
       Real*8  Step,Eref,Eplus,Eminus,Step_m,Step_p,E_Pred
-      Real*8  Optim_E
+      Real*8  Optim_E, Ci, Cj
       Real*8  sum,fact
       Logical DidChange
       Integer Iter
@@ -61,9 +61,8 @@
 *----------------------------------------------------------------------*
 * Initialize                                                           *
 *----------------------------------------------------------------------*
-*define _DEBUG_
-#ifdef _DEBUG_
-      Call qEnter('Optim')
+*#define _DEBUGPRINT_
+#ifdef _DEBUGPRINT_
       Debug=.true.
       Debug2=.True.
 *     Debug2=.false.
@@ -89,7 +88,7 @@
         Write(6,'(a)') 'Start C:'
         Write(6,'(6F15.6)') (C(i),i=1,n)
         Write(6,'(a)') 'Start G:'
-        Write(6,'(6F15.6)') (G(i),i=1,n)
+        Write(6,'(6F26.16)') (G(i),i=1,n)
         Call RecPrt('H',' ',H,nDim,nDim)
       endif
 *----------------------------------------------------------------------*
@@ -114,21 +113,23 @@
       Eminus=1.0D0
       Eplus =1.0D0
 *
-100   If(Iter.lt.500 .and. DidChange) Then
+      Do While(Iter.lt.500 .and. DidChange)
 *
          Iter=Iter+1
          DidChange=.false.
          Do i=1,n-1
             Do j=i+1,n
 *
+               Ci = C(i)
+               Cj = C(j)
                Step_p = Min(Step,1.0D0-C(i),C(j))
                C(i)=C(i)+Step_p
                C(j)=C(j)-Step_p
 *
                Eplus=optim_E(C,G,H,n,nDim)
 *
-               C(i)=C(i)-Step_p
-               C(j)=C(j)+Step_p
+               C(i)=Ci
+               C(j)=Cj
 *
                Step_m = Min(Step,C(i),1.0D0-C(j))
 *
@@ -137,13 +138,18 @@
 *
                EMinus=optim_E(C,G,H,n,nDim)
 *
-               C(i)=C(i)+Step_m
-               C(j)=C(j)-Step_m
+               C(i)=Ci
+               C(j)=Cj
 *
        if(Debug2) then
-               Write(6,'(a,2I3,3F20.10)') 'i,j,Eref,Eplus,Eminus',
+               Write(6,'(a,2I3,3F26.16)') 'i,j,Eref,Eplus,Eminus',
      &                                     i,j,Eref,Eplus,Eminus
+               Write (6,'(a,2F26.16)') 'Step_p, Step_m=',Step_p,Step_m
+               Write (6,*) 'Eplus.lt.EMinus=',Eplus.lt.EMinus
+               Write (6,*) 'Eplus.lt.Eref=',Eplus.lt.Eref
+               Write (6,*) 'Eminus.lt.Eref=',Eminus.lt.Eref
        endif
+               If (Abs(Eplus-EMinus).gt.1.0D-12) Then
                If(Eplus.lt.Eminus) Then
                   If(Eplus.lt.Eref) Then
                      C(i)=C(i)+Step_p
@@ -159,8 +165,11 @@
                      DidChange=.true.
                   End If
                End If
-            End Do
-         End Do
+               End If
+
+            End Do ! j
+         End Do ! i
+
          If(.not.DidChange) Then
             If(Step.gt.0.9d-4) Then
                Step=0.1d0*Step
@@ -179,27 +188,22 @@
             If(C(i).gt.1.0d0) C(i)=1.0d0
             sum=sum+C(i)
          End Do
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
          Write(6,*) 'optim: sum-1',sum-1.0d0
 #endif
          fact=1.0d0/sum
          Do i=1,n
             C(i)=fact*C(i)
          End Do
-         Go To 100
-      End If
-#ifdef _DEBUG_
+      End Do
+#ifdef _DEBUGPRINT_
       Write (6,*) 'ERef=',ERef
 #endif
       E_Pred=ERef
-*----------------------------------------------------------------------*
-* Done.                                                                *
-*----------------------------------------------------------------------*
-#ifdef _DEBUG_
-      Call qExit('Optim')
-#endif
-      Return
-      End
+
+      End subroutine Optim
+
+
       Real*8 Function optim_E(C,G,H,n,nDim)
       Implicit Real*8 (A-H,O-Z)
       Real*8 C(nDim), G(nDim), H(nDim,nDim)
@@ -212,5 +216,4 @@
          End Do
          Optim_E=Optim_E+C(k)*G(k)+Tmp
       End Do
-      Return
       End

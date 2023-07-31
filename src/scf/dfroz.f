@@ -36,10 +36,9 @@
 *     history: none                                                    *
 *                                                                      *
 ************************************************************************
+      use InfSCF
       Implicit Real*8 (a-h,o-z)
 #include "real.fh"
-#include "mxdm.fh"
-#include "infscf.fh"
 #include "stdalloc.fh"
 *
       Real*8 Dlt(nDlt),CMO(nCMO)
@@ -138,7 +137,6 @@
          nOr = nOrb(iSym)
          nFr = nFro(iSym)
 *
-         nBF = nBs - nFr
          nOF = nOr - nFr
          lth = nBs*(nBs + 1)/2
 *
@@ -170,8 +168,8 @@
                Dlt(ipDlt + Ind(iRow,iCol)) = Scale*Sum
             End Do
          End Do
-*define _DEBUG_
-#ifdef _DEBUG_
+*define _DEBUGPRINT_
+#ifdef _DEBUGPRINT_
          Call NrmClc(Dlt(ipDlt),nBs,'DOne_SCF_froz','Dlt(ipDlt)')
 #endif
 *
