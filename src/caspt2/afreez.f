@@ -37,20 +37,21 @@
 *     THRDE : Threshold for deleting orbitals                               *
 *                                                                           *
 *****************************************************************************
-      USE REFWFN
+      use OneDat, only: sNoNuc, sNoOri
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "itmax.fh"
 #include "Molcas.fh"
 #include "real.fh"
 #include "stdalloc.fh"
 *
-      CHARACTER(LENIN8) NAME(*)
-      CHARACTER(4) NAMFRO(*)
+      CHARACTER(LEN=LENIN8) NAME(*)
+      CHARACTER(LEN=4) NAMFRO(*)
       DIMENSION NBAS(NSYM),NFRO(NSYM),NISH(NSYM),NASH(NSYM),NSSH(NSYM),
      &          NDEL(NSYM)
       DIMENSION LABFRO(mxbas),DPQ(*)
       REAL*8, ALLOCATABLE :: SMAT(:)
       REAL*8 CMO(*)
+      character(len=8) :: Label
 *
 *
 *----------------------------------------------------------------------*
@@ -76,7 +77,10 @@
       NSMAT=NTRI+6
       CALL MMA_ALLOCATE(SMAT,NSMAT)
       isymlbl=1
-      Call RdOne(irc,6,'Mltpl  0',1,SMAT,isymlbl)
+      iopt=ibset(ibset(0,sNoOri),sNoNuc)
+      Label='Mltpl  0'
+      iComp=1
+      Call RdOne(irc,iopt,Label,iComp,SMAT,isymlbl)
 *
 *----------------------------------------------------------------------*
 *      write(6,*)'molecular orbitals before localization'

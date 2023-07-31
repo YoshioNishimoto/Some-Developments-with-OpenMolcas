@@ -8,13 +8,14 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine rumer_cvb(bikcof,
      > nel,nalf,nbet,ndet,ifns,kbasis,iprint,nswpdim,
      > minspn,maxspn,nkspn,
      > minswp,maxswp,nkswp,ioccswp,locca,lnocca,
-     > xdet,xspin,iwork,
+     > xdet,xspin,iw,
      > ialfs,ibets)
       implicit real*8 (a-h,o-w,y-z),integer(x)
       dimension bikcof(ndet,ifns)
@@ -24,7 +25,7 @@
       dimension ioccswp(nbet,nswpdim)
       dimension locca(nel), lnocca(nel)
       dimension xdet(0:nel,0:nalf),xspin((nel+1)*(nalf+1)),
-     > iwork(nel)
+     > iw(nel)
       dimension ialfs(nalf),ibets(nbet)
       save one
       data one/1.0d0/
@@ -110,18 +111,18 @@ c Determine pairings
       endif
 
       do 3000 iswp=1,nswpdim
-      call izero(iwork,nel)
+      call izero(iw,nel)
       do 3100 ia=1,nalf
-      iwork(ialfs(ia))=1
+      iw(ialfs(ia))=1
 3100  continue
       do 3200 ia=1,nbet
       if(ioccswp(ia,iswp).ne.0)then
 c  IA => alpha electron in position number 2 (= swap).
-        iwork(ialfs(ia))=0
-        iwork(ibets(ia))=1
+        iw(ialfs(ia))=0
+        iw(ibets(ia))=1
       endif
 3200  continue
-      bikcof(indget_cvb(iwork,nalf,nel,xdet),index)=bikvalue
+      bikcof(indget_cvb(iw,nalf,nel,xdet),index)=bikvalue
 3000  continue
       call loind_cvb(nel,nbet,nkspn,minspn,maxspn,
      >                       locca,lnocca,index,xspin,*2100)

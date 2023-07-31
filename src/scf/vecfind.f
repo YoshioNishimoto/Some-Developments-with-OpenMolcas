@@ -39,13 +39,13 @@
 *  5 NDDO (use not)    9 Guessorb                                      *
 *                                                                      *
 ************************************************************************
-      Implicit Real*8 (A-H,O-Z)
-#include "mxdm.fh"
-#include "infscf.fh"
-#include "stdalloc.fh"
 #ifdef _HDF5_
-#  include "mh5.fh"
+      Use mh5, Only: mh5_fetch_attr
 #endif
+      use InfSCF
+      use stdalloc, only: mma_allocate, mma_deallocate
+*     Implicit Real*8 (A-H,O-Z)
+      Implicit None
 *----------------------------------------------------------------------*
 * Dummy arguments                                                      *
 *----------------------------------------------------------------------*
@@ -63,6 +63,9 @@
       Integer mynOrb(8)
       Character*10 infoLbl
       Real*8, Dimension(:), Allocatable:: EOrb
+      Integer nSQRSum, iSym, i, nData, iVer, j, N2, N1, iDSpin, nEle,
+     &        iTmp, nEle1, nEle2, mTmp, iOff, n, iBas, iRC
+      Real*8 GAP, eAlpha, eBeta, tmp
 *----------------------------------------------------------------------*
 * Setup                                                                *
 *----------------------------------------------------------------------*
@@ -319,10 +322,10 @@
 *        Write(6,*) 'Using Guessorb orbitals'
          If(OccSet) Then
 *           Write(6,*) 'Occupation is set'
-            Continue
+            !continue
          Else If(FermSet) Then
 *           Write(6,*) 'Fermi is set'
-            Continue
+            !continue
          Else
 *           Write(6,*) 'Must decide if to use Fermi'
             If(nAufb(1).eq.-1) Then
@@ -408,6 +411,8 @@
 *                                                                      *
 *----------------------------------------------------------------------*
 *     Write(6,'(a,i2)') 'VecFind: InVec=',InVec
+*     Write(6,*) 'OccSet=',OccSet
+*     Write(6,*) 'FermSet=',FermSet
 *----------------------------------------------------------------------*
 *                                                                      *
 *----------------------------------------------------------------------*

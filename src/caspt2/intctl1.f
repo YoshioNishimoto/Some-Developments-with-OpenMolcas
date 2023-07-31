@@ -9,16 +9,14 @@
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
       SUBROUTINE INTCTL1(CMO)
+      use caspt2_output, only:iPrGlb,debug
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
 #include "pt2_guga.fh"
-#include "output.fh"
-#include "WrkSpc.fh"
 #include "intgrl.fh"
 
       DIMENSION CMO(NCMO)
-      CALL QENTER('INTCTL1')
 
 * Compute using conventional integral file:
       IF(IPRGLB.GE.DEBUG) THEN
@@ -34,6 +32,5 @@
 c Compute FIMO, FAMO, ...  to workspace:
       CALL FOCK_RPT2
 
-      CALL QEXIT('INTCTL1')
       RETURN
       END

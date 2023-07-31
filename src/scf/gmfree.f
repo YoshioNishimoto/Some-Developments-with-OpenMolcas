@@ -34,21 +34,17 @@
 ************************************************************************
       use SCF_Arrays
       use Orb_Type
+#ifdef _FDE_
+      use Embedding_Global, only: embInt
+#endif
+      use InfSCF
       Implicit Real*8 (a-h,o-z)
 *
-#include "mxdm.fh"
-#include "infscf.fh"
 #include "stdalloc.fh"
-#ifdef _FDE_
-      ! Thomas Dresselhaus
-#include "embpotdata.fh"
-#endif
 *
 *----------------------------------------------------------------------*
 *     Start                                                            *
 *----------------------------------------------------------------------*
-*
-      nD = iUHF + 1
 *
 *---- Deallocate memory
       Call mma_deallocate(Darwin)
@@ -61,16 +57,17 @@
       Call mma_deallocate(OrbType)
       Call mma_deallocate(EOrb)
       Call mma_deallocate(OccNo)
-      Call mma_deallocate(Fock)
+      Call mma_deallocate(FockMO)
+      Call mma_deallocate(FockAO)
+      Call mma_deallocate(CMO_ref)
       Call mma_deallocate(CMO)
       Call mma_deallocate(TrM)
 *
-      Call mma_deallocate(Lowdin)
       Call mma_deallocate(Ovrlp)
       Call mma_deallocate(OneHam)
       Call mma_deallocate(HDiag)
 #ifdef _FDE_
-      If (Allocated(Emb)) Call mma_deallocate(Emb)
+      If (Allocated(embInt)) Call mma_deallocate(embInt)
 #endif
 *
 *----------------------------------------------------------------------*

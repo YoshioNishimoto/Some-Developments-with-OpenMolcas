@@ -13,14 +13,6 @@
       SubRoutine Picky(Din,n,m,nijPrm,nijCmp,nDCR,nSt,nEnd,mSt,mEnd,
      &                 Dout)
 ************************************************************************
-*                                                                      *
-* Object:                                                              *
-*                                                                      *
-* Called from: DFTwo                                                   *
-*                                                                      *
-* Calling    : QEnter                                                  *
-*              QExit                                                   *
-*                                                                      *
 *     Author: Roland Lindh, Dept. of Theoretical Chemistry,            *
 *             University of Lund, SWEDEN                               *
 ************************************************************************
@@ -35,11 +27,6 @@
       ij1(i,j,k) = (k-1)*(n*m+1) + (j-1)*n + i
       ij2(i,j,k) = (k-1)*((nEnd-nSt+1)*(mEnd-mSt+1)+1) +
      &             (j-1)*(nEnd-nSt+1) + i
-*
-      iRout = 236
-      iPrint = nPrint(iRout)
-*     Call QEnter('Picky')
-*     Call GetMem('Enter Picky','Check','Real',iDum,iDum)
 *
       If (nSt.eq.1.and.nEnd.eq.n .and.
      &    mSt.eq.1.and.mEnd.eq.m) Then
@@ -79,7 +66,5 @@ c              jOut= nijCmp*((nEnd-nSt+1)*(mEnd-mSt+1)+1)
  1       Continue
       End If
 *
-*     Call QExit('Picky')
-*     Call GetMem('Exit Picky','Check','Real',iDum,iDum)
       Return
       End

@@ -34,80 +34,53 @@
 *                                                                      *
 ************************************************************************
       use OccSets
-      use IOBUF
+      use KSDFT_Info, only: CoefR, CoefX
+      use OFembed
+      use Functionals, only: Custom_File, Custom_Func
+      use IOBuf, only: lDaRec,nSect!,DiskMx_MByte
+      use InfSO
+#ifdef _HDF5_
+      use mh5, only: mh5_is_hdf5, mh5_open_file_r
+#endif
+      use Fock_util_global, only: Deco, DensityCheck, Estimate, Update
 *
+      use SpinAV, only: Do_SpinAV
+      use InfSCF
+      use ChoSCF
+      use MxDM
       Implicit Real*8 (a-h,o-z)
       External Allocdisk
       Integer Allocdisk
 *
 #include "real.fh"
-#include "mxdm.fh"
-#include "infscf.fh"
-#include "infso.fh"
 #include "stdalloc.fh"
-#include "hflda.fh"
 #include "ldfscf.fh"
 #include "file.fh"
-#include "iprlv.fh"
-#include "ksdft.fh"
-#ifdef _HDF5_
-#  include "mh5.fh"
-#endif
+#include "hfc_logical.fh"
 *
 *---- Define local variables
-      Character*180  Key, Line, BLIne
+      Character*180  Key, Line
       Character*180 Get_Ln
       External Get_Ln
-      Integer nLev,iArray(32)
+      Integer iArray(32)
       Logical lTtl, IfAufChg,OccSet,FermSet,CharSet,UHFSet,SpinSet
-      Logical Cholesky,REORD,DECO,timings,DensityCheck
-      Integer ALGO,NSCREEN
-      Real*8  dmpk,dFKmat
+      Logical Cholesky
       Real*8  ThrRd(1)
       Integer Mode(1)
 *     character ww*128
       character Method*8
-      Logical Cho_Aufb,Estimate,Update
       Logical TDen_UsrDef
 
-      Common /CHOSCF / REORD,DECO,dmpk,dFKmat,ALGO,NSCREEN
-      COMMON /CHOTIME / timings
-      COMMON /CHODENSITY/ DensityCheck
-      COMMON /CHOSCREEN/ Estimate,Update
-      Common /CHOAUF / Cho_Aufb
-      Logical Do_OFemb,KEonly,OFE_first
-      COMMON  / OFembed_L / Do_OFemb,KEonly,OFE_first
-      Character*16  OFE_KSDFT
-      COMMON  / OFembed_C / OFE_KSDFT
-      COMMON  / OFembed_I / ipFMaux, ip_NDSD, l_NDSD
-      COMMON  / OFembed_T / ThrFThaw
-      COMMON  / OFembed_R1/ Xsigma
-      COMMON  / OFembed_R2/ dFMD
-      Logical Do_Tw
-      COMMON  / Tw_corr_L   / Do_Tw
-      Character*16  ADDC_KSDFT
-      COMMON  / ADDcorr_C   / ADDC_KSDFT
-      Logical Do_Addc
-      COMMON  / ADDcorr_L   / Do_Addc
-      Logical Do_SpinAV
-      COMMON  / SPAVE_L  / Do_SpinAV
-      Common /Sagit/isSagit
-*
-*----------------------------------------------------------------------*
-*     Start                                                            *
-*----------------------------------------------------------------------*
-*
-#ifdef _DEBUG_
-      Call qEnter('RdInp')
-#endif
+#include "chotime.fh"
+#include "choauf.fh"
+
+#include "addcorr.fh"
+
 *
 *     copy input from standard input to a local scratch file
 *
       Call SpoolInp(LuSpool)
 *
-      Call ICopy(2*MxPrLv,[0],0,iPrLV,1)
-*
-      BLine=' '
       OccSet=.false.
       FermSet=.false.
       CharSet=.false.
@@ -125,7 +98,7 @@
       timings=.false.
       UHFSet=.false.
       Nscreen = 10    ! default screening interval (# of red sets)
-      dmpk = 1.0d0   ! default damping of the screening threshold
+      dmpk = 0.045d0   ! default damping of the screening threshold
       Estimate=.false.
       Update=.true.
 #if defined (_MOLCAS_MPP_)
@@ -142,21 +115,7 @@
       MxConstr=0
       klockan=1
       Do_Addc=.false.
-      Do_SpinAV=.false.
       iTer2run=2
-* Orbital-free embedding
-      Do_OFemb=.false.
-      KEonly  =.false.
-      OFE_first  =.true.
-      ThrFThaw = 0.0d0
-      dFMD = 0.0d0
-      Xsigma = 1.0d4
-      ipFMaux = -666666
-      ip_NDSD = -696969
-      l_NDSD = 0
-* KSDFT exch. and corr. scaling factors
-      CoefX = 1.0D0
-      CoefR = 1.0D0
 * Delta_Tw correlation energy calculation
       Do_Tw=.false.
 * Read Cholesky info from runfile and save in infscf.fh
@@ -232,11 +191,9 @@
       iFroz = 0
       iOccu = 0
       nTit  = 0
-      UHF_Size=1
       ivvloop=0
       iPrForm=-1
       iterprlv=0
-      HFLDA=0.0d0
       ScrFac=0.0d0
 *
 *---- Parameters that control how new orbitals
@@ -283,7 +240,6 @@
       MSYMON=.False.
 *
       iUHF = 0
-      isSagit=0
       nD = 1
 *
 *---- Locate "start of input"
@@ -305,7 +261,6 @@
       If (Line(1:4).eq.'FROZ') Go To 1500
       If (Line(1:4).eq.'OVLD') Go To 1700
       If (Line(1:4).eq.'PRLS') Go To 1800
-      If (Line(1:4).eq.'PRLI') Go To 1850
       If (Line(1:4).eq.'PROR') Go To 1900
       If (Line(1:4).eq.'KEEP') Go To 2000
       If (Line(1:4).eq.'STAR') Go To 2100
@@ -327,7 +282,7 @@
       If (Line(1:4).eq.'MCCN') Go To 2510
       If (Line(1:4).eq.'IVO ') Go To 2600
       If (Line(1:4).eq.'UHF ') Go To 2700
-      If (Line(1:4).eq.'ROHF') Go To 2800
+      If (Line(1:4).eq.'HFC ') Go To 2701
       If (Line(1:4).eq.'NODA') Go To 2900
       If (Line(1:4).eq.'CONV') Go To 3000
       If (Line(1:4).eq.'DISK') Go To 3100
@@ -339,6 +294,7 @@
       If (Line(1:4).eq.'C1DI') Go To 3600
       If (Line(1:4).eq.'QUAD') Go To 3700
       If (Line(1:4).eq.'RS-R') Go To 3750
+      If (Line(1:4).eq.'R-GE') Go To 3751
       If (Line(1:4).eq.'SCRA') Go To 3800
       If (Line(1:4).eq.'EXTR') Go To 3900
       If (Line(1:4).eq.'RFPE') Go To 4000
@@ -365,7 +321,6 @@
       If (Line(1:4).eq.'ROTP') Go To 5000
       If (Line(1:4).eq.'HLGA') Go To 5002
       If (Line(1:4).eq.'CLOC') Go To 5001
-      If (Line(1:4).eq.'HFLD') Go To 5010
       If (Line(1:4).eq.'FLIP') Go To 5020
       If (Line(1:4).eq.'PMTI') Go To 6000
       If (Line(1:4).eq.'STAT') Go To 6010
@@ -403,7 +358,7 @@
       If (Line(1:4).eq.'MSYM') Go To 8904
       If (Line(1:4).eq.'ITDI') Go To 8905
       If (Line(1:4).eq.'FCKA') Go To 8906
-      If (Line(1:4).eq.'SAGI') Go To 8907
+      If (Line(1:4).eq.'DEPT') Go To 8907
 *
       If (Line(1:4).eq.'FALC') Go To 30000
 *
@@ -514,15 +469,6 @@ c      End If
       Line=Get_Ln(LuSpool)
       Call Get_I1(1,iPri)
       iPrint = Max(iPri,iPrint)
-      GoTo 1000
-*
-*>>>>>>>>>>>>> PRLI <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
- 1850 Continue
-      Line=Get_Ln(LuSpool)
-      Call Get_I1(1,nLev)
-      nLev = Min(2*nLev,2*MxPrLv)
-      Line=Get_Ln(LuSpool)
-      Call Get_I(1,iPrLV,nLev)
       GoTo 1000
 *
 *>>>>>>>>>>>>> PROR <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -827,14 +773,13 @@ c      End If
      &                 'UHF keyword should be placed before others')
       endif
       iUHF     = 1
-      UHF_Size = 2
       MiniDn = .False.
       nD       = 2
       GoTo 1000
 *
-*>>>>>>>>>>>>> ROHF <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
- 2800 Continue
-      iROHF = 1
+*>>>>>>>>>>>>> HFC  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+ 2701 Continue
+      UHF_HFC     = .True.
       GoTo 1000
 *
 *>>>>>>>>>>>>> NODA <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -896,6 +841,13 @@ c      End If
 *>>>>>>>>>>>>> RS-R <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
  3750 Continue
       RSRFO = .True.
+      RGEK  = .False.
+      GoTo 1000
+*
+*>>>>>>>>>>>>> R-GE <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+ 3751 Continue
+      RGEK  = .True.
+      RSRFO = .False.
       GoTo 1000
 *
 *>>>>>>>>>>>>> SCRA <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
@@ -936,11 +888,11 @@ c      End If
       Line=Get_Ln(LuSpool)
       Line(180:180)='2'
       Call Put_Ln(Line)
-      Call Get_I(1,iArray,UHF_Size+1)
-      Do i=1,UHF_Size
+      Call Get_I(1,iArray,iUHF+2)
+      Do i=1,iUHF+1
          nAufb(i)=iArray(i)
       EndDo
-      iAuf=iArray(UHF_Size+1)
+      iAuf=iArray(iUHF+3)
       If (IfAufChg) Then
       call WarningMessage(2,
      &  'Option AUFBau is mutually exclusive CHARge')
@@ -1058,8 +1010,21 @@ c      End If
  4600 Continue
       Line=Get_Ln(LuSpool)
       Call UpCase(Line)
-      Call LeftAd(Line)
-      KSDFT=Line(1:16)
+      Line = adjustl(Line)
+      KSDFT=Line(1:80)
+      nFunc = 0
+      Read(Line,*,iostat=istatus) nFunc
+      If ((istatus == 0) .and. (nFunc > 0)) Then
+        KSDFT = Custom_Func
+        LuCF = IsFreeUnit(10)
+        Call molcas_open(LuCF,Custom_File)
+        Write(LuCF,*) Trim(KSDFT),nFunc
+        Do i=1,nFunc
+          Line=Get_Ln(LuSpool)
+          Write(LuCF,*) Trim(Line)
+        End Do
+        Close(LuCF)
+      End If
       GoTo 1000
 *
 *>>>>>>>>>>>>> DFCF <<<< Factors to scale exch. and corr. <<
@@ -1076,7 +1041,7 @@ c      End If
       Do_OFemb=.true.
       Line=Get_Ln(LuSpool)
       Call UpCase(Line)
-      Call LeftAd(Line)
+      Line = adjustl(Line)
       OFE_KSDFT=Line(1:16)
       write(6,*)  '  --------------------------------------'
       write(6,*)  '   Orbital-Free Embedding Calculation'
@@ -1135,8 +1100,8 @@ c      End If
       Do_Addc=.True.
       Line=Get_Ln(LuSpool)
       Call UpCase(Line)
-      Call LeftAd(Line)
-      ADDC_KSDFT=Line(1:16)
+      Line = adjustl(Line)
+      ADDC_KSDFT=Line(1:80)
       GoTo 1000
 *
 *>>>>>>>>>>>>> SAVE << Spin-Averaged wavelets (CONStraint) <
@@ -1195,6 +1160,11 @@ c      End If
      &        'SPIN must be a positive integer')
          Call Abend()
       End If
+      If (iAu_ab/=0) Then
+         iUHF=1
+         MiniDn = .False.
+         nD = 2
+      End If
       If ((iUHF.ne.1).and.(iAu_ab.ne.0)) Then
          Call WarningMessage(2,
      &        'SPIN greater than 1 requires UHF before it')
@@ -1235,12 +1205,6 @@ c      End If
       DoHLgap=.true.
       QNRTh    = 0.0d0
       GoTo 1000
-*>>>>>>>>>>>>> HFLDA <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
- 5010 Continue
-      Line=Get_Ln(LuSpool)
-      Call Get_F1(1,HFLDA)
-      Write(6,'(a,F15.3)') 'HFLDA=', HFLDA
-      Goto 1000
 *>>>>>>>>>>>>> FLIP <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
  5020 Continue
       Line=Get_Ln(LuSpool)
@@ -1511,9 +1475,17 @@ c        Call FindErrorLine()
          FckAuf=.False.
       End If
       GoTo 1000
-*>>>>>>>>>>>>> SAGI <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
+*>>>>>>>>>>>>> DEPTH  <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
  8907 Continue
-      isSagit=1
+      Line=Get_Ln(LuSpool)
+      Call Get_I1(1,kOptim_Max)
+      If (kOptim_Max>MxOptm) Then
+         Write (6,*) 'kOptim_Max>MxOptm'
+         Write (6,*) 'kOptim_Max=',kOptim_Max
+         Write (6,*) 'MxOptm=',MxOptm
+         Write (6,*) 'Modify mxdm.f90 and recompile!'
+         Call Abend()
+      End If
       GoTo 1000
 *>>>>>>>>>>>>> FALC <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
 30000 Continue
@@ -1633,6 +1605,11 @@ c         Write (6,*)
          Call Abend
       End If
 *
+      If(iUHF.eq.0 .and. UHF_HFC) Then
+      call sysAbendMsg('rdinp','incorrect input',
+     &                 'HFC keyword should be used with UHF')
+      End If
+*
 *---- Print out warning informations (if any)
 *
       If (iFroz.eq.1 .and. (InVec.eq.2 .or. InVec.eq.4)) Then
@@ -1652,7 +1629,6 @@ c         Write (6,*)
          Call ICopy(nSym,[0],0,nFro,1)
          call WarningMessage(2, 'Input error!;'//
      &    'Aufbau not allowed with frozen orbitals')
-         Call QTrace
          Call Abend()
       End If
 *
@@ -1693,7 +1669,6 @@ c         Write (6,*)
       If (MxConstr.gt.0 .and. (iUHF+iOCCU).ne.2) Then
          call WarningMessage(2,
      &    'For CONStraints, keywords UHF and OCCUpied are compulsory!')
-         Call QTrace
          Call Abend()
       EndIf
 *
@@ -1738,9 +1713,6 @@ c         Write (6,*)
       End If
 *
       Call Put_iScalar('SCF mode',iUHF)
-#ifdef _DEBUG_
-      Call qExit('RdInp')
-#endif
 *
       LKon = ALGO.eq.4
 *
@@ -1775,12 +1747,10 @@ c         Write (6,*)
   902 Continue
       call WarningMessage(2, 'Input error!;'//
      & 'Error reading input file for OCCNO option')
-      Call QTrace
       Call Abend()
   903 Continue
       call WarningMessage(2, 'Input error!;'//
      & 'End of input file for OCCNO option')
-      Call QTrace
       Call Abend()
 *
       End

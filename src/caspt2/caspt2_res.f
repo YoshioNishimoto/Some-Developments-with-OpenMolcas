@@ -1,116 +1,82 @@
-      Subroutine CASPT2_Res
+************************************************************************
+* This file is part of OpenMolcas.                                     *
+*                                                                      *
+* OpenMolcas is free software; you can redistribute it and/or modify   *
+* it under the terms of the GNU Lesser General Public License, v. 2.1. *
+* OpenMolcas is distributed in the hope that it will be useful, but it *
+* is provided "as is" and without any express or implied warranties.   *
+* For more details see the full text of the license in the file        *
+* LICENSE or in <http://www.gnu.org/licenses/>.                        *
+*                                                                      *
+* Copyright (C) 2021, Yoshio Nishimoto                                 *
+************************************************************************
+      Subroutine CASPT2_Res(VECROT)
 C
+      use caspt2_global, only: real_shift, imag_shift
       Implicit Real*8 (A-H,O-Z)
 C
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
-
+#include "caspt2_grad.fh"
+C
 C#include "SysDef.fh"
+C
+      DIMENSION VECROT(*)
 C
       !! 1) Calculate the derivative of the CASPT2 energy with respect
       !!    to the amplitude.
       !! 2) In the standard CASPT2, solve the CASPT2 equation. In the
       !!    diagonal CASPT2, compute the lambda directly.
+      !!
+      !! L_S = U_{TS}*H_{TU}*U_{US}
+      !!     + U_{SS}*(H_{SS} + <\Psi_S|H0-E0|\Psi_S>)*U_{SS}
+      !!     + <lambda|H|\Psi0> + <lambda|H0-E0+Eshift|\Psi_S>
 C
-C     write (*,*) "in CASPT2_res"
-      If (MAXIT.ne.0) THEN !  .and. (SHIFT.NE.0.0D+00.or.SHIFTI.ne.0.0D+00)) Then
-        iRHS2  = 7
+C     write(6,*) "in CASPT2_res"
+      IRHS2  = 7
+      CALL PSCAVEC(1.0D+00,IRHS,IRHS2)
+C
+      !! Construct the partial derivative of the target state
+      !! The derivative is constructed in IRHS2
+      !! The shift parameters are set to zero, because the actual energy
+      !! is computed without them. The reference state has to be
+      !! multiplied by two, from the above equation for L_S.
+      !! For MS-CASPT2, the rotation is mutiplied later.
+      SAV=real_shift
+      SAVI=imag_shift
+      real_shift=0.0d0
+      imag_shift=0.0d0
+      CALL SIGMA_CASPT2(2.0D+00,2.0D+00,IVECX,IRHS2)
+      real_shift=SAV
+      imag_shift=SAVI
+C
+      !! Add the partial derivative contribution for MS-CASPT2
+      !! (off-diagonal elements). The derivative is taken with IVECW
+      !! and put in IVECC.
+C     write (*,*) "Ifmscoup = ", ifmscoup, nstlag
+      IF (IFMSCOUP) Then
+        Call RHS_ZERO(IVECC)
+        Call PSCAVEC(VECROT(jStLag),IRHS2,IRHS2)
+        Do iStLag = 1, nStLag
+          Scal = VECROT(iStLag)
+          If (iStLag.eq.jStLag) Scal = 0.0d+00
+          If (ABS(VECROT(iStLag)).le.1.0d-12) Cycle
+          Call MS_Res(1,iStLag,jStLag,Scal)
+        End Do
+        !! Transform to SR representatin (IRHS).
+        CALL PTRTOSR(0,IVECC,IRHS)
+        !! Add to IRHS2
+        Call PLCVEC(1.0D+00,1.0D+00,IRHS,IRHS2)
       End If
 C
-      !! Copy the solution vector to the residual space
-      Do iCase = 1, 13
-C       write (*,*) "icase=",icase
-C       if (icase.ne.12.and.icase.ne.13) cycle
-C       if (icase.ne.10.and.icase.ne.11) cycle
-C       if (icase.ne. 8.and.icase.ne. 9) cycle
-        Do iSym = 1, nSym
-          nIN = nINDEP(iSym,iCase)
-          IF(NIN.EQ.0) Cycle
-          nAS = nASUP(iSym,iCase)
-          nIS = nISUP(iSym,iCase)
-C Remember: NIN values in BDIAG, but must read NAS for correct
-C positioning.
-          Call GETMEM('LBD','ALLO','REAL',LBD,nAS)
-          Call GETMEM('LID','ALLO','REAL',LID,nIS)
-          iD = iDBMat(iSym,iCase)
-          Call dDaFile(LUSBT,2,Work(LBD),nAS,iD)
-          Call dDaFile(LUSBT,2,Work(LID),nIS,iD)
-C         if (icase.eq.4) then
-C           do i = 1, nis
-C             write (*,*) "ir = ",i
-C             do j = 1, nin
-C               write (*,'(i3,3f20.10)') i,work(lbd+j-1),work(lid+i-1),
-C    *          1.0d+00/(work(lbd+j-1)+work(lid+i-1))
-C             end do
-C           end do
-C         end if
-
-          Call RHS_ALLO(nIN,nIS,lg_V1)
-          Call RHS_ALLO(nIN,nIS,lg_V2)
-          !! Read the solution vector
-          Call RHS_Read(nIN,nIS,lg_V2,iCase,iSym,iVecX)
-          !! Save it in the residual vector space immediately
-C         Call RHS_Save(nIN,nIS,lg_V2,iCase,iSym,iVecR)
-          !! Read the RHS vector
-          Call RHS_Read(nIN,nIS,lg_V1,iCase,iSym,iRHS)
-          !! Scale the RHS vector appropriately (compute lambda)
-          Call CASPT2_ResD(1,nIN,nIS,lg_V1,Work(LBD),Work(LID))
-          !! T <- T + lambda
-          Call DScal_(nIN*nIS,2.0D+00,Work(lg_V1),1)
-          If (MaxIt.eq.0) Then
-C           call dcopy_(nin*nis,0.0d+00,0,work(lg_v2),1)
-C           Call DaXpY_(nIN*nIS,2.0D+00,Work(lg_V1),1,Work(lg_V2),1)
-            !! Save the modified T in the original T
-C           Call RHS_Save(nIN,nIS,lg_V2,iCase,iSym,iVecX)
-C           write (*,*) "lambda"
-C       do i = 1, nin*nis
-C       write (*,'(i3,f20.10)') i,work(lg_v1+i-1)
-C       end do
-C       do i = 1, 10
-C       write (*,*) i,work(lg_v1)
-C       end do
-            Call RHS_Save(nIN,nIS,lg_V1,iCase,iSym,iVecR)
-          Else
-C           Call RHS_Save(nIN,nIS,lg_V1,iCase,iSym,iRHS2)
-              Call RHS_ALLO(NAS,NIS,lg_V3)
-              CALL RHS_READ(NAS,NIS,lg_V3,ICASE,ISYM,iRHS)
-              CALL RHS_SAVE(NAS,NIS,lg_V3,ICASE,ISYM,iRHS2)
-              Call RHS_FREE(NAS,NIS,lg_V3)
-          End If
-          Call RHS_Free(nIN,nIS,lg_V1)
-          Call RHS_Free(nIN,nIS,lg_V2)
-
-          Call GETMEM('LBD','FREE','REAL',LBD,nAS)
-          Call GETMEM('LID','FREE','REAL',LID,nIS)
-        End Do
-      End Do
-C
-C     Now, going to solve the Lambda for non-variational CASPT2, i.e.
-C     with real/imaginary shift, without the diagonal approximation.
-C     The following is just a copy-and-paste of eqctl2.f and pcg.f,
-C     but some unnecessary lines (comuptation of energy etc.) are
-C     omitted.
-C
-C Transform RHS of CASPT2 equations to eigenbasis for H0:
-C     CALL PTRTOSR(1,IVECW,IRHS)
-C
-      !! We need IRHS,IVECR,IVECX,IVECC,IVECC2
-      !! The original IRHS is no longer needed (?),
-      !! but has to be modified for (X)MS
-      !! IVECR is also not needed
-      !! IVECX is needed, so use a different array
-      !! IVECC and IVECC2 are later transformed
-      If (MAXIT.ne.0) THEN !  .and. SHIFT.NE.0.0D+00.or.SHIFTI.ne.0.0D+00) Then
-      SAV=SHIFT
-      SAVI=SHIFTI
-      SHIFT=0.0d0
-      SHIFTI=0.0d0
-      CALL SIGMA_CASPT2(2.0d+00,2.0d+00,IVECX,iRHS2)
-      SHIFT=SAV
-      SHIFTI=SAVI
+      !! Finally, solve the lambda equation.
+      !! The following is just a copy-and-paste of eqctl2.f and pcg.f,
+      !! but some unnecessary lines (comuptation of energy etc.) are
+      !! omitted.
+      !! The lambda equation is solved with the shift parameters,
+      !! as is the case for the T-amplitude.
 C
       iVecXbk = iVecX
       iVecRbk = iVecR
@@ -118,25 +84,36 @@ C
       iVecX   = iVecR
       iRHS    = 7
       iVecR   = 8
-
+C
       Call PCG_RES(ICONV)
-C          CALL PCOLLVEC(IVECX,0)
-C          CALL PCOLLVEC(IVECR,0)
       IF (ICONV .NE. 0) THEN
         WRITE (6,'(" Lambda equation did not converge...")')
         WRITE (6,'(" Continue anyway?")')
       END IF
 C
-      !! Restore contravariant and covariant representations of the
-      !! non-variational T-amplitude
       iVecX   = iVecXbk
       iVecR   = iVecRbk
       iRHS    = iRHSbk
+C
+      !! For implicit derivative of S
+      IF (IFMSCOUP) THEN
+        CALL PTRTOSR(1,IVECW,IRHS)
+        Call RHS_ZERO(IVECC)
+        Do iStLag = 1, nStLag
+          Scal = VECROT(iStLag)*0.5d+00
+          If (iStLag.eq.jStLag) Scal = Scal*2.0d+00
+          If (ABS(VECROT(iStLag)).le.1.0d-12) Cycle
+          Call MS_Res(1,iStLag,jStLag,Scal)
+        End Do
+        CALL PTRTOSR(0,IVECC,IRHS2)
+      END IF
+C
+      !! Restore contravariant and covariant representations of the
+      !! non-variational T-amplitude
       CALL PTRTOC(0,IVECX,IVECC)
       CALL PTRTOC(1,IVECX,IVECC2)
-      End If
 C     Do iCase = 1, 13
-C       write (*,*) "icase=",icase
+C       write(6,*) "icase=",icase
 C       Do iSym = 1, nSym
 C         nIN = nINDEP(iSym,iCase)
 C         IF(NIN.EQ.0) Cycle
@@ -147,7 +124,7 @@ C         Call RHS_ALLO(nIN,nIS,lg_V1)
 C         !! Read the solution vector
 C         Call RHS_Read(nIN,nIS,lg_V1,iCase,iSym,iVecR)
 C         do i = 1, nin*nis
-C           write (*,'(i3,f20.10)') i,work(lg_v1+i-1)
+C           write(6,'(i3,f20.10)') i,work(lg_v1+i-1)
 C         end do
 C         Call RHS_Free(nIN,nIS,lg_V1)
 C       End Do
@@ -156,24 +133,26 @@ C
 C
 C
       RETURN
+C
       END
 C
 C-----------------------------------------------------------------------
 C
       !! RHS_SGMDIA
       SUBROUTINE CASPT2_ResD(Mode,NIN,NIS,lg_W,DIN,DIS)
+#ifdef _MOLCAS_MPP_
+      USE Para_Info, ONLY: Is_Real_Par
+#endif
       IMPLICIT REAL*8 (A-H,O-Z)
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
       DIMENSION DIN(*),DIS(*)
 
 C Apply the resolvent of the diagonal part of H0 to an RHS array
 
-#include "para_info.fh"
 #ifdef _MOLCAS_MPP_
 #include "global.fh"
 #include "mafdecls.fh"
@@ -190,18 +169,16 @@ C-SVC: get the local vertical stripes of the lg_W vector
           NCOL=jHi-jLo+1
           CALL GA_Access (lg_W,iLo,iHi,jLo,jHi,mW,LDW)
           CALL CASPT2_ResD2(MODE,NROW,NCOL,DBL_MB(mW),LDW,DIN(iLo),
-     &                DIS(jLo),SHIFT,SHIFTI)
+     &                DIS(jLo))
           CALL GA_Release_Update (lg_W,iLo,iHi,jLo,jHi)
         END IF
         CALL GA_Sync()
 C       CALL GAdSUM_SCAL(DOVL)
       ELSE
-        CALL CASPT2_ResD2(MODE,NIN,NIS,WORK(lg_W),NIN,DIN,DIS,
-     &                   SHIFT,SHIFTI)
+        CALL CASPT2_ResD2(MODE,NIN,NIS,WORK(lg_W),NIN,DIN,DIS)
       END IF
 #else
-      CALL CASPT2_ResD2(MODE,NIN,NIS,WORK(lg_W),NIN,DIN,DIS,
-     &                 SHIFT,SHIFTI)
+      CALL CASPT2_ResD2(MODE,NIN,NIS,WORK(lg_W),NIN,DIN,DIS)
 #endif
 
       END
@@ -209,25 +186,26 @@ C
 C-----------------------------------------------------------------------
 C
       !! RESDIA
-      SUBROUTINE CASPT2_ResD2(Mode,NROW,NCOL,W,LDW,DIN,DIS,
-     &                  SHIFT,SHIFTI)
+      SUBROUTINE CASPT2_ResD2(Mode,NROW,NCOL,W,LDW,DIN,DIS)
+      use caspt2_global, only: real_shift, imag_shift
       IMPLICIT REAL*8 (A-H,O-Z)
 
       DIMENSION W(LDW,*),DIN(*),DIS(*)
 
       DO J=1,NCOL
         DO I=1,NROW
+          SCAL = 0.0D+00
           If (Mode.eq.1) Then
-            DELTA  = SHIFT+DIN(I)+DIS(J)
-            DELINV = DELTA/(DELTA**2+SHIFTI**2)
+            DELTA  = real_shift+DIN(I)+DIS(J)
+            DELINV = DELTA/(DELTA**2+imag_shift**2)
             !! The following SCAL is the actual residual
             SCAL   = 1.0D+00 - (DIN(I)+DIS(J))*DELINV
-C           write (*,*) "residue = ", scal
-C           if (abs(residue).ge.1.0d-08) write (*,*) "residue = ", scal
+C           write(6,*) "residue = ", scal
+C           if (abs(residue).ge.1.0d-08) write(6,*) "residue = ", scal
             !! Another scaling is required for lambda
             SCAL   =-SCAL*DELINV
           ELse If (Mode.eq.2) Then
-            SCAL   =-SHIFTI/(DIN(I)+DIS(J))
+            SCAL   =-imag_shift/(DIN(I)+DIS(J))
           End If
           W(I,J) = SCAL*W(I,J)
         END DO
@@ -238,29 +216,25 @@ C-----------------------------------------------------------------------
 C
       SUBROUTINE PCG_RES(ICONV)
       USE INPUTDATA
+      use caspt2_output, only:iPrGlb,terse,usual
       IMPLICIT NONE
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 
       INTEGER ICONV
 
-      INTEGER I,IC,IS,ITER
+      INTEGER I,ITER
       INTEGER IVECP,IVECT,IVECU
-      INTEGER LAXITY
-      INTEGER Cho_X_GetTol
-      EXTERNAL Cho_X_GetTol
       REAL*8 ALPHA,BETA,PR,PT,UR
       REAL*8 ECORR(0:8,0:MXCASE)
       REAL*8 EAIVX,EATVX,EBJAI,EBJAT,EBVAT,EVJAI,EVJTI,EVJTU
-      REAL*8 E2NONV,ESHIFT
+      REAL*8 E2NONV
       REAL*8 OVLAPS(0:8,0:MXCASE)
-      REAL*8 SAV,SAVI,DSCALE
+      REAL*8 DSCALE
 
-      CALL QENTER('PCG')
 C Flag to tell wether convergence was obtained
       ICONV = 0
 
@@ -302,16 +276,10 @@ C R <- R - (H0-E0)*X
       CALL POVLVEC(IVECR,IVECR,OVLAPS)
       RNORM=SQRT(OVLAPS(0,0))
       IF(RNORM.LT.THRCONV) GOTO 900
+
       IF(IPRGLB.GE.USUAL) THEN
        WRITE(6,*)
-       WRITE(6,*) "RASPT2 with level shift is non-variational,"
-       WRITE(6,*) "so the Lambda equation has to be solved"//
-     *            " for analytic gradients"
-       WRITE(6,*) "Following values are nonsense (or I just don't"//
-     *            " know the meaning)"
-       WRITE(6,*)
-C      WRITE(6,*)'The contributions to the second order'//
-C    &     ' correlation energy in atomic units.'
+       WRITE(6,*) "Solving the Lambda equation for analytic gradients"
        WRITE(6,'(25A5)')('-----',I=1,25)
        WRITE(6,'(2X,A,A)')
      & 'IT.      VJTU        VJTI        ATVX        AIVX        VJAI ',
@@ -370,120 +338,8 @@ C---------------------
       IF(IPRGLB.GE.TERSE) THEN
        WRITE(6,'(25A5)')('-----',I=1,25)
        WRITE(6,*)
-C      WRITE(6,*)' FINAL CASPT2 RESULT:'
-      END IF
-C     CALL POVLVEC(IRHS,IVECX,ECORR)
-C     EVJTU=ECORR(0,1)
-C     EVJTI=ECORR(0,2)+ECORR(0,3)
-C     EATVX=ECORR(0,4)
-C     EAIVX=ECORR(0,5)
-C     EVJAI=ECORR(0,6)+ECORR(0,7)
-C     EBVAT=ECORR(0,8)+ECORR(0,9)
-C     EBJAT=ECORR(0,10)+ECORR(0,11)
-C     EBJAI=ECORR(0,12)+ECORR(0,13)
-C     E2NONV=ECORR(0,0)
-C     CALL POVLVEC(IVECX,IVECX,OVLAPS)
-C     DENORM=1.0D0+OVLAPS(0,0)
-C     REFWGT=1.0D00/DENORM
-CPAM Insert: Compute the variational second-order energy.
-CPAM Use unshifted H0. Save any shifts, then restore them.
-C     SAV=SHIFT
-C     SAVI=SHIFTI
-C     SHIFT=0.0d0
-C     SHIFTI=0.0d0
-C     CALL SIGMA_CASPT2(1.0d0,0.0d0,IVECX,IVECT)
-C     SHIFT=SAV
-C     SHIFTI=SAVI
-C     CALL POVLVEC(IVECX,IVECT,OVLAPS)
-C     E2CORR=2.0D0*E2NONV+OVLAPS(0,0)
-CPAM End of insert.
-C     ESHIFT=E2CORR-E2NONV
-C     E2TOT=EREF+E2CORR
-
-C     IF(IPRGLB.GT.USUAL.or.iprglb.ne.silent) THEN
-C       WRITE(6,*)
-C       WRITE(6,*)' Correlation energy /Case, /Symm, and sums:'
-C       DO IC=1,13
-C        WRITE(6,'(1X,A8,9F12.8)')
-C    &      CASES(IC),(ECORR(IS,IC),IS=1,NSYM),ECORR(0,IC)
-C       END DO
-C       WRITE(6,'(1X,A8,9F12.8)')
-C    &    'Summed: ', (ECORR(IS,0),IS=1,NSYM),ECORR(0,0)
-C     ENDIF
-
-      IF (IPRGLB.GE.TERSE) THEN
-      !  WRITE(6,*)
-
-      !  If (.not.Input % LovCASPT2) Then
-C     !     WRITE(6,'(6x,a,f18.10)')'Reference energy:     ',EREF
-      !     WRITE(6,'(6x,a,f30.20)')'Reference energy:     ',EREF
-C     !     WRITE(6,'(6x,a,f18.10)')'E2 (Non-variational): ',E2NONV
-      !     WRITE(6,'(6x,a,f30.20)')'E2 (Non-variational): ',E2NONV
-      !     IF(SHIFT.NE.0.0d0.or.SHIFTI.ne.0.0d0) THEN
-C     !       WRITE(6,'(6x,a,f18.10)')'Shift correction:     ',ESHIFT
-      !       WRITE(6,'(6x,a,f30.20)')'Shift correction:     ',ESHIFT
-      !     END IF
-C     !     WRITE(6,'(6x,a,f18.10)')'E2 (Variational):     ',E2CORR
-      !     WRITE(6,'(6x,a,f30.20)')'E2 (Variational):     ',E2CORR
-      !     If (.not.Input % FnoCASPT2) Then
-C     !        WRITE(6,'(6x,a,f18.10)')'Total energy:         ',E2TOT
-      !        WRITE(*,'(6x,a,f30.20)')'Total energy:         ',E2TOT
-      !     Else
-      !        WRITE(6,'(6x,a,f18.10,a)')'FNO correction:       ',EMP2,
-     &!             '   (estimate)   '
-      !        WRITE(6,'(6x,a,f13.5)')
-      !        E2TOT=E2TOT+EMP2
-      !        WRITE(6,'(6x,a,f18.10,a)')'Total energy:         ',E2TOT,
-     &!             '   (FNO-CASPT2) '
-      !     EndIf
-      !     WRITE(6,'(6x,a,f18.10)')'Residual norm:        ',RNORM
-C     !     WRITE(6,'(6x,a,f13.5)') 'Reference weight:     ',REFWGT
-      !     WRITE(6,'(6x,a,f30.20)') 'Reference weight:     ',REFWGT
-      !  Else
-      !     WRITE(6,'(6x,a,f18.10)')
-     &!             'Reference energy:                 ',EREF
-      !     WRITE(6,'(6x,a,f18.10)')
-     &!             'Active-Site E2 (Non-variational): ',E2NONV
-      !     IF(SHIFT.NE.0.0d0.or.SHIFTI.ne.0.0d0) THEN
-      !       WRITE(6,'(6x,a,f18.10)')
-     &!             'Shift correction:                 ',ESHIFT
-      !     END IF
-      !     WRITE(6,'(6x,a,f18.10)')
-     &!             'Active-Site E2 (Variational):     ',E2CORR
-      !     WRITE(6,'(6x,a,f18.10)')
-     &!             'Frozen region E2 :                ',EMP2
-      !     WRITE(6,'(6x,a,f18.10)')
-     &!             'Residual norm:                    ',RNORM
-      !     WRITE(6,'(6x,a,f13.5)')
-     &!             'Reference weight:                 ',REFWGT
-      !     WRITE(6,'(6x,a,f13.5)')
-      !     E2TOT=E2TOT+EMP2
-      !     WRITE(6,'(6x,a,f18.10)')
-     &!             'Total energy (LovCASPT2):         ',E2TOT
-      !  EndIf
       END IF
 
-* In automatic verification calculations, the precision is lower
-* in case of Cholesky calculation.
-C     LAXITY=8
-C     IF(IfChol) LAXITY=Cho_X_GetTol(LAXITY)
-C     Call Add_Info('E_CASPT2',[E2TOT],1,LAXITY)
-
-C     IF(IPRGLB.GE.USUAL) THEN
-C      WRITE(6,*)
-C      WRITE(6,'(6x,a)')
-C    &  'Contributions to the CASPT2 correlation energy'
-C      WRITE(6,'(6x,a,F18.10)')
-C    &  'Active & Virtual Only:    ',EATVX+EBVAT
-C      WRITE(6,'(6x,a,F18.10)')
-C    &  'One Inactive Excited:     ',EVJTU+EAIVX+EBJAT
-C      WRITE(6,'(6x,a,F18.10)')
-C    &  'Two Inactive Excited:     ',EVJTI+EVJAI+EBJAI
-C      WRITE(6,*)
-C     END IF
-C     CALL GETMEM('LISTS','FREE','INTE',LLISTS,NLSTOT)
-      CALL QEXIT('PCG')
-C
       RETURN
-C
+
       END SUBROUTINE PCG_RES

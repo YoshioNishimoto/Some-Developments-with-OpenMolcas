@@ -77,7 +77,7 @@
 * IHFORM
 * NNSEL2E : Only selected 2e terms will be included
 * ISEL2E : orbital spaces in which 2e terms are included
-*          (Currently : all indeces identical )
+*          (Currently : all indices identical )
 *
 * ======
 * Output
@@ -158,10 +158,8 @@ c        NSEL2E = NNSEL2E
 c        IF(IMZERO.NE.0) GOTO 9999
 c      ELSE
 *. Operator specified by input
-        IAPRLEV =-1
         IDOH2 = JDOH2
         IDIAG = 0
-        NSEL2E = 0
 c      END IF
       IF(NTEST.GE. 20)
      &WRITE(6,*) ' IHAPR, IDIAG IDOH2 ' , IHAPR,IDIAG, IDOH2
@@ -512,7 +510,6 @@ c      END IF
         WRITE(6,*) ' ==================================='
         CALL WRTMAT(SB,NIB,NIA,NIB,NIA)
       END IF
-      NTESTO = NTEST
       RETURN
 c Avoid unused argument warnings
       IF (.FALSE.) THEN

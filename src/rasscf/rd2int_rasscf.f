@@ -31,12 +31,10 @@
 #include "rasscf.fh"
 #include "general.fh"
 #include "output_ras.fh"
-      Parameter (ROUTINE='RD2INT  ')
       Integer nSymX,nBasX(8)
 *----------------------------------------------------------------------*
 *     Start                                                            *
 *----------------------------------------------------------------------*
-      Call qEnter(ROUTINE)
       iRc=-1
       Call GetOrd(iRc,lSquare,nSymX,nBasX,nSkipX)
       If (iRc.ne.0) Then
@@ -73,6 +71,5 @@
 *----------------------------------------------------------------------*
 *     Exit                                                             *
 *----------------------------------------------------------------------*
-      Call qExit('Rd2Int')
       Return
       End

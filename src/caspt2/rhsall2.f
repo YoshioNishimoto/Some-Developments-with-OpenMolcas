@@ -10,6 +10,7 @@
 ************************************************************************
       SUBROUTINE RHSALL2(IVEC)
       USE CHOVEC_IO
+      use caspt2_output, only:iPrGlb,verbose
       IMPLICIT REAL*8 (A-H,O-Z)
 * ----------------------------------------------------------------
 * Code for processing all the cholesky vectors
@@ -17,9 +18,8 @@
 * Also form the active two-electron integrals 'TUVX'.
 * ================================================================
 #include "rasdim.fh"
-#include "warnings.fh"
+#include "warnings.h"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "chocaspt2.fh"
 #include "WrkSpc.fh"
@@ -27,7 +27,7 @@
       Integer Active, Inactive, Virtual
       Parameter (Inactive=1, Active=2, Virtual=3)
       Integer nSh(8,3)
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       INTEGER NUMERR
       SAVE NUMERR
       DATA NUMERR / 0 /
@@ -41,7 +41,6 @@
 *                                                                      *
 ************************************************************************
 *                                                                      *
-      Call QEnter('RHSALL2')
 
       IF (IPRGLB.GE.VERBOSE) THEN
         WRITE(6,'(1X,A)') ' Using RHSALL2+ADDRHS algorithm'
@@ -81,7 +80,6 @@
 *
        IB1=NBTCHES(JSYM)+1
        IB2=NBTCHES(JSYM)+NBTCH(JSYM)
-       write (*,*) "nbatches,nbtch = ", nbtches(jsym),nbtch(jsym)
 *
        MXBGRP=IB2-IB1+1
        IF (MXBGRP.LE.0) CYCLE
@@ -96,7 +94,7 @@
 
        CALL MEMORY_ESTIMATE(JSYM,IWORK(LBGRP),NBGRP,
      &                      NCHOBUF,MXPIQK,NADDBUF)
-       IF (IPRGLB.GT.VERBOSE.or..true.) THEN
+       IF (IPRGLB.GT.VERBOSE) THEN
          WRITE(6,*)
          WRITE(6,'(A,I12)') '  Number of Cholesky batches: ',IB2-IB1+1
          WRITE(6,'(A,I12)') '  Number of batch groups:     ',NBGRP
@@ -114,7 +112,6 @@
 *      IBSTEP=1
 *
 *      DO IBSTA=IB1,IB2,IBSTEP
-       write (*,*) "nbgrp = ", nbgrp
        DO IBGRP=1,NBGRP
         IBSTA=IWORK(LBGRP  +2*(IBGRP-1))
         IBEND=IWORK(LBGRP+1+2*(IBGRP-1))
@@ -124,7 +121,7 @@
            NV=NV+NVLOC_CHOBATCH(IB)
         END DO
 
-        IF (IPRGLB.GT.VERBOSE.or..true.) THEN
+        IF (IPRGLB.GT.VERBOSE) THEN
          WRITE(6,'(A,I12)') '  Cholesky vectors in this group = ', NV
          WRITE(6,*)
         END IF
@@ -395,7 +392,7 @@ C      the case, symmetry, and rhs vector respectively.
 * The RHS elements of Cases A, C, D1  need a correction:
       CALL MODRHS(IVEC,WORK(LFIMO))
 
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
 * compute and print RHS fingerprints
       WRITE(6,'(1X,A4,1X,A3,1X,A18)') 'Case','Sym','Fingerprint'
       WRITE(6,'(1X,A4,1X,A3,1X,A18)') '====','===','==========='
@@ -423,7 +420,6 @@ C      the case, symmetry, and rhs vector respectively.
 ************************************************************************
 *                                                                      *
 
-      Call QExit('RHSALL2')
       RETURN
       END
       Subroutine Get_Cholesky_Vectors(ITK,ITQ,JSYM,
@@ -468,10 +464,10 @@ C      the case, symmetry, and rhs vector respectively.
      &                             BUFF,idxBuff,nBUFF,
      &                             nSh,JSYM,
      &                             IVEC,NV)
+      use caspt2_output, only:iPrGlb,debug
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
       DIMENSION Cho_Bra(nBra), Cho_Ket(nKet)
       DIMENSION BUFF(nBuff),idxBuff(nBuff),PIQK(mxPIQK)
@@ -625,7 +621,7 @@ C-SVC: sanity check
                DO iT=0,NP-1
                   iTUVX=iT+iOffP+iUVX1
                   iPIQK=iT      +iUVX2
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
 * Temporary test statements -- remove after debug!
                   IF(ITUVX.LT.0 .or. ITUVX.gt.NTUVX) THEN
                      ITUVX=NTUVX
@@ -652,10 +648,10 @@ C-SVC: sanity check
       SUBROUTINE MEMORY_ESTIMATE(JSYM,LBGRP,NBGRP,
      &                           NCHOBUF,NPIQK,NADDBUF)
       USE CHOVEC_IO
+      use caspt2_output, only:iPrGlb,verbose
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
       DIMENSION LBGRP(2,NBGRP)
       Integer Active, Inactive, Virtual

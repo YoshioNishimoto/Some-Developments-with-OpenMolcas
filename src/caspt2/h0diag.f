@@ -22,7 +22,6 @@ C INPUT ARRAYS:
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "pt2_guga.fh"
 #include "WrkSpc.fh"
       DIMENSION DIAG(MXCI),NOW(2,NSYM,NMIDV),IOW(2,NSYM,NMIDV)
@@ -30,7 +29,6 @@ C INPUT ARRAYS:
 C PURPOSE: FORM AN ARRAY OF DIAGONAL HAMILTONIAN MATRIX ELEMENTS
 C FOR THE SPECIFIED TOTAL SYMMETRY ISYCI
 
-      CALL QENTER('H0DIAG')
       CALL DCOPY_(MXCI,[0.0D0],0,DIAG,1)
       IEMU=1
       DO MV=1,NMIDV
@@ -48,6 +46,5 @@ C FOR THE SPECIFIED TOTAL SYMMETRY ISYCI
   30      CONTINUE
         END DO
       END DO
-      CALL QEXIT('H0DIAG')
       RETURN
       END

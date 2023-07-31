@@ -11,19 +11,14 @@
 
       SUBROUTINE RasScf_Mcontrol(id_call)
 
+      Use Fock_util_global, only: ALGO, dmpk, Nscreen
+      Use Para_Info, Only: MyRank
       Implicit Real*8 (a-h,o-z)
 #include "rasdim.fh"
-#include "para_info.fh"
 #include "general.fh"
 #include "rasscf.fh"
-      Logical  timings,DoLock,Deco
-      Logical  DoCholesky
-      Integer  ALGO,Nscreen
-      Real*8   dmpk
 *
-      Common /CHLCAS / DoCholesky,ALGO
-      COMMON /CHOTIME / timings
-      Common /CHOLK / DoLocK,Deco,dmpk,Nscreen
+#include "chotime.fh"
 *
       Integer id_call
       Character*512 List

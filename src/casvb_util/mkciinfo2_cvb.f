@@ -8,14 +8,14 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine mkciinfo2_cvb(i1alf,i1bet,iafrm,ibfrm,iato,ibto,
      >  phato,phbto,
      >  xalf,xbet,xalf2,xbet2,mingrph,maxgrph,
      >  nk,locc,lunocc,inewocc,iaccm)
       implicit real*8 (a-h,o-w,y-z),integer(x)
-#include "ext_cvb.fh"
 #include "main_cvb.fh"
 #include "optze_cvb.fh"
 #include "files_cvb.fh"
@@ -106,7 +106,7 @@ c  Altered definitions of I1ALF & I1BET :
 700   continue
       if(absym(4))then
 c  I1ALF & I1BET may share memory:
-        if(iiloc(i1alf).ne.iiloc(i1bet))
+        if(ip_of_iWork(i1alf(1,1)).ne.ip_of_iWork(i1bet(1,1)))
      >    call imove_cvb(i1alf,i1bet,norb*n1a)
       else
         do 800 iorb=1,norb

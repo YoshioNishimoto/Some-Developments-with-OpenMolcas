@@ -18,7 +18,7 @@
 c this function builds and diagonalizes the interaction Hamiltonians
       Implicit None
 #include "stdalloc.fh"
-      Integer, parameter            :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter        :: wp=kind(0.d0)
       Integer, intent(in)           :: exch
       Integer, intent(in)           :: npair
       Integer, intent(in)           :: i_pair(npair,2)
@@ -65,7 +65,6 @@ c diag:
       Integer          :: info, lwork
       Real(kind=8), allocatable :: rwork(:) !rwork(3*exch-2)
       Complex(kind=8), allocatable :: work(:) !work(2*exch-1)
-      Call qEnter('PA_diagham')
 c allocate memory and initialize variables:
       If( exch >= 0 ) Then
          Call mma_allocate(HTOT,exch,exch,'HTOT')
@@ -575,6 +574,5 @@ c diagonalize
          Call mma_deallocate(intc)
          Call mma_deallocate(icoord)
       End If
-      Call qExit('PA_diagham')
       Return
       End

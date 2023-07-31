@@ -21,7 +21,6 @@
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "pt2_guga.fh"
 #include "stdalloc.fh"
@@ -36,7 +35,7 @@ C Local array:
       INTEGER :: NOP1, NOP2, NOP3
 
       REAL*8, ALLOCATABLE :: TRDTMP(:), TRDCI(:), TRDSGM(:)
-      INTEGER :: NTMP, NSGM
+      INTEGER :: NTMP
 
       INTEGER :: I, J, ID
       INTEGER :: ISYM, ISYMT
@@ -50,7 +49,6 @@ C denoting sets of coefficients stored on LUSOLV. These are assumed
 C to be contravariant representations of the wave operators W1 and W2,
 C in the notation of the comments.
 
-      CALL QENTER('TRDACT')
 
 CTEST      WRITE(*,*)' Memory list, TRDACT point A:'
 CTEST      call getmem('TRDACT A','LIST','REAL',LDUM,NDUM)
@@ -62,15 +60,7 @@ C (1): Compute a representation of the operator PCAS*W1T*W2
       CALL MMA_ALLOCATE(TRDOP1,NOP1)
       CALL MMA_ALLOCATE(TRDOP2,NOP2)
       CALL MMA_ALLOCATE(TRDOP3,NOP3)
-      call dcopy(nop1,0.0d+00,0,trdop1,1)
-      call dcopy(nop2,0.0d+00,0,trdop2,1)
-      call dcopy(nop3,0.0d+00,0,trdop3,1)
       CALL MKWWOP(IVEC,JVEC,OP0,TRDOP1,NOP2,TRDOP2,NOP3,TRDOP3)
-        write (*,*) "trdop1"
-       call sqprt(trdop1,nasht)
-       call dscal(nop2,easum,trdop2,1)
-        write (*,*) "trdop2"
-       call prtril(trdop2,nop1)
 CTEST      WRITE(*,*)' TRDACT, back from MKWWOP.'
 CTEST      WRITE(*,*)' OP0:'
 CTEST      WRITE(*,'(1x,5f16.8)') OP0
@@ -96,8 +86,6 @@ CTEST      WRITE(*,*)' OP2:'
 CTEST      WRITE(*,'(1x,5f16.8)')(TRDOP2(I),I=1,NOP2)
 CTEST      WRITE(*,*)' OP3:'
 CTEST      WRITE(*,'(1x,5f16.8)')(TRDOP3(I),I=1,NOP3)
-        write (*,*) "trdop1 after modop"
-       call sqprt(trdop1,nasht)
       NTMP=NCONF
       CALL MMA_ALLOCATE(TRDTMP,NTMP)
       CALL MMA_ALLOCATE(TRDCI,NCONF)
@@ -111,19 +99,15 @@ CTEST      WRITE(*,'(1x,5f16.8)')(TRDOP3(I),I=1,NOP3)
         END DO
         CALL DDAFILE(LUCIEX,2,TRDCI,NCONF,ID)
 CTEST      WRITE(*,*)' Before HAM3, the CI array:'
-CTEST      CALL PRWF_CP2(LSYM,NCONF,TRDCI,0.0D0)
+CTEST      CALL PRWF_CP2(STSYM,NCONF,TRDCI,0.0D0)
 CTEST      WRITE(*,*)' Norm:',DNRM2_(NCONF,TRDCI,1)
       ELSE
         TRDCI=1.0D0
       END IF
       CALL DCOPY_(NTMP,[0.0D0],0,TRDTMP,1)
-      CALL HAM3(OP0,TRDOP1,NOP2,TRDOP2,NOP3,TRDOP3,LSYM,TRDCI,TRDTMP)
-        write (*,*) "ntmp = ", ntmp
-        do i = 1, ntmp
-          write (*,'(i3,f20.10)') i,trdtmp(i)
-        end do
+      CALL HAM3(OP0,TRDOP1,NOP2,TRDOP2,NOP3,TRDOP3,STSYM,TRDCI,TRDTMP)
 CTEST      WRITE(*,*)' After HAM3, the wave function W(+)*W*(PSI0):'
-CTEST      CALL PRWF_CP2(LSYM,NCONF,TRDTMP,0.0D0)
+CTEST      CALL PRWF_CP2(STSYM,NCONF,TRDTMP,0.0D0)
 CTEST      WRITE(*,*)' Ovlp with CI:',DDOT_(NCONF,TRDCI,1,TRDTMP,1)
 C No more need for the operators:
       CALL MMA_DEALLOCATE(TRDOP1)
@@ -148,7 +132,6 @@ C ordinal number of each active orbital.
           END DO
         END DO
 CTEST      WRITE(*,*)' At point 3 in TRDACT. The scalar products:'
-        NSGM=NCONF
         CALL MMA_ALLOCATE(TRDSGM,MXCI)
         DO ITABS=1,NASHT
           ISYMT=IASYM(ITABS)
@@ -158,7 +141,7 @@ CTEST      WRITE(*,*)' At point 3 in TRDACT. The scalar products:'
             IULEV=IATOG(IUABS)
 CPAM00          CALL GETSGM(IULEV,ITLEV,IDEX,TRDSGM)
 CPAM00 GETSGM replaced by GETSGM2
-            CALL GETSGM2(IULEV,ITLEV,LSYM,TRDCI,TRDSGM)
+            CALL GETSGM2(IULEV,ITLEV,STSYM,TRDCI,TRDSGM)
             SCP=DDOT_(NCONF,TRDSGM,1,TRDTMP,1)
 CTEST      WRITE(*,*)' ITABS,IUABS,SCP:',ITABS,IUABS,SCP
             DTU(ITABS,IUABS)=DTU(ITABS,IUABS)+SCP
@@ -172,8 +155,6 @@ CTEST      WRITE(*,*)' ITABS,IUABS,SCP:',ITABS,IUABS,SCP
           DTU(ITABS,ITABS)=DTU(ITABS,ITABS)+OCCNUM
         END DO
       END IF
-C     write (*,*) "DTU"
-C     call sqprt(dtu,nasht)
 CPAM00 No more need for CI array
       CALL MMA_DEALLOCATE(TRDCI)
 C No more need for the TMP state vector
@@ -189,8 +170,6 @@ CTEST      call getmem('TRDACT D','CHEC','REAL',LDUM,NDUM)
 
 C (4): Add the correction <0| [W1T,E(tu)] W2 |0>.
       CALL COMMWEW(IVEC,JVEC,DTU)
-C     write (*,*) "DTU"
-C     call sqprt(dtu,nasht)
 
 CTEST      WRITE(*,*)' After point 4 in TRDACT, the array DTU is:'
 CTEST      do i=1,nasht
@@ -200,6 +179,5 @@ CTEST      end do
 CTEST      WRITE(*,*)' Memory check, TRDACT point E:'
 CTEST      call getmem('TRDACT E','CHEC','REAL',LDUM,NDUM)
 
-      CALL QEXIT('TRDACT')
       RETURN
       END

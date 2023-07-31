@@ -8,11 +8,11 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine ppgs2_cvb(cvb,cvbdet,ifnss)
       implicit real*8 (a-h,o-z)
-#include "ext_cvb.fh"
 #include "main_cvb.fh"
 #include "optze_cvb.fh"
 #include "files_cvb.fh"
@@ -20,12 +20,12 @@
 
 
 #include "frag_cvb.fh"
-#include "malloc_cvb.fh"
+#include "WrkSpc.fh"
       dimension cvb(nvb),cvbdet(ndetvb),ifnss(0:nel,0:nel)
 
 c  First applicable configuration with first possible spin in
 c  each fragment is set to perfect-pairing:
-      call dfill(nvb,1d-2,cvb,1)
+      call dcopy_(nvb,[1d-2],0,cvb,1)
       ioffs_cvb=0
       icoffs_nconf=0
       do 100 ifrag=1,nfrag

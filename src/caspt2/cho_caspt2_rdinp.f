@@ -16,24 +16,17 @@
 *             in CASPt2
 *
 ************************************************************************
+      Use Fock_util_global, only: ALGO, Deco, DensityCheck, REORD
       Implicit Real*8 (A-H,O-Z)
-#include "itmax.fh"
-#include "info.fh"
 #include "real.fh"
 #include "print.fh"
-#include "output.fh"
-#include "WrkSpc.fh"
-      Character(180) KWord, Key, Get_Ln
+      Character(Len=180) KWord, Key, Get_Ln
       External Get_Ln
-      Logical  DFonly,REORD,DECO,timings,DensityCheck
-      character(16) SECNAM
+      Logical  DFonly
+      character(len=16) SECNAM
       parameter (SECNAM = 'CHO_CASPT2_RDINP')
-      Integer  ALGO
 *
-      Common /CHORAS / REORD,DECO,ALGO
-      Common /CHOTIME/ timings
-      COMMON /CHODENSITY/ DensityCheck
-
+#include "chotime.fh"
 #include "chocaspt2.fh"
 
 *
@@ -96,14 +89,6 @@
          DECO  =.true.
          DensityCheck=.false.
          timings=.false.
-
-*                                                                      *
-************************************************************************
-*     Define Blank lines                                               *
-*
-      Do i = 1, 80
-         BLine(i:i) = ' '
-      End Do
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -124,7 +109,7 @@
 *-------------------------------------------------------------------*
 
       If (KWord(1:1).eq.'*')    Go To 1000
-      If (KWord.eq.BLine)       Go To 1000
+      If (KWord.eq.'')       Go To 1000
       If (KWord(1:4).eq.'ALGO') Go To 900
       If (KWord(1:4).eq.'IALG') Go To 950
       If (KWord(1:4).eq.'REOR') Go To 800
@@ -142,7 +127,6 @@
       iChrct=Len(KWord)
       Last=iCLast(KWord,iChrct)
       WRITE(6,'(1X,A,A)') KWord(1:Last),' is not a keyword!'
-      Call ErrTra
       WRITE(6,*) SECNAM, ' Error in keyword.'
       CALL ABEND()
 *                                                                      *

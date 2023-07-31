@@ -17,8 +17,6 @@ C
       DIMENSION WRK(LWRK)
 #include "cholesky.fh"
 #include "choreo.fh"
-#include "choptr.fh"
-#include "WrkSpc.fh"
 
       CHARACTER*10 SECNAM
       PARAMETER (SECNAM = 'CHO_REOVC1')
@@ -39,8 +37,7 @@ C     -----------------------
 C     Make rs1 the "current" reduced set (for reading).
 C     -------------------------------------------------
 
-      CALL CHO_RSCOPY(IWORK(ip_IIBSTRSH),IWORK(ip_NNBSTRSH),
-     &                IWORK(ip_INDRED),1,2,NSYM,NNSHL,NNBSTRT(1),3)
+      CALL CHO_RSCOPY(1,2)
 
 C     Loop over Cholesky vector symmetries.
 C     -------------------------------------
@@ -102,7 +99,7 @@ C              Reorder.
 C              --------
 
                KCHO2 = KREAD
-               CALL CHO_IZERO(IOFF,64)
+               CALL IZERO(IOFF,64)
                ICOUNT = KCHO2 - 1
                DO ISYMB = 1,NSYM
                   ISYMA = MULD2H(ISYMB,ISYM)
@@ -113,7 +110,7 @@ C              --------
                   END IF
                END DO
 
-               CALL CHO_DZERO(WRK(KCHO2),NNBST(ISYM)*NUMV)
+               CALL FZERO(WRK(KCHO2),NNBST(ISYM)*NUMV)
                DO IVEC = 1,NUMV
                   KOFF1 = KCHO1 + NNBSTR(ISYM,2)*(IVEC - 1) - 1
                   DO IRS = 1,NNBSTR(ISYM,2)

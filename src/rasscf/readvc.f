@@ -58,11 +58,10 @@
 *                                                                      *
 ************************************************************************
       use stdalloc, only : mma_allocate, mma_deallocate
-      use fortran_strings, only : to_upper
 
       use rasscf_data, only : lRoots, nRoots,
      &  iRoot, LENIN8, mxTit, Weight, mXOrb, mXroot,
-     &  maxorbout, nAcPar, iXsym, iAlphaBeta,
+     &  nAcPar, iXsym, iAlphaBeta,
      &  iOverwr, iSUPSM, iCIrst, iPhName, nAcpr2, nOrbT, iClean,
      &  purify, iAdr15
       use general_data, only : nSym, mXSym,
@@ -73,28 +72,33 @@
       use orthonormalization, only : t_ON_scheme, ON_scheme_values,
      &  orthonormalize
 
+#ifdef _HDF5_
+      use mh5, only: mh5_open_file_r, mh5_exists_dset, mh5_fetch_dset,
+     &               mh5_close_file
+#endif
+
       implicit none
 
 *     global data declarations
 #include "output_ras.fh"
+      Character*16 ROUTINE
       Parameter (ROUTINE='READVC  ')
 #include "WrkSpc.fh"
 #include "SysDef.fh"
-#include "warnings.fh"
+#include "warnings.h"
 #include "wadr.fh"
 #include "casvb.fh"
-#include "raswfn.fh"
-      Common /IDSXCI/ IDXCI(mxAct),IDXSX(mxAct)
+#include "sxci.fh"
 
       real*8 :: CMO(*),OCC(*),D(*),DS(*),P(*),PA(*)
       type(t_ON_scheme), intent(in) :: scheme
 
       logical :: found, changed
-      integer :: iPrlev, nData, ifvb,
+      integer :: iPrlev, nData,
      &    i, j, iTIND, NNwOrd, iSym,
      &    LNEWORD, LTMPXSYM, iErr, IAD19, iJOB,
      &    lll, lJobH, ldJobH, lscr, iDisk,
-     &    jRoot, kRoot, iDXsX, idXCI,
+     &    jRoot, kRoot,
      &    iDummy(1), IADR19(30), iAD15, lEne, nTmp(8)
       real*8 :: Dummy(1), Scal
       real*8, allocatable :: CMO_copy(:)
@@ -102,11 +106,11 @@
       integer mh5id
       character(Len=maxbfn) typestring
 #endif
-      character(LENIN8*mxOrb) :: lJobH1
-      character(2*72) :: lJobH2
-      character(72) :: JobTit(mxTit)
-      character(80) :: VecTit
-      character(4) :: Label
+      character(len=LENIN8*mxOrb) :: lJobH1
+      character(len=2*72) :: lJobH2
+      character(len=72) :: JobTit(mxTit)
+      character(len=80) :: VecTit
+      character(len=4) :: Label
 
       interface
         integer function isfreeunit(seed)
@@ -121,7 +125,6 @@
 *----------------------------------------------------------------------*
 *                                                                      *
 *----------------------------------------------------------------------*
-      Call qEnter('ReadVc')
 C Local print level (if any)
       IPRLEV=IPRLOC(1)
       IF(IPRLEV.ge.DEBUG) THEN
@@ -247,7 +250,7 @@ C Local print level (if any)
            end if
         Else
            If (IPRLEV.ge.TERSE) then
-              Write(LF,*) '  File JOBOLD not found -- use JOBIPH.'
+              Write(LF,'(6X,A)') 'File JOBOLD not found -- use JOBIPH.'
            End If
            If (JOBIPH.gt.0) Then
               JOBOLD=JOBIPH
@@ -336,11 +339,12 @@ C Local print level (if any)
          Call GetMem('Scr','Free','Real',lscr,NACPR2)
         End If
 CSVC: read the L2ACT and LEVEL arrays from the jobiph file
-         IAD19=IADR19(18)
-         IF (IAD19.NE.0) THEN
-           CALL IDAFILE(JOBOLD,2,IDXSX,mxAct,IAD19)
-           CALL IDAFILE(JOBOLD,2,IDXCI,mxAct,IAD19)
-         END IF
+!IFG: disabled, since it breaks when changing active space specification
+        !IAD19=IADR19(18)
+        !IF (IAD19.NE.0) THEN
+        !  CALL IDAFILE(JOBOLD,2,IDXSX,mxAct,IAD19)
+        !  CALL IDAFILE(JOBOLD,2,IDXCI,mxAct,IAD19)
+        !END IF
         If(JOBOLD.gt.0.and.JOBOLD.ne.JOBIPH) Then
           Call DaClos(JOBOLD)
           JOBOLD=-1
@@ -539,6 +543,5 @@ CSVC: read the L2ACT and LEVEL arrays from the jobiph file
 
 *     exit
 
-      CALL QEXIT('READVC')
       RETURN
       END

@@ -8,17 +8,17 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
-c
        subroutine ccsd(ireturn,run_triples)
 c
 c     program for CCSD
 c
+       use Para_Info, only: MyRank, nProcs
        Logical run_triples
 c
 #include "ccsd1.fh"
 #include "ccsd2.fh"
 #include "filemgr.fh"
-#include "paralell.fh"
+#include "parallel.fh"
 
 #include "SysDef.fh"
 c
@@ -44,11 +44,10 @@ c
 CLD    real*8 pz1aa,pz1bb,pz2aaaa,pz2bbbb,pz2abab
 c
 c      parameters for par
-       real*8 timtotcpu,timtotcpun,timdifcpu,timtotwc,timtotwcn,timdifwc
+       real*8 timtotcpu,timtotcpun,timtotwc,timtotwcn,timdifwc
        real*8 timtotit
        integer i
 c
-       Call qEnter('CCSD')
        call CWTime (timtotcpu,timtotwc)
        timtotit=timtotwc
 c
@@ -327,7 +326,7 @@ c
        call init (Work(iOff),wrksize,
      & lunabij1,lunabij2,lunabij3)
        call CWTime (timtotcpun,timtotwcn)
-       timdifcpu=timtotcpun-timtotcpu
+ctmp   timdifcpu=timtotcpun-timtotcpu
        timdifwc=timtotwcn-timtotwc
        timtotcpu=timtotcpun
        timtotwc=timtotwcn
@@ -340,7 +339,7 @@ c
        call sumoverab (Work(iOff),wrksize,
      & lunt2o1,lunt2o2,lunt2o3,nabstack,possabstack,niter)
        call CWTime (timtotcpun,timtotwcn)
-       timdifcpu=timtotcpun-timtotcpu
+ctmp   timdifcpu=timtotcpun-timtotcpu
        timdifwc=timtotwcn-timtotwc
        timtotcpu=timtotcpun
        timtotwc=timtotwcn
@@ -355,7 +354,7 @@ c
      & lunt2o1,lunt2o2,lunt2o3,
      & lunw3aaaa,lunw3baab,lunw3bbaa,lunw3bbbb,lunw3abba,lunw3aabb)
        call CWTime (timtotcpun,timtotwcn)
-       timdifcpu=timtotcpun-timtotcpu
+ctmp   timdifcpu=timtotcpun-timtotcpu
        timdifwc=timtotwcn-timtotwc
        timtotcpu=timtotcpun
        timtotwc=timtotwcn
@@ -368,7 +367,7 @@ c
      & lunw3baab,lunw3aabb,lunw3bbaa,lunt2o1,lunt2o2,lunt2o3,
      & lunabij1,lunabij2,lunabij3)
        call CWTime (timtotcpun,timtotwcn)
-       timdifcpu=timtotcpun-timtotcpu
+ctmp   timdifcpu=timtotcpun-timtotcpu
        timdifwc=timtotwcn-timtotwc
        timtotcpu=timtotcpun
        timtotwc=timtotwcn
@@ -380,7 +379,7 @@ c
      & lunabij1,lunabij2,lunabij3,
      & lunt2o1,lunt2o2,lunt2o3)
        call CWTime (timtotcpun,timtotwcn)
-       timdifcpu=timtotcpun-timtotcpu
+ctmp   timdifcpu=timtotcpun-timtotcpu
        timdifwc=timtotwcn-timtotwc
        timtotcpu=timtotcpun
        timtotwc=timtotwcn
@@ -392,7 +391,7 @@ c
 cpar
        call joinamplitudes (Work(iOff),wrksize)
        call CWTime (timtotcpun,timtotwcn)
-       timdifcpu=timtotcpun-timtotcpu
+ctmp   timdifcpu=timtotcpun-timtotcpu
        timdifwc=timtotwcn-timtotwc
        timtotcpu=timtotcpun
        timtotwc=timtotwcn
@@ -601,7 +600,7 @@ c3.7  save restart informations - energy, iteration cycle
 c
 ctmp   call timing (timtotcpu,timdifcpu,timtotwc,timdifwc)
        call CWTime (timtotcpun,timtotwcn)
-       timdifcpu=timtotcpun-timtotcpu
+ctmp   timdifcpu=timtotcpun-timtotcpu
        timdifwc=timtotwcn-timtotwc
        timtotcpu=timtotcpun
        timtotwc=timtotwcn
@@ -740,156 +739,6 @@ c
          write(6,*)
        EndIf
 c
-       Call qExit('CCSD')
        ireturn=0
        return
        end
-c
-c     ---------------
-c
-       subroutine percentzero (wrk,wrksize,
-     & mapd,pz)
-c
-c     this routine test % of small elements in meditate, decribed by mpd
-c
-c     mapd - direct map of required mediate (I)
-c
-#include "wrk.fh"
-       integer mapd(0:512,1:6)
-       real*8  pz
-c
-c     help variables
-c
-       integer poss,lenght
-       integer nhelp,nzero
-       real*8 zerolim
-c
-c     def lenght, poss, zerolim
-c
-       poss=mapd(1,1)
-       nhelp=mapd(0,5)
-       lenght=mapd(nhelp,1)+mapd(nhelp,2)-mapd(1,1)
-       zerolim=1.0d-6
-c
-       if (lenght.gt.0) then
-       nzero=0
-       do 100 nhelp=poss,poss+lenght-1
-       if (abs(wrk(nhelp)).lt.zerolim) then
-       nzero=nzero+1
-       end if
- 100    continue
-       pz = dble(100*nzero)/dble(lenght)
-       else
-       pz=1.0d0
-       end if
-c
-       return
-       end
-c
-c     ---------------
-c
-        subroutine ccsd_exc (key)
-c
-c       check, if there is atleast one determinant in CCSD expansion
-c       key=0 - no determinant in expansion
-c           1 - only monoexcitations in expansion
-c           2 - both mono and biexcitations in expansion
-c
-        implicit none
-#include "ccsd1.fh"
-        integer key
-c
-c       help variables
-        integer isym,jsym,ijsym,asym,bsym,nij,nab
-        integer naa,nbb,naaaa,nbbbb,nabab
-c
-c
-c1.1    calc # of monoexcitations
-c       taking into account also symmetry
-
-        naa=0
-        nbb=0
-        do isym=1,nsym
-          asym=isym
-          naa=naa+noa(isym)*nva(asym)
-          nbb=nbb+nob(isym)*nvb(asym)
-        end do
-c
-c1.2    calc # of biexcitation
-c       taking into account also symmetry
-c
-        naaaa=0
-        do isym=1,nsym
-        do jsym=1,isym
-        ijsym=mmul(isym,jsym)
-        if (isym.eq.jsym) then
-          nij=noa(isym)*(noa(isym)-1)/2
-        else
-          nij=noa(isym)*noa(jsym)
-        end if
-          do asym=1,nsym
-          bsym=mmul(ijsym,asym)
-          if (bsym.lt.asym) then
-            nab=nva(asym)*nva(bsym)
-          else if (bsym.eq.asym) then
-            nab=nva(asym)*(nva(asym)-1)/2
-          else
-            nab=0
-          end if
-          naaaa=naaaa+nij*nab
-          end do
-        end do
-        end do
-c
-        nbbbb=0
-        do isym=1,nsym
-        do jsym=1,isym
-        ijsym=mmul(isym,jsym)
-        if (isym.eq.jsym) then
-          nij=nob(isym)*(nob(isym)-1)/2
-        else
-          nij=nob(isym)*nob(jsym)
-        end if
-          do asym=1,nsym
-          bsym=mmul(ijsym,asym)
-          if (bsym.lt.asym) then
-            nab=nvb(asym)*nvb(bsym)
-          else if (bsym.eq.asym) then
-            nab=nvb(asym)*(nvb(asym)-1)/2
-          else
-            nab=0
-          end if
-          nbbbb=nbbbb+nij*nab
-          end do
-        end do
-        end do
-c
-        nabab=0
-        do isym=1,nsym
-        do jsym=1,isym
-        ijsym=mmul(isym,jsym)
-        nij=noa(isym)*nob(jsym)
-          do asym=1,nsym
-          bsym=mmul(ijsym,asym)
-          nab=nva(asym)*nvb(bsym)
-          nabab=nabab+nij*nab
-          end do
-        end do
-        end do
-c
-c
-c2      set key
-c
-        if ((naaaa+nbbbb+nabab).eq.0) then
-          if ((naa+nbb).eq.0) then
-            key=0
-          else
-            key=1
-          end if
-        else
-          key=2
-        end if
-c
-c
-        return
-        end

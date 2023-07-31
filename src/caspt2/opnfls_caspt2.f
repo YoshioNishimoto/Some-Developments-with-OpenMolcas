@@ -22,15 +22,13 @@ C  M.P. Fuelscher and P. AA. Malmqvist
 C  University of Lund, Sweden, 1993
 ************************************************************************
       Implicit Real*8 (A-H,O-Z)
-      CHARACTER(2) CVEC,CMAT
+      CHARACTER(LEN=2) CVEC,CMAT
 *---------------------------------------------------------------------*
 C  Start
 *---------------------------------------------------------------------*
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 
-      Call qEnter('OpnFls')
 *---  define logical unit numbers ------------------------------------*
 C  AO two-electron integrals
       LUINTA=20
@@ -61,7 +59,7 @@ C  Half transformed integrals (uq|rt)
       CALL DANAME_MF_wa(LUDRATOT,'DRARRT')
 *
 C-SVC: assign logical units for RHS arrays and open files for writing
-      DO IVEC=1,6
+      DO IVEC=1,8
         LURHS(IVEC)=50+IVEC
         write(unit=CVEC, fmt='(I2.2)') IVEC
         CALL DANAME_MF_WA(LURHS(IVEC),'RHS_'//CVEC)
@@ -107,9 +105,9 @@ C  AO one-electron integrals
           CALL ABEND()
         End If
       End If
+
 *----------------------------------------------------------------------*
 C  Exit
 *----------------------------------------------------------------------*
-      Call qExit('OpnFls')
       Return
       End

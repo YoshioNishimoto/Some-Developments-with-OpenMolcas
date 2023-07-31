@@ -25,7 +25,7 @@
 !    dE -- energy diference E(i)-E(j)
 
       Implicit None
-      Integer, parameter           :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter           :: wp=kind(0.d0)
       Integer, intent(in)          :: N
       Real(kind=8), intent(in)    :: E(N), T
       Complex(kind=8), intent(in) :: M1(3,N,N), M2(3,N,N)
@@ -35,7 +35,6 @@
       Real(kind=8)                :: pB, dE, c2(3,3), R, F
       Real(kind=8)                :: boltz_k
 
-      Call qEnter('CHI')
       boltz_k=0.6950356_wp !   in cm^-1*k-1
 
       pB=0.0_wp
@@ -75,6 +74,5 @@
 
       ! scale the total tensor by the total statistical sum Z:
       Call dscal_(3*3, 1.0_wp/Z, X, 1)
-      Call qExit('CHI')
       Return
       End

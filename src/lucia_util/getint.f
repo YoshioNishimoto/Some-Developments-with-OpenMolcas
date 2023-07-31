@@ -28,7 +28,6 @@
 #include "wadr.fh"
       DIMENSION XINT(*)
 *
-      CALL QENTER('GETIN')
       NTEST = 00
 *
       IF(NTEST.GE.1) THEN
@@ -82,13 +81,12 @@ c       WRITE(6,*) ' I_USE_SIMTRH in GETINT =', I_USE_SIMTRH
         WRITE(6,*) ' 2 electron integral block for TS blocks '
         WRITE(6,*) ' Ixchng :', IXCHNG
         WRITE(6,*) ' After GETINC '
-        WRITE(6,'(1H ,4(A,I2,A,I2,A))')
+        WRITE(6,'(1X,4(A,I2,A,I2,A))')
      &  '(',ITP,',',ISM,')','(',JTP,',',JSM,')',
      &  '(',KTP,',',KSM,')','(',LTP,',',LSM,')'
         CALL WRTMAT(XINT,NIK,NJL,NIK,NJL)
       END IF
 *
-      CALL QEXIT('GETIN')
 C     STOP ' Jeppe forced me to stop in GETINT '
       RETURN
       END

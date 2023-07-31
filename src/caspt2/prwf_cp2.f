@@ -9,7 +9,7 @@
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
 * Copyright (C) 1994, Per Ake Malmqvist                                *
-**********************************************************************
+************************************************************************
 *--------------------------------------------*
 * 1994  PER-AAKE MALMQUIST                   *
 * DEPARTMENT OF THEORETICAL CHEMISTRY        *
@@ -22,7 +22,6 @@
       REAL*8, INTENT(IN) :: CI(NCO), THR
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "pt2_guga.fh"
 #include "WrkSpc.fh"
 

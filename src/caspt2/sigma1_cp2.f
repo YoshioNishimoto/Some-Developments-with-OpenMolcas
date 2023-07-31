@@ -31,7 +31,6 @@
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "pt2_guga.fh"
 #include "WrkSpc.fh"
       INTRINSIC MOD
@@ -43,7 +42,6 @@
 *  WERE PREPARED BY GINIT AND ITS SUBROUTINES.
 *****************************************************************
 
-      CALL QENTER('SIGMA1')
 
       IF(ABS(CPQ).LT.1.0D-12) GOTO 999
       iLUW=0
@@ -372,6 +370,5 @@ C CASE IS: LOWER HALF, EXCITE:
  800  CONTINUE
 
  999  CONTINUE
-      CALL QEXIT('SIGMA1')
       RETURN
       END

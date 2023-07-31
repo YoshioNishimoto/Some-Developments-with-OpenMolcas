@@ -15,17 +15,17 @@
      &                 nOrdOp,rNuc,rHrmt,iChO,
      &                 opmol,ipad,opnuc,iopadr,idirect,isyop,
      &                 PtChrg,nGrid,iAddPot)
+      use Basis_Info, only: nBas
       use PrpPnt
+      use Gateway_global, only: PrPrt, Short, IfAllOrb
+      use Sizes_of_Seward, only: S
+      use Gateway_Info, only: Thrs
+      use Symmetry_Info, only: nIrrep
       Implicit Real*8 (A-H,O-Z)
       External Kernel, KrnlMm
-#include "itmax.fh"
-#include "info.fh"
 #include "stdalloc.fh"
-#include "print.fh"
 #include "real.fh"
-      Real*8, Dimension(:), Allocatable :: Out, Nuc, TMat, Temp, El,
-     &                                     Array
-      Character*16, Dimension(:), Allocatable :: plabs
+      Real*8, Dimension(:), Allocatable :: Out, Nuc, El, Array
       Character Label*8, LBL*4
       Character L_Temp*8
       Real*8 CCoor(3,nComp), rNuc(nComp), PtChrg(nGrid)
@@ -36,22 +36,20 @@
 *                                                                      *
 ************************************************************************
 *                                                                      *
-      iRout = 112
-      iPrint = nPrint(iRout)
-      Call qEnter('OneEl')
-      If (iPrint.ge.19) Then
-         Write (6,*) ' In OneEl: Label', Label
-         Write (6,*) ' In OneEl: nComp'
-         Write (6,'(1X,8I5)') nComp
-         Write (6,*) ' In OneEl: lOper'
-         Write (6,'(1X,8I5)') lOper
-         Write (6,*) ' In OneEl: n2Tri'
-         Do iComp = 1, nComp
-            ip(iComp) = n2Tri(lOper(iComp))
-         End Do
-         Write (6,'(1X,8I5)') (ip(iComp),iComp=1,nComp)
-         Call RecPrt(' CCoor',' ',CCoor,3,nComp)
-      End If
+!#define _DEBUGPRINT_
+#ifdef _DEBUGPRINT_
+      Write (6,*) ' In OneEl: Label', Label
+      Write (6,*) ' In OneEl: nComp'
+      Write (6,'(1X,8I5)') nComp
+      Write (6,*) ' In OneEl: lOper'
+      Write (6,'(1X,8I5)') lOper
+      Write (6,*) ' In OneEl: n2Tri'
+      Do iComp = 1, nComp
+         ip(iComp) = n2Tri(lOper(iComp))
+      End Do
+      Write (6,'(1X,8I5)') (ip(iComp),iComp=1,nComp)
+      Call RecPrt(' CCoor',' ',CCoor,3,nComp)
+#endif
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -66,8 +64,12 @@
             If (iAnd(lOper(iComp),iTwoj(iIrrep)).ne.0) nIC = nIC + 1
          End Do
       End Do
-      If (iPrint.ge.20) Write (6,*) ' nIC =',nIC
-      If (nIC.eq.0) Go To 999
+#ifdef _DEBUGPRINT_
+      Write (6,*) ' nIC =',nIC
+#endif
+*
+      If (nIC.eq.0) Return
+*
       Call SOS(iStabO,nStabO,llOper)
 *                                                                      *
 ************************************************************************
@@ -100,7 +102,8 @@
 *                                                                      *
 *---- Compute all SO integrals for all components of the operator.
 *
-      Call OneEl_(Kernel,KrnlMm,Label,ip,lOper,nComp,CCoor,
+      Call OneEl_Inner
+     &           (Kernel,KrnlMm,Label,ip,lOper,nComp,CCoor,
      &            nOrdOp,rHrmt,iChO,
      &            opmol,opnuc,ipad,iopadr,idirect,isyop,
      &            iStabO,nStabO,nIC,
@@ -112,7 +115,9 @@
 *                                                                      *
 ************************************************************************
 *                                                                      *
-      If (iPrint.ge.10) Call PrMtrx(Label,lOper,nComp,ip,Array)
+#ifdef _DEBUGPRINT_
+      Call PrMtrx(Label,lOper,nComp,ip,Array)
+#endif
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -137,7 +142,7 @@
                If (short) Then
                   mDim = 1
                Else
-                  mDim = nDim
+                  mDim = S%nDim
                End If
                call mma_allocate(Out,mDim*nComp,label='Out')
                ipOut=1
@@ -153,7 +158,7 @@
             If (nInt.ne.0)
      &      Call XProp(Short,ifallorb,
      &                 nIrrep,nBas,nVec,Vec,nOcc,Occ,
-     &                 Thrs,nDen,Array(ip(iComp)),
+     &                 nDen,Array(ip(iComp)),
      &                 Out(ipOut+(iComp-1)*mDim))
 *
             If (Label(1:3).eq.'PAM') Then
@@ -191,9 +196,6 @@ c               Close(28)
                Else If (LBL.eq.'VELO') Then
                    lpole = 1
                End If
-               Call mma_allocate(plabs,nComp,label='plabs')
-               Call mma_allocate(TMat,nComp**2,label='TMat')
-               Call mma_allocate(Temp,nComp,label='Temp')
                If (nComp.eq.1) Then
                   ipC2 = 1 ! dummy
                Else
@@ -201,7 +203,7 @@ c               Close(28)
                End If
                Call Prop(Short,Label,Ccoor(1,1),Ccoor(1,ipC2),
      &                   nIrrep,nBas,mDim,Occ,Thrs,
-     &                   Out,Nuc,lpole,plabs,TMat,Temp,ifallorb)
+     &                   Out,Nuc,lpole,ifallorb)
 *
 * For a properties calculation, save the values of EF or CNT operators,
 * they will be used to write the sum through Add_Info in Drv1El
@@ -230,9 +232,6 @@ c               Close(28)
                  Call mma_deallocate(El)
                End If
 *
-               Call mma_deallocate(Temp)
-               Call mma_deallocate(TMat)
-               Call mma_deallocate(plabs)
                Call mma_deallocate(Nuc)
                Call mma_deallocate(Out)
             End If
@@ -323,7 +322,5 @@ c               Close(28)
 *                                                                      *
 ************************************************************************
 *                                                                      *
- 999  Continue
-      Call qExit('OneEl')
       Return
       End

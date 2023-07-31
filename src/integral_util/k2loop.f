@@ -12,35 +12,22 @@
 *               1990, IBM                                              *
 ************************************************************************
       SubRoutine k2Loop(Coor,
-     &           iAnga,iCmpa,iShll,
-     &           iDCRR,nDCRR,Data,
-     &           Alpha,nAlpha,Beta, nBeta,
-     &           Alpha_,Beta_,
-     &           Coeff1,iBasn,Coeff2,jBasn,
-     &           Zeta,ZInv,Kappab,P,IndP,nZeta,IncZZ,Con,
-     &           Wrk,nWork2,
-     &           Cmpct,nScree,mScree,iStb,jStb,
-     &           Dij,nDij,nDCR,nHm,ijCmp,DoFock,
-     &           Scr,nScr,
-     &           Knew,Lnew,Pnew,Qnew,nNew,DoGrad,HMtrx,nHrrMtrx)
+     &                  iAnga,iCmpa,iShll,
+     &                  iDCRR,nDCRR,Data,
+     &                  Alpha,nAlpha,Beta, nBeta,
+     &                  Alpha_,Beta_,
+     &                  Coeff1,iBasn,Coeff2,jBasn,
+     &                  Zeta,ZInv,Kappab,P,IndP,nZeta,IncZZ,Con,
+     &                  Wrk,nWork2,
+     &                  Cmpct,nScree,mScree,iStb,jStb,
+     &                  Dij,nDij,nDCR,nHm,ijCmp,DoFock,
+     &                  Scr,nScr,
+     &                  Knew,Lnew,Pnew,Qnew,nNew,DoGrad,HMtrx,nHrrMtrx)
 ************************************************************************
 *                                                                      *
 * Object: to compute zeta, kappa, P, and the integrals [nm|nm] for     *
 *         prescreening. This is done for all unique pairs of centers   *
 *         generated from the symmetry unique centers A and B.          *
-*                                                                      *
-* Called from: Drvk2                                                   *
-*                                                                      *
-* Calling    : QEnter                                                  *
-*              DCopy   (ESSL)                                          *
-*              DoZeta                                                  *
-*              Rys                                                     *
-*              DGeTMO  (ESSL)                                          *
-*              RecPrt                                                  *
-*              Hrr                                                     *
-*              CrSph1                                                  *
-*              CrSph2                                                  *
-*              QExit                                                   *
 *                                                                      *
 *     Author: Roland Lindh, IBM Almaden Research Center, San Jose, CA  *
 *             March '90                                                *
@@ -51,13 +38,17 @@
 *             grals for Schwartz inequality in a k2 loop.              *
 *             Modified for direct SCF, January '93                     *
 ************************************************************************
+      use, intrinsic :: iso_c_binding, only: c_f_pointer, c_loc
       use Real_Spherical
+      use Basis_Info
+      use Center_Info
+      use Symmetry_Info, only: nIrrep, iOper
+      use Gateway_Info, only: CutInt, RadMax, cdMax, EtMax
       Implicit Real*8 (A-H,O-Z)
 #include "ndarray.fh"
       External TERIS, ModU2, Cmpct, Cff2DS, Rys2D
 #include "real.fh"
-#include "itmax.fh"
-#include "info.fh"
+#include "Molcas.fh"
 #include "disp.fh"
 #include "print.fh"
       Real*8 Coor(3,4), CoorM(3,4), Coori(3,4), Coora(3,4), CoorAC(3,2),
@@ -83,42 +74,43 @@
 *     This is to allow type punning without an explicit interface
       Contains
       Subroutine k2loop_internal(Data)
-      Use Iso_C_Binding
       Real*8, Target :: Data((nZeta*(nDArray+2*ijCmp)+nDScalar+nHm),
      &                       nDCRR)
       Integer, Pointer :: iData(:)
-      Logical TF, TstFnc
-      External TstFnc
+      Logical, External :: TF
+#ifdef _WARNING_WORKAROUND_
       Interface
-         SubRoutine Rys(iAnga,nT,Zeta,ZInv,nZeta,
-     &                  Eta,EInv,nEta,
-     &                  P,lP,Q,lQ,rKapab,rKapcd,Coori,Coora,CoorAC,
-     &                  mabMin,mabMax,mcdMin,mcdMax,Array,nArray,
-     &                  Tvalue,ModU2,Cff2D,Rys2D,NoSpecial)
-         Integer iAnga(4), nT, nZeta, nEta, lP, lQ, mabMin, mabMax,
-     &           mcdMin, mcdMax, nArray
-         External Tvalue, ModU2, Cff2D, Rys2D
-         Real*8 Zeta(nZeta), ZInv(nZeta), P(lP,3), rKapab(nZeta),
-     &          Eta(nEta),   EInv(nEta),  Q(lQ,3), rKapcd(nEta),
-     &          CoorAC(3,2), Coora(3,4), Coori(3,4), Array(nArray)
-         Logical NoSpecial
+        SubRoutine Rys(iAnga,nT,Zeta,ZInv,nZeta,Eta,EInv,nEta,P,lP,Q,lQ,
+     &                 rKapab,rKapcd,Coori,Coora,CoorAC,mabMin,mabMax,
+     &                 mcdMin,mcdMax,Array,nArray,Tvalue,ModU2,Cff2D,
+     &                 Rys2D,NoSpecial)
+        use Definitions, only: wp, iwp
+        integer(kind=iwp), intent(in) :: iAnga(4), nT, nZeta, nEta, lP,
+     &                                   lQ, mabMin, mabMax, mcdMin,
+     &                                   mcdMax, nArray
+        real(kind=wp), intent(in) :: Zeta(nZeta), ZInv(nZeta),
+     &                               Eta(nEta), EInv(nEta), P(lP,3),
+     &                               Q(lQ,3), rKapab(nZeta),
+     &                               rKapcd(nEta), Coori(3,4),
+     &                               Coora(3,4), CoorAC(3,2)
+        real(kind=wp), intent(inout) :: Array(nArray)
+        external :: Tvalue, ModU2, Cff2D, Rys2D
+        logical(kind=iwp), intent(in) :: NoSpecial
          End Subroutine Rys
       End Interface
+#endif
 *                                                                      *
 ************************************************************************
 *                                                                      *
 *     Statement function to compute canonical index
 *
       nabSz(ixyz) = (ixyz+1)*(ixyz+2)*(ixyz+3)/6  - 1
-      TF(mdc,iIrrep,iComp) = TstFnc(iOper,nIrrep,iCoSet(0,0,mdc),
-     &                       nIrrep/nStab(mdc),iChTbl,iIrrep,iComp,
-     &                       nStab(mdc))
 *                                                                      *
 ************************************************************************
 *                                                                      *
       iRout = 241
       iPrint = nPrint(iRout)
-*     Call QEnter('k2Loop')
+*     iPrint = 99
       call dcopy_(3,[One],0,Q,1)
       nData=nZeta*(nDArray+2*ijCmp)+nDScalar+nHm
       call dcopy_(nData*nDCRR,[Zero],0,Data,1)
@@ -142,11 +134,8 @@
 *
          Call ICopy(1024,nPrint,1,iSave,1)
          Call ICopy(1024,[5],0,nPrint,1)
-         iR = iDCRR(lDCRR)
 *
-         CoorM(1,2) = DBLE(iPhase(1,iDCRR(lDCRR)))*Coor(1,2)
-         CoorM(2,2) = DBLE(iPhase(2,iDCRR(lDCRR)))*Coor(2,2)
-         CoorM(3,2) = DBLE(iPhase(3,iDCRR(lDCRR)))*Coor(3,2)
+         Call OA(iDCRR(lDCRR),Coor(1:3,2),CoorM(1:3,2))
          AeqB = EQ(CoorM(1,1),CoorM(1,2))
 *        Branch out if integrals are zero by symmetry.
          If (AeqB .and. Mod(iSmAng,2).eq.1) Go To 100
@@ -180,16 +169,12 @@
          ne=(mabMax-mabMin+1)
          Do iIrrep = 0, nIrrep-1
             i13_=ip_HrrMtrx(nZeta)+(iIrrep*nHm)/nIrrep
-            TA(1) = DBLE(iPhase(1,iOper(iIrrep)))*CoorM(1,1)
-            TA(2) = DBLE(iPhase(2,iOper(iIrrep)))*CoorM(2,1)
-            TA(3) = DBLE(iPhase(3,iOper(iIrrep)))*CoorM(3,1)
-            TB(1) = DBLE(iPhase(1,iOper(iIrrep)))*CoorM(1,2)
-            TB(2) = DBLE(iPhase(2,iOper(iIrrep)))*CoorM(2,2)
-            TB(3) = DBLE(iPhase(3,iOper(iIrrep)))*CoorM(3,2)
+            Call OA(iOper(iIrrep),CoorM(1:3,1),TA)
+            Call OA(iOper(iIrrep),CoorM(1:3,2),TB)
             Call HrrMtrx(Data(i13_,lDCRR+1),
      &                   ne,la,lb,TA,TB,
-     &                   Transf(iShlla),RSph(ipSph(la)),iCmpa_,
-     &                   Transf(jShllb),RSph(ipSph(lb)),jCmpb_)
+     &                   Shells(iShlla)%Transf,RSph(ipSph(la)),iCmpa_,
+     &                   Shells(jShllb)%Transf,RSph(ipSph(lb)),jCmpb_)
          End Do
 *                                                                      *
 ************************************************************************
@@ -207,7 +192,7 @@
          mabcd=(mabMax-mabMin+1)*(mcdMax-mcdMin+1)
 *
 *        Find the proper centers to start of with the angular
-*        momentum on. If la.eq.lb there will excist an
+*        momentum on. If la.eq.lb there will exist an
 *        ambiguity to which center that angular momentum should
 *        be accumulated on. In that case we will use A and C of
 *        the order as defined by the basis functions types.
@@ -262,6 +247,11 @@
 *                                                                      *
 ************************************************************************
 *                                                                      *
+         Call C_F_Pointer(C_Loc(Data(ip_IndZ(1,nZeta),lDCRR+1)),iData,
+     &                    [nAlpha*nBeta+1])
+*                                                                      *
+************************************************************************
+*                                                                      *
 *-----------Store data in core
 *
             Call Cmpct(Wrk(iW2),iCmpa_,jCmpb_,nZeta,mZeta,
@@ -270,7 +260,7 @@
      &                 Data(ip_Z    (1,nZeta),lDCRR+1),
      &                 Data(ip_Kappa(1,nZeta),lDCRR+1),
      &                 Data(ip_Pcoor(1,nZeta),lDCRR+1),
-     &                 Data(ip_IndZ (1,nZeta),lDCRR+1),iZeta-1,Jnd,
+     &                 iData,iZeta-1,Jnd,
      &                 Data(ip_ZInv (1,nZeta),lDCRR+1),CutInt,RadMax,
      &                 cdMax,EtMax,AeqB,
      &                 Data(ip_ab   (1,nZeta),lDCRR+1),
@@ -287,8 +277,6 @@
 *                                                                      *
 *        Estimate the largest contracted integral.
 *
-         Call C_F_Pointer(C_Loc(Data(ip_IndZ(1,nZeta),lDCRR+1)),iData,
-     &                    [nAlpha*nBeta+1])
          Data(ip_EstI(nZeta),lDCRR+1) =
      &                      EstI(Data(ip_Z(1,nZeta),lDCRR+1),
      &                           Data(ip_Kappa(1,nZeta),lDCRR+1),
@@ -516,8 +504,8 @@
 *                                                                      *
 ************************************************************************
 *                                                                      *
-*#define _DEBUG_
-#ifdef _DEBUG_
+*#define _DEBUGPRINT_
+#ifdef _DEBUGPRINT_
          Write (6,*)
          Write (6,*) 'lDCRR=',lDCRR
          Call WrCheck('Zeta ',Data(ip_Z    (1,nZeta),  lDCRR+1),nZeta)
@@ -545,7 +533,6 @@
 #endif
  100  Continue ! lDCRR
 *
-*     Call QExit('k2Loop')
       Return
       End Subroutine k2loop_internal
 *

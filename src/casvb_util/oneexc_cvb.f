@@ -8,18 +8,18 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine oneexc_cvb(cfrom,cto,vij,diag,iPvb)
       implicit real*8 (a-h,o-z)
       logical diag
-#include "ext_cvb.fh"
 #include "main_cvb.fh"
 #include "optze_cvb.fh"
 #include "files_cvb.fh"
 #include "print_cvb.fh"
 
-#include "malloc_cvb.fh"
+#include "WrkSpc.fh"
       dimension vij(*),cfrom(*),cto(*)
 
       idens=0
@@ -36,9 +36,10 @@
         call abend_cvb()
       endif
 
-      call oneexc2_cvb(w(iaddr_ci(icfrom)),w(iaddr_ci(icto)),vij,
-     >  iw(ll(1)),iw(ll(2)),iw(ll(5)),iw(ll(6)),w(ll(9)),w(ll(10)),
-     >  iw(ll(11)),iw(ll(12)),iw(ll(13)),iw(ll(14)),npvb,
+      call oneexc2_cvb(work(iaddr_ci(icfrom)),work(iaddr_ci(icto)),vij,
+     >  iwork(ll(1)),iwork(ll(2)),iwork(ll(5)),iwork(ll(6)),work(ll(9)),
+     >  work(ll(10)),
+     >  iwork(ll(11)),iwork(ll(12)),iwork(ll(13)),iwork(ll(14)),npvb,
      >  nda,ndb,n1a,n1b,nam1,nbm1,norb,projcas,sc,absym(3),diag,idens,
      >  iPvb)
 
@@ -51,17 +52,19 @@ c  If projcas and iPvb=0 we asume the normal density/1-ex. is required:
         endif
         ivij2=mstackr_cvb(nvij)
         if(idens.eq.0)then
-          call fmove_cvb(vij,w(ivij2),nvij)
-          call dscal_(nvij,-1d0,w(ivij2),1)
+          call fmove_cvb(vij,work(ivij2),nvij)
+          call dscal_(nvij,-1d0,work(ivij2),1)
         else
-          call fzero(w(ivij2),nvij)
+          call fzero(work(ivij2),nvij)
         endif
-        call oneexc2_cvb(w(iaddr_ci(icfrom)),w(iaddr_ci(icto)),w(ivij2),
-     >    iw(ll(1)),iw(ll(2)),iw(ll(5)),iw(ll(6)),w(ll(9)),w(ll(10)),
-     >    iw(ll(11)),iw(ll(12)),iw(ll(13)),iw(ll(14)),npvb,
+        call oneexc2_cvb(work(iaddr_ci(icfrom)),work(iaddr_ci(icto)),
+     >    work(ivij2),
+     >    iwork(ll(1)),iwork(ll(2)),iwork(ll(5)),iwork(ll(6)),
+     >    work(ll(9)),work(ll(10)),
+     >    iwork(ll(11)),iwork(ll(12)),iwork(ll(13)),iwork(ll(14)),npvb,
      >    nda,ndb,n1a,n1b,nam1,nbm1,norb,projcas,sc,absym(3),diag,idens,
      >    3-iPvb)
-        if(idens.eq.1)call daxpy_(nvij,-1d0,w(ivij2),1,vij,1)
+        if(idens.eq.1)call daxpy_(nvij,-1d0,work(ivij2),1,vij,1)
         call mfreer_cvb(ivij2)
       endif
       return
@@ -69,13 +72,12 @@ c  If projcas and iPvb=0 we asume the normal density/1-ex. is required:
       subroutine onedens_cvb(cfrom,cto,vij,diag,iPvb)
       implicit real*8 (a-h,o-z)
       logical diag
-#include "ext_cvb.fh"
 #include "main_cvb.fh"
 #include "optze_cvb.fh"
 #include "files_cvb.fh"
 #include "print_cvb.fh"
 
-#include "malloc_cvb.fh"
+#include "WrkSpc.fh"
       dimension vij(*),cfrom(*),cto(*)
       idens=1
       icfrom=nint(cfrom(1))
@@ -91,9 +93,10 @@ c  If projcas and iPvb=0 we asume the normal density/1-ex. is required:
         call abend_cvb()
       endif
 
-      call oneexc2_cvb(w(iaddr_ci(icfrom)),w(iaddr_ci(icto)),vij,
-     >  iw(ll(1)),iw(ll(2)),iw(ll(5)),iw(ll(6)),w(ll(9)),w(ll(10)),
-     >  iw(ll(11)),iw(ll(12)),iw(ll(13)),iw(ll(14)),npvb,
+      call oneexc2_cvb(work(iaddr_ci(icfrom)),work(iaddr_ci(icto)),vij,
+     >  iwork(ll(1)),iwork(ll(2)),iwork(ll(5)),iwork(ll(6)),work(ll(9)),
+     >  work(ll(10)),
+     >  iwork(ll(11)),iwork(ll(12)),iwork(ll(13)),iwork(ll(14)),npvb,
      >  nda,ndb,n1a,n1b,nam1,nbm1,norb,projcas,sc,absym(3),diag,idens,
      >  iPvb)
 
@@ -106,17 +109,19 @@ c  If projcas and iPvb=0 we asume the normal density/1-ex. is required:
         endif
         ivij2=mstackr_cvb(nvij)
         if(idens.eq.0)then
-          call fmove_cvb(vij,w(ivij2),nvij)
-          call dscal_(nvij,-1d0,w(ivij2),1)
+          call fmove_cvb(vij,work(ivij2),nvij)
+          call dscal_(nvij,-1d0,work(ivij2),1)
         else
-          call fzero(w(ivij2),nvij)
+          call fzero(work(ivij2),nvij)
         endif
-        call oneexc2_cvb(w(iaddr_ci(icfrom)),w(iaddr_ci(icto)),w(ivij2),
-     >    iw(ll(1)),iw(ll(2)),iw(ll(5)),iw(ll(6)),w(ll(9)),w(ll(10)),
-     >    iw(ll(11)),iw(ll(12)),iw(ll(13)),iw(ll(14)),npvb,
+        call oneexc2_cvb(work(iaddr_ci(icfrom)),work(iaddr_ci(icto)),
+     >    work(ivij2),
+     >    iwork(ll(1)),iwork(ll(2)),iwork(ll(5)),iwork(ll(6)),
+     >    work(ll(9)),work(ll(10)),
+     >    iwork(ll(11)),iwork(ll(12)),iwork(ll(13)),iwork(ll(14)),npvb,
      >    nda,ndb,n1a,n1b,nam1,nbm1,norb,projcas,sc,absym(3),diag,idens,
      >    3-iPvb)
-        if(idens.eq.1)call daxpy_(nvij,-1d0,w(ivij2),1,vij,1)
+        if(idens.eq.1)call daxpy_(nvij,-1d0,work(ivij2),1,vij,1)
         call mfreer_cvb(ivij2)
       endif
       return

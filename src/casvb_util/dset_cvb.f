@@ -8,19 +8,19 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine dset_cvb(iorbrel,ifxorb,ifxstr,
      >  idelstr,iorts,irots,izeta)
       implicit real*8 (a-h,o-z)
-#include "ext_cvb.fh"
 #include "main_cvb.fh"
 #include "optze_cvb.fh"
 #include "files_cvb.fh"
 #include "print_cvb.fh"
 
 #include "inpmod_cvb.fh"
-#include "malloc_cvb.fh"
+#include "WrkSpc.fh"
       dimension iorbrel(ndimrel),ifxorb(mxorb),
      >  iorts(*),irots(*),izeta(*)
 
@@ -33,9 +33,9 @@ c  Check if any molecular interaction constraints :
       call wrioff_cvb(11,recinp,ioffs)
       call wris_cvb(ifxorb,norb,recinp,ioffs)
       call wrioff_cvb(12,recinp,ioffs)
-      call wris_cvb(iw(ifxstr),nfxvb,recinp,ioffs)
+      call wris_cvb(iwork(ifxstr),nfxvb,recinp,ioffs)
       call wrioff_cvb(13,recinp,ioffs)
-      call wris_cvb(iw(idelstr),nzrvb,recinp,ioffs)
+      call wris_cvb(iwork(idelstr),nzrvb,recinp,ioffs)
       call wrioff_cvb(14,recinp,ioffs)
       call wris_cvb(iorts,2*nort,recinp,ioffs)
       call wrioff_cvb(15,recinp,ioffs)

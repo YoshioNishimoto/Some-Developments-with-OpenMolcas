@@ -9,8 +9,10 @@
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
       Subroutine GR_DArray(Array,nArray)
+#ifdef _MOLCAS_MPP_
+      Use Para_Info, Only: nProcs, Is_Real_Par
+#endif
       Implicit Real*8 (a-h,o-z)
-#include "para_info.fh"
 *
       Real*8 Array(nArray)
 *
@@ -19,7 +21,6 @@
       Call CWTime(TCpu1,TWall1)
       Call GADGOP(Array,nArray,'+')
       Call CWTime(TCpu2,TWall2)
-      Call SavTim(10,TCpu2-TCpu1,TWall2-TWall1)
 #else
 c Avoid unused argument warnings
       If (.False.) Call Unused_real_array(Array)

@@ -14,7 +14,7 @@
 C This Subroutine receives the moment matrix dipso(3,dim,dim) and Returns the matrix re-builted using only the 1-st order operators.
 
       Implicit None
-      Integer, parameter       :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter        :: wp=kind(0.d0)
       Integer, intent(in)      :: dim, order, iprint
       Real(kind=8), intent(out) :: gtens(3)
 !     initial magnetic moment
@@ -37,7 +37,6 @@ C This Subroutine receives the moment matrix dipso(3,dim,dim) and Returns the ma
      &                       SP_DIPW(3), O1, O2, m_fact, trace
       External            :: trace
 !------------------------------------------------------------
-      Call qEnter('mu_order')
       Z=(0.0_wp,0.0_wp)
       ! get the local pseudospin:
       Call pseudospin( MM, dim, Z, 3,1, iprint)
@@ -186,7 +185,6 @@ C This Subroutine receives the moment matrix dipso(3,dim,dim) and Returns the ma
       gtens=0.0_wp
       maxes=0.0_wp
       Call ATENS( HCF2(order,:,:,:), dim, gtens, maxes, 1)
-      Call qExit('mu_order')
 
       Return
       End

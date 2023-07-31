@@ -9,22 +9,23 @@
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
       SUBROUTINE TRAONE(CMO)
+      use OneDat, only: sNoNuc, sNoOri
+      use caspt2_output, only:iPrGlb,verbose
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
-#include "warnings.fh"
+#include "warnings.h"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
       DIMENSION CMO(NCMO)
       DIMENSION nBasXX(8),Keep(8)
       Logical iSquar, Found
+      character(len=8) :: Label
 
 c Objective: Transformation of one-electron integrals
 c (effective one electron Hamiltonian) for CASPT2.
 
-      CALL QENTER('TRAONE')
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       IFTEST=1
 #else
       IFTEST=0
@@ -50,7 +51,6 @@ c (effective one electron Hamiltonian) for CASPT2.
         WRITE(6,*)' ORDINT NR OF SYMM:', NSYMXX
         WRITE(6,*)' ORDINT NR OF BASIS FUNCTIONS/SYMM:'
         WRITE(6,'(1x,8I5)')(NBASXX(I),I=1,NSYMXX)
-        CALL ERRTRA
         CALL ABEND()
       END IF
 c Allocate FLT,DLT, and DSQ.
@@ -65,11 +65,12 @@ c Read nuclear repulsion energy:
       IF ( IFTEST.NE.0 ) WRITE(6,*)' POTNUC:',POTNUC
 c Read one-electron hamiltonian matrix into FLT.
       IRC=-1
-      IOPT=6
+      IOPT=ibset(ibset(0,sNoOri),sNoNuc)
       ICOMP=1
       ISYLBL=1
+      Label='OneHam'
       IF ( IFTEST.NE.0 ) WRITE(6,*)' CALLING RDONE (ONEHAM)'
-      CALL RDONE(IRC,IOPT,'OneHam  ',ICOMP,WORK(LWFLT),ISYLBL)
+      CALL RDONE(IRC,IOPT,Label,ICOMP,WORK(LWFLT),ISYLBL)
       IF ( IFTEST.NE.0 ) WRITE(6,*)' BACK FROM RDONE'
       IF(IRC.NE.0) THEN
         WRITE(6,*)'TRAONE Error: RDONE failed reading OneHam.'
@@ -104,7 +105,7 @@ c the nuclear attraction by the cavity self-energy
          If (Found) Call NameRun('RUNOLD')
          Call Get_dScalar('RF Self Energy',ERFSelf)
          Call Get_dArray('Reaction field',Work(lTemp),nTemp)
-         If (Found) Call NameRun('RUNFILE')
+         If (Found) Call NameRun('#Pop')
          PotNuc=PotNuc+ERFself
          Call Daxpy_(nTemp,1.0D0,Work(lTemp),1,WORK(LWFLT),1)
 *
@@ -170,10 +171,9 @@ c  one-electron hamiltonian.
 *     Look out-- we temporarily allocate all available memory.
 *
       ExFac=1.0D0
-
          Call FTwo_Drv(nSym,nBas,nFro,KEEP,
      &                 WORK(LWDLT),WORK(LWDSQ),WORK(LWFLT),NBTRI,
-     &                 ExFac,nBSQT,nBMX,CMO)
+     &                 ExFac,nBMX,CMO)
 
 *                                                                      *
 ************************************************************************
@@ -213,10 +213,10 @@ c Transform one-electron effective Hamiltonian:
      &                  1.0d0,CMO(ICMO),NBAS(ISYM),WORK(LWTMP),
      &                  NBAS(ISYM),0.0d0,WORK(IOFF),NORB(ISYM))
 
-           CALL MXMT(WORK(IOFF),    1,NORB(ISYM),
-     &             CMO(ICMO),     1,NBAS(ISYM),
-     &             WORK(IMO),
-     &             NORB(ISYM),NBAS(ISYM))
+           Call DGEMM_Tri('N','N',NORB(ISYM),NORB(ISYM),NBAS(ISYM),
+     &                    1.0D0,WORK(IOFF),NORB(ISYM),
+     &                          CMO(ICMO),NBAS(ISYM),
+     &                    0.0D0,WORK(IMO),NORB(ISYM))
          END IF
          ICMO=ICMO+NBAS(ISYM)*(NORB(ISYM)+NDEL(ISYM))
          IAO =IAO +NBAS(ISYM)*(NBAS(ISYM)+1)/2
@@ -243,7 +243,6 @@ c Transform one-electron effective Hamiltonian:
       CALL GETMEM('WFMO','FREE','REAL',LWFMO,notri)
       CALL GETMEM('WFLT','FREE','REAL',LWFLT,NBTRI)
 
-      CALL QEXIT('TRAONE')
 
       RETURN
       End

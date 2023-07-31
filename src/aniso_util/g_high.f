@@ -16,7 +16,7 @@ c     this routine calculates the g-tensor and d-tensor in the basis of the any 
 c     (coming from 1 molecular term)
 c
       Implicit None
-      Integer, parameter :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter :: wp=kind(0.d0)
 
       Integer, intent(in):: imltpl, dim, iprint
       logical, intent(in):: Do_structure_abc, GRAD
@@ -28,7 +28,6 @@ c
       ! local variables:
       Integer :: i
 
-      Call qEnter('g_high')
 C intializations
       If(Iprint>2) Then
         CALL prMom('G_HIGH:  DIPSOM(l,i,j):',dipsom,dim)
@@ -65,7 +64,6 @@ c--------------------------------------------------------------------------
      &                Do_structure_abc, cryst, coord, gtens, maxes,
      &                iprint)
 
-      Call qExit('g_high')
       Return
       End
 CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC
@@ -80,8 +78,7 @@ C
 C     dim ---  the multiplicity of the effective spin
 C
       Implicit None
-      Integer, parameter :: wp=SELECTED_REAL_KIND(p=15,r=307)
-#include "barrier.fh"
+      Integer, parameter :: wp=kind(0.d0)
 #include "stdalloc.fh"
       Integer, intent(in)         :: dim, iMLTPL, iprint
       Real (kind=8), intent(in)  :: ESOM(dim), cryst(6), coord(3)
@@ -114,7 +111,6 @@ C
      &                  trace
       External trace, IsFreeUnit
 !----------------------------------------------------------------------
-      Call qEnter('g_high_1')
 
       Call mma_allocate(ELOC,dim,'ELOC')
       Call mma_allocate(axes_in_abc,3,3,'axes_in_abc')
@@ -142,12 +138,12 @@ C
 !----------------------------------------------------------------------
       CALL atens(dipsom, dim, gtens, maxes, 2 )
 c  save data for construction of the blocking barriers
-      Do i=1,3
-        Do j=1,3
-          axes(iMLTPL,i,j)=0.0_wp
-          axes(iMLTPL,i,j)=maxes(i,j)
-        End Do
-      End Do
+!     Do i=1,3
+!       Do j=1,3
+!         axes(iMLTPL,i,j)=0.0_wp
+!         axes(iMLTPL,i,j)=maxes(i,j)
+!       End Do
+!     End Do
 c compute the magnetic axes in the crystalographic coordinate system, If requested:
       If(do_structure_abc) Then
         axes_in_abc=0.0_wp
@@ -281,7 +277,7 @@ C  Obtain the b3m and c3m coefficients:
             If(M==0) Then
               BNMC(l,n,m)=(0.5_wp,0.0_wp)*(B(l,n,m)+B(l,n,-m))
             Else
-              m_fact=dcmplx((-1)**M,0.0)
+              m_fact=cmplx((-1)**M,0.0,kind=8)
               BNMC(l,n,m)=   B(l,n,m) + m_fact*B(l,n,-m)
               BNMS(l,n,m)= ( B(l,n,m) - m_fact*B(l,n,-m) )*
      &                     (0.0_wp,-1.0_wp)
@@ -700,7 +696,6 @@ c
       Call mma_deallocate(SP_DIPW)
 
 
-      Call qExit('g_high_1')
 
       Return
       End

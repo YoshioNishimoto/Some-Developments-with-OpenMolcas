@@ -18,32 +18,27 @@
 *     called from: SOrb                                                *
 *                                                                      *
 ************************************************************************
+      use OneDat, only: sNoNuc, sNoOri
+      use SpinAV
+      use InfSCF
       Implicit Real*8 (a-h,o-z)
 #include "real.fh"
 #include "file.fh"
-#include "mxdm.fh"
-#include "infscf.fh"
-#include "WrkSpc.fh"
 #include "stdalloc.fh"
 *
       Character FName*(*), Line*62
       Integer nTmp(8), nIF(8), nRASO(8), nBD(8), nZero(8), nHoles(8)
       Integer nSsh(8), nSsh_ab(8)
-      Real*8 Erest_xc
-      COMMON /dCSCF_xc/ Erest_xc
-      Real*8 s2CNO
-      COMMON /dCSCF_s2/ s2CNO
-      Logical Do_SpinAV
-      COMMON  / SPAVE_L  / Do_SpinAV
-      COMMON  / SPAVE_I  / ip_DSc
+#include "dcscf.fh"
 * Pam 2012 Changed VECSORT arg list, need dummy array:
-      Integer NewOrd(2)
+      Integer iDummy(1)
       Real*8 CMO(mBB,nD), EOrb(mmB,nD), OccNo(mmB,nD)
       Integer, Dimension(:), Allocatable:: IndT, ID_vir
-      Real*8, Dimension(:,:), Allocatable:: Da
-      Integer, Dimension(:,:), Allocatable:: Match
+      Real*8, Allocatable:: Da(:,:)
+      Integer, Allocatable:: Match(:,:)
       Real*8, Dimension(:), Allocatable:: Corb, SAV, SLT, SQ
-      Dimension Dummy(1)
+      Real*8 Dummy(1)
+      character(len=8) :: Label
 ************************************************************************
 *
 *----------------------------------------------------------------------*
@@ -139,7 +134,7 @@
      &               IndT,VTitle,1,iErr,iWFtype)
       End If
       Call RdTwoEnrg(Lu_,E_nondyn)
-      Call VecSort(nSym,nBas,nBas,CMO,OccNo,IndT,0,NewOrd,iErr)
+      Call VecSort(nSym,nBas,nBas,CMO,OccNo,IndT,0,iDummy,iErr)
       indx=1
       Do iSym=1,nSym
          nZero(iSym)=0
@@ -185,7 +180,7 @@
       Call TrimEor(EOrb,EOrb,nSym,nBas,nOrb)
       Call mma_deallocate(IndT)
 *
-      Call Setup
+      Call Setup()
 *
       Call Izero(nBD,nSym)
       Do iSym=2,nSym
@@ -193,7 +188,7 @@
      &             + nBas(iSym-1)*(nBas(iSym-1)+1)/2
       End Do
       Call mma_allocate(Da,nBT,2,Label='Da')
-      Call Fzero(Da,2*nBT)
+      Da(:,:)=Zero
       Call mma_allocate(Match,2,MxConstr,Label='Match')
       Call mma_allocate(Corb,MaxBas,Label='Corb')
 *
@@ -298,7 +293,8 @@
 *
       If (Do_SpinAV) Then
          Call mma_deallocate(SAV)
-         Call GetMem('DSc','Allo','Real',ip_DSc,nBB)
+         Call mma_Allocate(DSc,nBB,Label='DSc')
+         DSC(:)=Zero
       EndIf
 *
       iOff=1
@@ -318,16 +314,16 @@
      &                    0.0d0,Da(ipDbb,2),nBas(iSym))
 *
          If (Do_SpinAV) Then
-            ipDScc=ip_DSc+lOff
+            ipDScc=lOff
             Do j=1,nBas(iSym)
                Do i=1,j
                   ji=j*(j-1)/2+i
                   iDaa=ipDaa-1+ji
                   iDbb=ipDbb-1+ji
-                  iDSc=ipDScc-1+nBas(iSym)*(j-1)+i
-                  Work(iDSc)=0.5d0*(Da(iDaa,1)-Da(iDbb,2))
-                  kDSc=ipDScc-1+nBas(iSym)*(i-1)+j
-                  Work(kDSc)=Work(iDSc)
+                  iDSc=ipDScc+nBas(iSym)*(j-1)+i
+                  DSc(iDSc)=0.5d0*(Da(iDaa,1)-Da(iDbb,2))
+                  kDSc=ipDScc+nBas(iSym)*(i-1)+j
+                  DSc(kDSc)=DSc(iDSc)
                End Do
             End Do
             lOff=lOff+nBas(iSym)**2
@@ -350,9 +346,8 @@
          Call WarningMessage(2,'Start6. Non-zero rc in Cho_X_init.')
          Call Abend
       endif
-
 *----------------------------------------------------------------------*
-      Call Get_Fmat_nondyn(Da(1,1),Da(1,2),nBT,.false.)
+      Call Get_Fmat_nondyn(Da(:,1),Da(:,2),nBT,.false.)
 *----------------------------------------------------------------------*
 
       Call Cho_X_Final(irc)
@@ -386,7 +381,10 @@
 *
       Call mma_allocate(SLT,nBT,Label='SLT')
       isymlbl=1
-      Call RdOne(irc,6,'Mltpl  0',1,SLT,isymlbl)
+      iOpt=ibset(ibset(0,sNoOri),sNoNuc)
+      Label='Mltpl  0'
+      iComp=1
+      Call RdOne(irc,iOpt,Label,iComp,SLT,isymlbl)
       If(irc.ne.0) Then
        write(6,*) ' Start6 : error in getting overlap matrix '
        Call Abend
@@ -439,7 +437,7 @@
          Call Ortho_Orb(CMO(iCMO,1),SQ,nBas(iSym),nSsh(iSym),2,.true.)
          iOff=iOff+nBas(iSym)*nOrb(iSym)
       End Do
-c      Call ChkOrt(CMO(1,1),nBB,SLT,nnB,Whatever) ! silent
+c      Call ChkOrt(1,Whatever) ! silent
 *
 
       Call Cho_ov_Loc(irc,Thrd,nSym,nBas,nOcc(1,2),nZero,
@@ -457,7 +455,7 @@ c      Call ChkOrt(CMO(1,1),nBB,SLT,nnB,Whatever) ! silent
      &                  .true.)
          iOff=iOff+nBas(iSym)*nOrb(iSym)
       End Do
-c      Call ChkOrt(CMO(1,2),nBB,SLT,nnB,Whatever) ! silent
+c      Call ChkOrt(2,Whatever) ! silent
 *
       If (Do_SpinAV) Then ! reset # of occupied
          Do i=1,nSym
@@ -476,60 +474,53 @@ c      Call ChkOrt(CMO(1,2),nBB,SLT,nnB,Whatever) ! silent
 *                                                                      *
 ************************************************************************
       Subroutine Get_Fmat_nondyn(Dma,Dmb,nBDT,DFTX)
+      Use Fock_util_global, only: Deco
+      use Data_Structures, only: Allocate_DT, Deallocate_DT, DSBA_Type
+      use SpinAV
+      use InfSCF
+      use ChoSCF
       Implicit Real*8 (a-h,o-z)
-#include "mxdm.fh"
-#include "infscf.fh"
-#include "WrkSpc.fh"
+#include "real.fh"
 #include "stdalloc.fh"
 *
       Integer nBDT
       Real*8  Dma(nBDT), Dmb(nBDT)
       Logical DFTX
-      Integer ALGO,NSCREEN
-      Logical REORD,DECO
-      Common /CHOSCF / REORD,DECO,dmpk,dFKmat,ALGO,NSCREEN
-      Integer ipFLT(2), ipKLT(2), nForb(8,2), nIorb(8,2), ipPorb(2)
-      Integer ipPLT(2)
-      Real*8, Dimension(:), Allocatable:: PLT
-      Real*8, Dimension(:,:), Allocatable:: Porb, Dm, FCNO, KLT
+      Integer nForb(8,2), nIorb(8,2)
+      Real*8, Dimension(:,:), Allocatable:: Dm
+      Real*8 E2act(1)
 *
       Real*8   Get_ExFac
       External Get_ExFac
-      Real*8 Erest_xc
+      Type (DSBA_Type) FLT(2), KLT(2), POrb(2), PLT(2)
 *
-      COMMON /dCSCF_xc/ Erest_xc
-      Logical Do_SpinAV
-      COMMON  / SPAVE_L  / Do_SpinAV
-      COMMON  / SPAVE_I  / ip_DSc
+#include "dcscf.fh"
 *
-
       nDMat=2
       Do i=1,nSym
          nForb(i,1)=0
          nForb(i,2)=0
       End Do
       If (DFTX) Then
-         FactXI=Get_ExFac(KSDFT)-1.0d0 ! note this trick
+         FactXI=Get_ExFac(KSDFT)-One ! note this trick
       Else
-         FactXI=1.0d0
+         FactXI=One
       EndIf
 *
-      Call mma_allocate(PLT,nBDT,Label='PLT')
-      ipPLT(1)=ip_of_Work(PLT(1))
-      ipPLT(2)=ipPLT(1)
+      Call Allocate_DT(PLT(1),nBas,nBas,nSym,aCase='TRI')
+      Call Allocate_DT(PLT(2),nBas,nBas,nSym,aCase='TRI',Ref=PLT(1)%A0)
       If (DFTX) Then
-         Call FZero(PLT,nBDT) ! to exclude Coulomb contrib
+         PLT(1)%A0(:)=Zero
       Else
-         call dcopy_(nBDT,Dma,1,PLT,1)
-         Call daxpy_(nBDT,1.0d0,Dmb,1,PLT,1)
+         PLT(1)%A0(:)= Dma(:) + Dmb(:)
       EndIf
 *
-      Call mma_allocate(Porb,nBB,2,Label='Porb')
-      ipPorb(1) = ip_of_Work(Porb(1,1))
-      ipPorb(2) = ipPorb(1)+nBB
+      Call Allocate_DT(POrb(1),nBas,nBas,nSym)
+      Call Allocate_DT(POrb(2),nBas,nBas,nSym)
+
       Call mma_allocate(Dm,nBB,2,Label='Dm')
-      Call UnFold(Dma,nBDT,Dm(1,1),nBB,nSym,nBas)
-      Call UnFold(Dmb,nBDT,Dm(1,2),nBB,nSym,nBas)
+      Call UnFold(Dma,nBDT,Dm(:,1),nBB,nSym,nBas)
+      Call UnFold(Dmb,nBDT,Dm(:,2),nBB,nSym,nBas)
 *
       If (Do_SpinAV) Then
          If (.not.DECO) Then
@@ -537,43 +528,44 @@ c      Call ChkOrt(CMO(1,2),nBB,SLT,nnB,Whatever) ! silent
            write(6,*) ' NODE will be reset to default. '
            DECO=.true.
          EndIf
-         Call daxpy_(NBB,-1.0d0,Work(ip_DSc),1,Dm(1,1),1)
-         Call daxpy_(NBB, 1.0d0,Work(ip_DSc),1,Dm(1,2),1)
+         Call daxpy_(NBB,-1.0d0,DSc,1,Dm(:,1),1)
+         Call daxpy_(NBB, 1.0d0,DSc,1,Dm(:,2),1)
       EndIf
 *
       iOff=0
       Do i=1,nSym
-         ipV=1+iOff
          ipDai=1+iOff
-         Call CD_InCore(Dm(ipDai,1),nBas(i),Porb(ipV,1),nBas(i),
+         Call CD_InCore(Dm(ipDai,1),nBas(i),Porb(1)%SB(i)%A2,nBas(i),
      &                  nIorb(i,1),1.0d-12,irc)
          If (irc.ne.0) Then
             write(6,*) ' Alpha density. Sym= ',i,'   rc= ',irc
+            Call RecPrt('Dm',' ',Dm(ipDai,1),nBas(i),nBas(i))
             Call Abend()
          EndIf
-         ipV=1+iOff
          ipDbi=1+iOff
-         Call CD_InCore(Dm(ipDbi,2),nBas(i),Porb(ipV,2),nBas(i),
+         Call CD_InCore(Dm(ipDbi,2),nBas(i),Porb(2)%SB(i)%A2,nBas(i),
      &                  nIorb(i,2),1.0d-12,irc)
          If (irc.ne.0) Then
             write(6,*) ' Beta density. Sym= ',i,'   rc= ',irc
+            Call RecPrt('Dm',' ',Dm(ipDbi,1),nBas(i),nBas(i))
             Call Abend()
          EndIf
          iOff=iOff+nBas(i)**2
       End Do
 *
-      Call mma_allocate(FCNO,nBDT,2,Label='FCNO')
-      Call FZero(FCNO,2*nBDT)
-      ipFLT(1)=ip_of_Work(FCNO(1,1))
-      ipFLT(2)=ipFLT(1)+nBDT
-      Call mma_allocate(KLT,nBDT,2,Label='KLT')
-      Call FZero(KLT,2*nBDT)
-      ipKLT(1)=ip_of_Work(KLT(1,1))
-      ipKLT(2)=ipKLT(1)+nBDT
+      Call Allocate_DT(FLT(1),nBas,nBas,nSym,aCase='TRI')
+      Call Allocate_DT(FLT(2),nBas,nBas,nSym,aCase='TRI')
+      FLT(1)%A0(:)=Zero
+      FLT(2)%A0(:)=Zero
+
+      Call Allocate_DT(KLT(1),nBas,nBas,nSym,aCase='TRI')
+      Call Allocate_DT(KLT(2),nBas,nBas,nSym,aCase='TRI')
+      KLT(1)%A0(:)=Zero
+      KLT(2)%A0(:)=Zero
 *
       dFmat=0.0d0
-      Call CHO_LK_SCF(irc,nDMat,ipFLT,ipKLT,nForb,nIorb,
-     &                    ipPorb,ipPLT,FactXI,nSCReen,dmpk,dFmat)
+      Call CHO_LK_SCF(irc,nDMat,FLT,KLT,nForb,nIorb,
+     &                Porb,PLT,FactXI,nSCReen,dmpk,dFmat)
       if (irc.ne.0) then
          Call WarningMessage(2,'Start6. Non-zero rc in Cho_LK_scf.')
          CALL Abend
@@ -582,26 +574,31 @@ c      Call ChkOrt(CMO(1,2),nBB,SLT,nnB,Whatever) ! silent
       If (Do_SpinAV) Then
          Call UnFold(Dma,nBDT,Dm(1,1),nBB,nSym,nBas)
          Call UnFold(Dmb,nBDT,Dm(1,2),nBB,nSym,nBas)
-         Call daxpy_(NBB,-1.0d0,Work(ip_DSc),1,Dm(1,1),1)
-         Call daxpy_(NBB,1.0d0,Work(ip_DSc),1,Dm(1,2),1)
+         Call daxpy_(NBB,-1.0d0,DSc,1,Dm(1,1),1)
+         Call daxpy_(NBB, 1.0d0,DSc,1,Dm(1,2),1)
          Call Fold(nSym,nBas,Dm(1,1),Dma)
          Call Fold(nSym,nBas,Dm(1,2),Dmb)
       EndIf
 *
-      E2act = 0.5d0*(ddot_(nBDT,Dma,1,FCNO(1,1),1)
-     &      +        ddot_(nBDT,Dmb,1,FCNO(1,2),1))
+      E2act(1) = 0.5d0*(ddot_(nBDT,Dma,1,FLT(1)%A0,1)
+     &         +        ddot_(nBDT,Dmb,1,FLT(2)%A0,1))
+      Call GADSum(E2act(1),1)
 *
       If (DFTX) Then
-         Erest_xc=Erest_xc-E2act
+         Erest_xc=Erest_xc-E2act(1)
       Else
-         E_nondyn=E_nondyn-E2act
+         E_nondyn=E_nondyn-E2act(1)
       EndIf
 *
-      Call mma_deallocate(KLT)
-      Call mma_deallocate(FCNO)
+      Call Deallocate_DT(KLT(2))
+      Call Deallocate_DT(KLT(1))
+      Call Deallocate_DT(FLT(2))
+      Call Deallocate_DT(FLT(1))
       Call mma_deallocate(Dm)
-      Call mma_deallocate(Porb)
-      Call mma_deallocate(PLT)
+      Call Deallocate_DT(POrb(2))
+      Call Deallocate_DT(POrb(1))
+      Call Deallocate_DT(PLT(2))
+      Call Deallocate_DT(PLT(1))
 *
       Return
       End
@@ -629,6 +626,7 @@ c      Call ChkOrt(CMO(1,2),nBB,SLT,nnB,Whatever) ! silent
 
       Close(LU)
       Return
- 888  Call SysAbendFileMsg('RdTwoEnrg','INPORB',
+ 888  Call SysWarnFileMsg('RdTwoEnrg','INPORB',
      &   'Error during reading INPORB\n','Field not there')
+      Call Abend()
       End

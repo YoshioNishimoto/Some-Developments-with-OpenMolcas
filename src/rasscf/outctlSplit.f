@@ -27,19 +27,22 @@
 *                                                                      *
 ************************************************************************
 ************* GLMJ ************
+      use OneDat, only: sNoOri, sOpSiz
       Implicit Real*8 (A-H,O-Z)
 
 #include "rasdim.fh"
 #include "rasscf.fh"
 #include "general.fh"
 #include "output_ras.fh"
+      Character*16 ROUTINE
       Parameter (ROUTINE='OUTCTL  ')
 #include "ciinfo.fh"
 #include "rctfld.fh"
 #include "WrkSpc.fh"
+#include "stdalloc.fh"
 #include "splitcas.fh"
 #include "SysDef.fh"
-
+      Real*8, Allocatable:: DSave(:)
       Character*8  Fmt2, Label
       Character*3 lIrrep(8)
       Character*80 Note
@@ -61,7 +64,6 @@ cnf
 *----------------------------------------------------------------------*
 *     Start and define the paper width                                 *
 *----------------------------------------------------------------------*
-      Call qEnter('OutCtlSplit')
 C Local print level (if any)
       IPRLEV=IPRLOC(6)
       IF(IPRLEV.ge.DEBUG) THEN
@@ -107,12 +109,12 @@ C Local print level (if any)
         Write(LF,Fmt2//'A,T45,F6.1)')'Spin quantum number',
      &                           (DBLE(ISPIN-1))/2.0d0
         Write(LF,Fmt2//'A,T45,I6)')'State symmetry',
-     &                           LSYM
+     &                           STSYM
         Call CollapseOutput(0,'Wave function specifications:')
 *
         Call Get_cArray('Irreps',lIrrep,24)
         Do iSym = 1, nSym
-           Call RightAd(lIrrep(iSym))
+           lIrrep(iSym) = adjustr(lIrrep(iSym))
         End Do
 *
         Write(LF,*)
@@ -151,9 +153,9 @@ C Local print level (if any)
         Write(LF,Fmt2//'A)')'----------------------------'
         Write(LF,*)
         Write(LF,Fmt2//'A,T40,I11)')'Number of CSFs',
-     &                           NCSASM(LSYM)
+     &                           NCSASM(STSYM)
         Write(LF,Fmt2//'A,T40,I11)')'Number of determinants',
-     &                           NDTASM(LSYM)
+     &                           NDTASM(STSYM)
         write(LF,Fmt2//'A,T45,I6)')  'Root required ', lrootSplit
         if (EnerSplit)
      &    write(LF,Fmt2//'A,T44,F7.2)')'Energy Gap (eV) in SplitCAS',
@@ -161,7 +163,7 @@ C Local print level (if any)
         if (PerSplit)
      &    write(LF,Fmt2//'A,T44,F7.1)')'Percentage sought in SplitCAS',
      &                            PercSpli
-        percent = Real(iDimBlockA)/Real(NCSASM(LSYM))*100.0d0
+        percent = Real(iDimBlockA)/Real(NCSASM(STSYM))*100.0d0
         write(LF,Fmt2//'A,T42,I9,A,F5.1,A)')'A-Block Size in '//
      &                          'SplitCAS (CSFs)',iDimBlockA,' (',
      &                          percent,' %)'
@@ -172,7 +174,7 @@ C Local print level (if any)
         If ( lRF ) then
            Call GetMem('Ovrlp','Allo','Real',iTmp0,nTot1+4)
            iRc=-1
-           iOpt=2
+           iOpt=ibset(0,sNoOri)
            iComp=1
            iSyLbl=1
            Label='Mltpl  0'
@@ -182,7 +184,6 @@ C Local print level (if any)
               Write(LF,*) 'OutCtl: iRc from Call RdOne not 0'
               Write(LF,*) 'Label = ',Label
               Write(LF,*) 'iRc = ',iRc
-              Call QTrace
               Call Abend
            Endif
            Call GetMem('Ovrlp','Free','Real',iTmp0,nTot1+4)
@@ -209,7 +210,7 @@ C Local print level (if any)
      &                      'in a previous calculation'
            Write(LF,*)
         End If
-        If (KSDFT.ne.'SCF'.and.KSDFT.ne.'PAM') Call Print_NQ_Info(iSpin)
+        If (KSDFT.ne.'SCF'.and.KSDFT.ne.'PAM') Call Print_NQ_Info()
         Call CollapseOutput(0,'CI expansion specifications:')
 
 * End of long if-block A over IPRLEV
@@ -284,14 +285,16 @@ C Local print level (if any)
       call dcopy_(2*mxRoot,[0.0d0],0,Temp,1)
       iRc1=0
       iRc2=0
-      iOpt=1
+      iOpt=ibset(0,sOpSiz)
       iComp=1
       iSyLbl=1
       nMVInt=0
       nDCInt=0
-      Call iRdOne(iRc1,iOpt,'MassVel ',iComp,iDum,iSyLbl)
+      Label='MassVel'
+      Call iRdOne(iRc1,iOpt,Label,iComp,iDum,iSyLbl)
       If (iRc1.eq.0) nMVInt=iDum(1)
-      Call iRdOne(iRc2,iOpt,'Darwin  ',iComp,iDum,iSyLbl)
+      Label='Darwin'
+      Call iRdOne(iRc2,iOpt,Label,iComp,iDum,iSyLbl)
       If (iRc2.eq.0) nDCInt=iDum(1)
       If ( (nMVInt+nDCInt).ne.0 ) Then
         IAD12=IADR15(12)
@@ -420,7 +423,8 @@ C Local print level (if any)
 ************************************************************************
 *     save the 1st order density for gradients                         *
 ************************************************************************
-      Call Get_D1AO(ipDSave,NTOT1)
+      Call mma_allocate(DSave,nTot1,Label='DSave')
+      Call Get_dArray_chk('D1ao',DSave,NTOT1)
 
 * Read natural orbitals
       If ( NAC.GT.0 ) then
@@ -433,7 +437,7 @@ C Local print level (if any)
       Call GetMem('DState','ALLO','REAL',ipD,nTot1)
       call dcopy_(nTot1,[0.0D0],0,Work(ipD),1)
       Call DONE_RASSCF(CMO,OCCN,Work(ipD))
-      Call Put_D1AO(Work(ipD),NTOT1)
+      Call Put_dArray('D1ao',Work(ipD),NTOT1)
       Call Free_Work(ipD)
 
       IF (IPRLEV.GE.USUAL) THEN
@@ -575,13 +579,12 @@ C Local print level (if any)
 
 *     Restore the correct 1st order density for gradient calculations.
 *
-      Call Put_D1AO(Work(ipDSave),NTOT1)
-      Call GetMem('DSave','Free','REAL',ipDSave,nTot1)
+      Call Put_dArray('D1ao',DSave,NTOT1)
+      Call mma_deallocate(DSave)
 *                                                                      *
 ************************************************************************
 *                                                                      *
       CALL GETMEM('CMON','FREE','REAL',icmon,NTOT2)
 *----------------------------------------------------------------------*
-      Call qExit('OutCtl')
       Return
       End

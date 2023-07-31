@@ -15,18 +15,13 @@ C              IRS3 (IRED3 is the reduced set id of IRS3).
 C
 C     WARNING: for IRED3 = 1, INDRED is reset here!!!!
 C
+      use ChoSwp, only: nnBstRSh, iiBstRSh, IndRed
 #include "implicit.fh"
       INTEGER IMAP(LMAP)
 #include "cholesky.fh"
-#include "choptr.fh"
-#include "WrkSpc.fh"
 
       CHARACTER*9 SECNAM
       PARAMETER (SECNAM = 'CHO_RS2RS')
-
-      IIBSTRSH(I,J,K)=IWORK(ip_IIBSTRSH-1+NSYM*NNSHL*(K-1)+NSYM*(J-1)+I)
-      NNBSTRSH(I,J,K)=IWORK(ip_NNBSTRSH-1+NSYM*NNSHL*(K-1)+NSYM*(J-1)+I)
-      INDRED(I,J)=IWORK(ip_INDRED-1+MMBSTRT*(J-1)+I)
 
 C     Check input.
 C     ------------
@@ -43,18 +38,17 @@ C     need to reset it (as warned about above).
 C     ---------------------------------------------------------------
 
       IF (IRED3 .EQ. 1) THEN
-         K0 = ip_INDRED - 1 + MMBSTRT*(IRS3 - 1)
          I1 = IIBSTR(ISYM,IRS3) + 1
          I2 = I1 + NNBSTR(ISYM,IRS3) - 1
          DO I = I1,I2
-            IWORK(K0+I) = I
+            IndRed(I,IRS3) = I
          END DO
       END IF
 
 C     Set up mapping array.
 C     ---------------------
 
-      CALL CHO_IZERO(IMAP,NNBSTR(ISYM,IRS2))
+      CALL IZERO(IMAP,NNBSTR(ISYM,IRS2))
       DO ISHLAB = 1,NNSHL
          N2 = NNBSTRSH(ISYM,ISHLAB,IRS2)
          N3 = NNBSTRSH(ISYM,ISHLAB,IRS3)

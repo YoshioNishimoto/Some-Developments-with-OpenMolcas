@@ -20,11 +20,11 @@
 * contravariant components. 980928, P-A Malmqvist
 *--------------------------------------------
       SUBROUTINE MKRHS(IVEC)
+      use caspt2_output, only:iPrGlb,verbose
       IMPLICIT REAL*8 (A-H,O-Z)
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
 #include "SysDef.fh"
@@ -35,7 +35,6 @@ C root state to the 1st order interacting space are computed, as
 C combinations of MO integrals.
 C This is the RHS vector in contravariant representation.
 
-      CALL QENTER('MKRHS')
 
       IF (IPRGLB.GE.VERBOSE) THEN
         WRITE(6,'(1X,A)') ' Using conventional MKRHS algorithm'
@@ -61,7 +60,6 @@ C INTEGRAL BUFFERS:
 
       CALL GETMEM('ERI','FREE','REAL',LERI,2*NERI)
 
-      CALL QEXIT('MKRHS')
 
       RETURN
       END
@@ -73,7 +71,6 @@ C INTEGRAL BUFFERS:
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
 #include "SysDef.fh"
@@ -82,7 +79,6 @@ C INTEGRAL BUFFERS:
 C Set up RHS vector of PT2 Linear Equation System, in vector
 C number IVEC of LUSOLV, for case 1 (VJTU).
 
-      CALL QENTER('MKRHSA')
 
       NFNXT=0
       DO 190 ISYM=1,NSYM
@@ -137,7 +133,6 @@ C Put W on disk:
           CALL GETMEM('WA','FREE','REAL',LW,NV)
  190    CONTINUE
 
-      CALL QEXIT('MKRHSA')
 
       RETURN
       END
@@ -147,19 +142,17 @@ C Put W on disk:
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
 #include "SysDef.fh"
       DIMENSION ERI(*), SCR(*)
 *#define _KIGEJ_
 *#define _KIGTJ_
-*#include <mig_kig.fh>
+*#include "mig_kig.fh"
 
 C Set up RHS vector of PT2 Linear Equation System, in vector
 C number IVEC of LUSOLV for cases 2 and 3 (VJTI).
 
-      CALL QENTER('MKRHSB')
 
       SQ2=SQRT(2.0D00)
 C VJTI CASE:
@@ -171,11 +164,9 @@ C VJTI CASE:
           NISP=NIGEJ(ISYM)
           NVP=NASP*NISP
           IF(NVP.EQ.0) GOTO 290
-          NSBP=(NASP*(NASP+1))/2
           NASM=NTGTU(ISYM)
           NISM=NIGTJ(ISYM)
           NVM=NASM*NISM
-          NSBM=(NASM*(NASM+1))/2
 C   Allocate WP,WM
           NV=NVP+NVM
           CALL GETMEM('WB','ALLO','REAL',LW,NV)
@@ -271,7 +262,6 @@ C  Put WM on disk
           CALL GETMEM('WB','FREE','REAL',LW,NV)
  290    CONTINUE
 
-      CALL QEXIT('MKRHSB')
 
       RETURN
       END
@@ -281,7 +271,6 @@ C  Put WM on disk
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
 #include "SysDef.fh"
@@ -290,7 +279,6 @@ C  Put WM on disk
 C Set up RHS vector of PT2 Linear Equation System, in vector
 C number IVEC of LUSOLV for case 4 (ATVX).
 
-      CALL QENTER('MKRHSC')
 
       NFNXT=0
       DO 390 ISYM=1,NSYM
@@ -329,7 +317,6 @@ C First, just the two-electron integrals. Later, add correction.
                       IW=IW1+NAS*(IW2-1)
                       IBUF=IATOT+NORB(ISYM)*(ITTOT-1)
                       WORK(LW-1+IW)=ERI(IBUF)
-C     write (*,'(4i3,f20.10)') ia,itabs,iuabs,ivabs,eri(ibuf)
  315                CONTINUE
  314              CONTINUE
  313            CONTINUE
@@ -337,7 +324,6 @@ C     write (*,'(4i3,f20.10)') ia,itabs,iuabs,ivabs,eri(ibuf)
  311        CONTINUE
  310      CONTINUE
 
-C             write (*,*) "oneadd = "
           DO IT=1,NASH(ISYM)
             ITTOT=IT+NISH(ISYM)
             ITABS=IT+NAES(ISYM)
@@ -351,8 +337,6 @@ C             write (*,*) "oneadd = "
                 SUM=SUM-WORK(LW-1+IYYWA)
               END DO
               ONEADD=SUM/DBLE(MAX(1,NACTEL))
-C             write (*,'(2i3,f20.10)') it,ia,oneadd
-
               DO ISYMU=1,NSYM
                 DO IU=1,NASH(ISYMU)
                   IUABS=IU+NAES(ISYMU)
@@ -369,13 +353,9 @@ C   Put W on disk
           ICASE=4
           CALL MKRHS_SAVE(ICASE,ISYM,IVEC,LW)
 
-C         do i = 1, Nv
-C           write (*,'(i4,1f20.10)') i,work(lw+i-1)
-C         end do
           CALL GETMEM('WC','FREE','REAL',LW,NV)
  390    CONTINUE
 
-      CALL QEXIT('MKRHSC')
 
       RETURN
       END
@@ -385,7 +365,6 @@ C         end do
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
 #include "SysDef.fh"
@@ -395,7 +374,6 @@ C         end do
 C Set up RHS vector of PT2 Linear Equation System, in vector
 C number IVEC of LUSOLV, for case 5, AIVX.
 
-      CALL QENTER('MKRHSD')
 
       DO 490 ISYM=1,NSYM
         IF(NINDEP(ISYM,5).EQ.0) GOTO 490
@@ -412,7 +390,6 @@ C   Allocate W; W subdivided into W1,W2.
           NIS=NISUP(ISYM,5)
           NV=NAS*NIS
           IF(NV.EQ.0) GOTO 490
-          NSD=(NAS*(NAS+1))/2
 C Compute W1(tu,ai)=(ai,tu) + FIMO(a,i)*delta(t,u)/NACTEL
 C Compute W2(tu,ai)=(ti,au)
           CALL GETMEM('WD','ALLO','REAL',LW,NV)
@@ -437,7 +414,6 @@ C Compute W2(tu,ai)=(ti,au)
                     IF(ISYM.EQ.1) THEN
                       FAI=FIMO(NFIMOES+(IATOT*(IATOT-1))/2+II)
                       ONEADD=FAI/DBLE(MAX(1,NACTEL))
-C     oneadd=0.0d+00
                     END IF
                     DO 415 IT=1,NASH(ISYMT)
                       ITABS=IT+NAES(ISYMT)
@@ -452,10 +428,6 @@ C     oneadd=0.0d+00
                       IF(ITABS.EQ.IUABS) WAITU=WAITU+ONEADD
                       WORK(LW-1+IW1)=WAITU
                       WORK(LW-1+IW2)=ERI2(IBUF2)
-        if (ii.le.4) then
-C       work(lw-1+iw1)=0.0d+00
-C       work(lw-1+iw2)=0.0d+00
-        end if
  415                CONTINUE
  414              CONTINUE
  413            CONTINUE
@@ -465,15 +437,9 @@ C       work(lw-1+iw2)=0.0d+00
 C   Put W on disk.
           ICASE=5
           CALL MKRHS_SAVE(ICASE,ISYM,IVEC,LW)
-C         open (999,file="fort.999")
-C       do i = 1, nas*nis
-C         write (999,'(f20.10)') work(lw+i-1)
-C       end do
-C       close (999)
           CALL GETMEM('WD','FREE','REAL',LW,NV)
  490    CONTINUE
 
-      CALL QEXIT('MKRHSD')
 
       RETURN
       END
@@ -483,7 +449,6 @@ C       close (999)
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
 #include "SysDef.fh"
@@ -491,12 +456,11 @@ C       close (999)
       DIMENSION ERI1(*),ERI2(*), SCR(*)
 *#define _KIGEJ_
 *#define _KIGTJ_
-*#include <mig_kig.fh>
+*#include "mig_kig.fh"
 
 C Set up RHS vector of PT2 Linear Equation System, in vector
 C number IVEC of LUSOLV, for cases 6 and 7 (VJAI).
 
-      CALL QENTER('MKRHSE')
 
       SQ2=SQRT(2.0D00)
       SQI2=1.0D0/SQ2
@@ -518,11 +482,9 @@ C   Allocate W with parts WP,WM
           NAS=NASH(ISYM)
           NISP=NISUP(ISYM,6)
           NISM=NISUP(ISYM,7)
-          NIS=NISP+NISM
           NVP=NAS*NISP
           IF(NVP.EQ.0) GOTO 590
           NVM=NAS*NISM
-          NSE=(NAS*(NAS+1))/2
           NV=NVP+NVM
           CALL GETMEM('WE','ALLO','REAL',LW,NV)
           LWP=LW
@@ -580,7 +542,6 @@ C   Put WP and WM on disk.
           CALL GETMEM('WE','FREE','REAL',LW,NV)
  590    CONTINUE
 
-      CALL QEXIT('MKRHSE')
 
       RETURN
       END
@@ -590,7 +551,6 @@ C   Put WP and WM on disk.
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
 #include "SysDef.fh"
@@ -599,7 +559,6 @@ C   Put WP and WM on disk.
 C Set up RHS vector of PT2 Linear Equation System, in vector
 C number IVEC of LUSOLV, for cases 8 and 9 (BVAT).
 
-      CALL QENTER('MKRHSF')
 
       SQ2=SQRT(2.0D00)
       SQI2=1.0D0/SQ2
@@ -615,8 +574,6 @@ C number IVEC of LUSOLV, for cases 8 and 9 (BVAT).
           NVP=NASP*NISP
           IF(NVP.EQ.0)GOTO 690
           NVM=NASM*NISM
-          NSFP=(NASP*(NASP+1))/2
-          NSFM=(NASM*(NASM+1))/2
           CALL GETMEM('WFP','ALLO','REAL',LWP,NVP)
           IF(NVM.GT.0) CALL GETMEM('WFM','ALLO','REAL',LWM,NVM)
 C   Let W(t,u,ab)=(aubt)
@@ -683,7 +640,6 @@ C   Put WM on disk
           IF(NVM.GT.0) CALL GETMEM('WFM','FREE','REAL',LWM,NVM)
  690    CONTINUE
 
-      CALL QEXIT('MKRHSF')
 
       RETURN
       END
@@ -693,7 +649,6 @@ C   Put WM on disk
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
 #include "SysDef.fh"
@@ -703,7 +658,6 @@ C   Put WM on disk
 C Set up RHS vector of PT2 Linear Equation System, in vector
 C number IVEC of LUSOLV, for cases 10 and 11 (BJAT).
 
-      CALL QENTER('MKRHSG')
 
       SQ2=SQRT(2.0D00)
       SQI2=1.0D0/SQ2
@@ -725,11 +679,9 @@ C   Allocate W with parts WP,WM
           NAS=NASH(ISYM)
           NISP=NISUP(ISYM,10)
           NISM=NISUP(ISYM,11)
-          NIS=NISP+NISM
           NVP=NAS*NISP
           IF(NVP.EQ.0) GOTO 790
           NVM=NAS*NISM
-          NSG=(NAS*(NAS+1))/2
           NV=NVP+NVM
           CALL GETMEM('WG','ALLO','REAL',LW,NV)
           CALL DCOPY_(NV,[0.0D0],0,WORK(LW),1)
@@ -790,7 +742,6 @@ C   Put WP and WM on disk.
           CALL GETMEM('WG','FREE','REAL',LW,NV)
  790    CONTINUE
 
-      CALL QEXIT('MKRHSG')
 
       RETURN
       END
@@ -800,19 +751,17 @@ C   Put WP and WM on disk.
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
 #include "SysDef.fh"
       DIMENSION ERI1(*),ERI2(*), SCR(*)
 *#define _KIGEJ_
 *#define _KIGTJ_
-*#include <mig_kig.fh>
+*#include "mig_kig.fh"
 
 C Set up RHS vector of PT2 Linear Equation System, in vector
 C number IVEC of LUSOLV, for cases 12 and 13 (BJAI).
 
-      CALL QENTER('MKRHSH')
 
       SQ2=SQRT(2.0D00)
       SQI2=1.0D0/SQ2
@@ -892,7 +841,6 @@ C With new norm., divide by /SQRT(12)
           END IF
  890    CONTINUE
 
-      CALL QEXIT('MKRHSH')
 
       RETURN
       END
@@ -901,12 +849,14 @@ C With new norm., divide by /SQRT(12)
 CSVC: special routine to save the RHS array. MKRHS works in serial, so
 C in case of a true parallel run we need to put the local array in a
 C global array and then save that to disk in a distributed fashion.
+#ifdef _MOLCAS_MPP_
+      USE Para_Info, ONLY: Is_Real_Par
+#endif
       IMPLICIT REAL*8 (A-H,O-Z)
 
 #include "rasdim.fh"
 #include "WrkSpc.fh"
 #include "caspt2.fh"
-#include "para_info.fh"
 
       NAS=NASUP(ISYM,ICASE)
       NIS=NISUP(ISYM,ICASE)

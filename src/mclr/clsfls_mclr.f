@@ -32,7 +32,6 @@
 *---------------------------------------------------------------------*
 *     Start                                                           *
 *---------------------------------------------------------------------*
-*     Call qEnter('ClsFls')
       If (iMethod.eq.iCASSCF) Then
          Call DaClos(LuCSF2sd)
 *------  close the JOBIPH file -------------------------------------------*
@@ -43,8 +42,7 @@
       Call DecideonCholesky(DoCholesky)
       If (.NOT.DoCholesky) then
          iRc=-1
-         iOpt=0
-         Call ClsOrd(iRc,iOpt)
+         Call ClsOrd(iRc)
          If ( iRc.ne.0 ) Then
             Write (6,*) 'ClsFls: Error closing ORDINT'
             Call Abend()
@@ -71,7 +69,6 @@
          Call ClsMck(iRc,iOpt)
          If ( iRc.ne.0 ) Then
             Write (6,*) 'ClsFls: Error closing MCKINT'
-            Call QTrace
             Call Abend()
          End If
       End If
@@ -80,6 +77,5 @@
 *----------------------------------------------------------------------*
 *     Exit                                                             *
 *----------------------------------------------------------------------*
-*     Call qExit('ClsFls')
       Return
       End

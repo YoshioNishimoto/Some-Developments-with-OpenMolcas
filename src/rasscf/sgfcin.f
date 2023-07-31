@@ -30,7 +30,7 @@
 *>
 *>  @param[in] CMO The MO-coefficients
 *>  @param[out] F The inactive Fock matrix in the basis of the active MO
-*>  @param[inout] FI The inactive Fock matrix in AO-space
+*>  @param[in,out] FI The inactive Fock matrix in AO-space
 *>    \f[\sum_{\sigma\rho} D^I_{\sigma\rho}(g_{\mu\nu\sigma\rho} - \frac{1}{2} g_{\mu\sigma\rho\nu})\f]
 *>    In output FI contains also the core energy added to
 *>    the diagonal elements.
@@ -44,6 +44,7 @@
 *>  @param[in] D1S The active spin density matrix in AO-space
 *>    \f[ D^{\text{AO}, A}_S = C^A (D^A_\alpha - D^A_\beta) (C^A)^\dagger \f]
       Subroutine SGFCIN(CMO, F, FI, D1I, D1A, D1S)
+      use RunFile_procedures, only: Get_dExcdRa
 #ifdef _DMRG_
       use qcmaquis_interface_cfg
 #endif
@@ -54,16 +55,20 @@
       use rasscf_data, only : EMY, KSDFT, dftfock, exfac, nac, nacpar,
      &    noneq, potnuc, rfpert,
      &    tot_charge, tot_el_charge, tot_nuc_charge,
-     &    doBlockDMRG
+     &    doBlockDMRG, doDMRG
+      use OneDat, only: sNoNuc, sNoOri
       use general_data, only : iSpin, nActEl, nSym, nTot1,
      &    nBas, nIsh, nAsh, nFro
-
+      use OFEmbed, only: Do_OFemb, OFE_first, FMaux
+      use OFEmbed, only: Rep_EN
 
       implicit none
 #include "rasdim.fh"
 #include "output_ras.fh"
+      Character*16 ROUTINE
       Parameter (ROUTINE='SGFCIN  ')
 #include "WrkSpc.fh"
+#include "stdalloc.fh"
 #include "rctfld.fh"
 #include "pamint.fh"
 #include "timers.fh"
@@ -75,31 +80,20 @@
       Character*8 PAMlbl
       Logical First, Dff, Do_DFT, Found
       Logical Do_ESPF
-
-#ifndef _DMRG_
-      logical :: doDMRG = .false.
-#endif
-*
-      Logical Do_OFemb, KEonly, OFE_first
-      COMMON  / OFembed_L / Do_OFemb,KEonly,OFE_first
-      Character*16 NamRfil
-      COMMON  / OFembed_R / Rep_EN,Func_AB,Func_A,Func_B,Energy_NAD,
-     &                      V_Nuc_AB,V_Nuc_BA,V_emb
-      COMMON  / OFembed_I / ipFMaux, ip_NDSD, l_NDSD
 *
       real*8, parameter ::  Zero=0.0d0, One=1.0d0
-      real*8 :: CASDFT_Funct, dumm(1), Emyn, energy_nad, Eone,
-     &  Erf1, Erf2, Erfhi, Erfx, Etwo, func_a, func_ab, func_b,
-     &  potnuc_ref, rep_en, v_emb, v_nuc_ab, v_nuc_ba, dDot_
+      real*8 :: CASDFT_Funct, dumm(1), Emyn, Eone,
+     &  Erf1, Erf2, Erfx, Etwo,  potnuc_ref, dDot_
       integer :: i, iadd, ibas, icharge, iComp,
-     &  ioff, iopt, ip_ndsd,
-     &  ipam, ipfmaux, iprlev, iptmpfcki, ntmpfck,
+     &  ioff, iopt,
+     &  ipam, iprlev, iptmpfcki, ntmpfck,
      &  irc, iSyLbl,
      &  iSym, iTmp0, iTmp1, iTmp2, iTmp3, iTmp4, iTmp5, iTmp6, iTmp7,
-     &  iTmp8, iTmpx, iTmpz, iTu, j, l_ndsd, lx0, lx1, lx2, lx3,
+     &  iTmp8, iTmpx, iTmpz, iTu, j, lx0, lx1, lx2, lx3,
      &  mxna, mxnb, nAt, nst, nt, ntu, nu, nvxc
+      real*8, allocatable :: TmpFckI(:), Tmpx(:)
+      integer, external :: ip_of_Work
 
-      Call qEnter(ROUTINE)
 C Local print level (if any)
       IPRLEV=IPRLOC(3)
       IPRLEV=0000
@@ -111,7 +105,7 @@ C Local print level (if any)
 *     Generate molecular charges
       Call GetMem('Ovrlp','Allo','Real',iTmp0,nTot1+4)
       iRc=-1
-      iOpt=2
+      iOpt=ibset(0,sNoOri)
       iComp=1
       iSyLbl=1
       Label='Mltpl  0'
@@ -121,7 +115,6 @@ C Local print level (if any)
          Write(LF,*) 'SGFCIN: iRc from Call RdOne not 0'
          Write(LF,*) 'Label = ',Label
          Write(LF,*) 'iRc = ',iRc
-         Call QTrace
          Call Abend
       Endif
       Call GetMem('Ovrlp','Free','Real',iTmp0,nTot1+4)
@@ -138,14 +131,13 @@ C Local print level (if any)
       iComp  =  1
       iSyLbl =  1
       iRc    = -1
-      iOpt   =  6
+      iOpt   =  ibset(ibset(0,sNoOri),sNoNuc)
       Label  = 'OneHam  '
       Call RdOne(iRc,iOpt,Label,iComp,Work(iTmp1),iSyLbl)
       If ( iRc.ne.0 ) then
          Write(LF,*) 'SGFCIN: iRc from Call RdOne not 0'
          Write(LF,*) 'Label = ',Label
          Write(LF,*) 'iRc = ',iRc
-         Call QTrace
          Call Abend
       Endif
       If ( IPRLEV.ge.DEBUG ) then
@@ -208,7 +200,6 @@ C Local print level (if any)
 *     modify the one electron Hamiltonian for reaction
 *     field calculations
       ERFX = Zero
-      ERFhi = Zero
       iCharge=Int(Tot_Charge)
 
       Call GetMem('DtmpI','Allo','Real',iTmp3,nTot1)
@@ -222,7 +213,7 @@ C Local print level (if any)
       Call Fold(nSym,nBas,D1I,Work(iTmp3))
       Call Fold(nSym,nBas,D1A,Work(iTmp4))
       Call Daxpy_(nTot1,1.0D0,Work(iTmp4),1,Work(iTmp3),1)
-      Call Put_D1ao(Work(iTmp3),nTot1)
+      Call Put_dArray('D1ao',Work(iTmp3),nTot1)
 *     Write(LF,*)
 *     Write(LF,*) ' D1ao in AO basis in SGFCIN'
 *     Write(LF,*) ' ---------------------'
@@ -237,7 +228,7 @@ C Local print level (if any)
 *---- Generate spin-density
 *
       Call Fold(nSym,nBas,D1S,Work(iTmp7))
-      Call Put_D1Sao(Work(iTmp7),nTot1)
+      Call Put_dArray('D1sao',Work(iTmp7),nTot1)
 
       If(KSDFT(1:3).ne.'SCF' .or. Do_OFemb) Then
         Call Put_iArray('nFro',nFro,nSym)
@@ -321,7 +312,7 @@ C Local print level (if any)
         Call Get_dArray('Reaction field',Work(iTmpZ),nTot1)
         Call Daxpy_(nTot1,1.0D0,Work(iTmpZ),1,Work(iTmp1),1)
         Call GetMem('RCTFLD','Free','Real',iTmpZ,nTot1)
-        If (Found) Call NameRun('RUNFILE')
+        If (Found) Call NameRun('#Pop')
       End If
       Call GetMem('DoneI','Allo','Real',iTmp2,nTot1)
         If ( IPRLEV.ge.DEBUG ) then
@@ -341,19 +332,17 @@ C Local print level (if any)
 *
       If (Do_OFemb) Then
          If (OFE_first) Then
-          Call GetMem('FMaux','Allo','Real',ipFMaux,nTot1)
-          Call Coul_DMB(.true.,1,Rep_EN,Work(ipFMaux),Work(iTmp3),Dumm,
-     &                         nTot1)
+          Call mma_allocate(FMaux,nTot1,Label='FMAux')
+          Call Coul_DMB(.true.,1,Rep_EN,FMaux,Work(iTmp3),Dumm,nTot1)
           OFE_first=.false.
          Else
-          Call Coul_DMB(.false.,1,Rep_EN,Work(ipFMaux),Work(iTmp3),Dumm,
-     &                          nTot1)
+          Call Coul_DMB(.false.,1,Rep_EN,FMaux,Work(iTmp3),Dumm,nTot1)
          EndIf
-         Call DaXpY_(nTot1,One,Work(ipFMaux),1,Work(iTmp1),1)
+         Call DaXpY_(nTot1,One,FMaux,1,Work(iTmp1),1)
 *
-         Call Get_NameRun(NamRfil) ! save the old RUNFILE name
-         Call NameRun('AUXRFIL')   ! switch the RUNFILE name
-         Call Get_dExcdRa(iTmpx,nVxc)
+         Call NameRun('AUXRFIL') ! switch the RUNFILE name
+         Call Get_dExcdRa(Tmpx,nVxc)
+         iTmpx = ip_of_Work(Tmpx(1))
          Call DaXpY_(nTot1,One,Work(iTmpx),1,Work(iTmp1),1)
          If (nVxc.eq.2*nTot1) Then ! Nuc Attr added twice
             Call DaXpY_(nTot1,One,Work(iTmpx+nTot1),1,
@@ -361,9 +350,9 @@ C Local print level (if any)
             Call Get_dArray('Nuc Potential',Work(iTmpx),nTot1)
             Call DaXpY_(nTot1,-One,Work(iTmpx),1,Work(iTmp1),1)
          EndIf
-         Call Free_Work(iTmpx)
+         Call mma_deallocate(Tmpx)
          Call GetMem('DtmpI','Free','Real',iTmp3,nTot1)
-         Call NameRun(NamRfil)   ! switch back to old RUNFILE
+         Call NameRun('#Pop')    ! switch back to old RUNFILE
       End If
 *
 *     Compute energy contributions
@@ -444,7 +433,8 @@ C Local print level (if any)
       CALL GETMEM('XXX3','ALLO','REAL',LX3,MXNB*MXNA)
       CALL DCOPY_(NTOT1,FI,1,WORK(LX1),1)
       If(KSDFT(1:3).ne.'SCF'.and.KSDFT(1:3).ne.'PAM') Then
-         Call Get_dExcdRa(ipTmpFckI,nTmpFck)
+         Call Get_dExcdRa(TmpFckI,nTmpFck)
+         ipTmpFckI = ip_of_Work(TmpFckI(1))
          CALL DaXpY_(NTOT1,1.0D0,Work(ipTmpFckI),1,WORK(LX1),1)
         If ( IPRLEV.ge.DEBUG ) then
           Write(LF,*)
@@ -458,7 +448,7 @@ C Local print level (if any)
             iOff = iOff + (iBas*iBas+iBas)/2
           End Do
         End If
-         Call Free_Work(ipTmpFckI)
+        Call mma_deallocate(TmpFckI)
       End If
       If ( IPRLEV.ge.DEBUG ) then
        Write(LF,*)
@@ -521,7 +511,6 @@ Cbjp
         Call TriPrt(' ',' ',F,NAC)
       End If
 
-      Call qExit('SGFCIN')
 
 
       Return

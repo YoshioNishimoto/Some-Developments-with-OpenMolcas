@@ -17,19 +17,20 @@
 * SWEDEN                                     *
 *--------------------------------------------*
       SUBROUTINE MKBMAT()
+      use caspt2_output, only:iPrGlb,verbose,debug
       IMPLICIT REAL*8 (A-H,O-Z)
 C Set up B matrices for cases 1..13.
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
 #include "pt2_guga.fh"
-
 #include "SysDef.fh"
+#include "stdalloc.fh"
+      REAL*8 DUM(1)
+      INTEGER*1, ALLOCATABLE :: idxG3(:,:)
 
-      CALL QENTER('MKBMAT')
 
       IF(IPRGLB.GE.VERBOSE) THEN
         WRITE(6,*)
@@ -58,18 +59,17 @@ C Set up B matrices for cases 1..13.
         WRITE(6,'("DEBUG> ",A)') '==== === ============='
       END IF
 
-      iPad=ItoB-MOD(6*NG3,ItoB)
-      CALL GETMEM('idxG3','ALLO','CHAR',LidxG3,6*NG3+iPad)
+      CALL mma_allocate(idxG3,6,NG3,label='idxG3')
       iLUID=0
-      CALL CDAFILE(LUSOLV,2,cWORK(LidxG3),6*NG3+iPad,iLUID)
+      CALL I1DAFILE(LUSOLV,2,idxG3,6*NG3,iLUID)
 
       CALL MKBA(WORK(LDREF),WORK(LPREF),
-     &          WORK(LFD),WORK(LFP),NG3,WORK(LF3),i1WORK(LidxG3))
+     &          WORK(LFD),WORK(LFP),NG3,WORK(LF3),idxG3)
       CALL MKBC(WORK(LDREF),WORK(LPREF),
-     &          WORK(LFD),WORK(LFP),NG3,WORK(LF3),i1WORK(LidxG3))
+     &          WORK(LFD),WORK(LFP),NG3,WORK(LF3),idxG3)
 
       CALL GETMEM('DELTA3','FREE','REAL',LF3,NG3)
-      CALL GETMEM('idxG3','FREE','CHAR',LidxG3,6*NG3+iPad)
+      CALL mma_deallocate(idxG3)
 
       CALL MKBB(WORK(LDREF),WORK(LPREF),WORK(LFD),WORK(LFP))
       CALL MKBD(WORK(LDREF),WORK(LPREF),WORK(LFD),WORK(LFP))
@@ -84,17 +84,17 @@ C Set up B matrices for cases 1..13.
 C For completeness, even case H has formally S and B
 C matrices. This costs nothing, and saves conditional
 C looping, etc in the rest  of the routines.
+      DUM(1)=0.0D0
       DO ISYM=1,NSYM
         DO ICASE=12,13
           NIN=NINDEP(ISYM,ICASE)
           IF(NIN.GT.0) THEN
             IDISK=IDBMAT(ISYM,ICASE)
-            CALL DDAFILE(LUSBT,1,[0.0D0],1,IDISK)
+            CALL DDAFILE(LUSBT,1,DUM,1,IDISK)
           END IF
         END DO
       END DO
 
-      CALL QEXIT('MKBMAT')
 
       RETURN
       END
@@ -103,15 +103,17 @@ C looping, etc in the rest  of the routines.
 * Case A (ICASE=1)
 ********************************************************************************
       SUBROUTINE MKBA(DREF,PREF,FD,FP,NG3,F3,idxG3)
+      use caspt2_output, only:iPrGlb,debug
       USE SUPERINDEX
+#ifdef _MOLCAS_MPP_
+      USE Para_Info, ONLY: Is_Real_Par
+#endif
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
-#include "para_info.fh"
 #ifdef _MOLCAS_MPP_
 #include "global.fh"
 #include "mafdecls.fh"
@@ -188,10 +190,10 @@ C Similarly, Fvutxyz= Sum(w)(EPSA(w)<Evutxyzww>, etc.
       SUBROUTINE MKBA_DP (DREF,PREF,FD,FP,iSYM,
      &                    BA,iLo,iHi,jLo,jHi,LDA)
       USE SUPERINDEX
+      use caspt2_global, only:ipea_shift
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
@@ -279,7 +281,7 @@ CGG.Nov03
             IDT=(ITABS*(ITABS+1))/2
             IDU=(IUABS*(IUABS+1))/2
             IDV=(IVABS*(IVABS+1))/2
-            VALUE=VALUE+BSHIFT*0.5d0*BA(ISADR)*
+            VALUE=VALUE+ipea_shift*0.5d0*BA(ISADR)*
      &                  (2.0d0-DREF(IDV)+DREF(IDT)+DREF(IDU))
           ENDIF
 CGG End
@@ -293,7 +295,6 @@ CGG End
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
@@ -470,7 +471,6 @@ C  - F(xvzyut) -> BA(yvx,zut)
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
@@ -495,6 +495,8 @@ C  - F(xvzyut) -> BA(yvx,zut)
       INTEGER, PARAMETER :: I4=KIND(ONE4)
 
       INTEGER, ALLOCATABLE :: IBUF(:)
+
+#include "mpi_interfaces.fh"
 
       ! Since we are stuck with collective calls to MPI_Alltoallv in
       ! order to gather the elements, each process needs to loop over
@@ -928,14 +930,16 @@ c Avoid unused argument warnings
 ********************************************************************************
       SUBROUTINE MKBC(DREF,PREF,FD,FP,NG3,F3,idxG3)
       USE SUPERINDEX
+      use caspt2_output, only:iPrGlb,debug
+#ifdef _MOLCAS_MPP_
+      USE Para_Info, ONLY: Is_Real_Par
+#endif
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
-#include "para_info.fh"
 #ifdef _MOLCAS_MPP_
 #include "global.fh"
 #include "mafdecls.fh"
@@ -969,13 +973,6 @@ C Similarly, Fvutxyz= Sum(w)(EPSA(w)<Evutxyzww>, etc.
 
         CALL PSBMAT_GETMEM('BC',lg_BC,NAS)
         CALL PSBMAT_READ('S',iCase,iSym,lg_BC,NAS)
-C     If (DoPT2Num) Then
-C       If (iVibPT2.eq.1) Then
-C         Work(lg_BC+iDiffPT2-1) = Work(lg_BC+iDiffPT2-1) - PT2Delta
-C       Else
-C         Work(lg_BC+iDiffPT2-1) = Work(lg_BC+iDiffPT2-1) + PT2Delta
-C       End If
-C     End If
 
         ! fill in the 3-el parts
 #ifdef _MOLCAS_MPP_
@@ -1006,20 +1003,6 @@ C     End If
         call MKBC_F3(ISYM,WORK(lg_BC),NG3,F3,idxG3)
 #endif
 
-C     call dcopy(nas*(nas+1)/2,0.0d+00,0,work(lg_bc),1)
-C     do i = 1, nas
-C       work(lg_bc+i*(i-1)/2+i-1) = 1.0d+00
-C     end do
-C     If (DoPT2Num) Then
-C     ipos = iDiffPT2-1+nAS*(iDiffPT2-1)
-C     ipos = iDiffPT2*(iDiffPT2+1)/2-1
-C     ipos = iDiffPT2-1
-C       If (iVibPT2.eq.1) Then
-C         Work(lg_BC+ipos) = Work(lg_BC+ipos) + PT2Delta
-C       Else
-C         Work(lg_BC+ipos) = Work(lg_BC+ipos) - PT2Delta
-C       End If
-C     End If
         CALL PSBMAT_WRITE('B',iCase,iSYM,lg_BC,NAS)
 
         IF(IPRGLB.GE.DEBUG) THEN
@@ -1035,10 +1018,10 @@ C     End If
       SUBROUTINE MKBC_DP (DREF,PREF,FD,FP,iSYM,
      &                    BC,iLo,iHi,jLo,jHi,LDC)
       USE SUPERINDEX
+      use caspt2_global, only:ipea_shift
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
@@ -1110,16 +1093,8 @@ CGG.Nov03
             IDT=(ITABS*(ITABS+1))/2
             IDU=(IUABS*(IUABS+1))/2
             IDV=(IVABS*(IVABS+1))/2
-            VALUE=VALUE+BSHIFT*0.5d0*BC(ISADR)*
-     &                    (4.0d0-DREF(IDT)*1-DREF(IDV)*1+DREF(IDU))
-C     write (*,'(2i3,2f20.10)') ituv,itabs,bc(isadr),-dref(idt)
-C     If (DoPT2Num.and.iUabs.eq.iDiffPT2) Then
-C       If (iVibPT2.eq.1) Then
-C           VALUE=VALUE-BSHIFT*0.5d0*BC(ISADR)*(-PT2Delta)
-C       Else
-C           VALUE=VALUE-BSHIFT*0.5d0*BC(ISADR)*(+PT2Delta)
-C       End If
-C     End If
+            VALUE=VALUE+ipea_shift*0.5d0*BC(ISADR)*
+     &                    (4.0d0-DREF(IDT)-DREF(IDV)+DREF(IDU))
           ENDIF
 CGG End
           BC(ISADR)=VALUE
@@ -1132,7 +1107,6 @@ CGG End
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
@@ -1309,7 +1283,6 @@ C  - F(xvzyut) -> BC(zvx,yut)
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
@@ -1334,6 +1307,8 @@ C  - F(xvzyut) -> BC(zvx,yut)
       INTEGER, PARAMETER :: I4=KIND(ONE4)
 
       INTEGER, ALLOCATABLE :: IBUF(:)
+
+#include "mpi_interfaces.fh"
 
       ! Since we are stuck with collective calls to MPI_Alltoallv in
       ! order to gather the elements, each process needs to loop over
@@ -1764,11 +1739,11 @@ c Avoid unused argument warnings
 
       SUBROUTINE MKBB(DREF,PREF,FD,FP)
       USE SUPERINDEX
+      use caspt2_global, only:ipea_shift
       IMPLICIT REAL*8 (A-H,O-Z)
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 
@@ -1790,7 +1765,6 @@ C where A= EASUM= sum over active w of (Ew*Dww).
 C    BBP(tu,xy)=BB(tu,xy)+BB(tu,yx)
 C    BBM(tu,xy)=BB(tu,xy)-BB(tu,yx)
 
-      CALL QENTER('MKBB')
 
 C Loop over superindex symmetry.
       DO ISYM=1,NSYM
@@ -1930,7 +1904,7 @@ CGG.Nov03
             IF (ITGEU.eq.IXGEY) THEN
               IDT=(ITABS*(ITABS+1))/2
               IDU=(IUABS*(IUABS+1))/2
-              WORK(LBBP-1+IBPADR)=WORK(LBBP-1+IBPADR)+BSHIFT*0.5d0*
+              WORK(LBBP-1+IBPADR)=WORK(LBBP-1+IBPADR)+ipea_shift*0.5d0*
      &                          (DREF(IDT)+DREF(IDU))*WORK(LSDP-1+ITGEU)
             ENDIF
 CGG End
@@ -1944,7 +1918,7 @@ CGG.Nov03
             IF (ITGEU.eq.IXGEY) THEN
               IDT=(ITABS*(ITABS+1))/2
               IDU=(IUABS*(IUABS+1))/2
-              WORK(LBBM-1+IBMADR)=WORK(LBBM-1+IBMADR)+BSHIFT*0.5d0*
+              WORK(LBBM-1+IBMADR)=WORK(LBBM-1+IBMADR)+ipea_shift*0.5d0*
      &                           (DREF(IDT)+DREF(IDU))*WORK(LSDM-1+INSM)
               INSM=INSM+1
             ENDIF
@@ -1978,18 +1952,17 @@ CGG End
  1000 CONTINUE
       END DO
 
-      CALL QEXIT('MKBB')
 
       RETURN
       END
 
       SUBROUTINE MKBD(DREF,PREF,FD,FP)
       USE SUPERINDEX
+      use caspt2_global, only:ipea_shift
       IMPLICIT REAL*8 (A-H,O-Z)
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 
@@ -2007,7 +1980,6 @@ C    BD(tu2,xy2)=
 C       -Fxtuy - (Ex+Et-A)*Gxtuy + 2*dxt (Fuy + (Ex-A)*Duy)
 C where A=EASUM=Sum(w) of (Ew*Dww)
 
-      CALL QENTER('MKBD')
 
 C Loop over superindex symmetry.
       DO ISYM=1,NSYM
@@ -2070,36 +2042,17 @@ CGG End
               B11=B11+2.0D0*(FUY+(ET-EASUM)*DUY)
               B22=B22+2.0D0*(FUY+(EX-EASUM)*DUY)
             END IF
-
-
-C      write (*,*)" --- "
-C      write (*,'("itu,ixy = ",4i3)') itu,ixy,itu2,ixy2
-C      write (*,'(4i4)') itabs,iuabs,ixabs,iyabs
-C      write (*,'(4i5,2f20.10)') ib11,ib21,ib12,ib22,b11,b22
-C      b11=0.0d+00
-C      b22=0.0d+00
-C      if (itu.eq.ixy) then
-C      b11=1.0d+00
-C      b22=1.0d+00
-C      end if
-C        if (itu.eq.ixy) then
-C          b11=1.0d+00
-C          b22=1.0d+00
-C         else
-C          b11=0.0d+00
-C          b22=0.0d+00
-C         end if
             WORK(LBD-1+IB11)= B11
-            WORK(LBD-1+IB21)=-0.5D0*B11!*0.0d+00
-            WORK(LBD-1+IB12)=-0.5D0*B11!*0.0d+00
-            WORK(LBD-1+IB22)= B22!*0.0d+00
+            WORK(LBD-1+IB21)=-0.5D0*B11
+            WORK(LBD-1+IB12)=-0.5D0*B11
+            WORK(LBD-1+IB22)= B22
 CGG.Nov03
             IF (ITU.eq.IXY) THEN
               IDT=(ITABS*(ITABS+1))/2
               IDU=(IUABS*(IUABS+1))/2
-              WORK(LBD-1+IB11)=WORK(LBD-1+IB11)+BSHIFT*0.5d0*
+              WORK(LBD-1+IB11)=WORK(LBD-1+IB11)+ipea_shift*0.5d0*
      &                       (2.0d0-DREF(IDU)+DREF(IDT))*WORK(LSD-1+ITU)
-              WORK(LBD-1+IB22)=WORK(LBD-1+IB22)+BSHIFT*0.5d0*
+              WORK(LBD-1+IB22)=WORK(LBD-1+IB22)+ipea_shift*0.5d0*
      &                   (2.0d0-DREF(IDU)+DREF(IDT))*WORK(LSD-1+ITU+NAS)
             ENDIF
 CGG End
@@ -2119,17 +2072,16 @@ CGG End
  1000 CONTINUE
       END DO
 
-      CALL QEXIT('MKBD')
 
       RETURN
       END
 
       SUBROUTINE MKBE(DREF,FD)
+      use caspt2_global, only:ipea_shift
       IMPLICIT REAL*8 (A-H,O-Z)
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 
@@ -2142,7 +2094,6 @@ C Formula used:
 C    BE(t,x)=-Ftx + (EASUM-Ex-Et)*Dtx
 C            + 2dtx Ex
 
-      CALL QENTER('MKBE')
 
       DO ISYM=1,NSYM
         NINP=NINDEP(ISYM,6)
@@ -2181,19 +2132,12 @@ CGG End
 CGG.Nov03
             IF (IT.eq.IX) THEN
               IDT=(ITABS*(ITABS+1))/2
-              VALUE=VALUE+BSHIFT*0.5d0*DREF(IDT)*WORK(LSD-1+IT)
+              VALUE=VALUE+ipea_shift*0.5d0*DREF(IDT)*WORK(LSD-1+IT)
             ENDIF
 CGG End
             WORK(LBE-1+IBE)=VALUE
           END DO
         END DO
-C     If (DoPT2Num) Then
-C       If (iVibPT2.eq.1) Then
-C         Work(LBE+iDiffPT2-1) = Work(LBE+iDiffPT2-1) + PT2Delta
-C       Else
-C         Work(LBE+iDiffPT2-1) = Work(LBE+iDiffPT2-1) - PT2Delta
-C       End If
-C     End If
 
 C Write to disk
         IF(NBE.GT.0.and.NINDEP(ISYM,6).GT.0) THEN
@@ -2213,18 +2157,17 @@ CGG End
  1000 CONTINUE
       END DO
 
-      CALL QEXIT('MKBE')
 
       RETURN
       END
 
       SUBROUTINE MKBF(DREF,PREF,FP)
       USE SUPERINDEX
+      use caspt2_global, only:ipea_shift
       IMPLICIT REAL*8 (A-H,O-Z)
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 
@@ -2238,7 +2181,6 @@ C    BF(tu,xy)= 2*(Ftxuy - EASUM*Gtxuy)
 C    BFP(tu,xy)=BF(tu,xy)+BF(tu,yx)
 C    BFM(tu,xy)=BF(tu,xy)-BF(tu,yx)
 
-      CALL QENTER('MKBF')
 
 C Loop over superindex symmetry.
       DO ISYM=1,NSYM
@@ -2249,13 +2191,6 @@ C Loop over superindex symmetry.
         IF(NBF.GT.0) THEN
           CALL GETMEM('BF','ALLO','REAL',LBF,NBF)
         END IF
-C     If (DoPT2Num) Then
-C       If (iVibPT2.eq.1) Then
-C         PREF(iDiffPT2) = PREF(iDiffPT2) + PT2Delta
-C       Else
-C         PREF(iDiffPT2) = PREF(iDiffPT2) - PT2Delta
-C       End If
-C     End If
         DO ITU=1,NAS
           ITUABS=ITU+NTUES(ISYM)
           ITABS=MTU(1,ITUABS)
@@ -2270,7 +2205,6 @@ C     End If
             IP1=MAX(ITX,IUY)
             IP2=MIN(ITX,IUY)
             IP=(IP1*(IP1-1))/2+IP2
-C       write (*,'(4i3,f20.10)') itabs,ixabs,iuabs,iyabs,pref(ip)
             WORK(LBF-1+IBADR)=4.0D0*(FP(IP)-EASUM*PREF(IP))
           END DO
         END DO
@@ -2340,13 +2274,9 @@ CGG.Nov03
             IF (ITGEU.eq.IXGEY) THEN
               IDT=(ITABS*(ITABS+1))/2
               IDU=(IUABS*(IUABS+1))/2
-              WORK(LBFP-1+IBPADR)=WORK(LBFP-1+IBPADR)+BSHIFT*0.5d0*
+              WORK(LBFP-1+IBPADR)=WORK(LBFP-1+IBPADR)+ipea_shift*0.5d0*
      &                    (4.0d0-DREF(IDT)-DREF(IDU))*WORK(LSDP-1+ITGEU)
             ENDIF
-C       tmp = 0.0d+00
-C       if (itgeu.eq.ixgey) tmp=1.0d+00
-C       work(lbfp-1+ibpadr)=tmp
-C     write (*,*) "clear bmat for F"
 CGG End
             IF(ITABS.EQ.IUABS) GOTO 200
             IF(IXABS.EQ.IYABS) GOTO 200
@@ -2358,13 +2288,10 @@ CGG.Nov03
             IF (ITGEU.eq.IXGEY) THEN
               IDT=(ITABS*(ITABS+1))/2
               IDU=(IUABS*(IUABS+1))/2
-              WORK(LBFM-1+IBMADR)=WORK(LBFM-1+IBMADR)+BSHIFT*0.5d0*
+              WORK(LBFM-1+IBMADR)=WORK(LBFM-1+IBMADR)+ipea_shift*0.5d0*
      &                    (4.0d0-DREF(IDT)-DREF(IDU))*WORK(LSDM-1+INSM)
               INSM=INSM+1
             ENDIF
-C       tmp = 0.0d+00
-C       if (itgtu.eq.ixgty) tmp=1.0d+00
-C       work(lbfm-1+ibmadr)=tmp
 
  200        CONTINUE
           END DO
@@ -2372,17 +2299,6 @@ C       work(lbfm-1+ibmadr)=tmp
         IF(NBF.GT.0) THEN
           CALL GETMEM('BF','FREE','REAL',LBF,NBF)
         END IF
-      !! template
-C     Call TriPrt('(BP)',' ',Work(LBFP))
-C     call prtril(work(Lbfp),nas)
-C     If (DoPT2Num) Then
-C       If (iVibPT2.eq.1) Then
-C         Work(LBFP+iDiffPT2-1) = Work(LBFP+iDiffPT2-1) + PT2Delta
-C       Else
-C         Work(LBFP+iDiffPT2-1) = Work(LBFP+iDiffPT2-1) - PT2Delta
-C       End If
-C     End If
-
 
 C Write to disk
         IF(NBFP.GT.0.and.NINDEP(ISYM,8).GT.0) THEN
@@ -2407,17 +2323,16 @@ CGG End
  1000 CONTINUE
       END DO
 
-      CALL QEXIT('MKBF')
 
       RETURN
       END
 
       SUBROUTINE MKBG(DREF,FD)
+      use caspt2_global, only:ipea_shift
       IMPLICIT REAL*8 (A-H,O-Z)
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 
@@ -2429,7 +2344,6 @@ C     Set up the matrix BG(t,x)
 C     Formula used:
 C     BG(t,x)= Ftx -EASUM*Dtx
 
-      CALL QENTER('MKBG')
 
       DO ISYM=1,NSYM
         NINP=NINDEP(ISYM,10)
@@ -2463,9 +2377,8 @@ CGG.Nov03
             VALUE=FD(ID)-EASUM*DREF(ID)
             IF (IT.eq.IX) THEN
               IDT=(ITABS*(ITABS+1))/2
-C             write (*,'(i3,3f20.10)') i,dref(idt),work(lsd-1+it),
-C    *                    BSHIFT*0.5d0*(2.0d0-DREF(IDT))*WORK(LSD-1+IT)
-              VALUE=VALUE+BSHIFT*0.5d0*(2.0d0-DREF(IDT))*WORK(LSD-1+IT)
+              VALUE = VALUE +
+     &                ipea_shift*0.5d0*(2.0d0-DREF(IDT))*WORK(LSD-1+IT)
             ENDIF
             WORK(LBG-1+IBG)=VALUE
 C           WORK(LBG-1+IBG)=FD(ID)-EASUM*DREF(ID)
@@ -2491,7 +2404,6 @@ CGG End
  1000 CONTINUE
       END DO
 
-      CALL QEXIT('MKBG')
 
       RETURN
       END

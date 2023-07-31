@@ -10,7 +10,7 @@
 ************************************************************************
       Subroutine individual_ranks(nDIMCF,BC,BS,Hinit,LJ,iprint)
       Implicit None
-      Integer, Parameter          :: wp=selected_real_kind(p=15,r=307)
+      Integer, Parameter            :: wp=kind(0.d0)
 #include "stdalloc.fh"
       Integer, intent(in)         :: nDIMCF,iprint
       Real(kind=8),intent(in)    :: BC(nDIMcf,0:nDIMcf)
@@ -46,7 +46,6 @@
       External                  :: dznrm2
       Character(len=16)         :: field(8)
       Character(len=6)          :: iprog
-      Call qEnter('SA_indRank')
 !-----------------------------------------------------------------------
       Call mma_allocate(Rnrm,nDIMCF,'Rnrm')
       Call mma_allocate(Snrm,nDIMCF,'Snrm')
@@ -365,14 +364,14 @@
          ip=projKQ(ik)
          iq=abs(projKQ(ik))
          ir=rankKQ(ik)
-         wt=100_wp*ListKQ(ik)/TnrmKQ
+         wt=100.0_wp*ListKQ(ik)/TnrmKQ
 
          If(projKQ(ik)>=0) Then
-            Write(6,'((1x,I2,1x,A),(1x,I3,1x,A),(E22.14,1x,A)'//
+            Write(6,'((1x,I2,1x,A),(1x,I3,1x,A),(E22.14,1x,A),'//
      &                'F19.14,1x,A)')
      &               ir,'|',ip,'|',BC(ir,iq),'|',wt,'|'
          Else
-            Write(6,'((1x,I2,1x,A),(1x,I3,1x,A),(E22.14,1x,A)'//
+            Write(6,'((1x,I2,1x,A),(1x,I3,1x,A),(E22.14,1x,A),'//
      &                'F19.14,1x,A)')
      &               ir,'|',ip,'|',BS(ir,iq),'|',wt,'|'
          End If
@@ -403,7 +402,6 @@
       Call mma_deallocate(rankKQ)
       Call mma_deallocate(projKQ)
 
-      Call qExit('SA_indRank')
       Return
       End Subroutine individual_ranks
 
@@ -412,7 +410,7 @@
 
       Subroutine sort_KQ(N,ARR,rank,proj,iopt)
       Implicit None
-      Integer, Parameter          :: wp=selected_real_kind(p=15,r=307)
+      Integer, Parameter            :: wp=kind(0.d0)
       Integer, intent(in)         :: N, iopt
       Integer, intent(inout)      :: rank(N), proj(N)
       Real(kind=8), intent(inout):: ARR(N)

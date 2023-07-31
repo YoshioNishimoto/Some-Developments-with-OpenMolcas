@@ -8,20 +8,13 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
-
       SUBROUTINE Scf_Mcontrol(id_call)
 
+      Use Para_Info, Only: MyRank
+      use InfSCF
+      use ChoSCF
       Implicit Real*8 (a-h,o-z)
-#include "mxdm.fh"
-#include "infscf.fh"
-#include "para_info.fh"
-*
-      Integer ALGO,NSCREEN
-      Logical REORD,DECO,timings
-      Real*8  dmpk,dFKmat
-*
-      Common /CHOSCF / REORD,DECO,dmpk,dFKmat,ALGO,NSCREEN
-      COMMON /CHOTIME / timings
+#include "chotime.fh"
 *
       Integer id_call
       Character*512 List

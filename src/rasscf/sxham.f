@@ -42,18 +42,18 @@ C ********** IBM-3090 RELEASE 89 01 23 **********
 C
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
-#include "warnings.fh"
+#include "warnings.h"
 #include "rasscf.fh"
 #include "general.fh"
 #include "gas.fh"
 #include "output_ras.fh"
+      Character*16 ROUTINE
       Parameter (ROUTINE='SXHAM   ')
       DIMENSION D(*),P(*),PA(*),FP(*),SXN(*),F1(*),F2(*),DIA(*),
      *          G(*),H(*),HDIAG(*),DF(*),DDIAG(*)
 C -- THRA: THRESHOLD FOR WARNING, ACTIVE OCC NO CLOSE TO 0 OR 2.
       DATA THRA/1.D-06/
       DIMENSION P2Act(1)
-      Call qEnter('SXHAM')
 C Local print level (if any)
       IPRLEV=IPRLOC(4)
       IF(IPRLEV.ge.DEBUG) THEN
@@ -410,6 +410,5 @@ C
         HDIAG(I)=ENER(I,ITER)-ENER(IROOT1,ITER)
 56     CONTINUE
       ENDIF
-      CALL QEXIT('SXHAM')
       RETURN
       END

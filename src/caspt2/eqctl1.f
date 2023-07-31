@@ -17,6 +17,7 @@
 * SWEDEN                                     *
 *--------------------------------------------*
       SUBROUTINE EQCTL1
+      use caspt2_gradient, only: do_grad
       IMPLICIT REAL*8 (A-H,O-Z)
 C On return, the following data sets will be defined and stored
 C on LUSOLV.
@@ -28,14 +29,12 @@ C At position IVEC=IVECC2, the solution array, in covariant repr.
 C At position IVEC=IVECW, the RHS array, in contravariant repr.
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
 #include "pt2_guga.fh"
       DIMENSION DUMMY(1),IDUM(1)
 
-      CALL QENTER('EQCTL1')
       IRHS  =1
       IVECX =2
       IVECR =3
@@ -109,7 +108,7 @@ C sigma routines now use the full RHS size.
 #endif
 
       IDV=0
-      If (IFDENS) Then
+      If (do_grad) Then
         !! idxG3 matrix is needed for computing Lagrangian. Here, the
         !! shift avoids the matrix overwritten in PCOLLVEC -> SOLV2DRA
         NG3MAX=iPARDIV(NG3TOT,NG2)
@@ -208,6 +207,5 @@ C over the excitation wave function terms.
 C IDTMAT() similarly addresses transformation matrices that
 C orthonormalize the S matrix blocks.
 
-      CALL QEXIT('EQCTL1')
       RETURN
       END

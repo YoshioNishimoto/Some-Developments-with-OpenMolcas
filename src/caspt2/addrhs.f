@@ -15,7 +15,6 @@
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
       DIMENSION TJVX(NT,NJ,NV,NX)
       DIMENSION Buff(nBuff)
@@ -25,7 +24,6 @@
 *                                                                      *
 ************************************************************************
 *                                                                      *
-      CALL QENTER('ADDRHSA')
 *
       ISYT=MUL(JSYM,ISYJ)
       ISYV=MUL(JSYM,ISYX)
@@ -94,7 +92,6 @@ C Put W on disk:
 ************************************************************************
 *                                                                      *
  900  CONTINUE
-      CALL QEXIT('ADDRHSA')
       RETURN
       END
 
@@ -106,8 +103,6 @@ C Put W on disk:
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
-#include "WrkSpc.fh"
 #include "eqsolv.fh"
 Case B:
 * t>v j>l WP(tv,jl)=add ((tj,vl))*(1/2)
@@ -126,7 +121,6 @@ Case B:
 *                                                                      *
 ************************************************************************
 *                                                                      *
-      CALL QENTER('ADDRHSB')
 *
       ISYT=MUL(JSYM,ISYJ)
       ISYV=MUL(JSYM,ISYL)
@@ -287,7 +281,6 @@ C Put WBM on disk:
 ************************************************************************
 *                                                                      *
  900  CONTINUE
-      CALL QEXIT('ADDRHSB')
       RETURN
       END
 
@@ -299,8 +292,6 @@ C Put WBM on disk:
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
-#include "WrkSpc.fh"
 #include "eqsolv.fh"
       DIMENSION AUVX(NA,NU,NV,NX)
       DIMENSION Buff(nBuff)
@@ -313,7 +304,6 @@ C             (FIMO(a,t)-sum(y)(ay,yt))*delta(u,v)/NACTEL.
 *                                                                      *
 ************************************************************************
 *                                                                      *
-      CALL QENTER('ADDRHSC')
 *
       ISYA=MUL(JSYM,ISYU)
       ISYV=MUL(JSYM,ISYX)
@@ -382,7 +372,6 @@ C Put W on disk:
 ************************************************************************
 *                                                                      *
  900  CONTINUE
-      CALL QEXIT('ADDRHSC')
       RETURN
       END
 
@@ -394,8 +383,6 @@ C Put W on disk:
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
-#include "WrkSpc.fh"
 #include "eqsolv.fh"
       DIMENSION AJVX(NV,NX,*)
       DIMENSION Buff(nBuff)
@@ -409,7 +396,6 @@ C Compute W2(vu,al)=(au,vl)
 *                                                                      *
 ************************************************************************
 *                                                                      *
-      CALL QENTER('ADDRHSD1')
 *
       DO ISW=1,NSYM
        IO=0
@@ -513,7 +499,6 @@ C Put W on disk:
 ************************************************************************
 *                                                                      *
  900  CONTINUE
-      CALL QEXIT('ADDRHSD1')
       RETURN
       END
 
@@ -525,8 +510,6 @@ C Put W on disk:
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
-#include "WrkSpc.fh"
 #include "eqsolv.fh"
       DIMENSION AUVL(NA,NU,NV,NL)
       DIMENSION Buff(nBuff)
@@ -540,7 +523,6 @@ C Compute W2(vu,al)=(au,vl)
 *                                                                      *
 ************************************************************************
 *                                                                      *
-      CALL QENTER('ADDRHSD2')
 *
       DO ISYW=1,NSYM
        IO=0
@@ -620,7 +602,6 @@ C Put W on disk:
 ************************************************************************
 *                                                                      *
  900  CONTINUE
-      CALL QEXIT('ADDRHSD2')
       RETURN
       END
 
@@ -632,8 +613,6 @@ C Put W on disk:
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
-#include "WrkSpc.fh"
 #include "eqsolv.fh"
 
       DIMENSION AJVL(NV,NL,*)
@@ -646,7 +625,6 @@ Case E:
 *                                                                      *
 ************************************************************************
 *                                                                      *
-      CALL QENTER('ADDRHSE')
 *
       SQ32=SQRT(1.5D0)
       ISYA=MUL(JSYM,ISYJ)
@@ -668,7 +646,6 @@ C Set up offset table:
       NAS=NASH(ISYM)
       NISP=NISUP(ISYM,6)
       NISM=NISUP(ISYM,7)
-      NIS=NISP+NISM
       NWP=NAS*NISP
       NWM=NAS*NISM
       NW=NWP+NWM
@@ -836,7 +813,6 @@ C Read WM:
 ************************************************************************
 *                                                                      *
  900  CONTINUE
-      CALL QEXIT('ADDRHSE')
       RETURN
       END
 
@@ -848,8 +824,6 @@ C Read WM:
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
-#include "WrkSpc.fh"
 #include "eqsolv.fh"
       DIMENSION AUCX(NA,NU,NC,NX)
       DIMENSION Buff(nBuff)
@@ -863,7 +837,6 @@ C   WM(ux,ac)= -((aucx)-(axcu))/2
 *                                                                      *
 ************************************************************************
 *                                                                      *
-      CALL QENTER('ADDRHSF')
 *
       IF(ISYU.LT.ISYX) GOTO 900
 
@@ -1024,7 +997,6 @@ C Put WFM on disk:
 ************************************************************************
 *                                                                      *
  900  CONTINUE
-      CALL QEXIT('ADDRHSF')
       RETURN
       END
 
@@ -1036,8 +1008,6 @@ C Put WFM on disk:
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
-#include "WrkSpc.fh"
 #include "eqsolv.fh"
 
       DIMENSION AUCL(NA,NU,*)
@@ -1052,7 +1022,6 @@ C   WM(u,l,ac)=  ((aucl)-cual))*SQRT(1.5D0)
 *                                                                      *
 ************************************************************************
 *                                                                      *
-      CALL QENTER('ADDRHSG')
 *
 
       ISYA=MUL(JSYM,ISYU)
@@ -1074,10 +1043,8 @@ C   Allocate W with parts WP,WM
       NAS=NASH(ISYM)
       NISP=NISUP(ISYM,10)
       NISM=NISUP(ISYM,11)
-      NIS=NISP+NISM
       NWGP=NAS*NISP
       NWGM=NAS*NISM
-      NWG=NWGP+NWGM
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -1269,7 +1236,6 @@ C      NBXSZJ=NINABX
 *                                                                      *
 ************************************************************************
 *                                                                      *
-      CALL QEXIT('ADDRHSG')
       RETURN
       END
 
@@ -1281,8 +1247,6 @@ C      NBXSZJ=NINABX
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
-#include "WrkSpc.fh"
 #include "eqsolv.fh"
       DIMENSION AJCL(NC*NL,*)
       DIMENSION Buff(nBuff)
@@ -1295,7 +1259,6 @@ C   WM(jl,ac)=((ajcl)-(alcj))*SQRT(3.0D0)
 *                                                                      *
 ************************************************************************
 *                                                                      *
-      CALL QENTER('ADDRHSH')
       IF(ISYJ.LT.ISYL) GOTO 900
       ISYA=MUL(JSYM,ISYJ)
       ISYC=MUL(JSYM,ISYL)
@@ -1385,7 +1348,6 @@ C      NBXSZJ=NINABX
              NCSZ=ICEND-ICSTA+1
              DO ILSTA=1,NL,NBXSZL
                ILEND=MIN(ILSTA-1+NBXSZL,NL)
-               NLSZ=ILEND-ILSTA+1
 
                ICLSTA=1+NL*(ICSTA-1)+NCSZ*(ILSTA-1)
 
@@ -1482,7 +1444,6 @@ C      NBXSZJ=NINABX
              NCSZ=ICEND-ICSTA+1
              DO ILSTA=1,NL,NBXSZL
                ILEND=MIN(ILSTA-1+NBXSZL,NL)
-               NLSZ=ILEND-ILSTA+1
 
                ICLSTA=1+NL*(ICSTA-1)+NCSZ*(ILSTA-1)
 
@@ -1543,6 +1504,5 @@ C      NBXSZJ=NINABX
 ************************************************************************
 *                                                                      *
  900  CONTINUE
-      CALL QEXIT('ADDRHSH')
       RETURN
       END

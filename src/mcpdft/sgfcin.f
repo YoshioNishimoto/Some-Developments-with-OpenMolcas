@@ -18,14 +18,20 @@
 *
 *     M.P. Fuelscher, Lund, July 1990
 *
+      use OneDat, only: sNoNuc, sNoOri
+      use RunFile_procedures, only: Get_dExcdRa
+      use OFembed, only: Do_OFemb,OFE_first,FMaux
+      use OFembed, only: Rep_EN
       Implicit Real*8 (A-H,O-Z)
 *
 #include "rasdim.fh"
 #include "general.fh"
 #include "output_ras.fh"
+      Character*16 ROUTINE
       Parameter (ROUTINE='SGFCIN  ')
 #include "rasscf.fh"
 #include "WrkSpc.fh"
+#include "stdalloc.fh"
 #include "rctfld.fh"
 #include "pamint.fh"
 #include "timers.fh"
@@ -37,18 +43,11 @@
       Logical First, Dff, Do_DFT, Found
       Logical Do_ESPF
 *
-      Logical Do_OFemb, KEonly, OFE_first
-      COMMON  / OFembed_L / Do_OFemb,KEonly,OFE_first
-      Character*16 NamRfil
-      COMMON  / OFembed_R / Rep_EN,Func_AB,Func_A,Func_B,Energy_NAD,
-     &                      V_Nuc_AB,V_Nuc_BA,V_emb
-      COMMON  / OFembed_I / ipFMaux, ip_NDSD, l_NDSD
-*
       Parameter ( Zero=0.0d0 , One=1.0d0 )
       Dimension Dumm(1)
+      Real*8, Allocatable :: TmpFckI(:), Tmpx(:)
 
 !      iprlev=debug
-      Call qEnter('SGFCIN')
 C Local print level (if any)
       IPRLEV=IPRLOC(3)
 !      IPRLEV=DEBUG
@@ -59,7 +58,7 @@ C Local print level (if any)
 *     Generate molecular charges
       Call GetMem('Ovrlp','Allo','Real',iTmp0,nTot1+4)
       iRc=-1
-      iOpt=2
+      iOpt=ibset(0,sNoOri)
       iComp=1
       iSyLbl=1
       Label='Mltpl  0'
@@ -69,7 +68,6 @@ C Local print level (if any)
          Write(LF,*) 'SGFCIN: iRc from Call RdOne not 0'
          Write(LF,*) 'Label = ',Label
          Write(LF,*) 'iRc = ',iRc
-         Call QTrace
          Call Abend
       Endif
       Call GetMem('Ovrlp','Free','Real',iTmp0,nTot1+4)
@@ -86,14 +84,13 @@ C Local print level (if any)
       iComp  =  1
       iSyLbl =  1
       iRc    = -1
-      iOpt   =  6
+      iOpt   =  ibset(ibset(0,sNoOri),sNoNuc)
       Label  = 'OneHam  '
       Call RdOne(iRc,iOpt,Label,iComp,Work(iTmp1),iSyLbl)
       If ( iRc.ne.0 ) then
          Write(LF,*) 'SGFCIN: iRc from Call RdOne not 0'
          Write(LF,*) 'Label = ',Label
          Write(LF,*) 'iRc = ',iRc
-         Call QTrace
          Call Abend
       Endif
       If ( IPRLEV.ge.DEBUG ) then
@@ -156,7 +153,6 @@ C Local print level (if any)
 *     modify the one electron Hamiltonian for reaction
 *     field calculations
       ERFX = Zero
-      ERFhi = Zero
       iCharge=Int(Tot_Charge)
       Call DecideOnESPF(Do_ESPF)
       If ( Do_ESPF .or. lRF .or. KSDFT.ne.'SCF'
@@ -170,7 +166,7 @@ C Local print level (if any)
         Call Fold(nSym,nBas,D1I,Work(iTmp3))
         Call Fold(nSym,nBas,D1A,Work(iTmp4))
         Call Daxpy_(nTot1,1.0D0,Work(iTmp4),1,Work(iTmp3),1)
-        Call Put_D1ao(Work(iTmp3),nTot1)
+        Call Put_dArray('D1ao',Work(iTmp3),nTot1)
 *        Write(LF,*)
 *        Write(LF,*) ' D1ao in AO basis in SGFCIN'
 *        Write(LF,*) ' ---------------------'
@@ -185,7 +181,7 @@ C Local print level (if any)
 *------ Generate spin-density
 *
         Call Fold(nSym,nBas,D1S,Work(iTmp7))
-        Call Put_D1Sao(Work(iTmp7),nTot1)
+        Call Put_dArray('D1sao',Work(iTmp7),nTot1)
 *
 *------ Scratch for one- and two-electron type contributions
 *
@@ -238,7 +234,7 @@ C Local print level (if any)
           Do iPAM=1,nPAM
              Write(PAMlbl,'(A,I3.3)') 'PAM  ',ipPam(iPAM)
              Call dCopy_(nTot1,[Zero],0,Work(iTmp8),1)
-          iComp=1
+             iComp=1
              Call RdOne(iRc,iOpt,PAMlbl,iComp,Work(iTmp8),iSyLbl)
              Call Daxpy_(nTot1,CPAM(iPAM),Work(iTmp8),1,Work(iTmp1),1)
           End Do
@@ -261,7 +257,7 @@ C Local print level (if any)
         Call Get_dArray('Reaction field',Work(iTmpZ),nTot1)
         Call Daxpy_(nTot1,1.0D0,Work(iTmpZ),1,Work(iTmp1),1)
         Call GetMem('RCTFLD','Free','Real',iTmpZ,nTot1)
-        If (Found) Call NameRun('RUNFILE')
+        If (Found) Call NameRun('#Pop')
       End If
       Call GetMem('DoneI','Allo','Real',iTmp2,nTot1)
         If ( IPRLEV.ge.DEBUG ) then
@@ -280,19 +276,18 @@ C Local print level (if any)
 *
       If (Do_OFemb) Then
          If (OFE_first) Then
+          Call mma_allocate(FMaux,nTot1,Label='FMaux')
           Call GetMem('FMaux','Allo','Real',ipFMaux,nTot1)
-          Call Coul_DMB(.true.,1,Rep_EN,Work(ipFMaux),Work(iTmp3),Dumm,
-     &                         nTot1)
+          Call Coul_DMB(.true.,1,Rep_EN,FMaux,Work(iTmp3),Dumm,nTot1)
           OFE_first=.false.
          Else
-          Call Coul_DMB(.false.,1,Rep_EN,Work(ipFMaux),Work(iTmp3),Dumm,
-     &                          nTot1)
+          Call Coul_DMB(.false.,1,Rep_EN,FMaux,Work(iTmp3),Dumm,nTot1)
          EndIf
-         Call DaXpY_(nTot1,One,Work(ipFMaux),1,Work(iTmp1),1)
+         Call DaXpY_(nTot1,One,FMaux,1,Work(iTmp1),1)
 *
-         Call Get_NameRun(NamRfil) ! save the old RUNFILE name
-         Call NameRun('AUXRFIL')   ! switch the RUNFILE name
-         Call Get_dExcdRa(iTmpx,nVxc)
+         Call NameRun('AUXRFIL') ! switch the RUNFILE name
+         Call Get_dExcdRa(Tmpx,nVxc)
+         iTmpx = ip_of_Work(Tmpx(1))
          Call DaXpY_(nTot1,One,Work(iTmpx),1,Work(iTmp1),1)
          If (nVxc.eq.2*nTot1) Then ! Nuc Attr added twice
             Call DaXpY_(nTot1,One,Work(iTmpx+nTot1),1,
@@ -300,9 +295,9 @@ C Local print level (if any)
             Call Get_dArray('Nuc Potential',Work(iTmpx),nTot1)
             Call DaXpY_(nTot1,-One,Work(iTmpx),1,Work(iTmp1),1)
          EndIf
-         Call Free_Work(iTmpx)
+         Call mma_deallocate(Tmpx)
          Call GetMem('DtmpI','Free','Real',iTmp3,nTot1)
-         Call NameRun(NamRfil)   ! switch back to old RUNFILE
+         Call NameRun('#Pop')    ! switch back to old RUNFILE
       End If
 *
 *     Compute energy contributions
@@ -385,7 +380,8 @@ c GLMJ end testing: print these energies
       CALL DCOPY_(NTOT1,FI,1,WORK(LX1),1)
 c GLMJ is commenting off the Exchange for testing
       If(KSDFT(1:3).ne.'SCF'.and.KSDFT(1:3).ne.'PAM') Then
-         Call Get_dExcdRa(ipTmpFckI,nTmpFck)
+         Call Get_dExcdRa(TmpFckI,nTmpFck)
+         ipTmpFckI = ip_of_Work(TmpFckI(1))
          CALL DaXpY_(NTOT1,1.0D0,Work(ipTmpFckI),1,WORK(LX1),1)
         If ( IPRLEV.ge.DEBUG ) then
           Write(LF,*)
@@ -399,7 +395,7 @@ c GLMJ is commenting off the Exchange for testing
             iOff = iOff + (iBas*iBas+iBas)/2
           End Do
         End If
-         Call Free_Work(ipTmpFckI)
+        Call mma_deallocate(TmpFckI)
       End If
       If ( IPRLEV.ge.DEBUG ) then
        Write(LF,*)
@@ -456,7 +452,6 @@ Cbjp
         Call TriPrt(' ',' ',F,NAC)
       End If
 
-      Call qExit('SGFCIN')
 
       Return
       End

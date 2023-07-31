@@ -12,7 +12,7 @@
 
       Implicit None
 #include "stdalloc.fh"
-      Integer, parameter           :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter        :: wp=kind(0.d0)
       Integer, intent(in)          :: N,iprint
       Complex(kind=8), intent(in) :: MM(3,N,N), MS(3,N,N)
 
@@ -24,7 +24,6 @@
       Complex(kind=8), allocatable :: AMM(:,:,:) !(3,N,N),
       Complex(kind=8), allocatable :: Mf(:,:), Sf(:,:), Lf(:,:) !(3,3)
 !-----------------------------------------------------------------------
-      Call qEnter('moments')
 
       g_e=2.0023193043718_wp
 
@@ -131,6 +130,5 @@
       Call mma_deallocate(Sf)
       Call mma_deallocate(Lf)
 
-      Call qExit('moments')
       Return
       End

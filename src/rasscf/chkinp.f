@@ -29,17 +29,21 @@
 #ifdef _DMRG_
       use qcmaquis_interface_cfg
 #endif
-
-      Implicit Real*8 (A-H,O-Z)
+      use linalg_mod, only: abort_
+      use gas_data, only: iDoGAS, nGAS, iGSOCCX, nGSSH
+      implicit none
 #include "rasdim.fh"
 #include "rasscf.fh"
-#include "gas.fh"
 #include "general.fh"
 #include "output_ras.fh"
-#include "warnings.fh"
-      Parameter (ROUTINE='ChkInp  ')
+#include "warnings.h"
+      integer :: ierr, ierr1, ierr2
+      integer :: i, iSym, iAlter
+      integer :: iB0, iA0, iC0
+
+!     These are the cumulated number of spin orbitals per GAS space.
+      integer :: c_orbs_per_GAS(nGAS)
 *----------------------------------------------------------------------*
-      Call qEnter('ChkInp')
 C Local print level (if any)
       IERR=0
       If ( NTOT.gt.mxOrb ) Then
@@ -165,7 +169,29 @@ C Local print level (if any)
         write(lf,*)'nactel=',nactel,'igsoccx:',igsoccx(ngas,2)
         write(lf,*)'************************************************'
        endif
-      endif
+
+       c_orbs_per_GAS = cumsum(sum(ngssh(: nGAS, : nSym), 2) * 2)
+       if (any(c_orbs_per_GAS < igsoccx(:nGAS, 1))) then
+      write(lf, *)
+      write(lf, *) 'In at least one GAS space, the minimum required '
+      write(lf, *) 'particle number by GAS constraints '
+      write(lf, *) 'is larger than the particle number '
+      write(lf, *) 'allowed by the Pauli principle.'
+      write(lf, *)
+          Call abort_('GASSCF: Pauli forbidden.')
+       end if
+       ! Conceptionally this should not be a problem, but the code
+       ! assumes it to be not the case.
+       if (any(c_orbs_per_GAS < igsoccx(:nGAS, 2))) then
+      write(lf, *)
+      write(lf, *) 'In at least one GAS space, the maximum allowed '
+      write(lf, *) 'particle number by GAS constraints '
+      write(lf, *) 'is larger than the particle number '
+      write(lf, *) 'allowed by the Pauli principle.'
+      write(lf, *)
+           Call abort_('GASSCF: Pauli forbidden.')
+       end if
+      end if
       If (NSYM.ne.1 .and. NSYM.ne.2 .and.
      &    NSYM.ne.4 .and. NSYM.ne.8) Then
         Write(LF,*)
@@ -325,13 +351,13 @@ C Local print level (if any)
       IERR=0
       If (NSYM.ne.1 .and. NSYM.ne.2 .and. NSYM.ne.4
      &                              .and. NSYM.ne.8) IERR=1
-      If (LSYM.GT.NSYM) IERR=1
+      If (STSYM.GT.NSYM) IERR=1
       If (IERR.eq.1) Then
         Write(LF,*)
         Write(LF,*) '***************** ERROR *****************'
         Call WarningMessage(2,'Wrong symmetry.')
         Write(LF,'(1X,A,I8)')'CHKINP Error: Wrong symmetry.'
-        Write(LF,'(1X,A,I8)')'State symmetry    LSYM=',LSYM
+        Write(LF,'(1X,A,I8)')'State symmetry   STSYM=',STSYM
         Write(LF,'(1X,A,I8)')'Point group order NSYM=',NSYM
         Write(LF,*)'************************************************'
         Call Quit(_RC_INPUT_ERROR_)
@@ -420,7 +446,6 @@ CBOR  Check INVEC
         Write(LF,*)'***********************************'
         Call Quit(_RC_INPUT_ERROR_)
       Endif
-      Call qExit('ChkInp')
 
 * PAM Krapperup Nov 05: Orbital print format.
 * First question: Which orbital spaces are eligible for printing?
@@ -451,4 +476,16 @@ CBOR  Check INVEC
       END IF
 *----------------------------------------------------------------------*
       Return
+
+      contains
+
+        pure function cumsum(X) result(res)
+            integer, intent(in) :: X(:)
+            integer :: res(size(X))
+            integer :: i
+            res(1) = X(1)
+            do i = 2, size(res)
+                res(i) = res(i - 1) + X(i)
+            end do
+        end function
       End

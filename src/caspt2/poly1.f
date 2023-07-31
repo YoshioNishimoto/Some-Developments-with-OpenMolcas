@@ -23,7 +23,6 @@
 * MATRIX FOR A CASSCF WAVE FUNCTION.
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "pt2_guga.fh"
 #include "SysDef.fh"
@@ -33,9 +32,7 @@
       INTEGER LSGM1,LG1TMP
 
       INTEGER I
-      REAL*8, EXTERNAL :: DDOT_,DNRM2_
 
-      CALL QENTER('POLY1')
 
       IF(NLEV.GT.0) THEN
         CALL GETMEM('LSGM1','ALLO','REAL',LSGM1 ,MXCI)
@@ -61,7 +58,6 @@
         CALL GETMEM('LG1TMP','FREE','REAL',LG1TMP,NG1)
       END IF
 
-      CALL QEXIT('POLY1')
 
       RETURN
       END

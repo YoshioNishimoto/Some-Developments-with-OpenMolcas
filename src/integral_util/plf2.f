@@ -25,14 +25,14 @@
 *  Author: Roland Lindh, IBM Almaden Research Center, San Jose, Ca     *
 *          May '90                                                     *
 ************************************************************************
+      use SOAO_Info, only: iAOtSO
       use k2_arrays, only: Sew_Scr
+      use lw_Info
+      use Gateway_Info, only: ThrInt
+      use sort_data, only: DimSyB, lSll
       Implicit Real*8 (A-H,O-Z)
-#include "itmax.fh"
-#include "info.fh"
 #include "real.fh"
 #include "print.fh"
-#include "srt0.fh"
-#include "srt1.fh"
 *
       Real*8 AOint(ijkl,iCmp,jCmp,kCmp,lCmp)
       Integer iShell(4), iAO(4), kOp(4), iAOst(4), iSOs(4)
@@ -40,7 +40,6 @@
 *
       iTri(i,j)=Max(i,j)*(Max(i,j)-1)/2 + Min(i,j)
 *
-C     Call qEnter('PLF2')
       irout = 109
       iprint = nprint(irout)
       If (iPrint.ge.49) Then
@@ -49,8 +48,8 @@ C     Call qEnter('PLF2')
          Write (6,*) ' Sum=',r1
          Write (6,*) ' Dot=',r2
       End If
-*define _DEBUG_
-#ifdef _DEBUG_
+*define _DEBUGPRINT_
+#ifdef _DEBUGPRINT_
       Call RecPrt(' In Plf2: AOInt',' ',
      &                              AOInt,ijkl,iCmp*jCmp*kCmp*lCmp)
 #endif
@@ -141,12 +140,9 @@ C                              Write (*,*) 'iSq=',Sew_Scr(lwSqN+nUt)
 *
 *     pass the integral to phase 1 of the bin sorting algorithm
 *
-      Call R8PREP(nUt+1,Sew_Scr(lwInt))
       Call SORT1A(nUt+1,Sew_Scr(lwInt),Sew_Scr(lwSqN),Sew_Scr(lwSyB))
-      NotZer=NotZer+nUt+1
       nUt=0
 *
-C     Call qExit('PLF2')
       Return
 c Avoid unused argument warnings
       If (.False.) Then

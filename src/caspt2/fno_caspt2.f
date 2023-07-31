@@ -19,6 +19,7 @@
 *     Author:   F. Aquilante  (Geneva, May  2008)                           *
 *                                                                           *
 *****************************************************************************
+      use InputData, only: Input
       Implicit Real*8 (A-H,O-Z)
 #include "itmax.fh"
 #include "Molcas.fh"
@@ -30,9 +31,7 @@
       Integer irc,IFQCAN
       Real*8  EMP2, vfrac
       Logical DoMP2
-      Real*8  DeMP2
-      Logical MP2_small
-      Common / ChFNOPT/ DeMP2, MP2_small
+#include "chfnopt.fh"
 *
       Integer ns_V(8), nAct(8)
       Integer lnOrb(8), lnOcc(8), lnFro(8), lnDel(8), lnVir(8)
@@ -42,6 +41,7 @@
 *
       irc=0
       MP2_small=.false.
+      shf=Input%RegFNO
 *
 *----------------------------------------------------------------------*
 *     GET THE TOTAL NUMBER OF BASIS FUNCTIONS, etc. AND CHECK LIMITS   *
@@ -77,9 +77,8 @@
 *----------------------------------------------------------------------*
       IF (IFQCAN.EQ.0) Then
          Write(6,'(/6X,A)')
-     &   'Need pseudocanonical RASSCF orbitals. See OUTOrbitals keyword'
-     & //' in RASSCF input section.'
-         Call Abend
+     &   'No pseudocanonical RASSCF orbitals found! '
+     & //'I will proceed with FDIAG values.'
       EndIf
       CALL GETMEM('LCMO','ALLO','REAL',LCMO,2*NCMO)
       iCMO=LCMO+NCMO
@@ -190,8 +189,20 @@
      &                        0.0d0,Work(kto),nBas(iSym))
            iOff=iOff+nSsh(iSym)**2
            TrDF(iSym)=ddot_(nSsh(iSym),Work(ip_Z),1,[1.0d0],0)
-           ns_V(iSym)=int(vfrac*dble(nSsh(iSym)))
-           TrDP(iSym)=ddot_(ns_V(iSym),Work(ip_Z),1,[1.0d0],0)
+           If (vfrac.ge.0.0d0) Then
+              ns_V(iSym)=int(vfrac*dble(nSsh(iSym)))
+              TrDP(iSym)=ddot_(ns_V(iSym),Work(ip_Z),1,[1.0d0],0)
+           Else
+              ns_V(iSym)=nSsh(iSym)-1
+              TrDP(iSym)=ddot_(ns_V(iSym),Work(ip_Z),1,[1.0d0],0)
+              Delta_TrD=TrDP(iSym)-TrDF(iSym) ! this is negative
+              Delta_TrD=Delta_TrD/TrDF(iSym)
+              Do While (Delta_TrD.gt.vfrac)
+                 ns_V(iSym)=ns_V(iSym)-1
+                 TrDP(iSym)=ddot_(ns_V(iSym),Work(ip_Z),1,[1.0d0],0)
+                 Delta_TrD=(TrDP(iSym)-TrDF(iSym))/TrDF(iSym)
+              End Do
+           End If
          endif
          jOff=jOff+nBas(iSym)**2
       End Do
@@ -240,7 +251,7 @@
             jD=ip_X+iOff
             Call Get_Can_Lorb(Work(kEVir+lOff),Work(ipOrbE+jOff),
      &                        nSsh(iSym),lnVir(iSym),
-     &                        iWork(ip_iD),Work(jD),iSym)
+     &                        iWork(ip_iD),Work(jD))
 
             kfr=LCMO+kOff+nBas(iSym)*(nFro(iSym)+nIsh(iSym)+nAsh(iSym))
             kto=iCMO+kOff+nBas(iSym)*(nFro(iSym)+lnOcc(iSym))

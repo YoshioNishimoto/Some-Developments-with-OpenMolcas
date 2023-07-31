@@ -19,39 +19,16 @@
 *     purpose: Read input to SCF: one-electron integrals, informations *
 *              about basis set and molecule and options to SCF.        *
 *                                                                      *
-*     called from: Scf                                                 *
-*                                                                      *
-*     calls to: R1IBas, RdInp,         IniSew, R1IntA, Rd2Int, SetUp,  *
-*               PrRF                                                   *
-*                                                                      *
-*----------------------------------------------------------------------*
-*                                                                      *
-*     written by:                                                      *
-*     P.O. Widmark, M.P. Fuelscher and P. Borowski                     *
-*     University of Lund, Sweden, 1992                                 *
-*     modified by M.Schuetz @teokem.lu.se, 1995                        *
-*     output: computed prescreening level, based on                    *
-*             convergence threshold                                    *
-*                                                                      *
-*----------------------------------------------------------------------*
-*                                                                      *
-*     history: none                                                    *
-*                                                                      *
 ************************************************************************
-*
-      Implicit Real*8 (a-h,o-z)
-*
-#include "mxdm.fh"
-#include "infscf.fh"
-#include "infso.fh"
+      use InfSCF, only: DSCF, nDisc, EThr, KSDFT, nCore, TimFld
+      Implicit None
 *
       Real*8 SIntTh
+
+      Real*8 CPU1, CPU2, Tim1, Tim2, Tim3
       Logical PkMode
 *
       Call Timing(Cpu1,Tim1,Tim2,Tim3)
-#ifdef _DEBUG_
-      Call qEnter('ReadIn')
-#endif
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -81,7 +58,7 @@
 *                                                                      *
 *     Initialize seward
 *
-      Call IniSew_scf(DSCF,EThr,DThr,FThr,DltNTh,SIntTh,KSDFT)
+      Call IniSew_scf(DSCF,EThr,SIntTh,KSDFT)
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -114,24 +91,16 @@
 *                                                                      *
 ************************************************************************
 *                                                                      *
-#ifdef _DEBUG_
-      Call qExit('ReadIn')
-#endif
       Call Timing(Cpu2,Tim1,Tim2,Tim3)
       TimFld( 1) = TimFld( 1) + (Cpu2 - Cpu1)
-*
-*----------------------------------------------------------------------*
-*     Exit                                                             *
-*----------------------------------------------------------------------*
-*
-      Return
-      End
+      End subroutine ReadIn_SCF
+
+
+
       Subroutine Ini_PkR8(PkMode)
-#include "itmax.fh"
-#include "info.fh"
+      use Gateway_Info, only: PkAcc
       Logical PkMode
 *
       Call inipkr8(PkAcc,PkMode)
 *
-      Return
       End

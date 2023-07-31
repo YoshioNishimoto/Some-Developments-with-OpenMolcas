@@ -32,15 +32,16 @@
 *                                                                      *
 ************************************************************************
 *
+      use OneDat, only: sNoNuc, sNoOri
+
       Implicit Real*8 (a-h,o-z)
 
 *     global definitions
 
 #include "rasdim.fh"
-#include "warnings.fh"
+#include "warnings.h"
 #include "general.fh"
 #include "output_ras.fh"
-      Parameter (ROUTINE='GUESS   ')
 #include "rasscf.fh"
 #include "WrkSpc.fh"
 
@@ -63,7 +64,7 @@
 *     load bare nuclei Hamiltonian
 
       iRc    = -1
-      iOpt   =  6
+      iOpt   =  ibset(ibset(0,sNoOri),sNoNuc)
       iComp  =  1
       iSyLbl =  1
       Label  = 'OneHam  '

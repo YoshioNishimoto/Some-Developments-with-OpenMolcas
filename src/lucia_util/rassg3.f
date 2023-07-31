@@ -30,7 +30,6 @@
 *
 
       IMPLICIT REAL*8(A-H,O-Z)
-#include "para_info.fh"
 #include "WrkSpc.fh"
 #include "io_util.fh"
 *. Batches of sigma
@@ -39,7 +38,6 @@
 *.Scratch
       DIMENSION SB(*),CB(*)
 *
-      CALL QENTER('RASSG')
       NTEST = 00
 C     NTEST = MAX(NTEST,IPRNT)
       IF(NTEST.GE.20) THEN
@@ -125,7 +123,7 @@ C     if this block structure is used internally, I didn't optimize this.
                EXIT
              EndIf
           End Do
-          If (I_AM_NOT_WANTED.eq.1) Call dzero(SB(ISBOFF-1+IOFF),ILEN)
+          If (I_AM_NOT_WANTED.eq.1) Call fzero(SB(ISBOFF-1+IOFF),ILEN)
 *
           CALL TODSC(SB(ISBOFF-1+IOFF),ILEN,-1,LUHC)
         END DO
@@ -140,7 +138,6 @@ C     if this block structure is used internally, I didn't optimize this.
         CALL WRTVCD(SB,LUHC,1,-1)
       END IF
 *
-      CALL QEXIT('RASSG')
       RETURN
 c Avoid unused argument warnings
       IF (.FALSE.) Call Unused_integer_array(LEBATS)

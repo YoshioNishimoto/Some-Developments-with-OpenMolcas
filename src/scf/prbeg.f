@@ -31,25 +31,17 @@
 *                                                                      *
 ************************************************************************
 *
+      use InfSCF
       Implicit Real*8 (a-h,o-z)
 *
 
-#include "mxdm.fh"
-#include "infscf.fh"
       Character*(*) Meth
       Character*10 Label
       Character *4 cUHF
-*
-*----------------------------------------------------------------------*
-*     Start                                                            *
-*----------------------------------------------------------------------*
-*
-#ifdef _DEBUG_
-      Call qEnter('PrBeg')
-#endif
-*
+
+
       If (jPrint.ge.2) Then
-*
+
       Write(6,*)
       call CollapseOutput(1,'Convergence information')
       iDummy_run=0
@@ -80,16 +72,6 @@
      &                       //'read from COMOLD'
          End If
       End If
-*
       End If
-*
-#ifdef _DEBUG_
-      Call qExit('PrBeg')
-#endif
-*
-*----------------------------------------------------------------------*
-*     Exit                                                             *
-*----------------------------------------------------------------------*
-*
-      Return
-      End
+
+      End subroutine PrBeg

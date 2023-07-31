@@ -115,7 +115,7 @@ C     Call RecPrt('Hessian ',' ',H,2,2)
       Call DiagMtrx_x(H,2,iNeg)
 C     Write (6,*) 'iNeg=',iNeg
 C     Call RecPrt('Hessian ',' ',H,2,2)
-      Call MInv(H,HInv,iSig,Det,2)
+      Call MInv(H,HInv,Det,2)
 C     Call RecPrt('HInv ',' ',HInv,2,2)
       Step(1)=HInv(1,1)*g(1)+HInv(1,2)*g(2)
       Step(2)=HInv(2,1)*g(1)+HInv(2,2)*g(2)
@@ -157,7 +157,7 @@ c Avoid unused argument warnings
       Real*8, Allocatable :: EVal(:), EVec(:,:), Diag(:,:), HU(:,:)
       Real*8 H(nH,nH)
 *
-      Lu=6
+*     Lu=6
 *
       Call mma_allocate(EVal,nH*(nH+1)/2,label='EVal')
       Call mma_allocate(EVec,nH,nH,label='EVec')

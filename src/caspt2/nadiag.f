@@ -22,15 +22,12 @@
 
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
-
 #include "SysDef.fh"
 
 C Set up non-active diagonal elements of H0.
 
-      CALL QENTER('NADIAG')
 
       DO 3000 ICASE=1,13
         DO 3001 ISYM=1,NSYM
@@ -249,7 +246,6 @@ C Dummy read the BDIAG elements. NOTE: NAS, not NIN.
  3001   CONTINUE
  3000 CONTINUE
 
-      CALL QEXIT('NADIAG')
 
       RETURN
       END

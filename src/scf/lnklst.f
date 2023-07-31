@@ -40,9 +40,9 @@
 * the following purposes:                                              *
 * IniLst(LList,incore)                                                 *
 *  -> initialize list                                                  *
-* PutVec(vec,lvec,LUnit,iterat,NoAllo,opcode,LList)                    *
+* PutVec(vec,lvec,iterat,opcode,LList)                                 *
 *  -> store vector on list, ev. move the tailnode vector on disk       *
-* GetVec(LUnit,iterat,LList,inode,vec,lvec)                            *
+* GetVec(iterat,LList,inode,vec,lvec)                                  *
 *  -> fetch vector from list, which corresponds to iterat              *
 * GetNod(iterat,LList,inode)                                           *
 *  -> does not read out vector, just returns address of node in inode  *
@@ -50,12 +50,12 @@
 *  -> returns info of node indicated by inode                          *
 * Logical InCore(inode)                                                *
 *  -> returns true, if corresponding vector is incore, false otherwise *
-* Integer iVPtr(LUnit,ivptr1,inode)                                    *
+* Integer iVPtr(vptr1,nvtr1,inode)                                     *
 *  -> uses InfNod or GetVec to read out vector of inode, depending     *
 *     if InCore or not. If the result is ivptr1, the vector was read   *
 *     from disk. ivptr1 has to be allocated before (same vector length *
 *     as stored in inode).                                             *
-* Integer LstPtr(LUnit,iterat,LList)                                   *
+* Integer LstPtr(iterat,LList)                                         *
 *  -> uses GetNod and InfNod to get the pointer to the vector, which   *
 *     corresponds to iterat. The pointer is the return value of the    *
 *     function. If the vector is not InCore, the function terminates   *
@@ -80,16 +80,12 @@
 *     M. Schuetz                                                       *
 *     University of Lund, Sweden, 1994/96                              *
 ************************************************************************
-
-
       SubRoutine IniLst(iLList,incore)
+      use LnkLst
       Implicit Real*8 (a-h,o-z)
       Integer iLList,incore
 #include "real.fh"
 
-#include "mxdm.fh"
-#include "lnklst.fh"
-*
       Debug_LnkLst=.False.
 *
 *     allocate list header CNOD
@@ -111,116 +107,131 @@
 *----------------------------------------------------------------------*
 
 
-      SubRoutine PutVec(vec,lvec,LUnit,iterat,NoAllo,opcode,iLList)
+      SubRoutine PutVec(vec,lvec,iterat,opcode,iLList)
 *     NoAllo is the amount of memory (in DWords) one wants to keep
 *     for other purposes.
 *     opcode is a 4 character string:
-*     'APND' -append nevertheless to list, if same iterat is found
-*             on head node
 *     'NOOP' -no operation, if same iterat is found on head node
-*     'OVWR' -overwrite vector, if same iterat is found on head node
-*             if lvec is different from lvec stored on node, old
+*     'OVWR' -overwrite vector, if same iterat is found in any node
+*             If lvec is different from lvec stored on node, old
 *             vector is not overwritten and iWork(LList) is set to
 *             ErrCode 1
 *
+      use LnkLst
       Implicit Real*8 (a-h,o-z)
 *
 *     declaration subroutine parameters
-      Integer lvec,LUnit,iterat,iLList,NoAllo,iroot,lislen,incore
+      Integer lvec,iterat,iLList,iroot,lislen
       Real*8 vec(lvec)
       Character opcode*4
 *
 *     declaration local variables
-      Integer iPtr1,iPtr2,MaxMem
+      Integer iPtr2,MaxMem
 C     Integer iDskPt,len
 *
 #include "real.fh"
-#include "WrkSpc.fh"
-#include "mxdm.fh"
-#include "lnklst.fh"
-
+#include "stdalloc.fh"
 #include "SysDef.fh"
 *
       If (Debug_LnkLst) Then
          Write (6,*) 'PutVec'
          Call StlLst(iLList)
-         Call qTrace
       End If
-#ifdef _DEBUG_
-      Call qEnter('PutVec')
-#endif
 *
 *     clear ErrCode
       nLList(iLList,0)=0
 *     read listhead
-      iroot=nLList(iLList,1)
+      iroot =nLList(iLList,1)
       lislen=nLList(iLList,2)
-      incore=nLList(iLList,3)
 
+#define _NEW_CODE_
+#ifdef _NEW_CODE_
+      Select Case(opcode)
+
+      Case('NOOP')
+
+         If ((iroot.gt.0).AND.(nLList(iroot,4).eq.iterat)) Return
+
+      Case('OVWR')
+         Do While ((iroot>0))
+            If (nLList(iroot,3).ne.lvec) Then
+* Set error code: inconsistency in vector lengths
+               nLList(iLList,0)=1
+            Else If (nLList(iroot,4)==iterat) Then
+               SCF_V(iroot)%A(1:lVec)=vec(1:lVec)
+               Return
+            End If
+            iroot=nLList(iroot,0)
+         End Do
+
+      Case default
+
+*         opcode unknown
+          Write (6,*) 'PutVec: opcode unknown'
+          Write (6,'(A,A)') 'opcode=',opcode
+          Call Abend()
+
+      End Select
+#else
       If ((iroot.gt.0).AND.(nLList(iroot,4).eq.iterat)) Then
         If (opcode.eq.'NOOP') Then
-*         that's all, folks
-#ifdef _DEBUG_
-          Call qExit('PutVec')
-#endif
+!         that's all, folks
           Return
         Else If (opcode.eq.'OVWR') Then
           If (nLList(iroot,3).ne.lvec) Then
 * Set error code: inconsistency in vector lengths
             nLList(iLList,0)=1
           Else
-            call dcopy_(lvec,vec,1,Work(nLList(iroot,1)),1)
+            SCF_V(iroot)%A(1:lVec)=vec(1:lVec)
           End If
-#ifdef _DEBUG_
-          Call qExit('PutVec')
-#endif
           Return
-        Else If (opcode.ne.'APND') Then
+        Else
 *         opcode unknown
           Write (6,*) 'PutVec: opcode unknown'
           Write (6,'(A,A)') 'opcode=',opcode
-          Call QTrace
           Call Abend()
         End If
       End If
+#endif
+
+      iroot =nLList(iLList,1)
 *     check if there is still enough memory to store vec
-      Call GetMem('LVec ','Max','Real',iPtr1,MaxMem)
-cvv Enough memory
-*       let's allocate some memory
-        Call GetMem('LVec ','Allo','Real',iPtr1,lvec)
-*      End If
+      Call mma_maxDBLE(MaxMem)
+!     let's allocate some memory
 *     allocate new node
       lLList=lLList+1
       iPtr2=lLList
+      If (iPtr2.gt.Maxnodes) Then
+         Write (6,*) 'PutVec: iPtr2.gt.Maxnodes'
+         Call Abend()
+      End If
+      If (Allocated(SCF_V(iPtr2)%A)) Then
+         Write (6,*) 'Node already allocated'
+         Write (6,*) 'iPtr2=',iPtr2
+         Call Abend()
+      End If
+      Call mma_allocate(SCF_V(iPtr2)%A,lVec,Label='LVec')
       nLList(iPtr2,0)=iroot
-      nLList(iPtr2,1)=iPtr1
+      nLList(iPtr2,1)=iPtr2
       nLList(iPtr2,2)=0
       nLList(iPtr2,3)=lvec
       nLList(iPtr2,4)=iterat
       nLList(iPtr2,5)=1
 
 
-      call dcopy_(lvec,vec,1,Work(iPtr1),1)
+      SCF_V(iPtr2)%A(:)=Vec(:)
       iroot=iPtr2
       lislen=lislen+1
       nLList(iLList,1)=iroot
       nLList(iLList,2)=lislen
 
 *
-#ifdef _DEBUG_
-      Call qExit('PutVec')
-#endif
       Return
-c Avoid unused argument warnings
-      If (.False.) Then
-         Call Unused_integer(LUnit)
-         Call Unused_integer(NoAllo)
-      End If
       End
 *----------------------------------------------------------------------*
 
 
-      SubRoutine GetVec(LUnit,iterat,iLList,inode,vec,lvec)
+      SubRoutine GetVec(iterat,iLList,inode,vec,lvec)
 *     searches linked list for node corresponding to iterat, starting
 *     from iroot=iWork(LList+1).
 *     inode points to the node found after searching.
@@ -231,38 +242,31 @@ c Avoid unused argument warnings
 *     address, if an inconsistent entry was found.
 *     if LList<0, then -LList is interpreted as a direct node address,
 *     and not the address of the listhead (faster access).
+      use LnkLst
       Implicit Real*8 (a-h,o-z)
 *
 *     declaration subroutine parameters
-      Integer lvec,LUnit,iterat,iLList,inode
+      Integer lvec,iterat,iLList,inode
       Real*8 vec(lvec)
 *
-*     declaration local variables
-c      Integer iDskPt
-*
 #include "real.fh"
-#include "WrkSpc.fh"
-#include "mxdm.fh"
-#include "lnklst.fh"
-
 #include "SysDef.fh"
 *
-#ifdef _DEBUG_
-      Call qEnter('GetVec')
-#endif
-*
-        inode=nLList(iLList,1)
-
- 100  If ((nLList(inode,4).ne.iterat).and.(nLList(inode,0).ne.0)) Then
-        inode=nLList(inode,0)
-
-        GoTo 100
+      inode=nLList(iLList,1)
+      If (inode<=0) Then
+         Write (6,*) 'GetVec: iNode<=0'
+         Call Abend()
       End If
+
+      Do While ((nLList(inode,4).ne.iterat).and.(nLList(inode,0).ne.0))
+         inode=nLList(inode,0)
+      End Do
+
       If (nLList(inode,4).eq.iterat) Then
 *       we've found matching entry, so check if consistent
         If (nLList(inode,3).eq.lvec) Then
-*         everything's allright, we made it, let's copy to vec
-            call dcopy_(lvec,Work(nLList(inode,1)),1,vec,1)
+*          everything's alright, we made it, let's copy to vec
+           vec(1:lVec)=SCF_V(iNode)%A(1:lVec)
         Else
 * inconsistency
           write(6,*)' Found inconsistency.'
@@ -273,12 +277,6 @@ c      Integer iDskPt
         inode=0
       End If
 *
-#ifdef _DEBUG_
-      Call qExit('GetVec')
-#endif
-      Return
-c Avoid unused argument warnings
-      If (.False.) Call Unused_integer(LUnit)
       End
 *----------------------------------------------------------------------*
 
@@ -288,19 +286,14 @@ c Avoid unused argument warnings
 *     from iroot. inode points to the node found after searching.
 *     inode is set to zero and iWork(LList)=0 is set to ErrCode 1,
 *     if no correspondance was found.
+      use LnkLst
       Implicit Real*8 (a-h,o-z)
 *
 *     declaration subroutine parameters
       Integer iterat,iLList,inode
 *
 #include "real.fh"
-#include "mxdm.fh"
-#include "lnklst.fh"
-
 *
-#ifdef _DEBUG_
-      Call qEnter('GetNod')
-#endif
 *
       If (Debug_LnkLst) Then
          Write (6,*) 'GetNod'
@@ -311,11 +304,15 @@ c Avoid unused argument warnings
       nLList(iLList,0)=0
 *     set inode to iroot
       inode=nLList(iLList,1)
-
- 100  If ((nLList(inode,4).ne.iterat).and.(nLList(inode,0).ne.0)) Then
-        inode=nLList(inode,0)
-        GoTo 100
+      If (inode<=0) Then
+         Write (6,*) 'GetNod: iNode<=0'
+         Write (6,*) 'iLList=',iLList
+         Call Abend()
       End If
+
+      Do While ((nLList(inode,4).ne.iterat).and.(nLList(inode,0).ne.0))
+        inode=nLList(inode,0)
+      End Do
       If (nLList(inode,4).eq.iterat) Then
 *       we've found matching entry
       Else
@@ -324,10 +321,6 @@ c Avoid unused argument warnings
         nLList(iLList,0)=1
       End If
 *
-#ifdef _DEBUG_
-      Call qExit('GetNod')
-#endif
-      Return
       End
 *----------------------------------------------------------------------*
 
@@ -335,15 +328,13 @@ c Avoid unused argument warnings
       SubRoutine InfNod(inode,iterat,ipnext,ipvec,lvec)
 *     returns info of node indicated by inode. iterat,ipnext,ipvec,lvec
 *     are overwritten with the corresponding info on the node
+      use LnkLst
       Implicit Real*8 (a-h,o-z)
 *
 *     declaration of procedure parameters
       Integer inode,iterat,ipnext,ipvec,lvec
 *
 
-#include "mxdm.fh"
-#include "lnklst.fh"
-*
       iterat=nLList(inode,4)
       ipnext=nLList(inode,0)
       ipvec= nLList(inode,1)
@@ -356,13 +347,11 @@ c Avoid unused argument warnings
 
       Logical Function InCore(inode)
 *     returns true, if corresponding vector is incore, false otherwise
+      use LnkLst
       Implicit Real*8 (a-h,o-z)
       Integer inode
 *
 
-#include "mxdm.fh"
-#include "lnklst.fh"
-*
       If (nLList(inode,5).eq.1) Then
         InCore=.TRUE.
       Else
@@ -375,12 +364,9 @@ c Avoid unused argument warnings
 
       Logical Function LLErr(iLList)
 *     checks, if ErrCode was set in previous LL Operation
+      use LnkLst
       Implicit Real*8 (a-h,o-z)
       Integer iLList
-*
-
-#include "mxdm.fh"
-#include "lnklst.fh"
 *
 
       If (nLList(iLList,0).eq.0) Then
@@ -395,20 +381,18 @@ c Avoid unused argument warnings
 
       Integer Function LLLen(iLList)
 *     returns the actual length of the LL
+      use LnkLst
       Implicit Real*8 (a-h,o-z)
       Integer iLList
 *
 
-#include "mxdm.fh"
-#include "lnklst.fh"
-*
       LLLen=nLList(iLList,2)
       Return
       End
 *----------------------------------------------------------------------*
 
 
-      Subroutine iVPtr(LUnit,vptr1,nvptr1,inode)
+      Subroutine iVPtr(vptr1,nvptr1,inode)
 *     uses InfNod or GetVec to read out vector of inode, depending
 *     if InCore or not. If the result is ivptr1, the vector was read
 *     from disk. ivptr1 has to be allocated before (same vector length
@@ -417,22 +401,19 @@ c Avoid unused argument warnings
 *     the inode value of GetVec is returned.
 *
 *     2017-03-15:Converted to return the array in vptr1.
+      use LnkLst
       Implicit Real*8 (a-h,o-z)
-      Integer LUnit,nvptr1,ivptr2,inode,idum
+      Integer nvptr1,ivptr2,inode,idum
       Logical InCore
       Real*8  vptr1(nvptr1)
 *
 #include "real.fh"
-#include "WrkSpc.fh"
-#include "mxdm.fh"
-#include "lnklst.fh"
 *
       If (InCore(inode)) Then
         Call InfNod(inode,idum,idum,ivptr2,idum)
-        Call DCopy_(nvptr1,Work(ivptr2),1,vptr1,1)
+        vPtr1(1:nvptr1)=SCF_V(inode)%A(1:nvptr1)
       Else
-        Call GetVec(LUnit,nLList(inode,4),inode,inode,
-     &              vptr1,nLList(inode,3))
+        Call GetVec(nLList(inode,4),inode,inode,vptr1,nLList(inode,3))
       End If
 *
       Return
@@ -440,7 +421,7 @@ c Avoid unused argument warnings
 *----------------------------------------------------------------------*
 
 
-      Integer Function LstPtr(LUnit,iterat,iLList)
+      Integer Function LstPtr(iterat,iLList)
 *     uses GetNod and InfNod to obtain the pointer to the vector, which
 *     corresponds to iterat. The pointer is the return value of the
 *     function. If the vector is not InCore, the function terminates
@@ -450,23 +431,19 @@ c Avoid unused argument warnings
       Implicit Real*8 (a-h,o-z)
 *
 *     declaration subroutine parameters
-      Integer LUnit,iterat,iLList
+      Integer iterat,iLList
 *
 *     declaration local variables
       Integer inode,idum,ivptr
 *     and functions
       Logical InCore
 *
-#ifdef _DEBUG_
-      Call qEnter('LstPtr')
-#endif
       LstPtr=-999999
       Call GetNod(iterat,iLList,inode)
       If (inode.eq.0) Then
 * Hmmm, no entry found in LList, that's strange
         Write (6,*) 'LstPtr: inode.le.0'
         Write (6,*) 'inode=',inode
-        Call QTrace
         Call Abend()
       Else If (InCore(inode)) Then
         Call InfNod(inode,idum,idum,ivptr,idum)
@@ -475,31 +452,20 @@ c Avoid unused argument warnings
 * Hmmm, no incore hit for this entry, that's strange
         Write (6,*) 'LstPtr: no incore hit for this entry'
         Write (6,*) 'inode=',inode
-        Call QTrace
         Call Abend()
       End If
-#ifdef _DEBUG_
-      Call qExit('LstPtr')
-#endif
-      Return
-c Avoid unused argument warnings
-      If (.False.) Call Unused_integer(LUnit)
       End
 *----------------------------------------------------------------------*
 
 
       SubRoutine KilLst(iLList)
+      use LnkLst
       Implicit Real*8 (a-h,o-z)
 *     Free all memory of linked list LList
 #include "real.fh"
-#include "WrkSpc.fh"
-#include "mxdm.fh"
-#include "lnklst.fh"
+#include "stdalloc.fh"
 *     local vars
-      Integer iLList,iroot,iPtr1
-#ifdef _DEBUG_
-      Call qEnter('KilLst')
-#endif
+      Integer iLList,iroot
 *
 *
       If (Debug_LnkLst) Then
@@ -508,46 +474,31 @@ c Avoid unused argument warnings
       End If
 *
       iroot=nLList(iLList,1)
- 100  Continue
-      If (iroot.ne.0) Then
-        iPtr1=nLList(iroot,1)
+      Do While (iroot.ne.0)
         iFlag=nLList(iroot,5)
 
         If (iFlag.eq.1) Then
-          Call GetMem('LVec ','Free','Real',iPtr1,nLList(iroot,3))
+          Call mma_deallocate(SCF_V(iroot)%A)
         End If
-        iPtr1=iroot
         iroot=nLList(iroot,0)
-        GoTo 100
-      End If
+      End Do
 *
-#ifdef _DEBUG_
-      Call qExit('KilLst')
-#endif
-      Return
       End
 *----------------------------------------------------------------------*
 
 
       SubRoutine DmpLst(iLList,LUnit,lDskPt)
+      use LnkLst
       Implicit Real*8 (a-h,o-z)
       Integer iLList,LUnit,lDskPt
 *
-#include "WrkSpc.fh"
-#include "mxdm.fh"
-#include "lnklst.fh"
-
+#include "stdalloc.fh"
 #include "SysDef.fh"
 *
-#ifdef _DEBUG_
-      Call QEnter('DmpLst')
-#endif
 *     clear ErrCode
       nLList(iLList,0)=0
 *     read listhead
       iroot=nLList(iLList,1)
-      lislen=nLList(iLList,2)
-      incore=nLList(iLList,3)
 
       If (iroot.le.0) Then
 * linked list has zero length, that's strange
@@ -555,23 +506,18 @@ c Avoid unused argument warnings
         lDskPt=0
         iDskPt=lDskPt
         Call iDaFile(LUnit,1,nLList(iLList,0),NodSiz,iDskPt)
-*       Call GetMem('CNOD ','Free','Inte',LList,NodSiz)
-#ifdef _DEBUG_
-        Call QExit('DmpLst')
-#endif
         Return
       End If
- 10   Continue
-      If (nLList(iroot,5).eq.1) Then
-        iPtr1=iroot
-        iPtr2=iPtr1
+
+      Do While (nLList(iroot,5).eq.1)
+         iPtr1=iroot
+         iPtr2=iPtr1
 * go either to last element or list or to last element in core
 * and flush vector
- 100    If ((nLList(iPtr1,0).ne.0).and.(nLList(iPtr1,5).eq.1)) Then
+         Do While ((nLList(iPtr1,0).ne.0).and.(nLList(iPtr1,5).eq.1))
           iPtr2=iPtr1
           iPtr1=nLList(iPtr1,0)
-          GoTo 100
-        End If
+        End Do
         If (nLList(iPtr1,5).eq.1) Then
 * nothing written on disk yet
           iDskPt=0
@@ -586,44 +532,31 @@ c Avoid unused argument warnings
         nLList(iPtr2,5)=0
         len=nLList(iPtr2,3)
 
-        Call dDaFile(LUnit,1,Work(iPtr1),len,iDskPt)
-        Call GetMem('LVec ','Free','Real',iPtr1,len)
-        Go To 10
-      End If
+        Call dDaFile(LUnit,1,SCF_V(iPtr2)%A,len,iDskPt)
+        Call mma_deallocate(SCF_V(iPtr2)%A)
+      End Do
       lDskPt=iDskPt
 *     now all vectors are flushed... so dump linked list...
       Call iDaFile(LUnit,1,nLList(iLList,0),NodSiz,iDskPt)
 *
- 200  If (iroot.ne.0) Then
+      Do While (iroot.ne.0)
         iPtr1=iroot
         iroot=nLList(iroot,0)
         Call iDaFile(LUnit,1,nLList(iPtr1,0),NodSiz,iDskPt)
-*       Call GetMem('LNode','Free','Inte',iPtr1,NodSiz)
-        GoTo 200
-      End If
-*     Call GetMem('CNOD ','Free','Inte',LList,NodSiz)
+      End Do
 *
-#ifdef _DEBUG_
-      Call QExit('DmpLst')
-#endif
-      Return
       End
 *----------------------------------------------------------------------*
 
 
       SubRoutine RclLst(iLList,LUnit,lDskPt,NoAllo)
+      use LnkLst
       Implicit Real*8 (a-h,o-z)
       Integer iLList,LUnit,lDskPt,NoAllo
 *
-#include "WrkSpc.fh"
-#include "mxdm.fh"
-#include "lnklst.fh"
-
+#include "stdalloc.fh"
 #include "SysDef.fh"
 *
-#ifdef _DEBUG_
-      Call QEnter('RclLst')
-#endif
 * load listhead...
       lLList=lLList+1
       iLList=lLList
@@ -636,9 +569,6 @@ c Avoid unused argument warnings
      &            //' that''s strange!'
 * linked list has zero length, that's strange
 *       Call Quit(20)
-#ifdef _DEBUG_
-        Call QExit('RclLst')
-#endif
         Return
       End If
 *
@@ -652,7 +582,7 @@ c Avoid unused argument warnings
 
       iroot=iPtr1
       iPtr2=iroot
- 100  If (nLList(iPtr2,0).ne.0) Then
+      Do While (nLList(iPtr2,0).ne.0)
         lislen=lislen+1
          lLList=lLList+1
          iPtr1=lLList
@@ -660,8 +590,7 @@ c Avoid unused argument warnings
 
         Call iDaFile(LUnit,2,nLList(iPtr1,0),NodSiz,lDskPt)
         iPtr2=iPtr1
-        Go To 100
-      End If
+      End Do
       If (nLList(iLList,2).ne.lislen) Then
         Write(6,*) 'RclLst:LList length mismatch:',
      &              nLList(iLList,2),lislen
@@ -670,27 +599,32 @@ c Avoid unused argument warnings
       Write (6,*) 'Let''s restore...'
 * now we have restored the list, let's fetch some vectors
       incore=nLList(iLList,3)
-      Call GetMem('LVec ','Max','Real',iPtr1,MaxMem)
+      Call mma_maxDBLE(MaxMem)
       lvec=nLList(iroot,3)
       iPtr2=iroot
- 200  If ((incore.gt.0).AND.(MaxMem-NoAllo.ge.lvec).AND.(iPtr2.gt.0))
-     &  Then
+      Do While ((incore.gt.0).AND.(MaxMem-NoAllo.ge.lvec).AND.
+     &          (iPtr2.gt.0))
         lDskPt=nLList(iPtr2,1)
-        Call GetMem('LVec ','Allo','Real',iPtr1,lvec)
-        Call dDaFile(LUnit,2,Work(iPtr1),lvec,lDskPt)
-        nLList(iPtr2,1)=iPtr1
+
+         If (iPtr2.gt.Maxnodes) Then
+            Write (6,*) 'iPtr2.gt.Maxnodes, restoring'
+            Call Abend()
+        End If
+        If (Allocated(SCF_V(iPtr2)%A)) Then
+           Write (6,*) 'Node already allocated while restoring'
+           Write (6,*) 'iPtr2=',iPtr2
+           Call Abend()
+        End If
+        Call mma_Allocate(SCF_V(iPtr2)%A,lvec,Label='LVec')
+        Call dDaFile(LUnit,2,SCF_V(iPtr2)%A,lvec,lDskPt)
+        nLList(iPtr2,1)=iPtr2
         nLList(iPtr2,2)=0
         nLList(iPtr2,5)=1
         iPtr2=nLList(iPtr2,0)
         incore=incore-1
 
-        Call GetMem('LVec ','Max','Real',iPtr1,MaxMem)
-        Go To 200
-      End If
+        Call mma_maxDBLE(MaxMem)
+      End Do
       If (iPtr2.gt.0) nLList(iLList,3)=nLList(iLList,3)-incore
 *
-#ifdef _DEBUG_
-      Call QExit('RclLst')
-#endif
-      Return
       End

@@ -10,6 +10,7 @@
 ************************************************************************
       SUBROUTINE NATORB_RASSI(DMAT,TDMZZ,VNAT,OCC,EIGVEC)
       use rassi_aux, only : iDisk_TDM
+      use OneDat, only: sNoNuc, sNoOri
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "SysDef.fh"
 #include "Molcas.fh"
@@ -20,14 +21,13 @@
 #include "WrkSpc.fh"
       DIMENSION DMAT(NBSQ),TDMZZ(NTDMZZ),VNAT(NBSQ),OCC(NBST)
       CHARACTER*14 FNAME
-      CHARACTER*8 KNUM
+      CHARACTER*8 KNUM, LABEL
       REAL*8 EIGVEC(NSTATE,NSTATE)
 
       EXTERNAL ISFREEUNIT
       EXTERNAL DDOT_
       DIMENSION Dummy(1),iDummy(7,8)
 
-      Call qEnter('NATORB')
 C ALLOCATE WORKSPACE AREAS.
       NSZZ=NBTRI
       NVEC=NBSQ
@@ -41,10 +41,11 @@ C ALLOCATE WORKSPACE AREAS.
       CALL GETMEM('EIG   ','ALLO','REAL',LEIG,NEIG)
 C READ ORBITAL OVERLAP MATRIX.
       IRC=-1
-      IOPT=6
+      IOPT=ibset(ibset(0,sNoOri),sNoNuc)
       ICMP=1
       ISYLAB=1
-      CALL RDONE(IRC,IOPT,'MLTPL  0',ICMP,WORK(LSZZ),ISYLAB)
+      LABEL='MLTPL  0'
+      CALL RDONE(IRC,IOPT,LABEL,ICMP,WORK(LSZZ),ISYLAB)
       IF ( IRC.NE.0 ) THEN
         WRITE(6,*)
         WRITE(6,*)'      *** ERROR IN SUBROUTINE  NATORB ***'
@@ -187,7 +188,6 @@ C SIORB.1, SIORB.2, ...
           ENDIF
           ISTOCC=ISTOCC+NB
         END DO
-        IFOCC=1
         LuxxVec=50
         LuxxVec=isfreeunit(LuxxVec)
         CALL WRVEC(FNAME,LUXXVEC,'CO',NSYM,NBASF,NBASF,
@@ -204,6 +204,5 @@ C End of very long loop over eigenstates KEIG.
       CALL GETMEM('VEC2  ','FREE','REAL',LVEC2,NVEC2)
       CALL GETMEM('SCR   ','FREE','REAL',LSCR,NSCR)
       CALL GETMEM('EIG   ','FREE','REAL',LEIG,NEIG)
-      Call qExit('NATORB')
       RETURN
       END

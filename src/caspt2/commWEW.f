@@ -22,7 +22,6 @@
 #include "SysDef.fh"
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "stdalloc.fh"
       DIMENSION DCOM(NASHT,NASHT)
@@ -35,7 +34,6 @@ C Adds, into the matrix DCOM, a correction obtained by commutation relations.
 C Present assumption: The two vectors nr. IVEC and JVEC, stored on LUSOLV,
 C are both in contravariant representation. Possibly, IVEC equals JVEC.
 
-      CALL QENTER('COMMWEW')
       DO ICASE=1,11
         DO ISYM=1,NSYM
           NAS=NASUP(ISYM,ICASE)
@@ -416,7 +414,6 @@ C Case 10 code section:
             SUM=SUM-CBLK(IY+NAS*(IIS-1))
      &                   *TBLK(IX+NAS*(IIS-1))
           END DO
-          write (*,'(2i3,f20.10)') ix,iy,sum
           DCOM(IXABS,IYABS)=DCOM(IXABS,IYABS)+SUM
 
         END DO
@@ -436,7 +433,6 @@ C Case 11 code section:
             SUM=SUM-CBLK(IY+NAS*(IIS-1))
      &                   *TBLK(IX+NAS*(IIS-1))
           END DO
-          write (*,'(2i3,f20.10)') ix,iy,sum
           DCOM(IXABS,IYABS)=DCOM(IXABS,IYABS)+SUM
 
         END DO
@@ -454,6 +450,5 @@ C Here ends the loops over ISYM and ICASE.
         END DO
       END DO
 
-      CALL QEXIT('COMMWEW')
       RETURN
       END

@@ -12,6 +12,7 @@
 *               2019, Stefano Battaglia                                *
 ************************************************************************
       SUBROUTINE GRPINI(IGROUP,NGRP,JSTATE_OFF,HEFF,H0,U0)
+      use caspt2_output, only:iPrGlb,usual,verbose,debug
       IMPLICIT REAL*8 (A-H,O-Z)
 * 2012  PER-AKE MALMQVIST
 * Multi-State and XMS initialization phase
@@ -23,21 +24,19 @@
 * for which a group offset JSTATE_OFF is passed in.
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "pt2_guga.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
 #include "intgrl.fh"
 #include "eqsolv.fh"
-#include "warnings.fh"
+#include "warnings.h"
 #include "stdalloc.fh"
       LOGICAL IF_TRNSF
-      CHARACTER(27)  STLNE2
+      CHARACTER(LEN=27)  STLNE2
       real(8) Heff(Nstate,Nstate)
       real(8) H0(Nstate,Nstate)
       real(8) U0(Nstate,Nstate)
 
-      CALL QENTER('GRPINI')
 * ---------------------------------------------------------------------
 * Number of states in this group.
       IF (IPRGLB.EQ.DEBUG) THEN
@@ -57,13 +56,11 @@
       Write(STLNE2,'(A,I3)')'Initial phase for group ',IGROUP
       Call StatusLine('CASPT2:',STLNE2)
       IF(IPRGLB.GE.USUAL) THEN
-       If(.not.IFNOPT2) Then
         WRITE(6,'(20A4)')('****',I=1,20)
         WRITE(6,'(A,I3)')
      &  ' Multi-State initialization phase begins for group ',IGROUP
         WRITE(6,'(20A4)')('----',I=1,20)
         CALL XFlush(6)
-       End If
       END IF
 * ---------------------------------------------------------------------
 
@@ -74,8 +71,6 @@
       IAD1M(2)=IDISK
       call ddafile(LUONEM,1,WORK(LCMO),NCMO,IDISK)
       IEOF1M=IDISK
-C     write (*,*) "cmo read from disk"
-C     call sqprt(work(lcmo),12)
 
 * Loop over states, selecting those belonging to this group.
 * For each such state, compute the Fock matrix in original MO basis,
@@ -88,16 +83,16 @@ C     call sqprt(work(lcmo),12)
         Jstate=J+JSTATE_OFF
 
 * Copy the 1-RDM of Jstate from LDMIX into LDREF
+        ! this might be obsolete if we remove sadref
         IF (IFSADREF) Then
           !! This DREF is used only for constructing the Fock in H0.
           !! DREF used in other places will be constructed in elsewhere
           !! (STINI).
-          Call DCopy_(NDREF,0.0D+00,0,WORK(LDREF),1)
+          Call DCopy_(NDREF,[0.0D+00],0,WORK(LDREF),1)
           Do K = 1, Nstate
-C           wij = WORK(LDWGT+(K-1) + NSTATE*(K-1))
             wij = 1.0d+00/nstate
-            offset = NDREF*(K-1)
-            CALL DAXPY_(NDREF,wij,WORK(LDMIX+offset),1,WORK(LDREF),1)
+            ioffset = NDREF*(K-1)
+            CALL DAXPY_(NDREF,wij,WORK(LDMIX+ioffset),1,WORK(LDREF),1)
           End Do
         Else
          CALL DCOPY_(NDREF,WORK(LDMIX+(Jstate-1)*NDREF),1,WORK(LDREF),1)
@@ -171,11 +166,14 @@ c Modify the Fock matrix if needed
 
 * In case of a XMS calculation, i.e. Ngrp > 1 and not DW, transform
 * the CI arrays of this group of states to make the Fock matrix
-* diagonal in the model space
+* diagonal in the model space.
+* Note that this is only done for XMS here. For XDW and RMS it is
+* done in the xdwinit subroutine. This code duplication is silly,
+* but we will get rid of it once we drop the groups of states
       if (Ngrp.gt.1.and.IFXMS.and.(.not.IFDW)) then
 
 * In case of XMS-CASPT2, printout H0 in original basis
-        if (IPRGLB.ge.VERBOSE) then
+        if (IPRGLB.ge.USUAL) then
           write(6,*)
           write(6,*)' H0 in the original model space basis:'
           call prettyprint(H0,Ngrp,Ngrp)
@@ -185,7 +183,7 @@ c Modify the Fock matrix if needed
 
 * Transform the Fock matrix in the new basis
         call transmat(H0,U0,Ngrp)
-        if (IPRGLB.ge.VERBOSE) then
+        if (IPRGLB.ge.USUAL) then
           write(6,*)' H0 eigenvectors:'
           call prettyprint(U0,Ngrp,Ngrp)
         end if
@@ -196,14 +194,10 @@ c Modify the Fock matrix if needed
 
 * As well as Heff
         call transmat(Heff,U0,Ngrp)
-        if (IPRGLB.ge.DEBUG) then
+        if (IPRGLB.ge.VERBOSE) then
           write(6,*)' Heff[1] in the rotated model space basis:'
           call prettyprint(Heff,Ngrp,Ngrp)
         end if
-
-       if(IFXMS) then
-        call prrotmat(NGRP,U0,HEFF,NSTATE,IFSILPrRot)
-       end if
 
 * Mix the CI arrays according to the H0 eigenvectors. Assume we can
 * put all the original ones in memory, but put the resulting vectors
@@ -235,7 +229,7 @@ c Modify the Fock matrix if needed
           if (IPRGLB.ge.VERBOSE) then
             write(6,'(1x,a,i3)')
      &      ' The CI coefficients of rotated model state nr. ',MSTATE(J)
-            call PRWF_CP2(LSYM,NCONF,WORK(LCIXMS),CITHR)
+            call PRWF_CP2(STSYM,NCONF,WORK(LCIXMS),CITHR)
           end if
         end do
 
@@ -253,11 +247,7 @@ c Modify the Fock matrix if needed
 * model functions, but using the new orbitals.
 * Note that the matrices FIFA, FIMO, etc are transformed as well
 
-C     write (*,*) "cmo before orbctl"
-C     call sqprt(work(lcmo),12)
       CALL ORBCTL(WORK(LCMO))
-C     write (*,*) "cmo after orbctl"
-C     call sqprt(work(lcmo),12)
 
 * In subroutine stini, the individual RHS, etc, arrays will be computed
 * for the states. If this is a true XMS calculation (Ngrp > 1) then
@@ -278,11 +268,8 @@ C     call sqprt(work(lcmo),12)
       CPUINT=CPU1-CPU0
       TIOINT=TIO1-TIO0
       call dcopy_(NCMO,WORK(LCMO),1,WORK(LCMOPT2),1)
-C     write (*,*) "lcmopt2 final"
-C     call sqprt(work(lcmopt2),12)
 
       call getmem('LCMO','FREE','REAL',LCMO,NCMO)
 
-      CALL QEXIT('GRPINI')
       return
       end

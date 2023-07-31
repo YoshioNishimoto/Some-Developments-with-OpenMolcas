@@ -31,8 +31,6 @@
 #include "print.fh"
       Real*8 Win(na,nb), Wout(nb,na)
 *
-      iRout = 71
-      iPrint = nPrint(iRout)
 *     Write (*,*) ' In Trns1: na, nb, nVec, nc=',na,nb,nvec,nc
 *     Call RecPrt(' Win',' ',Win,na,nb)
       If (nc.eq.1) Then
@@ -49,6 +47,5 @@
          Call DGeTMO(Win,nb,nb,na,Wout,na)
 *        Call RecPrt(' After second DGeTMO',' ',Wout,na,nb)
       End If
-*     Call GetMem(' Exit Trns1','CHECK','REAL',iDum,iDum)
       Return
       End

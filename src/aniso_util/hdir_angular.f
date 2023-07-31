@@ -18,7 +18,7 @@
 !             If L=3 (i.e.Z), rotation of the M occurs in the XY plane
 
       Implicit None
-      Integer, parameter         :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter         :: wp=kind(0.d0)
       Integer       :: nP, L, iprint
       Real(kind=8) :: dX(nP), dY(nP), dZ(nP), Ang(nP)
       !local variables
@@ -26,7 +26,6 @@
       Real(kind=8) :: AngStep,AngRad
       Real(kind=8) :: pi
 
-      Call qEnter('hdir_angular')
       pi=3.1415926535897932384626433832795028841971_wp
       dX(:)=0.0_wp
       dY(:)=0.0_wp
@@ -78,6 +77,5 @@
         End Do
       End If
 
-      Call qExit('hdir_angular')
       Return
       End

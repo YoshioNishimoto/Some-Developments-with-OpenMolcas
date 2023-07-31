@@ -17,18 +17,16 @@
 * SWEDEN                                     *
 *--------------------------------------------*
       SUBROUTINE SIZES()
+      use caspt2_output, only:iPrGlb,usual
       USE SUPERINDEX
       IMPLICIT REAL*8 (A-H,O-Z)
 
 #include "rasdim.fh"
-#include "warnings.fh"
+#include "warnings.h"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 #include "pt2_guga.fh"
-#include "WrkSpc.fh"
 
-      CALL QENTER('SIZES')
 
 C Available workspace right now:
       CALL GETMEM('LDUM','MAX','REAL',LDUM,MXLEFT)
@@ -58,17 +56,17 @@ C Preferred size for efficiency:
 C Actual max needed in-core:
         NPLBUF=MIN(NPLBUF,(NASHT*(NASHT+1))/2)
         NPOLY=NPOLY+NPLBUF*(NPLBUF+3+3*MXCI)
-*        WRITE(*,*)' Memory requirements for POLY3 (Above SGUGA):'
-*        WRITE(*,*)'   CI vector                      :',MXCI
-*        WRITE(*,*)'   Extra margin for small scratch :',NBOTTOM
-*        WRITE(*,*)'   Ten arrays G10,G20..F12        :',NGARR
-*        WRITE(*,*)'   H0,SGM0,C1,C2                  :',4*MXCI
-*        WRITE(*,*)'   VXYZB,TUBUF,DTUB               :',3*NPLBUF
-*        WRITE(*,*)'   A,B1,B2                        :',3*NPLBUF*MXCI
-*        WRITE(*,*)'   SCR                            :',NPLBUF**2
-*        WRITE(*,*)
-*        WRITE(*,*)' Total, for POLY3                 :',NPOLY
-*        WRITE(*,*)
+*        write(6,*)' Memory requirements for POLY3 (Above SGUGA):'
+*        write(6,*)'   CI vector                      :',MXCI
+*        write(6,*)'   Extra margin for small scratch :',NBOTTOM
+*        write(6,*)'   Ten arrays G10,G20..F12        :',NGARR
+*        write(6,*)'   H0,SGM0,C1,C2                  :',4*MXCI
+*        write(6,*)'   VXYZB,TUBUF,DTUB               :',3*NPLBUF
+*        write(6,*)'   A,B1,B2                        :',3*NPLBUF*MXCI
+*        write(6,*)'   SCR                            :',NPLBUF**2
+*        write(6,*)
+*        write(6,*)' Total, for POLY3                 :',NPOLY
+*        write(6,*)
       END IF
 
 C Precompute sizes, offsets etc.
@@ -80,7 +78,7 @@ C SBMAT need:
 *       N=NTUV(ISYM)
 *       NG3C=NG3C+(N*(N+1))/2
 *     END DO
-      NG3C=iPARDIV(NG3TOT,NG2)
+*     NG3C=iPARDIV(NG3TOT,NG2)
 
 C Sizes and addresses to lists:
       DO ISL1=1,NSYM
@@ -196,7 +194,7 @@ C transformations (overrides NSIGMA computed above)
 
 C PRPCTL needs:
 C In DIADNS alone, NDD words are needed:
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       WRITE(6,*)' Memory requirements for PRPCTL (Above SGUGA).'
       WRITE(6,*)
       WRITE(6,*)' PRP1) First phase of PRPCTL.'
@@ -231,7 +229,7 @@ C In DIADNS alone, NDD words are needed:
             NIS=NISUP(ISYM,ICASE)
             IF(NIS.GT.0) THEN
               NAS=NASUP(ISYM,ICASE)
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
               WRITE(6,*)' Case, Symm:',ICASE,ISYM
               WRITE(6,*)' NIN,NAS,NIS:',NIN,NAS,NIS
               WRITE(6,*)' NIMX,NSMX:',NIMX,NAMX
@@ -245,20 +243,20 @@ C In DIADNS alone, NDD words are needed:
               END IF
             END IF
           END IF
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       WRITE(6,'(1x,a,2i4,5x,i8)')'      Case, symm:',ICASE,ISYM,2*NX
 #endif
           NDD=MAX(2*NX,NDD)
         END DO
       END DO
 
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       WRITE(6,*)'       DIADNS needs the maximum, or NDD=',NDD
 #endif
       NCMO=NBSQT
       NPRP1=NBOTTOM+NCMO+notri+NLSTOT+2*NOSQT+MMX+NDD
 
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       WRITE(6,*)
       WRITE(6,*)'    B) Also needed, for 1st phase of PRPCTL:'
       WRITE(6,'(1x,a,i8)')'       NBOTTOM:',NBOTTOM
@@ -270,7 +268,7 @@ C In DIADNS alone, NDD words are needed:
 #endif
       NPRP2=NBOTTOM+2*NCMO+notri+NBAST*(NBAST+1)
 
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       WRITE(6,*)' PRP2) Second phase of PRPCTL.'
       WRITE(6,*)
       WRITE(6,'(1x,a,i8)')'       NBOTTOM:',NBOTTOM
@@ -350,7 +348,6 @@ C This is a Cholesky calculation, only give recommended amount
        END IF
       END IF
 
-      CALL QEXIT('SIZES')
 
       RETURN
       END

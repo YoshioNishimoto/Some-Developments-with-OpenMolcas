@@ -1,3 +1,15 @@
+************************************************************************
+* This file is part of OpenMolcas.                                     *
+*                                                                      *
+* OpenMolcas is free software; you can redistribute it and/or modify   *
+* it under the terms of the GNU Lesser General Public License, v. 2.1. *
+* OpenMolcas is distributed in the hope that it will be useful, but it *
+* is provided "as is" and without any express or implied warranties.   *
+* For more details see the full text of the license in the file        *
+* LICENSE or in <http://www.gnu.org/licenses/>.                        *
+*                                                                      *
+* Copyright (C) 2021, Yoshio Nishimoto                                 *
+************************************************************************
       Subroutine OLagFro0(DPT2_ori,DPT2)
 C
       Implicit Real*8 (A-H,O-Z)
@@ -14,9 +26,9 @@ C
         nOrbI2 = nBas(iSym)-nDel(iSym)
         If (nOrbI1.gt.0) Then
           nFroI = nFro(iSym)
-          nIshI = nIsh(iSym)
-          nAshI = nAsh(iSym)
-          nSshI = nSsh(iSym)
+          ! nIshI = nIsh(iSym)
+          ! nAshI = nAsh(iSym)
+          ! nSshI = nSsh(iSym)
 C
           !! Do for all orbitals
           Do iOrb = 1, nOrbI1
@@ -100,7 +112,7 @@ C
       !   Do Nu = 1, nBasI
       !     If (Mu.eq.Nu) Cycle
       !     DIA(iAOsq+Mu-1+nBasI*(Nu-1))
-     *!       = 0.5D+00*DIA(iAOsq+Mu-1+nBasI*(Nu-1)) 
+     *!       = 0.5D+00*DIA(iAOsq+Mu-1+nBasI*(Nu-1))
       !   End Do
       ! End Do
 C
@@ -146,7 +158,7 @@ C
 C
 C-----------------------------------------------------------------------
 C
-      Subroutine OLagFro1(DPT2,OLag,trf)
+      Subroutine OLagFro1(DPT2,OLag)
 C
       Implicit Real*8 (A-H,O-Z)
 C
@@ -155,17 +167,16 @@ C
 #include "WrkSpc.fh"
 C
       Dimension DPT2(*),OLag(*)
-      dimension trf(12,12)
 C
       Call GetMem('EPS','Allo','Real',ipEPS,nBasT)
       Call Get_dArray('RASSCF OrbE',Work(ipEPS),nBasT)
 C
-C     write (*,*) "DPT2 before frozen orbital"
+C     write(6,*) "DPT2 before frozen orbital"
 C     call sqprt(dpt2,nbast)
-C     write (*,*) "OLag"
+C     write(6,*) "OLag"
 C     call sqprt(olag,nbast)
 C     do i = 1, nbast
-C       write (*,'(i3,f20.10)') i,work(ipeps+i-1)
+C       write(6,'(i3,f20.10)') i,work(ipeps+i-1)
 C     end do
       iMO  = 1
       DO iSym = 1, nSym
@@ -173,97 +184,29 @@ C     end do
         nFroI = nFro(iSym)
         If (nOrbI.gt.0.and.nFroI.gt.0) Then
           nIshI = nIsh(iSym)
-          nBasI = nBas(iSym)
+          ! nBasI = nBas(iSym)
           !! Make sure that the frozen orbital of the orbital Lagrangian
           !! is zero
-          Call DCopy(nOrbI*nFroI,0.0D+00,0,OLag,1)
+          Call DCopy_(nOrbI*nFroI,[0.0D+00],0,OLag,1)
           Do iOrb = 1, nFroI
             Do jOrb = nFroI+1, nFroI+nIshI
-C         write (*,*) iorb,jorb,OLag(iMO+iOrb-1+nOrbI*(jOrb-1))
-C         write (*,*) work(ipeps+iorb-1),work(ipeps+jorb-1)
+C         write(6,*) iorb,jorb,OLag(iMO+iOrb-1+nOrbI*(jOrb-1))
+C         write(6,*) work(ipeps+iorb-1),work(ipeps+jorb-1)
               Tmp = -0.5D+00*(OLag(iMO+iOrb-1+nOrbI*(jOrb-1))
      *                       -OLag(iMO+jOrb-1+nOrbI*(iOrb-1)))
      *            /(Work(ipEPS+iOrb-1)-Work(ipEPS+jOrb-1))
-C         write (*,*) tmp
-C      write (*,*) "wrong"
+C    *            /(Work(ipFIFA+iOrb-1+nBasI*(iOrb-1))-EPSI(jOrb-nFroI))
+C         write(6,*) tmp
               DPT2(iMO+iOrb-1+nOrbI*(jOrb-1))
      *          = DPT2(iMO+iOrb-1+nOrbI*(jOrb-1)) + Tmp
               DPT2(iMO+jOrb-1+nOrbI*(iOrb-1))
      *          = DPT2(iMO+jOrb-1+nOrbI*(iOrb-1)) + Tmp
             End Do
           End Do
-          IF (BSHIFT.NE.0.0D+00.and..false.) THEN
-      Call GetMem('WRK1','ALLO','Real',ipWRK1,25)
-      Call GetMem('WRK2','ALLO','Real',ipWRK2,25)
-      Call GetMem('WRK3','ALLO','Real',ipWRK3,25)
-      Call GetMem('WRK4','ALLO','Real',ipWRK4,25)
-      do iorb=6,10
-      do jorb=6,10
-        work(ipwrk1+iorb-6+5*(jorb-6)) = olag(iorb+12*(jorb-1))
-        work(ipwrk2+iorb-6+5*(jorb-6)) = trf(iorb,jorb)
-      end do
-      end do
-      write (*,*) "olag before"
-      call sqprt(work(ipwrk1),5)
-      call dgemm('N','N',5,5,5,
-     *           1.0d+00,work(ipwrk2),5,work(ipwrk1),5,
-     *           0.0d+00,work(ipwrk3),5)
-      call dgemm('N','T',5,5,5,
-     *           1.0d+00,work(ipwrk3),5,work(ipwrk2),5,
-     *           0.0d+00,work(ipwrk4),5)
-      write (*,*) "olag after"
-      call sqprt(work(ipwrk4),5)
-      do iorb=1,5
-      write (*,*) iorb,eps(3+iorb)
-      work(ipwrk1+iorb-1+5*(iorb-1)) = 0.0d+00
-      do jorb=1,iorb-1
-              Tmp = (Work(ipwrk4+jOrb-1+5*(iOrb-1))
-     *             - Work(ipwrk4+iOrb-1+5*(jOrb-1)))
-     *            /(EPS(3+iorb)-EPS(3+jorb))
-             work(ipwrk1+iorb-1+5*(jorb-1)) = tmp
-             work(ipwrk1+jorb-1+5*(iorb-1)) = tmp
-      end do
-      end do
-      call sqprt(work(ipwrk1),5)
-      call dgemm('T','N',5,5,5,
-     *           1.0d+00,work(ipwrk2),5,work(ipwrk1),5,
-     *           0.0d+00,work(ipwrk3),5)
-      call dgemm('N','N',5,5,5,
-     *           1.0d+00,work(ipwrk3),5,work(ipwrk2),5,
-     *           0.0d+00,work(ipwrk4),5)
-      call sqprt(work(ipwrk4),5)
-      do iorb=1, 5
-      do jorb=1,5
-        dpt2(5+iorb+12*(5+jorb-1))
-     *  = dpt2(5+iorb+12*(5+jorb-1))
-     +  + work(ipwrk4+iorb-1+5*(jorb-1))*0.0d+00
-      end do
-      end do
-C     call sqprt(olag,12)
-C     call sqprt(trf,12)
-C     call sqprt(work(ipwrk1),5)
-C     call sqprt(work(ipwrk2),5)
-      Call GetMem('WRK1','FREE','Real',ipWRK1,25)
-      Call GetMem('WRK2','FREE','Real',ipWRK2,25)
-      Call GetMem('WRK3','FREE','Real',ipWRK3,25)
-      Call GetMem('WRK3','FREE','Real',ipWRK4,25)
-C         nAshI = nAsh(iSym)
-C         Do iOrb = nFroI+nIshI+1, nFroI+nIshI+nAshI
-C           Do jOrb = nFroI+nIshI+1, iOrb-1
-C             Tmp = (OLag(iMO+jOrb-1+nOrbI*(iOrb-1))
-C    *             - OLag(iMO+iOrb-1+nOrbI*(jOrb-1)))
-C    *            /(EPS(iOrb-nFroI)-EPS(jOrb-nFroI))
-C             DPT2(iMO+iOrb-1+nOrbI*(jOrb-1))
-C    *          = DPT2(iMO+iOrb-1+nOrbI*(jOrb-1)) + Tmp*0.5d+00
-C             DPT2(iMO+jOrb-1+nOrbI*(iOrb-1))
-C    *          = DPT2(iMO+jOrb-1+nOrbI*(iOrb-1)) + Tmp*0.5d+00
-C           End Do
-C         End Do
-          END IF
         End If
         iMO  = iMO  + nOrbI*nOrbI
       End Do
-C     write (*,*) "DPT2 after frozen orbital"
+C     write(6,*) "DPT2 after frozen orbital"
 C     call sqprt(dpt2,nbast)
 C
       Call GetMem('EPS','Free','Real',ipEPS,nBasT)
@@ -281,7 +224,7 @@ C
 C
       Dimension DPT2(*),FPT2(*),ERI(*),Scr(*)
 C
-C     write (*,*) "FPT2 before frozen orbital"
+C     write(6,*) "FPT2 before frozen orbital"
 C     call sqprt(fpt2,nbast)
       iMO = 1
       isymi = 1
@@ -319,7 +262,7 @@ C
         End Do
         iMO = iMO + nOrbI*nOrbI
       End Do
-C     write (*,*) "FPT2 after frozen orbital"
+C     write(6,*) "FPT2 after frozen orbital"
 C     call sqprt(fpt2,nbast)
 C
       End Subroutine OLagFro2
@@ -335,6 +278,7 @@ C
 #include "WrkSpc.fh"
 C
       Dimension FIFA(*),FIMO(*),WRK1(*),WRK2(*)
+      Character(Len=8) Label
 C
       !! Read H_{\mu \nu}
       CALL GETMEM('WFLT','ALLO','REAL',LWFLT,NBTRI)
@@ -342,7 +286,8 @@ C
       IOPT=6
       ICOMP=1
       ISYLBL=1
-      CALL RDONE(IRC,IOPT,'OneHam  ',ICOMP,WORK(LWFLT),ISYLBL)
+      Label='OneHam  '
+      CALL RDONE(IRC,IOPT,Label,ICOMP,WORK(LWFLT),ISYLBL)
 C
       !! AO -> MO transformation
       iAO   = 1
@@ -365,7 +310,7 @@ C
         !! FIMO
         !! WRK1 = G(D)
         Call DCopy_(nBasI*nBasI,FIMO(iAO),1,WRK1,1)
-C     call dcopy(nbasI*nbasi,0.0d+00,0,wrk1,1)
+C     call docpy_nbasI*nbasi,0.0d+00,0,wrk1,1)
         !! WRK1 = H+G(D)
         Call Square(Work(LWFLT+iAOtr-1),WRK2,1,nBasI,nBasI)
         Call DaXpY_(nBasI*nBasI,1.0D+00,WRK2,1,WRK1,1)
@@ -389,9 +334,9 @@ C
         iCMO  = iCMO  + nBasI*nOrbI !?
         iMO   = iMO   + nOrbI*nOrbI
       End Do
-C     write (*,*) "FIFA"
+C     write(6,*) "FIFA"
 C     call sqprt(fifa,nbast)
-C     write (*,*) "FIMO"
+C     write(6,*) "FIMO"
 C     call sqprt(fimo,nbast)
 C
       CALL GETMEM('WFLT','FREE','REAL',LWFLT,NBTRI)
@@ -415,7 +360,7 @@ C
 C
       nOrbI = nBas(iSym)-nDel(iSym)
       nFroI = nFro(iSym)
-      Call DCopy_(nOrbI**2,0.0D+00,0,Fsq,1)
+      Call DCopy_(nOrbI**2,[0.0D+00],0,Fsq,1)
 C
       !! Frozen orbital
       Do iOrb = 1, nFroI
@@ -440,35 +385,33 @@ C-----------------------------------------------------------------------
 C
       !! focktwo.f
       SUBROUTINE OLagFro4(iSym0,iSymI,iSymJ,iSymK,iSymL0,
-     *                    DPT2AO,DPT2CAO,FPT2AO,FPT2CAO,
-     *                    DIA,DI,FIFA,FIMO,WRK)
-C
+     *                    DPT2AO,DPT2CAO,FPT2AO,FPT2CAO,WRK)
+
       USE CHOVEC_IO
-C
+      use ChoSwp, only: InfVec
+      use ChoArr, only: nDimRS
+
       IMPLICIT REAL*8 (A-H,O-Z)
-C
+
 #include "rasdim.fh"
-#include "warnings.fh"
+#include "warnings.h"
 #include "caspt2.fh"
 #include "eqsolv.fh"
 #include "chocaspt2.fh"
-#include "choptr.fh"
 #include "choglob.fh"
 #include "WrkSpc.fh"
-#include "output.fh"
 #include "caspt2_grad.fh"
-C
-      Dimension DPT2AO(*),DPT2CAO(*),FPT2AO(*),FPT2CAO(*)
-      Dimension DIA(*),DI(*),FIFA(*),FIMO(*),WRK(*)
-      Integer ISTLT(8),ISTSQ(8),iSkip(8)
-C
+
+      Dimension DPT2AO(*),DPT2CAO(*),FPT2AO(*),FPT2CAO(*),WRK(*)
+      Integer ISTLT(8),ISTSQ(8),iSkip(8),ipWRK(8)
+
       integer nnbstr(8,3)
-C
-      INFVEC(I,J,K)=IWORK(ip_INFVEC-1+MAXVEC*N2*(K-1)+MAXVEC*(J-1)+I)
-C
+
+      ! INFVEC(I,J,K)=IWORK(ip_INFVEC-1+MAXVEC*N2*(K-1)+MAXVEC*(J-1)+I)
+
       iSym = iSym0
       call getritrfinfo(nnbstr,maxvec,n2)
-C
+
       ISTSQ(1)=0
       ISTLT(1)=0
       Do jSym = 2, nSym
@@ -481,7 +424,7 @@ C
       Do jSym = 1, nSym
         iSkip(jSym) = 1
       End Do
-C
+
       nBasI  = nBas(iSymI)
       nBasJ  = nBas(iSymJ)
       iSymIJ = 1+iEor(iSymI-1,iSymJ-1)
@@ -494,22 +437,24 @@ C
       If (iSymK.EQ.iSymI) iSMax = iSymJ
       iSymL  = 1+iEor(iSymIJ-1,iSymK-1)
       IF (iSymL.GT.iSMax) Return !! should not
-      nBasL  = nBas(iSymL)
+      nBasL  = nBas(iSymL0)
       nBasKL = nBasK*nBasL
-      IF (iSymK.EQ.iSymL) nBasKL = (nBasK*(nBasK+1))/2
+      IF (iSymK.EQ.iSymL0) nBasKL = (nBasK*(nBasK+1))/2
       If (nBasKL.eq.0) Return
-C
+
       CALL GETMEM('CHSPC','ALLO','REAL',IP_CHSPC,NCHSPC)
-      CALL GETMEM('WRK  ','ALLO','REAL',ipWRK,nBasT*nBasT)
-C
+      CALL GETMEM('WRK  ','ALLO','REAL',ipWRK(iSym),nBasT*nBasT)
+
       IBATCH_TOT=NBTCHES(iSym)
 
       IF(NUMCHO_PT2(iSym).EQ.0) Return
 
-      ipnt=ip_InfVec+MaxVec_PT2*(1+InfVec_N2_PT2*(iSym-1))
-      JRED1=iWork(ipnt)
-      JRED2=iWork(ipnt-1+NumCho_PT2(iSym))
-C     write (*,*) "jred1,jred2 = ", jred1,jred2
+      ! ipnt=ip_InfVec+MaxVec_PT2*(1+InfVec_N2_PT2*(iSym-1))
+      ! JRED1=iWork(ipnt)
+      ! JRED2=iWork(ipnt-1+NumCho_PT2(iSym))
+      JRED1=InfVec(1,2,iSym)
+      JRED2=InfVec(NumCho_PT2(iSym),2,iSym)
+!     write(6,*) "jred1,jred2 = ", jred1,jred2
 
 * Loop over JRED
       DO JRED=JRED1,JRED2
@@ -523,7 +468,7 @@ C     write (*,*) "jred1,jred2 = ", jred1,jred2
 * the mapping between reduced index and basis set pairs.
 * The reduced set is divided into suitable batches.
 * First vector is JSTART. Nr of vectors in r.s. is NVECS_RED.
-        JEND=JSTART+NVECS_RED-1
+        ! JEND=JSTART+NVECS_RED-1
 
 * Determine batch length for this reduced set.
 * Make sure to use the same formula as in the creation of disk
@@ -533,9 +478,9 @@ C     write (*,*) "jred1,jred2 = ", jred1,jred2
 * Loop over IBATCH
         JV1=JSTART
         DO IBATCH=1,NBATCH
-C         write (*,*) "ibatch,nbatch = ", ibatch,nbatch
+C         write(6,*) "ibatch,nbatch = ", ibatch,nbatch
           IBATCH_TOT=IBATCH_TOT+1
-  
+
           JNUM=NVLOC_CHOBATCH(IBATCH_TOT)
           JV2=JV1+JNUM-1
 
@@ -561,41 +506,40 @@ C
           END IF
 C
           ipVecL = ip_CHSPC
-          Do iVec = JV1, JV2
+          Do iVec = 1, NUMV
             !! (strange) reduced form -> squared AO vector (mu nu|iVec)
             jVref = 1 !! only for iSwap=1
 C           lscr  = nBasI*(nBasI+1)/2
-            If (l_NDIMRS.LT.1) Then
+            ! If (l_NDIMRS.LT.1) Then
+            If (size(nDimRS).lt.1) Then
               lscr  = NNBSTR(iSym,3)
             Else
               JREDL = INFVEC(iVec,2,iSym)
-              lscr  = iWork(ip_nDimRS+iSym-1+nSym*(JREDL-1)) !! JRED?
+              ! lscr  = iWork(ip_nDimRS+iSym-1+nSym*(JREDL-1)) !! JRED?
+              lscr  = nDimRS(iSym,JREDL)
             End If
             JVEC1 = 1
-            JNUM  = 1
-            NUMV  = 1
             iSwap = 2
 C           Call Cho_ReOrdr(irc,Work(ip_CHSPC+lscr*(iVec-1)),lscr,jVref,
 C    *                      JVEC1,JNUM,NUMV,iSym,JREDC,iSwap,ipWRK,
 C    *                      iSkip)
-            Call DCopy_(nBasI**2,0.0D+00,0,Work(ipWRK),1)
+            Call DCopy_(nBasI**2,[0.0D+00],0,Work(ipWRK(iSym)),1)
             Call Cho_ReOrdr(irc,Work(ipVecL),lscr,jVref,
-     *                      JVEC1,JNUM,NUMV,iSym,JREDC,iSwap,ipWRK,
+     *                      JVEC1,1,1,iSym,JREDC,iSwap,ipWRK,
      *                      iSkip)
             ipVecL = ipVecL + lscr
 C
 C           ----- Fock-like transformations -----
 C
-            Call FDGTRF_RI(Work(ipWRK),DPT2AO ,FPT2AO )
-            Call FDGTRF_RI(Work(ipWRK),DPT2CAO,FPT2CAO)
-C           Call FDGTRF_RI(Work(ipWRK),DIA    ,FIFA   )
-C           Call FDGTRF_RI(Work(ipWRK),DI     ,FIMO   )
+            Call FDGTRF_RI(Work(ipWRK(iSym)),DPT2AO ,FPT2AO )
+            Call FDGTRF_RI(Work(ipWRK(iSym)),DPT2CAO,FPT2CAO)
           End Do
+          JV1=JV1+JNUM
         End Do
       End Do
 C
       CALL GETMEM('CHSPC','FREE','REAL',IP_CHSPC,NCHSPC)
-      CALL GETMEM('WRK  ','FREE','REAL',ipWRK,nBasT*nBasT)
+      CALL GETMEM('WRK  ','FREE','REAL',ipWRK(iSym),nBasT*nBasT)
 C
       !! Have to symmetrize Fock-transformed matrices
       Do i = 1, nBasI
@@ -606,12 +550,6 @@ C
           tmp = (FPT2CAO(i+nBasI*(j-1))+FPT2CAO(j+nBasI*(i-1)))*0.5d+00
           FPT2CAO(i+nBasI*(j-1)) = Tmp
           FPT2CAO(j+nBasI*(i-1)) = Tmp
-C         tmp = (FIFA(i+nBasI*(j-1))+FIFA(j+nBasI*(i-1)))*0.5d+00
-C         FIFA(i+nBasI*(j-1)) = Tmp
-C         FIFA(j+nBasI*(i-1)) = Tmp
-C         tmp = (FIMO(i+nBasI*(j-1))+FIMO(j+nBasI*(i-1)))*0.5d+00
-C         FIMO(i+nBasI*(j-1)) = Tmp
-C         FIMO(j+nBasI*(i-1)) = Tmp
         End Do
       End Do
 C

@@ -20,11 +20,6 @@
 *         intermediate matrix will not push the start of the same out  *
 *         from the cache.                                              *
 *                                                                      *
-* Called from: Cntrct                                                  *
-*                                                                      *
-* Calling    : QEnter                                                  *
-*              QExit                                                   *
-*                                                                      *
 * Author:     Roland Lindh, Dept. of Theoretical Chemistry, University *
 *             of Lund, SWEDEN.                                         *
 ************************************************************************
@@ -32,13 +27,13 @@
 #include "real.fh"
 #include "print.fh"
       Real*8 Coeff1(nPrm1,nCntr1), Coeff2(nPrm2,nCntr2),
-     &       A1(lZeta,nVec), A2(IncVec,nprm2),
-     &       A3(nVec,nCntr1,nCntr2)
+     &       A1(lZeta,nVec)
+      Real*8, Intent(inout) :: A2(IncVec,nprm2), A3(nVec,nCntr1,nCntr2)
       Parameter (mxnprm=1000)   ! be aware of aCD(fat) basis sets.
       Integer Indij(lZeta),idone(mxnprm),nnz2(mxnprm),
      &        ifirst(mxnprm),last(mxnprm)
       Logical First
-*     Call QEnter('CntHlf')
+      ![all others are intent(in)]
 *
       If (nPrm1.gt.mxnprm .or.
      &    nPrm2.gt.mxnprm) Then
@@ -48,7 +43,6 @@
 *
 *     Sparsity check
 *
-      iz2=0
       nz2=0
       minva=max(4,(nPrm2+1)/2)
       Do iCntr2 = 1,nCntr2
@@ -164,6 +158,5 @@ C     &                         A3(iivec,iCntr1,icntr2),1,mVec,nPrm2)
 *
       End Do    ! iiVec
 *
-*     Call QExit('CntHlf')
       Return
       End

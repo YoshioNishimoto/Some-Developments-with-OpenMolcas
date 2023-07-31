@@ -99,7 +99,6 @@ c Loop over all possible symmetry combinations.
       iocmoj=0
       ioDq=0
       do 1020 jsym=0,mirrep-1
-        jksym=ieor(jsym,ksym)
         nj=npam(2,jsym)
         jsta=jend+1
         jend=jend+nj
@@ -127,7 +126,6 @@ c Break loop if not acceptable symmetry combination.
         if(klsym.ne.ijsym) goto 1005
 c Break loop if no such symmetry block:
         if(nijkl.eq.0) goto 1005
-        ilsym=jksym
         If (iPrint.ge.99) Write (6,*) ' i,j,k,lsym=',iSym,jSym,kSym,lSym
 c Bypass transformation if no active orbitals:
         if(nxvut.eq.0) goto 300
@@ -148,14 +146,6 @@ c Pick up matrix elements and put in a full symmetry block:
               if(itu.ge.ivx .and. iv.eq.ix) fact=2.0d00
               if(itu.lt.ivx .and. it.eq.iu) fact=2.0d00
               scrP(ind)=fact*scrP(ind)
-            end if
-            if(isym.eq.lsym) then
-              itx=i3adr(it,ix)
-              ivu=i3adr(iv,iu)
-            end if
-            if(isym.eq.ksym) then
-              itv=i3adr(it,iv)
-              ixu=i3adr(ix,iu)
             end if
          End do
         End do
@@ -283,14 +273,6 @@ c Put results into correct positions in PSOPam:
               if(itu.ge.ivx .and. iv.eq.ix) fact=2.0d00
               if(itu.lt.ivx .and. it.eq.iu) fact=2.0d00
               scr1(ind)=fact*scr1(ind)
-            end if
-            if(isym.eq.lsym) then
-              itx=i3adr(it,ix)
-              ivu=i3adr(iv,iu)
-            end if
-            if(isym.eq.ksym) then
-              itv=i3adr(it,iv)
-              ixu=i3adr(ix,iu)
             end if
          End do
         End do
@@ -451,6 +433,8 @@ C   FOR RAMAN SPECTRA
      &        -Quart*DSO(ioDs+ips,2)*DSO(ioDr+irq,1)
      &        -Quart*DSO(ioDs+ips,3)*DSO(ioDr+irq,4)
      &        -Quart*DSO(ioDs+ips,4)*DSO(ioDr+irq,3)
+     &        -Quart*DSO(ioDs+ips,1)*DSO(ioDr+irq,6)
+     &        -Quart*DSO(ioDs+ips,6)*DSO(ioDr+irq,1)
 !ANDREW - uncomment
 !     &        -Quart*DSO(ioDs+ips,1)*DSO(ioDr+irq,5)
 !     &        -Quart*DSO(ioDs+ips,5)*DSO(ioDr+irq,1)
@@ -461,10 +445,6 @@ C   FOR RAMAN SPECTRA
                PSOPam(ipso)=PSOPam(ipso)
      *            -Quart*SSDM(ioDs+ips,1,iSSDM)*SSDM(ioDr+irq,2,iSSDM)
      *            -Quart*SSDM(ioDs+ips,2,iSSDM)*SSDM(ioDr+irq,1,iSSDM)
-C    *            +Quart*SSDM(ioDs+ips,1,iSSDM)*DSO(ioDr+irq,1)
-C    *            +Quart*SSDM(ioDs+ips,1,iSSDM)*DSO(ioDr+irq,3)
-C    *            +Quart*DSO(ioDs+ips,1)*SSDM(ioDr+irq,1,iSSDM)
-C    *            +Quart*DSO(ioDs+ips,3)*SSDM(ioDr+irq,1,iSSDM)
              End Do
            End If
           end if
@@ -476,6 +456,8 @@ C    *            +Quart*DSO(ioDs+ips,3)*SSDM(ioDr+irq,1,iSSDM)
      &        -Quart*DSO(ioDr+ipr,2)*DSO(ioDs+isq,1)
      &        -Quart*DSO(ioDr+ipr,3)*DSO(ioDs+isq,4)
      &        -Quart*DSO(ioDr+ipr,4)*DSO(ioDs+isq,3)
+     &        -Quart*DSO(ioDr+ipr,1)*DSO(ioDs+isq,6)
+     &        -Quart*DSO(ioDr+ipr,6)*DSO(ioDs+isq,1)
 !ANDREW - uncomment
 !     &        -Quart*DSO(ioDr+ipr,1)*DSO(ioDs+isq,5)
 !     &        -Quart*DSO(ioDr+ipr,5)*DSO(ioDs+isq,1)
@@ -485,10 +467,6 @@ C    *            +Quart*DSO(ioDs+ips,3)*SSDM(ioDr+irq,1,iSSDM)
                PSOPam(ipso)=PSOPam(ipso)
      *            -Quart*SSDM(ioDr+ipr,1,iSSDM)*SSDM(ioDs+isq,2,iSSDM)
      *            -Quart*SSDM(ioDr+ipr,2,iSSDM)*SSDM(ioDs+isq,1,iSSDM)
-C    *            +Quart*SSDM(ioDr+ipr,1,iSSDM)*DSO(ioDs+isq,1)
-C    *            +Quart*SSDM(ioDr+ipr,1,iSSDM)*DSO(ioDs+isq,3)
-C    *            +Quart*DSO(ioDr+ipr,1)*SSDM(ioDs+isq,1,iSSDM)
-C    *            +Quart*DSO(ioDr+ipr,3)*SSDM(ioDs+isq,1,iSSDM)
              End Do
            End If
           end if
@@ -506,10 +484,6 @@ C    *            +Quart*DSO(ioDr+ipr,3)*SSDM(ioDs+isq,1,iSSDM)
                PSOPam(ipso)=PSOPam(ipso)
      *            +SSDM(ioDq+ipq,1,iSSDM)*SSDM(ioDs+irs,2,iSSDM)
      *            +SSDM(ioDq+ipq,2,iSSDM)*SSDM(ioDs+irs,1,iSSDM)
-C    *            -SSDM(ioDq+ipq,1,iSSDM)*DSO(ioDs+irs,1)
-C    *            -SSDM(ioDq+ipq,1,iSSDM)*DSO(ioDs+irs,3)
-C    *            -DSO(ioDq+ipq,1)*SSDM(ioDr+irs,1,iSSDM)
-C    *            -DSO(ioDq+ipq,3)*SSDM(ioDr+irs,1,iSSDM)
              End Do
            End If
           end if

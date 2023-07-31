@@ -18,6 +18,7 @@
  (file)  UNAORB  "$WorkDir/$Project$SubProject."UnaOrb        rwst
  (file)  MP2ORB  "$WorkDir/$Project$SubProject."MP2Orb        rwst
  (file)  RASORB  "$WorkDir/$Project$SubProject."RasOrb        rw*st
+ (file)  ITERORB  "$WorkDir/$Project$SubProject."IterOrb      rw*st
  (file)  DYSORB  "$WorkDir/$Project$SubProject."DysOrb        rw*st
  (file)  PT2ORB  "$WorkDir/$Project$SubProject."Pt2Orb        rw*st
  (file)  CPFORB  "$WorkDir/$Project$SubProject."CpfOrb        rwst
@@ -37,6 +38,7 @@
  (file)  SODISDENS  "$WorkDir/$Project$SubProject."SODSOrb    rw*st
  (file)  SODILDENS  "$WorkDir/$Project$SubProject."SODLOrb    rw*st
  (file)  NTORB  "$WorkDir/$Project$SubProject."NTOrb          rw*st
+ (file)  VECDET "$WorkDir/$Project$SubProject."VecDet         rw*st
 
 #define _ORBITALS_
 #endif

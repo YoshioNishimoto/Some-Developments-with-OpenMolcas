@@ -16,7 +16,6 @@
 *                                                                      *
 ************************************************************************
 #include "output_ras.fh"
-      Parameter (ROUTINE='RDSUPS  ')
       Integer iBuff(*)
       Integer is(288),ie(288)
       Character*288 Line
@@ -28,7 +27,7 @@
 *---  Read next line as a chatacter string  ---------------------------*
 100   Read(LuInput,'(A)',End=900) Line
 *---  Left adjust line  -----------------------------------------------*
-      Call LeftAd(Line)
+      Line = adjustl(line)
       If ( Line(1:1).eq.' ' ) Goto 100
       If ( Line(1:1).eq.'*' ) Goto 100
 *---  Remove multiple intervening blanks  -----------------------------*

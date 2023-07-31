@@ -17,22 +17,21 @@
 * SWEDEN                                     *
 *--------------------------------------------*
       SUBROUTINE MLTCTL(HEFF,EIGVEC,U0)
-      USE REFWFN
+      use caspt2_output, only:iPrGlb,terse,usual,verbose
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "stdalloc.fh"
       INTEGER LAXITY
       INTEGER  Cho_X_GetTol
       EXTERNAL Cho_X_GetTol
-      CHARACTER(8) INLAB
+      CHARACTER(LEN=8) INLAB
+      character(len=3) variant
       DIMENSION HEFF(NSTATE,NSTATE),EIGVEC(NSTATE,NSTATE)
       real(8) U0(Nstate,Nstate)
       real(8),allocatable :: Utmp(:,:)
 
-      CALL QENTER('MLTCTL')
 
       IF(IPRGLB.GE.TERSE) THEN
         CALL CollapseOutput(1,'Multi-State CASPT2 section:')
@@ -45,8 +44,6 @@
       END IF
 
 C Write out the effective Hamiltonian, for use in e.g. RASSI:
-      IRC=-1
-      IOPT=1
       INLAB='HEFF'
       CALL put_darray(INLAB,HEFF,NSTATE**2)
 
@@ -106,7 +103,7 @@ C Use a symmetrized matrix, in triangular storage:
       END IF
       CALL DCOPY_(NSTATE**2,[0.0D0],0,WORK(LUMAT),1)
       CALL DCOPY_(NSTATE,[1.0D0],0,WORK(LUMAT),NSTATE+1)
-      CALL NIDiag(WORK(LHTRI),WORK(LUMAT),NSTATE,NSTATE,0)
+      CALL NIDiag(WORK(LHTRI),WORK(LUMAT),NSTATE,NSTATE)
       CALL JACORD(WORK(LHTRI),WORK(LUMAT),NSTATE,NSTATE)
       DO I=1,NSTATE
         ENERGY(I)=DSHIFT+WORK(LHTRI-1+(I*(I+1))/2)
@@ -118,21 +115,24 @@ C Use a symmetrized matrix, in triangular storage:
       CALL GETMEM('HTRI','FREE','REAL',LHTRI,NHTRI)
 
       IF(IPRGLB.GE.TERSE) THEN
-        If (IFXMS) Then
-          WRITE(6,*)
-          WRITE(6,'(6X,A)')' Total XMS-CASPT2 energies:'
-          DO I=1,NSTATE
-            Call PrintResult(6,'(6x,A,I3,5X,A,F16.8)',
-     &      'XMS-CASPT2 Root',I,'Total energy:',ENERGY(I),1)
-          END DO
+        If (IFRMS) Then
+          variant = 'RMS'
+        Else if (IFXMS.and.IFDW) then
+          variant = 'XDW'
+        Else if (IFXMS) then
+          variant = 'XMS'
+        Else if (IFDW) then
+          variant = 'DW '
         Else
-          WRITE(6,*)
-          WRITE(6,'(6X,A)')' Total MS-CASPT2 energies:'
-          DO I=1,NSTATE
-            Call PrintResult(6,'(6x,A,I3,5X,A,F16.8)',
-     &      'MS-CASPT2 Root',I,'Total energy:',ENERGY(I),1)
-          END DO
+          variant = 'MS '
         End If
+          WRITE(6,*)
+          WRITE(6,'(6X,A,A)')' Total ',trim(variant)//
+     &      '-CASPT2 energies:'
+          DO I=1,NSTATE
+            Call PrintResult(6,'(6x,A,I3,5X,A,F16.8)',trim(variant)//
+     &      '-CASPT2 Root',I,'Total energy:',ENERGY(I),1)
+          END DO
       END IF
 
       IF(IPRGLB.GE.USUAL) THEN
@@ -145,9 +145,9 @@ C Use a symmetrized matrix, in triangular storage:
           END DO
           WRITE(6,*)
         END DO
-        if (IFXMS) then
+        if (IFXMS.or.IFRMS) then
 * Transform eigenvectors into the original input basis
-          call mma_allocate(Utmp,Nstate,Nstate)
+          call mma_allocate(Utmp,Nstate,Nstate,Label='Utmp')
           call dgemm_('N','N',Nstate,Nstate,Nstate,
      &                1.0d0,U0,Nstate,eigvec,Nstate,
      &                0.0d0,Utmp,Nstate)
@@ -176,6 +176,5 @@ C Use a symmetrized matrix, in triangular storage:
       IF(IfChol) LAXITY=Cho_X_GetTol(LAXITY)
       Call Add_Info('E_MSPT2',ENERGY,nState,LAXITY)
 
-      CALL QEXIT('MLTCTL')
       RETURN
       END

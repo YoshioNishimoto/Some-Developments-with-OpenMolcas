@@ -12,6 +12,8 @@
       SUBROUTINE RunGromacs(nAtIn,Coord,ipMltp,MltOrd,Forces,
      &                      ipGrad,Energy)
 
+      USE, INTRINSIC :: iso_c_binding, only: c_int, c_loc, c_ptr
+      use UnixInfo, only: SuperName
       IMPLICIT NONE
 
 #include "espf.fh"
@@ -20,11 +22,12 @@
 
       INTEGER, INTENT(IN) :: ipMltp,MltOrd,nAtIn
       INTEGER, INTENT(OUT) :: ipGrad
-      INTEGER, DIMENSION(3,nAtIn), INTENT(IN) :: Coord
+      REAL*8, DIMENSION(3,nAtIn), INTENT(IN) :: Coord
       REAL*8, INTENT(OUT) :: Energy
       LOGICAL, INTENT(IN) :: Forces
 
-      INTEGER :: iAtGMX,iAtIn,iAtOut,ic,iLast,iOk,ipCR,ipGMS
+      TYPE(c_ptr) :: ipCR,ipGMS
+      INTEGER :: iAtGMX,iAtIn,iAtOut,ic,iLast,iOk
       INTEGER :: j,LuExtPot,LuWr,nAtGMX,nAtOut
       INTEGER, DIMENSION(:), ALLOCATABLE :: AT
       REAL*8 :: EnergyGMX,Energy2GMX,q
@@ -34,21 +37,45 @@
       REAL*8, DIMENSION(:,:), ALLOCATABLE :: ForceGMX,Force2GMX
       REAL*8, DIMENSION(:,:), ALLOCATABLE :: GradMMO
       CHARACTER(LEN=12) :: ExtPotFormat
-      CHARACTER(LEN=100) :: ProgName
       CHARACTER(LEN=256) :: LogFileName,Message,TPRFileName
       LOGICAL :: Found,isNotLast
 
-      INTEGER, EXTERNAL :: init_commrec,isFreeUnit
-      INTEGER, EXTERNAL :: mmslave_calc_energy,mmslave_init
-      INTEGER, EXTERNAL :: mmslave_read_tpr,mmslave_set_q
-      CHARACTER(LEN=100), EXTERNAL :: Get_SuperName
+      INTEGER, EXTERNAL :: isFreeUnit
+      INTERFACE
+        SUBROUTINE mmslave_done(gms) BIND(C,NAME='mmslave_done_')
+          USE, INTRINSIC :: iso_c_binding, ONLY: c_ptr
+          TYPE(c_ptr), VALUE :: gms
+        END SUBROUTINE mmslave_done
+        FUNCTION mmslave_init(cr,log_) BIND(C,NAME='mmslave_init_')
+          USE, INTRINSIC :: iso_c_binding, ONLY: c_char, c_ptr
+          TYPE(c_ptr) :: mmslave_init
+          TYPE(c_ptr), VALUE :: cr
+          CHARACTER(kind=c_char) :: log_(*)
+        END FUNCTION mmslave_init
+        FUNCTION mmslave_read_tpr(tpr,gms)
+     &           BIND(C,NAME='mmslave_read_tpr_')
+          USE, INTRINSIC :: iso_c_binding, ONLY: c_char, c_int, c_ptr
+          INTEGER(kind=c_int) :: mmslave_read_tpr
+          CHARACTER(kind=c_char) :: tpr(*)
+          TYPE(c_ptr), VALUE :: gms
+        END FUNCTION mmslave_read_tpr
+        FUNCTION mmslave_set_q(gms,id,q) BIND(C,NAME='mmslave_set_q_')
+          USE, INTRINSIC :: iso_c_binding, ONLY: c_double, c_int, c_ptr
+          INTEGER(kind=c_int) :: mmslave_set_q
+          TYPE(c_ptr), VALUE :: gms
+          INTEGER(kind=c_int), VALUE :: id
+          REAL(kind=c_double), VALUE :: q
+        END FUNCTION mmslave_set_q
+        FUNCTION init_commrec() BIND(C,NAME='init_commrec_')
+          USE, INTRINSIC :: iso_c_binding, ONLY: c_ptr
+          TYPE(c_ptr) :: init_commrec
+        END FUNCTION init_commrec
+      END INTERFACE
 
-      CALL qEnter('RunGromacs')
 
       LuExtPot = 1
       LuWr = 6
       Energy = Zero
-      ProgName = Get_SuperName()
 
       WRITE(ExtPotFormat,'(a4,i2,a6)') '(I4,',MxExtPotComp,'F13.8)'
 
@@ -86,13 +113,13 @@
       ipCR = init_commrec()
       CALL prgmtranslate('GMX.LOG',LogFileName,iLast)
       LogFileName(iLast+1:iLast+1) = CHAR(0)
-      ipGMS = mmslave_init(%VAL(ipCR),LogFileName)
+      ipGMS = mmslave_init(ipCR,LogFileName)
 
 ! Let Gromacs read tpr file
       TPRFileName = TPRDefName
       iLast = LEN_TRIM(TPRFileName)
       TPRFileName(iLast+1:iLast+1) = CHAR(0)
-      iOk = mmslave_read_tpr(TPRFileName,%VAL(ipGMS))
+      iOk = mmslave_read_tpr(TPRFileName,ipGMS)
       IF (iOk.ne.1) THEN
          Message = 'RunGromacs: mmslave_read_tpr is not ok'
          CALL WarningMessage(2,Message)
@@ -103,7 +130,7 @@
 ! are MMO atoms to optimize, (3) not last energy, (4) multipoles are
 ! available, and (5) no gradient calculation
       IF (MMIterMax>0.AND.nAtOut>0) THEN
-         isNotLast = ProgName(1:11).NE.'last_energy'
+         isNotLast = SuperName(1:11).NE.'last_energy'
          IF ((ipMltp.NE.ip_Dummy).AND.(.NOT.Forces).AND.isNotLast) THEN
             CALL Opt_MMO(nAtIn,Coord,nAtOut,CoordMMO,nAtGMX,AT,ipGMS)
          END IF
@@ -114,8 +141,8 @@
 ! external potential.
       DO iAtGMX = 1,nAtGMX
          IF (AT(iAtGMX)==QM) THEN
-            iOk = mmslave_set_q(%VAL(ipGMS),%VAL(iAtGMX-1),
-     &                          %VAL(SmallNumber))
+            iOk = mmslave_set_q(ipGMS,INT(iAtGMX-1,kind=c_int),
+     &                          SmallNumber)
             IF (iOk.NE.1) THEN
                Message = 'RunGromacs: mmslave_set_q is not ok'
                CALL WarningMessage(2,Message)
@@ -144,8 +171,8 @@
       CALL dcopy_(3*nAtGMX,Zero,0,FieldGMX,1)
       CALL dcopy_(3*nAtGMX,Zero,0,ForceGMX,1)
       CALL dcopy_(nAtGMX,Zero,0,PotGMX,1)
-      iOk = mmslave_calc_energy(%VAL(ipGMS),CoordGMX,ForceGMX,
-     &                          FieldGMX,PotGMX,EnergyGMX)
+      iOk = mmslave_calc_energy_wrapper(ipGMS,CoordGMX,ForceGMX,
+     &                                  FieldGMX,PotGMX,EnergyGMX)
       IF (iOk.NE.1) THEN
          Message='RunGromacs: mmslave_calc_energy is not ok'
          CALL WarningMessage(2,Message)
@@ -164,7 +191,7 @@
          DO iAtGMX = 1,nAtGMX
             IF (AT(iAtGMX)==QM) THEN
                q = Work(ipMltp+ic)
-               iOk = mmslave_set_q(%VAL(ipGMS),%VAL(iAtGMX-1),%VAL(q))
+               iOk = mmslave_set_q(ipGMS,INT(iAtGMX-1,kind=c_int),q)
                IF (iOk.ne.1) THEN
                   Message = 'RunGromacs: mmslave_set_q is not ok'
                   CALL WarningMessage(2,Message)
@@ -173,8 +200,8 @@
                ic = ic+MltOrd
             END IF
          END DO
-         iOk = mmslave_calc_energy(%VAL(ipGMS),CoordGMX,Force2GMX,
-     &                             Field2GMX,Pot2GMX,Energy2GMX)
+         iOk = mmslave_calc_energy_wrapper(ipGMS,CoordGMX,Force2GMX,
+     &                                     Field2GMX,Pot2GMX,Energy2GMX)
          IF (iOk.NE.1) THEN
             Message = 'RunGromacs: mmslave_calc_energy is not ok'
             CALL WarningMessage(2,Message)
@@ -240,11 +267,30 @@
          CALL mma_deallocate(Pot2GMX)
          CALL mma_deallocate(GradMMO)
       END IF
-      CALL mmslave_done(%VAL(ipGMS))
-
-      CALL qExit('RunGromacs')
+      CALL mmslave_done(ipGMS)
 
       RETURN
+
+      CONTAINS
+
+      FUNCTION mmslave_calc_energy_wrapper(gms,x,f,A,phi,energy)
+      INTEGER :: mmslave_calc_energy_wrapper
+      TYPE(c_ptr) :: gms
+      REAL*8, TARGET :: x(*), f(*), A(*), phi(*)
+      REAL*8 :: energy
+      INTERFACE
+        FUNCTION mmslave_calc_energy(gms,x,f,A,phi,energy)
+     &           BIND(C,NAME='mmslave_calc_energy_')
+          USE, INTRINSIC :: iso_c_binding, ONLY: c_double, c_int, c_ptr
+          INTEGER(kind=c_int) :: mmslave_calc_energy
+          TYPE(c_ptr), VALUE :: gms, x, f, A, phi
+          REAL(kind=c_double) :: energy
+        END FUNCTION mmslave_calc_energy
+      END INTERFACE
+      mmslave_calc_energy_wrapper = mmslave_calc_energy(gms,c_loc(x(1)),
+     &  c_loc(f(1)),c_loc(A(1)),c_loc(phi(1)),energy)
+      END FUNCTION mmslave_calc_energy_wrapper
+
       END
 #elif defined (NAGFOR)
 ! Some compilers do not like empty files

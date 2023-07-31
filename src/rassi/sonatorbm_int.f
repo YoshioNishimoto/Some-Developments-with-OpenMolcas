@@ -13,6 +13,7 @@
      &                         PROPVALXR,PROPVALYR,PROPVALZR,
      &                         PROPVALXI,PROPVALYI,PROPVALZI)
       use rassi_global_arrays, only: JBNUM
+      use OneDat, only: sOpSiz
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "prgm.fh"
       CHARACTER*16 ROUTINE
@@ -95,15 +96,14 @@ c JOPT controls what is read.
 c JOPT=1 Read the size information
 c JOPT=0 Read the property
 c JOPT=6 Read the property, skipping the nuclear contribution and the origin
-c (see misc_util/OneFlags.fh)
-      JOPT=1
-      CALL iRDONE(IRC,JOPT,CHARPROP,IC,IDUM,ISCHK)
-      IF (IRC.EQ.0) NSIZ=IDUM(1)
-
+c (see OneDat module)
+      JOPT=ibset(0,sOpSiz)
+      ICMP=IC
+      CALL iRDONE(IRC,JOPT,CHARPROP,ICMP,IDUM,ISCHK)
 
 c Actually read the integral
       JOPT=0
-      CALL RDONE(IRC,JOPT,CHARPROP,IC,WORK(LIP),ISCHK)
+      CALL RDONE(IRC,JOPT,CHARPROP,ICMP,WORK(LIP),ISCHK)
 
       IF ( IRC.NE.0 ) THEN
         WRITE(6,*)
@@ -182,7 +182,7 @@ c in SONATORB.F from the symmetric/antisymmetric equations
         End If
       END IF
 
-      IF(IPGLOB.GE.VERBOSE) THEN
+*      IF(IPGLOB.GE.VERBOSE) THEN
       WRITE(6,*)
       WRITE(6,*) "************************************"
       WRITE(6,*) "SONATORB EXPECTATION VALUES"
@@ -197,7 +197,7 @@ c in SONATORB.F from the symmetric/antisymmetric equations
       WRITE(6,*) "Property: Im(Y): ",PROPVALYI
       WRITE(6,*) "Property: Im(Z): ",PROPVALZI
       WRITE(6,*) "************************************"
-      END IF
+*      END IF
 
 c Free up un-needed space
       CALL GETMEM('IP    ','FREE','REAL',LIP,NIP)

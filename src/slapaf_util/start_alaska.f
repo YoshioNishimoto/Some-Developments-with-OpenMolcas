@@ -9,31 +9,32 @@
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
       Subroutine Start_Alaska()
+      use Slapaf_Parameters, only: Request_Alaska, Request_RASSI, iState
+      use UnixInfo, only: ProgName
       Implicit Real*8 (a-h,o-z)
 #include "print.fh"
-#include "info_slapaf.fh"
-#include "nadc.fh"
-      Character*100 ProgName, Get_ProgName
+      character(len=len(ProgName)) :: PName
       Character*128 FileName
       Character*16 StdIn, JOB1, JOB2
       Character*8 Method
+      Character(LEN=180):: Line
       Logical Exists
 *                                                                      *
 ************************************************************************
 *                                                                      *
 *     Get the name of the module
 *
-      ProgName=Get_ProgName()
-      Call Upcase(ProgName)
-      Call LeftAd(ProgName)
+      PName=ProgName
+      Call Upcase(PName)
+      PName = adjustl(PName)
 *
       iEnd = 1
- 99   If (ProgName(iEnd:iEnd).ne.' ') Then
+ 99   If (PName(iEnd:iEnd).ne.' ') Then
          iEnd=iEnd+1
          Go To 99
       End If
       iEnd = Min(iEnd-1,5)
-      FileName=progname(1:iend)//'INP'
+      FileName=PName(1:iend)//'INP'
 *
       LuInput=11
       LuInput=IsFreeUnit(LuInput)

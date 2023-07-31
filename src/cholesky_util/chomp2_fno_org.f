@@ -15,6 +15,7 @@ C
 C      F. Aquilante, Geneva May 2008  (snick to Pedersen's code)
 C
 C
+      use ChoMP2, only: iFirstS, LnOcc, LnT1am, LiMatij
 #include "implicit.fh"
       Logical Delete
       Real*8  P_ab(*), P_ii(*)
@@ -22,10 +23,7 @@ C
 #include "cholesky.fh"
 #include "chomp2_cfg.fh"
 #include "chomp2.fh"
-#include "WrkSpc.fh"
-      Real*8  DeMP2
-      Logical MP2_small
-      Common / ChFNOPT/ DeMP2, MP2_small
+#include "chfnopt.fh"
 
       Character*7  ThisNm
       Character*14 SecNam
@@ -36,15 +34,11 @@ C
 
       Integer iDummy
       Parameter (iDummy = -999999)
+      Real*8  xsDnom
 
-      iFirstS(i,j)=iWork(ip_FirstS-1+nSym*(j-1)+i)
-      LnT1am(i,j)=iWork(ip_LnT1am-1+nSym*(j-1)+i)
-      LiMatij(i,j,k)=iWork(ip_LiMatij-1+nSym*nSym*(k-1)+nSym*(j-1)+i)
-      LnOcc(i,j)=iWork(ip_LnOcc-1+nSym*(j-1)+i)
       MulD2h(i,j)=iEor(i-1,j-1)+1
       iTri(i,j)=max(i,j)*(max(i,j)-3)/2+i+j
 
-      Call qEnter(ThisNm)
       irc = 0
 
       kP(1)=1
@@ -86,7 +80,7 @@ C        -----------------------------------
             If (ChoAlg.eq.2) Then
 
                kMabij = kXaibj  ! rename pointer
-               Call Cho_dZero(Wrk(kMabij),LnT2am) ! initialize
+               Call FZero(Wrk(kMabij),LnT2am) ! initialize
 
 C              Loop over Cholesky vector symmetries.
 C              -------------------------------------
@@ -260,10 +254,12 @@ C                             -------------------------------------
                                     Dnom = EVir(iVir(iSymb)+ja)
      &                                   + EVir(iVir(iSymb)+jb)
      &                                   - 2.0d0*EOcc(iOcc(iSymj)+j)
+                                    xsDnom = Dnom/(Dnom**2+shf**2)
                                     kOffMM = kOffM
      &                                     + nVir(iSymb)*(jb-1) +ja-1
                                     DeMP2 = DeMP2
-     &                                    + Wrk(kOffMM)**2/Dnom
+c     &                                    + Wrk(kOffMM)**2/Dnom
+     &                                    + Wrk(kOffMM)**2*xsDnom
                                  End Do
                               End Do
 
@@ -314,7 +310,7 @@ C     -----------------------------------
          If (ChoAlg.eq.2) Then
 
             kMabij = kXaibj  ! rename pointer
-            Call Cho_dZero(Wrk(kMabij),LnT2am) ! initialize
+            Call FZero(Wrk(kMabij),LnT2am) ! initialize
 
 C           Loop over Cholesky vector symmetries.
 C           -------------------------------------
@@ -485,11 +481,14 @@ C                          -------------------------------------
                                  Dnom = EVir(iVir(iSymb)+ja)
      &                                + EVir(iVir(iSymb)+jb)
      &                                - 2.0d0*EOcc(iOcc(iSymj)+j)
+                                 xsDnom = Dnom/(Dnom**2+shf**2)
                                  kOffMM = kOffM
      &                                  + nVir(iSymb)*(jb-1) +ja-1
                                  DeMP2 = DeMP2
+c     &                                 + Wrk(kOffMM)**2/Dnom
      &                                 + Wrk(kOffMM)**2/Dnom
-                                 Wrk(kOffMM) = Wrk(kOffMM)/Dnom
+c                                 Wrk(kOffMM) = Wrk(kOffMM)/Dnom
+                                 Wrk(kOffMM) = Wrk(kOffMM)*xsDnom
                               End Do
                            End Do
 
@@ -530,5 +529,4 @@ C     ----------------------------------
          End Do
       End If
 
-      Call qExit(ThisNm)
       End

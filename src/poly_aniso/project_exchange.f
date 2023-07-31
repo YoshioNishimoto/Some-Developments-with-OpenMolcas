@@ -12,7 +12,7 @@
 c  this function determines the local pseuDospins and rotates the hamiltonian
 c  to the local pseuDospin basis
       Implicit None
-      Integer, parameter        :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter        :: wp=kind(0.d0)
       Integer N1,N2
 !     spin-orbit energies on each site
       Real(kind=8) ::  E1(N1), E2(N2)
@@ -41,7 +41,6 @@ c      Real(kind=8) ::  WCG ! Clebsh_Gordan Coefficeints
 c      logical DBG
 c      external WCG
       Complex(kind=8) ::  Jpar(N1-1,-N1+1:N1-1,N2-1,-N2+1:N2-1)
-      Call qEnter('PA_projexch')
 c      DBG=.false.
 
 c      Write(6,'(A)') 'J parameters in the initial ab intio basis:'
@@ -122,6 +121,5 @@ c reWrite the exchange matrix in the basis of local pseuDospins:
       Jc=0.0_wp
       Call tensor2cart(Jpar(1,-1:1,1,-1:1),Jc)
 
-      Call qExit('PA_projexch')
       Return
       End

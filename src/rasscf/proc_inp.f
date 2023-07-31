@@ -10,64 +10,67 @@
 *                                                                      *
 * Copyright (C) 2018, Ignacio Fdez. Galvan                             *
 ************************************************************************
-      Subroutine Proc_Inp(DSCF,Info,lOPTO,iRc)
+      Subroutine Proc_Inp(DSCF,lOPTO,iRc)
 
       use stdalloc, only : mma_allocate, mma_deallocate
       use fortran_strings, only : to_upper, operator(.in.)
 #ifdef _DMRG_
 ! module dependencies
-      use qcmaquis_interface_environment, only: initialize_dmrg
       use qcmaquis_interface_cfg
+      use qcmaquis_interface, only: qcmaquis_interface_init,
+     &        remove_comment, qcmaquis_interface_set_param,
+     &        qcmaquis_interface_stdout
+      use active_space_solver_cfg, only: as_solver_inp_proc
+#ifdef _MOLCAS_MPP_
+      use Para_Info, Only: mpp_procid, mpp_nprocs
 #endif
-      use active_space_solver_cfg
-      use write_orbital_files, only: OrbFiles
+#endif
+      use csfbas, only: CONF, KCFTP
+      use Fock_util_global, only: DoCholesky
+      use write_orbital_files, only: OrbFiles, write_orb_per_iter
       use fcidump, only: DumpOnly
       use fcidump_reorder, only: ReOrInp, ReOrFlag
-      use fciqmc, only: DoEmbdNECI, DoNECI
+      use fciqmc, only: DoEmbdNECI, DoNECI, tGUGA_in
+      use fciqmc_read_RDM, only: MCM7, WRMA
       use CC_CI_mod, only: Do_CC_CI
+      use spin_correlation, only: orb_range_p, orb_range_q, same_orbs
       use orthonormalization, only : ON_scheme, ON_scheme_values
       use fciqmc_make_inp, only : trial_wavefunction, pops_trial,
      &  t_RDMsampling, RDMsampling,
      &  totalwalkers, Time, nmCyc, memoryfacspawn,
      &  realspawncutoff, diagshift, definedet, semi_stochastic
-
+#ifdef _HDF5_
+      use mh5, only: mh5_is_hdf5, mh5_open_file_r, mh5_exists_attr,
+     &               mh5_exists_dset, mh5_fetch_attr, mh5_fetch_dset,
+     &               mh5_close_file
+#endif
+      use KSDFT_Info, only: CoefR, CoefX
+      use OFembed, only: Do_OFemb,KEonly, OFE_KSDFT,
+     &                   ThrFThaw, Xsigma, dFMD
+      use CMS, only: iCMSOpt,CMSGiveOpt,CMSGuessFile
+      use UnixInfo, only: SuperName
       Implicit Real*8 (A-H,O-Z)
 #include "SysDef.fh"
 #include "rasdim.fh"
-#include "warnings.fh"
+#include "warnings.h"
 #include "WrkSpc.fh"
 #include "gas.fh"
 #include "rasscf.fh"
 #include "input_ras.fh"
 #include "splitcas.fh"
 #include "bk_approx.fh"
-#include "general.fh"
+#include "general_mul.fh"
 #include "output_ras.fh"
 #include "orthonormalize.fh"
-#include "ksdft.fh"
-      Parameter (ROUTINE='READIN  ')
 #include "casvb.fh"
 #include "pamint.fh"
 * Lucia-stuff:
 #include "ciinfo.fh"
-#include "csfbas.fh"
 #include "spinfo.fh"
 #include "lucia_ini.fh"
 #include "rasscf_lucia.fh"
 *^ needed for passing kint1_pointer
-#ifdef _HDF5_
-#  include "mh5.fh"
-#endif
-#include "para_info.fh"
 *
-      Logical Do_OFemb,KEonly,OFE_first,l_casdft
-      COMMON  / OFembed_L / Do_OFemb,KEonly,OFE_first
-      Character*16  OFE_KSDFT
-      COMMON  / OFembed_C / OFE_KSDFT
-      COMMON  / OFembed_I / ipFMaux, ip_NDSD, l_NDSD
-      COMMON  / OFembed_T / ThrFThaw
-      COMMON  / OFembed_R1/ Xsigma
-      COMMON  / OFembed_R2/ dFMD
 *
       Character*180  Line
       Character*8 NewJobIphName
@@ -83,23 +86,14 @@
       Dimension iMAlter(MaxAlter,2)
       Integer IPRGLB_IN, IPRLOC_IN(7)
 
-      Logical DoCholesky,timings,DensityCheck
 #ifdef _DMRG_
 * DMRG-NEVPT2 variables: MPS compression, 4-RDM evaluation
 #include "nevptp.fh"
 #endif
-      Logical DoLocK,Deco
-      Logical Estimate,Update
-      Integer ALGO,Nscreen
-      Real*8  dmpk,ChFracMem
       Logical DBG, exist
 
-      Common /CHLCAS / DoCholesky,ALGO
-      COMMON /CHODENSITY/ DensityCheck
-      COMMON /CHOTIME / timings
-      Common /CHOLK / DoLocK,Deco,dmpk,Nscreen
-      COMMON /CHOSCREEN/ Estimate,Update
-      COMMON /CHOPAR/ ChFracMem
+#include "chotime.fh"
+#include "chopar.fh"
 
       Integer IScratch(10)
 * Label informing on what type of data is available on an INPORB file.
@@ -109,7 +103,7 @@
       DIMENSION NFRO_L(8),NISH_L(8),NRS1_L(8),NRS2_L(8)
       DIMENSION NRS3_L(8),NSSH_L(8),NDEL_L(8)
 #ifdef _HDF5_
-      character(1), allocatable :: typestring(:)
+      character(len=1), allocatable :: typestring(:)
 #endif
 * TOC on JOBOLD (or JOBIPH)
       DIMENSION IADR19(15)
@@ -118,8 +112,6 @@
       External Get_LN
       Real*8   Get_ExFac
       External Get_ExFac
-      Character*100 ProgName, Get_SuperName
-      External Get_SuperName
       Character*72 ReadStatus
       Character*72 JobTit(mxTit)
       Character*256 myTitle
@@ -131,13 +123,15 @@
 
       integer :: start, step, length
 
-      character(50) :: ON_scheme_inp, uppercased
+      character(len=50) :: ON_scheme_inp, uppercased
+      character(len=:), allocatable :: buffer
 
 #ifdef _DMRG_
 !     dmrg(QCMaquis)-stuff
+      Character*256 CurrDir
+      Character*72 ProjectName
       integer              :: LRras2_dmrg(8)
       integer, allocatable :: initial_occ(:,:)
-      logical              :: ifverbose_dmrg,ifdo_dmrg
       character(len=20)    :: guess_dmrg
 !     dmrg(QCMaquis)-stuff
 #endif
@@ -152,7 +146,6 @@ C   No changing about read in orbital information from INPORB yet.
 #ifdef _DMRG
 * Leon: Prepare 4-RDM calculations for (CD)-DMRG-NEVPT2 at the end of the calculation
       DoNEVPT2Prep = .FALSE.
-      DoEvaluateRDM = .FALSE.
 !     If this is set to 0, MPS compression is disabled
       MPSCompressM = 0
 #endif
@@ -176,16 +169,15 @@ C   No changing about read in orbital information from INPORB yet.
         hfocc(i) = 0
       end do
 
-* Orbital-free embedding
-      Do_OFemb=.false.
-      KEonly  =.false.
-      OFE_first  =.true.
-      ipFMaux = -666666
-      ip_NDSD = -696969
-      l_NDSD = 0
-      ThrFThaw = 0.0d0
-      dFMD = 0.0d0
-      Xsigma=1.0d4
+#ifdef _ENABLE_DICE_SHCI_
+      dice_stoc = .false.
+      nref_dice = 1
+      dice_eps1 = 1.0d-4
+      dice_eps2 = 1.0d-5
+      dice_sampleN = 200
+      dice_iter = 20
+      dice_restart = .false.
+#endif
 
 *    SplitCAS related variables declaration  (GLMJ)
       DoSplitCAS= .false.
@@ -200,10 +192,6 @@ C   No changing about read in orbital information from INPORB yet.
 *   QCMaquis flags
 * ======================================================================
       dofcidump      =   .false.
-#ifdef _DMRG_
-      ifdo_dmrg      =   doDMRG
-      ifverbose_dmrg =   .false.
-#endif
 
 * ======================================================================
 
@@ -213,7 +201,6 @@ C   No changing about read in orbital information from INPORB yet.
 *     The compiler thinks NASHT could be undefined later (after 100)
       NASHT=0
 
-      Call qEnter('Proc_Inp')
 
       DBG=.false.
       NAlter=0
@@ -265,23 +252,22 @@ C   No changing about read in orbital information from INPORB yet.
        Call SetPos(LUInput,'EXPE',Line,iRc)
        Call ChkIfKey()
       Else
-        ProgName=Get_SuperName()
         IfVB=0
-        If (ProgName(1:6).eq.'rasscf') Then
+        If (SuperName(1:6).eq.'rasscf') Then
 * For geometry optimizations use the old CI coefficients.
          If (.Not.Is_First_Iter()) Then
            KeyCIRE=.true.
            KeyFILE=.false.
          End If
-        Else If (ProgName(1:5).eq.'casvb') Then
+        Else If (SuperName(1:5).eq.'casvb') Then
          IfVB=2
-        Else If (ProgName(1:6).eq.'loprop') Then
+        Else If (SuperName(1:6).eq.'loprop') Then
          KeyCIRE=.true.
          KeyFILE=.false.
-        Else If (ProgName(1:11).eq.'last_energy') Then
+        Else If (SuperName(1:11).eq.'last_energy') Then
          KeyCIRE=.true.
          KeyFILE=.false.
-        Else If (ProgName(1:18).eq.'numerical_gradient') Then
+        Else If (SuperName(1:18).eq.'numerical_gradient') Then
          KeyCIRE=.true.
          KeyFILE=.false.
         End If
@@ -415,7 +401,6 @@ C   No changing about read in orbital information from INPORB yet.
 *          3: specifications from orbital file
       iOrbData=0
       INVEC=0
-      iHAVECI=0
 * INVEC=0, no source for orbitals (yet)
 *       1, CORE command: compute orbitals from scratch.
 *       2, read from starting orbitals file in INPORB format.
@@ -787,33 +772,12 @@ C   No changing about read in orbital information from INPORB yet.
        If (Line(1:4).eq.'ROKS') DFTFOCK='ROKS'
        If (Line(1:6).eq.'CASDFT') DFTFOCK='DIFF'
        Read(LUInput,*,End=9910,Err=9920) Line
-       KSDFT=Line(1:16)
+       KSDFT=Line(1:80)
        Call UpCase(KSDFT)
-       l_casdft = KSDFT(1:5).eq.'TLSDA'   .or.
-     &            KSDFT(1:6).eq.'TLSDA5'  .or.
-     &            KSDFT(1:5).eq.'TBLYP'   .or.
-     &            KSDFT(1:6).eq.'TSSBSW'  .or.
-     &            KSDFT(1:5).eq.'TSSBD'   .or.
-     &            KSDFT(1:5).eq.'TS12G'   .or.
-     &            KSDFT(1:4).eq.'TPBE'    .or.
-     &            KSDFT(1:5).eq.'FTPBE'   .or.
-     &            KSDFT(1:5).eq.'TOPBE'   .or.
-     &            KSDFT(1:6).eq.'FTOPBE'  .or.
-     &            KSDFT(1:7).eq.'TREVPBE' .or.
-     &            KSDFT(1:8).eq.'FTREVPBE'.or.
-     &            KSDFT(1:6).eq.'FTLSDA'  .or.
-     &            KSDFT(1:6).eq.'FTBLYP'
+       l_casdft = KSDFT(1:2).eq.'T:' .or. KSDFT(1:3).eq.'FT:'
        If (.NOT.l_casdft) GoTo 9920
        If (IPRLOC(1).GE.DEBUG.and.l_casdft)
      &     write(6,*) ' MCPDFT with functional:', KSDFT
-CGG Calibration of A, B, C, and D coefficients in SG's NewFunctional 1
-       If ( KSDFT(1:4).eq.'NEWF') Then
-         ReadStatus=' Failure reading data following KSDF=NEWF.'
-         Read(LUInput,*,End=9910,Err=9920)
-     &                                       Acoef,Bcoef,Ccoef,Dcoef
-         ReadStatus=' O.K. after reading data following KSDF=NEWF.'
-       End If
-CGG This part will be removed. (PAM 2009: What on earth does he mean??)
       ExFac=Get_ExFac(KSDFT)
 *---  Process DFCF command --------------------------------------------*
       If (KeyDFCF) Then
@@ -871,6 +835,112 @@ CGG This part will be removed. (PAM 2009: What on earth does he mean??)
        If (DBG) Write(6,*) ' ROtSTate keyword was used.'
        iRotPsi=1
        Call SetPos(LUInput,'ROST',Line,iRc)
+       Call ChkIfKey()
+      End If
+*---  Process XMSI command --------------------------------------------*
+      If (DBG) Write(6,*) ' Check if XMSI case.'
+      If (KeyXMSI) Then
+       If (DBG) Write(6,*) ' XMSI keyword was used.'
+       iRotPsi=1
+       IXMSP=1
+       Call SetPos(LUInput,'XMSI',Line,iRc)
+       Call ChkIfKey()
+      End If
+*---  Process CMSI command --------------------------------------------*
+      If (DBG) Write(6,*) ' Check if CMSI case.'
+      If (KeyCMSI) Then
+       If (DBG) Write(6,*) ' CMSI keyword was used.'
+       iRotPsi=1
+       ICMSP=1
+       Call SetPos(LUInput,'CMSI',Line,iRc)
+       Call ChkIfKey()
+      End If
+*---  Process CMSS command --------------------------------------------*
+      CMSStartMat='XMS'
+      If (KeyCMSS.and.(iCMSP.eq.1)) Then
+       If (DBG) Then
+         Write(6,*)' Reading CMS inital rotation matrix'
+       End If
+       Call SetPos(LUInput,'CMSS',Line,iRc)
+       Line=Get_Ln(LUInput)
+       If(iRc.ne._RC_ALL_IS_WELL_) GoTo 9810
+       Call ChkIfKey()
+       If (DBG) Then
+         Write(6,*) ' Reading CMS starting rotation matrix from'
+         Write(6,*) trim(Line)
+       End If
+       if(.not.(trim(Line).eq.'XMS'))  then
+         CMSGuessFile=trim(Line)
+         CMSStartMat=CMSGuessFile
+         call F_Inquire(trim(CMSStartMat),lExists)
+         if(.not.lExists) then
+           write(LF,'(6X,A,A)') trim(CMSStartMat),
+     &' is not found. Use XMS intermediate states as initial guess.'
+           CMSStartMat='XMS'
+         end if
+C         call fileorb(Line,CMSStartMat)
+       end if
+      End If
+*---  Process CMSO command --------------------------------------------*
+      If (KeyCMSO.and.(iCMSP.eq.1)) Then
+       If (DBG) Then
+         Write(6,*) 'Inputting CMS optimization option'
+       End If
+       Call SetPos(LUInput,'CMSO',Line,iRc)
+       Line=Get_Ln(LUInput)
+       CALL Upcase(Line)
+       If(Line(1:4).eq.'NEWT') Then
+        iCMSOpt=1
+       Else If(Line(1:4).eq.'JACO') Then
+        iCMSOpt=2
+       Else
+        ReadStatus='Wrong value assigned to keyword CMSO'
+        GoTo 9920
+       End If
+       CMSGiveOpt=.true.
+       If(iRc.ne._RC_ALL_IS_WELL_) GoTo 9810
+       If (DBG) Then
+        Write(6,*) ' CMS Optimization Option',iCMSOpt
+       End If
+       Call ChkIfKey()
+      End If
+*---  Process CMMA command --------------------------------------------*
+      If (KeyCMMA) Then
+       If (DBG) Write(6,*) ' CMS Max Cylces keyword was given.'
+       Call SetPos(LUInput,'CMMA',Line,iRc)
+       If(iRc.ne._RC_ALL_IS_WELL_) GoTo 9810
+       ReadStatus=' Failure reading data following CMMA keyword.'
+       Read(LUInput,*,End=9910,Err=9920) ICMSIterMax
+       ReadStatus=' O.K. reading data following CMMA keyword.'
+       If (DBG) Then
+        Write(6,*) ' Max nr of CMS cycles',ICMSIterMax
+       End If
+       Call ChkIfKey()
+      End If
+*---  Process CMMI command --------------------------------------------*
+      If (KeyCMMI) Then
+       If (DBG) Write(6,*) ' CMS Min Cylces keyword was given.'
+       Call SetPos(LUInput,'CMMI',Line,iRc)
+       If(iRc.ne._RC_ALL_IS_WELL_) GoTo 9810
+       ReadStatus=' Failure reading data following CMMI keyword.'
+       Read(LUInput,*,End=9910,Err=9920) ICMSIterMin
+       ReadStatus=' O.K. reading data following CMMI keyword.'
+       If (DBG) Then
+        Write(6,*) ' Min nr of CMS cycles',ICMSIterMin
+       End If
+       Call ChkIfKey()
+      End If
+*---  Process CMTH command --------------------------------------------*
+      If (KeyCMTH) Then
+       If (DBG) Write(6,*) ' CMS Threshold keyword was given.'
+       Call SetPos(LUInput,'CMTH',Line,iRc)
+       If(iRc.ne._RC_ALL_IS_WELL_) GoTo 9810
+       ReadStatus=' Failure reading data following CMTH keyword.'
+       Read(LUInput,*,End=9910,Err=9920) CMSThreshold
+       ReadStatus=' O.K. reading data following CMTH keyword.'
+       If (DBG) Then
+        Write(6,*) ' CMS threshold',CMSThreshold
+       End If
        Call ChkIfKey()
       End If
 *---  Process RFPE command ----- (new!) -------------------------------*
@@ -955,6 +1025,72 @@ CGG This part will be removed. (PAM 2009: What on earth does he mean??)
         Write(6,*) ' Response field will follow CISE root: ',ICIRFROOT
        End If
       End If
+*---  Process SSCR command --------------------------------------------*
+      if (KeySSCR) then
+        if (DBG) write(6,*) ' SSCR command was given.'
+        call setpos(luinput,'SSCR',line,irc)
+        If(iRc.ne._RC_ALL_IS_WELL_) GoTo 9810
+        line=get_ln(luinput)
+        line(80:80)='0'
+        ReadStatus=' Failure reading after KeySSCR keyword.'
+        read(line,*,err=9920,end=9920) norbs, same_orbs
+        ReadStatus=' O.K reading after KeySSCR keyword.'
+
+        if (norbs >= mxOrb) then
+          write(6,'(a)', advance="no") 'SSCR error:'
+          write(6,*) "number of spatial orbitals exceeds maximum"
+          write(6,'(a,i4)') "norbs = ", norbs
+          write(6,'(a)') new_line('a')
+          call abend()
+        end if
+
+        call mma_allocate(orb_range_p,norbs)
+        call mma_allocate(orb_range_q,norbs)
+
+        if (same_orbs /= 1) then
+          Line=Get_Ln(LUInput)
+          readstatus=' failure reading after SSCR keyword.'
+          read(Line,*) (orb_range_p(i), i = 1, norbs)
+          Line=Get_Ln(LUInput)
+          read(Line,*) (orb_range_q(j), j = 1, norbs)
+
+          if (size(orb_range_p) /= size(orb_range_q)) then
+            write(6,'(a)', advance="no") 'SSCR error:'
+            write(6,*) "numbers of spatial orbitals do not match"
+            write(6,*) "orb_range_p has length ", size(orb_range_p)
+            write(6,*) "orb_range_q has length ", size(orb_range_q)
+            write(6,'(a)') new_line('a')
+            call abend()
+          end if
+
+          do i = 1, norbs
+            do j = 1, norbs
+              if (i < j) then
+                if (orb_range_p(i) == orb_range_p(j)) then
+                  write(6,'(a)', advance="no") 'SSCR error:'
+                  write(6,*) 'first range contains duplicates.'
+                  write(6,'(*(i4))') orb_range_p
+                  write(6,'(a)') new_line('a')
+                  call abend()
+                end if
+                if (orb_range_q(i) == orb_range_q(j)) then
+                  write(6,'(a)', advance="no") 'SSCR error:'
+                  write(6,*) 'second range contains duplicates.'
+                  write(6,'(*(i4))') orb_range_q
+                  write(6,'(a)') new_line('a')
+                  call abend()
+                end if
+              end if
+            end do
+          end do
+        else
+            do i = 1, norbs
+              orb_range_p(i) = i
+              orb_range_q(i) = i
+            end do
+        end if
+      call ChkIfKey()
+      end if
 *---  Process CIRO command --------------------------------------------*
       If (DBG) Write(6,*) ' Check for CIROOTS command.'
       IF(KeyCIRO) Then
@@ -1158,7 +1294,6 @@ CIgorS End
 
 * CORE is probably becoming obsolete.
 *---  Process CORE command --------------------------------------------*
-      Continue
       If (KeyCORE) Then
        If (DBG) Write(6,*)' CORE command was used.'
         IF (IPRLEV.ge.VERBOSE) Write(LF,*)
@@ -1654,7 +1789,7 @@ CIgorS End
 * PAM Jan 2014 -- do not take POTNUC from JOBIPH; take it directly
 * from runfile, where it was stored by seward.
         iAd19=iAdr19(1)
-        CALL WR_RASSCF_Info(JobOld,2,iAd19,NACTEL,ISPIN,NSYM,LSYM,
+        CALL WR_RASSCF_Info(JobOld,2,iAd19,NACTEL,ISPIN,NSYM,STSYM,
      &                      NFRO,NISH,NASH,NDEL,NBAS,
      &                      mxSym,lJobH1,LENIN8*mxOrb,NCONF,
      &                      lJobH2,2*72,JobTit,4*18*mxTit,
@@ -1930,6 +2065,9 @@ C orbitals accordingly
           goto 9930
         end if
       end if
+      if (KeyPERI) then
+        write_orb_per_iter = .true.
+      end if
 *---  Process NECI commands -------------------------------------------*
       if (KeyNECI) then
         if(DBG) write(6, *) 'NECI is actived'
@@ -1950,16 +2088,46 @@ C orbitals accordingly
      &'for compiling or use an external NECI.')
 #endif
         end if
+*----------------------------------------------------------------------------------------
+        if (KeyWRMA) then
+            WRMA = .true.
+            if(DBG) write(6, *) 'DMAT/PSMAT/PAMAT will be dumped.'
+        end if
+*----------------------------------------------------------------------------------------
+        if (KeyMCM7) then
+#ifndef _HDF5_
+          call WarningMessage(2, 'MCM7 is given in the input, '//
+     &    'please make sure to compile Molcas with HDF5 support.')
+#endif
+            MCM7 = .true.
+            if (.not. DoNECI) then
+                call WarningMessage(2, 'MCM7 needs the NECI keyword!')
+                GoTo 9930
+            end if
+            if(DBG) write(6, *) 'M7 CASSCF activated.'
+        end if
+*----------------------------------------------------------------------------------------
+        if (KeyGUGA) then
+            tGUGA_in = .true.
+            if(DBG) write(6, *) 'spin-free GUGA-NECI RDMs are actived'
+            if (.not. KeyNECI) then
+              call WarningMessage(2, 'GUGA requires NECI keyword!')
+              GoTo 9930
+            end if
+        end if
 *--- This block is to process the DEFINEDET -------------------
         if(KeyDEFI) then
-          call mma_allocate(definedet, nActel)
           call setpos(luinput,'DEFI',line,irc)
+          call mma_allocate(buffer,2000)
           if(irc.ne._RC_ALL_IS_WELL_) goto 9810
           ReadStatus = ' Failure reading Definedet.'
-          Read(luinput,*,end=9910,Err=9920)(definedet(i), i = 1, nActEl)
+          Read(luinput,'(A)',end=9910,Err=9920) buffer
           ReadStatus = ' O.K. reading Definedet.'
+          call mma_allocate(definedet,len_trim(buffer))
+          definedet(:) = trim(buffer)
+          call mma_deallocate(buffer)
           write(6,*)'definedet read in proc_inp of size:', nactel
-          write(6,*)(definedet(i), i = 1, nActEl)
+          write(6,*) definedet
         end if
         if(KeyTOTA) then
           call setpos(luinput,'TOTA',line,irc)
@@ -2058,23 +2226,23 @@ C orbitals accordingly
        If(iRc.ne._RC_ALL_IS_WELL_) GoTo 9810
        Line=Get_Ln(LUInput)
        ReadStatus=' Failure reading symmetry index after SYMM keyword.'
-       Read(Line,*,Err=9920) LSYM
+       Read(Line,*,Err=9920) STSYM
        ReadStatus=' O.K. reading symmetry index after SYMM keyword.'
-       If (DBG) Write(6,*) ' State symmetry index ',LSYM
+       If (DBG) Write(6,*) ' State symmetry index ',STSYM
        Call ChkIfKey()
-* If LSYM has not been set, normally it should be defaulted to 1.
-* Exception: if this is a high-spin OS case, these often require LSYM.ne.1:
+* If STSYM has not been set, normally it should be defaulted to 1.
+* Exception: if this is a high-spin OS case, these often require STSYM.ne.1:
       ELSE
-        LSYM=1
+        STSYM=1
         IF(ISPIN.eq.NASHT+1) THEN
          DO ISYM=1,NSYM
           NA=NASH(ISYM)
-          IF(NA.ne.2*(NA/2)) LSYM=MUL(LSYM,ISYM)
+          IF(NA.ne.2*(NA/2)) STSYM=MUL(STSYM,ISYM)
          END DO
         END IF
       END IF
-      Call put_iscalar('LSYM',LSYM)
-      If (DBG) Write(6,*)' State symmetry LSYM=',LSYM
+      Call put_iscalar('STSYM',STSYM)
+      If (DBG) Write(6,*)' State symmetry STSYM=',STSYM
 *
 * =======================================================================
 *
@@ -2128,35 +2296,41 @@ C orbitals accordingly
       IF (KEYHEXS) THEN
         IF(DBG) WRITE(6,*) ' HEXS (Highly excited states)'//
      &                       ' keyword was given. '
-       Call SetPos(LUInput,'HEXS',Line,iRc)
-       If(iRc.ne._RC_ALL_IS_WELL_) GoTo 9810
-       I_ELIMINATE_GAS_MOLCAS = 1
-       ReadStatus=' Failure reading data following HEXS keyword.'
-       Read(LUInput,*,End=9910,Err=9920) N_ELIMINATED_GAS_MOLCAS
-       ReadStatus=' O.K. after reading data following HEXS keyword.'
-         ReadStatus=' Failure reading data following HEXS keyword.'
-         Read(LUInput,*,End=9910,Err=9920)
-     &   (IELIMINATED_IN_GAS_MOLCAS(I),I=1,N_ELIMINATED_GAS_MOLCAS)
-         ReadStatus=' O.K. after reading data following HEXS keyword.'
+        Call SetPos(LUInput,'HEXS',Line,iRc)
+        If(iRc.ne._RC_ALL_IS_WELL_) GoTo 9810
+        if ((I_ELIMINATE_GAS_MOLCAS /= 0) .and.
+     &     (I_ELIMINATE_GAS_MOLCAS /= 2)) then
+          Call WarningMessage(2, 'HEXS keyword defined more than once')
+          goto 9810
+        endif
+        I_ELIMINATE_GAS_MOLCAS = I_ELIMINATE_GAS_MOLCAS + 1
+        ReadStatus=' Failure reading data following HEXS keyword.'
+        Read(LUInput,*,End=9910,Err=9920) N_ELIMINATED_GAS_MOLCAS
+        ReadStatus=' O.K. after reading data following HEXS keyword.'
+        ReadStatus=' Failure reading data following HEXS keyword.'
+        Read(LUInput,*,End=9910,Err=9920)
+     &       (IELIMINATED_IN_GAS_MOLCAS(I),I=1,N_ELIMINATED_GAS_MOLCAS)
+        ReadStatus=' O.K. after reading data following HEXS keyword.'
       END IF
 *
 * --- Process DEXS command
-* At the moment same array as HEXS is being used
-* If HEXS and DEXS should be used together rename one these arrays
-*
       IF (KEYDEXS) THEN
         IF(DBG) WRITE(6,*) ' DEXS (Doubly excited states)'//
      &                       ' keyword was given. '
        Call SetPos(LUInput,'DEXS',Line,iRc)
        If(iRc.ne._RC_ALL_IS_WELL_) GoTo 9810
-       I_ELIMINATE_GAS_MOLCAS = 2
-       ReadStatus=' Failure reading data following HEXS keyword.'
-       Read(LUInput,*,End=9910,Err=9920) N_ELIMINATED_GAS_MOLCAS
-       ReadStatus=' O.K. after reading data following HEXS keyword.'
-         ReadStatus=' Failure reading data following HEXS keyword.'
-         Read(LUInput,*,End=9910,Err=9920)
-     &   (IELIMINATED_IN_GAS_MOLCAS(I),I=1,N_ELIMINATED_GAS_MOLCAS)
-         ReadStatus=' O.K. after reading data following HEXS keyword.'
+       if (I_ELIMINATE_GAS_MOLCAS > 1) then
+         Call WarningMessage(2, 'DEXS keyword defined more than once')
+         goto 9810
+       endif
+       I_ELIMINATE_GAS_MOLCAS = I_ELIMINATE_GAS_MOLCAS + 2
+       ReadStatus=' Failure reading data following DEXS keyword.'
+       Read(LUInput,*,End=9910,Err=9920) N_2ELIMINATED_GAS_MOLCAS
+       ReadStatus=' O.K. after reading data following DEXS keyword.'
+       ReadStatus=' Failure reading data following DEXS keyword.'
+       Read(LUInput,*,End=9910,Err=9920)
+     &      (I2ELIMINATED_IN_GAS_MOLCAS(I),I=1,N_2ELIMINATED_GAS_MOLCAS)
+       ReadStatus=' O.K. after reading data following DEXS keyword.'
       END IF
 *
 *---  Process HROO command ---
@@ -2186,7 +2360,6 @@ C orbitals accordingly
       END IF
 *
 *---  Process CLEA command ---
-      Continue
       If (KeyCLEA) Then
        If (DBG) Write(6,*) ' CLEAN (Orbital Cleaning) keyword.'
        If (DBG) Write(6,*) ' (Awkward input -- replace??).'
@@ -2436,7 +2609,7 @@ C orbitals accordingly
        Read(LUInput,'(A)',End=9910,Err=9920) OFE_KSDFT
        ReadStatus=' O.K. after reading data after OFEM keyword.'
        Call UpCase(OFE_KSDFT)
-       Call LeftAd(OFE_KSDFT)
+       OFE_KSDFT = adjustl(OFE_KSDFT)
        write(6,*)
        write(6,*)  '  --------------------------------------'
        write(6,*)  '   Orbital-Free Embedding Calculation'
@@ -2694,7 +2867,7 @@ c       write(6,*)          '  --------------------------------------'
           Call ChkIfKey()
         end if
         !> DMRG flag
-        ifdo_dmrg=.true.
+        doDMRG=.true.
         LRras2_dmrg(1:8) = 0
         !> LRras2 = Ras2 as the default
         do i=1,nsym
@@ -2703,10 +2876,6 @@ c       write(6,*)          '  --------------------------------------'
         !> initial guess setup
         guess_dmrg(1:7) = 'DEFAULT'
         call mma_allocate(initial_occ,nrs2t,nroots); initial_occ = 0
-        !> debug output
-#ifdef _DMRG_DEBUG_
-        ifverbose_dmrg = .true.
-#endif
       end if
 *
 *---  Process RGIN command (QCMaquis Custom Input) --------------------*
@@ -2766,7 +2935,8 @@ c       write(6,*)          '  --------------------------------------'
         Line=Get_Ln(LUInput)
         call UpCase(Line)
         If (Index(Line,'EVRD').ne.0) then
-          DoEvaluateRDM = .TRUE.
+         Call WarningMessage(2,'Warning,EvRDM keyword is deprecated.')
+         Write(6,*) ('RDM evaluation is done in NEVPT2 module now')
         end if
 
 #else
@@ -2970,6 +3140,73 @@ c       write(6,*)          '  --------------------------------------'
        write(6,*)(hfocc(i),i=1,NASHT)
       End If
 
+#ifdef _ENABLE_DICE_SHCI_
+*---  Process DICE command --------------------------------------------*
+      If (KeyDICE) Then
+       DoBlockDMRG = .True.
+       Write(6,*) 'DICE> (semistochastic) heat bath configuration ',
+     & 'interaction (SHCI)'
+       Call SetPos(LUInput,'DICE',Line,iRc)
+       Call ChkIfKey()
+      End If
+*---  Process STOC command --------------------------------------------*
+      If (KeySTOC) Then
+       Dice_Stoc=.True.
+       Write(6,*) 'DICE> Using semistochastic algorithm',
+     & 'interaction (SHCI)'
+       Call SetPos(LUInput,'STOC',Line,iRc)
+       Call ChkIfKey()
+      End If
+*---  Process DIOC command --------------------------------------------*
+      DICEOCC = ''
+      If (KeyDIOC) Then
+       Call SetPos(LUInput,'DIOC',Line,iRc)
+       If(iRc.ne._RC_ALL_IS_WELL_) GoTo 9810
+       ReadStatus=' Failure reading data after DIOC keyword.'
+       Read(LUInput,*,End=9910,Err=9920) nref_dice
+       do iref_dice=1,nref_dice
+          Read(LUInput,'(A)',End=9910,Err=9920) diceocc(iref_dice)
+          call molcas2dice(diceocc(iref_dice))
+       enddo
+       ReadStatus=' O.K. after reading data after DIOC keyword.'
+       Call ChkIfKey()
+      End If
+*---  Process EPSI command --------------------------------------------*
+      If (KeyEPSI) Then
+       If (DBG) Write(6,*) ' EPS (Thresholds) command was used.'
+       Call SetPos(LUInput,'EPS',Line,iRc)
+       If(iRc.ne._RC_ALL_IS_WELL_) GoTo 9810
+       ReadStatus=' Failure reading thresholds after EPSI keyword.'
+       Read(LUInput,*,End=9910,Err=9920) dice_eps1,dice_eps2
+       ReadStatus=' O.K. after reading thresholds after EPSI keyword.'
+       Call ChkIfKey()
+      End If
+*---  Process SAMP command --------------------------------------------*
+      If (KeySAMP) Then
+       Call SetPos(LUInput,'SAMP',Line,iRc)
+       If(iRc.ne._RC_ALL_IS_WELL_) GoTo 9810
+       ReadStatus=' Failure reading data after SAMP keyword.'
+       Read(LUInput,*,End=9910,Err=9920) dice_sampleN
+       ReadStatus=' O.K. after reading data after SAMP keyword.'
+       Call ChkIfKey()
+      End If
+*---  Process DITE command --------------------------------------------*
+      If (KeyDITE) Then
+       Call SetPos(LUInput,'DITE',Line,iRc)
+       If(iRc.ne._RC_ALL_IS_WELL_) GoTo 9810
+       ReadStatus=' Failure reading data after DITE keyword.'
+       Read(LUInput,*,End=9910,Err=9920) dice_iter
+       ReadStatus=' O.K. after reading data after DITE keyword.'
+       Call ChkIfKey()
+      End If
+*---  Process DIRE command --------------------------------------------*
+      If (KeyDIRE) Then
+       dice_restart=.True.
+       Call SetPos(LUInput,'DIRE',Line,iRc)
+       Call ChkIfKey()
+      End If
+#endif
+
 *---  All keywords have been processed ------------------------------*
 
       If (.not.KeyINAC) Then
@@ -3144,37 +3381,59 @@ C Test read failed. JOBOLD cannot be used.
      &    PCM_On()       .or.
      &    Do_OFEmb       .or.
      &    KSDFT.ne.'SCF'     )
-     &    Call IniSew(Info,DSCF.or.Langevin_On().or.PCM_On(),nDiff)
+     &    Call IniSew(DSCF.or.Langevin_On().or.PCM_On(),nDiff)
 * ===============================================================
+#ifdef _DMRG_
+      domcpdftDMRG = l_casdft .and. doDMRG
+      twordm_qcm = domcpdftDMRG.or.(.not.KeyCION)
+#endif
 
       ! Setup part for DMRG calculations
 #ifdef _DMRG_
       if(keyDMRG .or. doDMRG)then
-        call initialize_dmrg(
-     &!>>>>>>>>>>>>>>>>>>>>>>>>>>>>   DMRGSCF wave function    <<<<<<<<<<<<<<<<<<<<<<<<<!
-     &           nsym,              ! Number of irreps
-     &           lsym,              !    Target irreps            DEFAULT:       1
-     &           nactel,            ! Number of electrons
-     &           ispin,             ! Multiple                    DEFAULT: singlet(1)
-     &           nroots,            ! Number of roots             DEFAULT:       1
-     &           lroots,            ! Max   roots                 DEFAULT:       1
-     &           iroot,             ! Target root                 DEFALUT:       1
-     &           nrs2,              ! RAS2 (active) orbitals      DEFALUT:   All 0
-     &           LRras2_dmrg,       ! RAS2 for LR (SA gradient)   DEFALUT:   All 0
-     &           NRS2T,             ! Number of RAS2 orbitals     DEFAULT:       0
-     &           weight,            ! Root Weight
-     &           THRE,              ! Threshold for energy        DEFAULT:   1e-08
-     &!>>>>>>>>>>>>>>>>>>>>>>>>>>>>   DMRG start options       <<<<<<<<<<<<<<<<<<<<<<<<<<!
-     &           ifdo_dmrg,         ! Logical DMRG                DEFAULT:   .FALSE.
-     &           guess_dmrg,        ! Initial guess               DEFALUT:  "Default"         (-> CI_DEAS)
-     &           initial_occ
-     &!>>>>>>>>>>>>>>>>>>>>>>>>>>>>   MPI options              <<<<<<<<<<<<<<<<<<<<<<<<<<!
+      call getenv("Project", ProjectName)
+      call getenv("CurrDir", CurrDir)
+      ! Initialize the new interface
+
+        call qcmaquis_interface_init(
+     &    nactel,
+     &    sum(nrs2),
+     &    ispin-1, ! in QCMaquis spins start with 0
+     &    stsym-1, ! in QCMaquis irreps start with 0
+     &    nsym,
+     &    nrs2,
+     &    qcmaquis_param%conv_thresh,
+     &    qcmaquis_param%M,
+     &    qcmaquis_param%num_sweeps,
+     &    trim(CurrDir)//"/"//trim(ProjectName),
+     &    twordm_qcm,
+     &    nroots,
+     &    lroots,
+     &    iroot,
+     &    thre,
+     &    weight,
 #ifdef _MOLCAS_MPP_
-     &          ,nprocs,
-     &           myrank
+     &    mpp_nprocs,
+     &    mpp_procid,
 #endif
-     &!>>>>>>>>>>>>><<>>>>>>>>>>>>>   Developer options        <<<<<<<<<<<<<<<<<<<<<<<<<<!
-     &           )
+     &    initial_occ)
+       ! TODO: Support sweep_bond_dimension!
+       ! This is an optional parameter to qcmaquis_interface_init not used here yet
+       ! For now, it is set by the following qcmaquis_interface_set_param
+
+        ! Read in the parameters
+        ! Loop over the lines of qcmaquis input, ignore the comments
+        do ii = 1, size(dmrg_input%qcmaquis_input)/2
+            ij = 2*ii
+            call remove_comment(dmrg_input%qcmaquis_input(ij-1), "//")
+            call remove_comment(dmrg_input%qcmaquis_input(ij), "//")
+
+            call qcmaquis_interface_set_param(
+     &               trim(dmrg_input%qcmaquis_input(ij-1)),
+     &               trim(dmrg_input%qcmaquis_input(ij)))
+        end do
+
+      call qcmaquis_interface_stdout(trim(ProjectName)//".QCMaquis.log")
       end if
 #endif
 *
@@ -3236,7 +3495,7 @@ C Test read failed. JOBOLD cannot be used.
       nactel_Molcas    = nactel
       ms2_Molcas       = ms2
       ispin_Molcas     = ispin
-      lsym_Molcas      = lsym
+      lsym_Molcas      = stsym
       NHOLE1_Molcas    = NHOLE1
       NELEC3_Molcas    = NELEC3
       itmax_Molcas     = itmax
@@ -3263,9 +3522,12 @@ C Test read failed. JOBOLD cannot be used.
           Call StatusLine('RASSCF:','Initializing Lucia...')
           CALL Lucia_Util('Ini',iDummy,iDummy,Dummy)
 * to get number of CSFs for GAS
+* and number of determinants to store
           nconf=0
+          nDet=0
           do i=1,mxsym
             nconf=nconf+ncsasm(i)
+            nDet=nDet+ndtasm(i)
           end do
 #ifdef _DMRG_
         end if
@@ -3287,8 +3549,8 @@ C Test read failed. JOBOLD cannot be used.
 * ===============================================================
       IF (ICICH.EQ.1) THEN
         CALL GETMEM('UG2SG','ALLO','INTE',LUG2SG,NCONF)
-        CALL UG2SG(NROOTS,NCONF,NAC,NACTEL,LSYM,IPR,
-     *             IWORK(KICONF(1)),IWORK(KCFTP),IWORK(LUG2SG),
+        CALL UG2SG(NROOTS,NCONF,NAC,NACTEL,STSYM,IPR,
+     *             CONF,IWORK(KCFTP),IWORK(LUG2SG),
      *             ICI,JCJ,CCI,MXROOT)
         CALL GETMEM('UG2SG','FREE','INTE',LUG2SG,NCONF)
       END IF
@@ -3352,12 +3614,10 @@ C Test read failed. JOBOLD cannot be used.
 *---  Normal exit -----------------------------------------------------*
 9000  CONTINUE
       If (DBG) Write(6,*)' Normal exit from PROC_INP.'
-      Call qExit('Proc_Inp')
       Return
 *---  Abnormal exit ---------------------------------------------------*
 9900  CONTINUE
       If (DBG) Write(6,*)' Abnormal exit from PROC_INP.'
-      Call qExit('Proc_Inp')
       Return
 
       end subroutine proc_inp

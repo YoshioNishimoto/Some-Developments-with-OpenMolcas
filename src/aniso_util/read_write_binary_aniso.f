@@ -12,7 +12,7 @@
      &                              esfs, U, MM, MS, ML, DM, angmom,
      &                              edmom, amfi, HSO )
       Implicit None
-      Integer, parameter :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter        :: wp=kind(0.d0)
       Integer            :: nss, nstate
       Integer            :: multiplicity(nstate)
       Real(kind=8)      :: eso(nss), esfs(nstate)
@@ -30,7 +30,6 @@
       Real(kind=8)      :: g_e
       Real(kind=8), allocatable :: tmpR(:,:), tmpI(:,:)
 
-      Call qEnter('read_binary_aniso')
       g_e=2.0023193043718_wp
       ! initialize:
       multiplicity=0
@@ -141,7 +140,6 @@
       Call mma_deallocate(tmpI)
       Call daclos(luaniso)
 
-      Call qExit('read_binary_aniso')
       Return
       End Subroutine read_binary_aniso
 
@@ -151,7 +149,7 @@
      &                               esfs, U, MM, MS, DM, ANGMOM,
      &                               EDMOM, AMFI, HSO )
       Implicit None
-      Integer, parameter :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter        :: wp=kind(0.d0)
       Integer            :: nss, nstate
       Integer            :: multiplicity(nstate)
       Real(kind=8)      :: eso(nss), esfs(nstate)
@@ -163,17 +161,18 @@
       ! local variables:
 #include "stdalloc.fh"
       Integer            :: i, j, l
-      Integer            :: luaniso, idisk
+      Integer            :: luaniso, idisk, idum(1)
       Real(kind=8), allocatable :: tmpR(:,:), tmpI(:,:)
 
-      Call qEnter('write_binary_aniso')
       LUANISO=8
       ! open the binary $Project.aniso file
       Call DANAME(LUANISO,'POLYFILE')
       ! writing data to it:
       idisk=0
-      Call idafile(luaniso,1,[nstate],1,idisk)
-      Call idafile(luaniso,1,[nss],1,idisk)
+      idum(1)=nstate
+      Call idafile(luaniso,1,idum,1,idisk)
+      idum(1)=nss
+      Call idafile(luaniso,1,idum,1,idisk)
       ! spin multiplicity ofthe spin free states:
       Call idafile(luaniso,1,multiplicity,nstate,idisk)
       ! spin-orbit energies:
@@ -261,7 +260,6 @@
       ! close the binary $Project.aniso file
       Call daclos(luaniso)
 
-      Call qExit('write_binary_aniso')
       Return
       End
 

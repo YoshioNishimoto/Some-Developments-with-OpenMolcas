@@ -36,28 +36,38 @@
 *    It was hard to write, and it must be hard to understand..."       *
 *                                                                      *
 ************************************************************************
+      Use Basis_Info, only: Basis_Info_Free
+      Use Center_Info, only: Center_Info_Free
+      use Symmetry_Info, only: Symmetry_Info_Free
+      use Arrays, only: Hss, FAMO, FAMO_SpinP, FAMO_SpinM, SFock,
+     &                  G2mm, G2mp, G2pp, Fp, Fm, G1p, G1m,
+     &                  CMO_Inv, CMO,
+     &                  Int1, pINT1, INT2, pINT2, G2t, G2sq, G1t,
+     &                  FIMO, F0SQMO
+      use Str_Info, only: DFTP, CFTP, DTOC, CNSM
+      use negpre, only: SS
+      use PDFT_Util, only :Do_Hybrid,WF_Ratio,PDFT_Ratio
       Implicit Real*8 (a-h,o-z)
-
 #include "Input.fh"
-#include "warnings.fh"
-#include "WrkSpc.fh"
+#include "warnings.h"
+#include "stdalloc.fh"
 #include "machine.fh"
 #include "SysDef.fh"
 
-#include "blksize.fh"
 #include "sa.fh"
 #include "Pointers.fh"
-#include "glbbas_mclr.fh"
-#include "lbbas1.fh"
 #include "detdim.fh"
-#include "csfbas_mclr.fh"
 #include "dmrginfo_mclr.fh"
 #include "csfsd.fh"
+      Integer, Allocatable:: ifpK(:), ifpS(:), ifpRHS(:),
+     &            ifpCI(:), ifpSC(:), ifpRHSCI(:)
 
 #include "Files_mclr.fh"
 
       Logical Reduce_Prt
       External Reduce_Prt
+      Integer get_MBl_wa
+      External get_MBl_wa
 *
 *     first a few things for making Markus Happy
       logical converged(8)
@@ -65,6 +75,7 @@
 *                                                                      *
 ************************************************************************
 *                                                                      *
+*     Call MCLR_banner()
       Call CWTime(TCpu1,TWall1)
 *                                                                      *
 ************************************************************************
@@ -74,12 +85,9 @@
 *                                                                      *
 ************************************************************************
 *                                                                      *
-*
-      call qenter('MCLR')
-*
       iAllo=0
 c      idp=rtoi
-      nrec=MBl_wa/rtob
+      nrec=get_MBl_wa()/rtob
 *
       Call DecideOnCholesky(DoCholesky)
       Call get_iScalar('nSym',nSymX)
@@ -90,10 +98,8 @@ c      idp=rtoi
       EndIf
 
 *
-      Call Init_Data
+      Call Init_Data()
 *
-*
-
       doDMRG = .false.
       doMCLR = .false.
 #ifdef _DMRG_
@@ -109,7 +115,6 @@ c      idp=rtoi
 !       open(unit=117,file="mclr_dets.initial")
 !      end if
 #endif
-
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -117,14 +122,12 @@ c      idp=rtoi
 *
       Call OpnFls_MCLR(iPL)
       Call IpInit()
-
 *                                                                      *
 ************************************************************************
 *                                                                      *
 *     Read input
 *
       Call InpCtl_MCLR(iPL)
-
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -145,13 +148,12 @@ c      idp=rtoi
          nA(iSym)=nna
          nnA=nnA+nAsh(isym)
       end do
+      nacpar=(nnA+1)*nnA/2
+      nacpr2=(nacpar+1)*nacpar/2
 
       Call Start_MCLR()
-
 *
       nisp=max(8,nDisp)
-*
-
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -161,25 +163,24 @@ c      idp=rtoi
 *                                                                      *
 *     File pointers
 *
-      Call GetMem('KapFile','ALLO','INTE',ifpK,nisp)
-      Call ICOPY(nisp,[-1],0,iWork(ifpk),1)
-      Call GetMem('SigFile','ALLO','INTE',ifpS,nisp)
-      Call ICOPY(nisp,[-1],0,iWork(ifps),1)
-      Call GetMem('RHSFile','ALLO','INTE',ifpRHS,nisp)
-      Call ICOPY(nisp,[-1],0,iWork(ifprhs),1)
+      Call mma_allocate(ifpK,nisp,Label='ifpK')
+      ifpK(:)=-1
+      Call mma_allocate(ifpS,nisp,Label='ifpS')
+      ifpS(:)=-1
+      Call mma_allocate(ifpRHS,nisp,'ifpRHS')
+      ifpRHS(:)=-1
       If (iMethod.eq.2) Then
-         Call GetMem('CIFile','ALLO','INTE',ifpCI,nisp)
-         Call ICOPY(nisp,[-1],0,iWork(ifpci),1)
-         Call GetMem('SCFile','ALLO','INTE',ifpSC,nisp)
-         Call ICOPY(nisp,[-1],0,iWork(ifpsc),1)
-         Call GetMem('RHCCIe','ALLO','INTE',ifpRHSCI,nisp)
-         Call ICOPY(nisp,[-1],0,iWork(ifprhsci),1)
+         Call mma_allocate(ifpCI,nisp,Label='ifpCI')
+         Call mma_allocate(ifpSC,nisp,Label='ifpSC')
+         Call mma_allocate(ifpRHSCI,nisp,Label='ifpRHSCI')
       Else
-         ifpCI=1
-         ifpSC=1
-         ifpRHSCI=1
+         Call mma_allocate(ifpCI,   1,Label='ifpCI')
+         Call mma_allocate(ifpSC,   1,Label='ifpSC')
+         Call mma_allocate(ifpRHSCI,   1,Label='ifpRHSCI')
       End If
-
+      ifpCI(:)=-1
+      ifpSC(:)=-1
+      ifpRHSCI(:)=-1
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -189,37 +190,39 @@ c      idp=rtoi
 *
 *     Output is stored on disk
 *
-*
-
       If (SPINPOL) Then
-         Call WfCtl_SP(iWork(ifpK),iWork(ifpS),iWork(ifpCI),
-     &                 iWork(ifpSC),iWork(ifpRHS),iWork(ifpRHSCI))
+         Call WfCtl_SP(ifpK,ifpS,ifpCI,ifpSC,ifpRHS,ifpRHSCI)
 *     Else if (ELECHESS) Then
-*        Call WfCtl_PCG(iWork(ifpK),iWork(ifpS),iWork(ifpCI),
-*                       iWork(ifpSC),iWork(ifpRHS),iWork(ifpRHSCI))
+*        Call WfCtl_PCG(ifpK,ifpS,ifpCI,ifpSC,ifpRHS,ifpRHSCI)
 *        Call Abend()
       Else if(iMCPD) Then!pdft
-         Call WfCtl_PDFT(iWork(ifpK),iWork(ifpS),iWork(ifpCI),
-     &                 iWork(ifpSC),iWork(ifpRHS),
-     &                 converged,iPL)
+
+        Do_Hybrid=.false.
+        CALL qpg_DScalar('R_WF_HMC',Do_Hybrid)
+        If(Do_Hybrid) Then
+         CALL Get_DScalar('R_WF_HMC',WF_Ratio)
+         PDFT_Ratio=1.0d0-WF_Ratio
+        End If
+
+        if(iMSPD) then
+          if(Do_Hybrid) then
+           CALL WarningMessage(2,
+     &     'Hybrid MS-PDFT gradient not supported yet')
+           CALL Quit(_RC_EXIT_EXPECTED_)
+          end if
+          Call WfCtl_MSPD(ifpK,ifpS,ifpCI,ifpSC,ifpRHS,converged,iPL)
+        else
+          Call WfCtl_PDFT(ifpK,ifpS,ifpCI,ifpSC,ifpRHS,converged,iPL)
+        end if
       Else if (SA.or.PT2) Then
-C     write (*,*) "tractl start"
-C       if (pt2) call tractl_mclr
-C     write (*,*) "tractl finish"
-         Call WfCtl_SA(iWork(ifpK),iWork(ifpS),iWork(ifpCI),
-     &                 iWork(ifpSC),iWork(ifpRHS),
-     &                 converged,iPL)
+         Call WfCtl_SA(ifpK,ifpS,ifpCI,ifpSC,ifpRHS,converged,iPL)
       Else If (TimeDep) Then
-         Call WfCtl_td(iWork(ifpK),iWork(ifpS),iWork(ifpCI),
-     &                 iWork(ifpSC),iWork(ifpRHS),iWork(ifpRHSCI),
+         Call WfCtl_td(ifpK,ifpS,ifpCI,ifpSC,ifpRHS,ifpRHSCI,
      &                 converged)
       Else
-         Call WfCtl_Hess(iWork(ifpK),iWork(ifpS),iWork(ifpCI),
-     &                   iWork(ifpSC),iWork(ifpRHS),iWork(ifpRHSCI),
+         Call WfCtl_Hess(ifpK,ifpS,ifpCI,ifpSC,ifpRHS,ifpRHSCI,
      &                   converged)
       End If
-
-
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -227,84 +230,94 @@ C     write (*,*) "tractl finish"
 *
       If(.not.(TwoStep.and.(StepType.eq.'RUN1'))) Then
          If (PT2.or.SA.or.iMCPD) Then
-            Call Out_PT2(iWork(ifpK),iWork(ifpCI))
+            Call Out_PT2(ifpK,ifpCI)
             If (PT2) Close (LUPT2) !! this file is opend in wfctl_sa
          Else If (TimeDep) Then
-            Call Output_td(iWork(ifpK),iWork(ifpS),
-     &                     iWork(ifpCI),iWork(ifpSC),
-     &                     iWork(ifpRHS),iWork(ifpRHSCI),converged)
+            Call Output_td(ifpK,ifpS,ifpCI,ifpSC,
+     &                     ifpRHS,ifpRHSCI,converged)
          Else
-            Call Output_mclr(iWork(ifpK),iWork(ifpS),
-     &                       iWork(ifpCI),iWork(ifpSC),
-     &                       iWork(ifpRHS),iWork(ifpRHSCI),converged)
+            Call Output_mclr(ifpK,ifpS,ifpCI,ifpSC,
+     &                       ifpRHS,ifpRHSCI,converged)
             If (mckinley) Call isoloop(Double)
          End If
 *
-         If (RASSI)   Call OutRAS   (iWork(ifpK),iWork(ifpCI))
+         If (RASSI)   Call OutRAS   (ifpK,ifpCI)
 *
-         If (TimeDep) Call OutRAS_td(iWork(ifpK),iWork(ifpCI))
+         If (TimeDep) Call OutRAS_td(ifpK,ifpCI)
       End If
 *                                                                      *
 ************************************************************************
 *                                                                      *
-
+      Call Basis_Info_Free()
+      Call Center_Info_Free()
+      Call Symmetry_Info_Free()
+*                                                                      *
+************************************************************************
+*                                                                      *
 *     Deallocate memory
-*
-      nDum=1
 *
 *     Arrays in csf.f
       If (iMethod.eq.2) Then
-         CALL GETMEM('KICTS ','Free','INTEGER',KICTS(1),nDum)
-         CALL GETMEM('KICONF','Free','INTEGER',KICONF(1),nDum)
-         CALL GETMEM('KDTOC','Free','REAL   ',KDTOC,nDum)
-         CALL GETMEM('KCFTP','Free','INTEGER',KCFTP,nDum)
-         CALL GETMEM('KDFTP','Free','INTEGER',KDFTP,nDum)
+         Call mma_deallocate(DTOC)
+         Call mma_deallocate(CFTP)
+         Call mma_deallocate(DFTP)
       End if
+      Do i = 1, MXCNSM
+         If (Allocated(CNSM(i)%ICONF))
+     &                Call mma_deallocate(CNSM(i)%ICONF)
+         If (Allocated(CNSM(i)%ICTS))
+     &                Call mma_deallocate(CNSM(i)%ICTS)
+      End Do
 
 *     Free arrays allocated by memstr.f
-      If (iMethod.eq.2) Call FreeStr
+      If (iMethod.eq.2) Call FreeStr()
 *     Arrays in inpone.f
-      Call GetMem('ONEHAM','Free','REAL',kint1,nDum)
-*     Arrays in incsfsd.f
-      If (iAllo.eq.1) Then
-         Call Getmem('KICONF2','Free','INTEGER',kiconf(2),nDum)
-         Call Getmem('KICTS2','Free','INTEGER',Kicts(2),nDum)
-      End If
+      Call mma_deallocate(INT1)
 *     Arrays in detctl.f
       If (iMethod.eq.2) Then
-         Call Getmem('TwoOff','Free','INTE',KpINT2,nDum)
-         Call Getmem('OneOff','Free','INTE',KpINT1,nDum)
+         Call mma_deallocate(pINT2)
+         Call mma_deallocate(pINT1)
       End if
 
 *     Array in rdab.f
       If (iMethod.eq.1) Then
-         Call Free_Work(ipCMO)
+         Call mma_deallocate(CMO)
       End If
 *     Arrays in rdjobip_td.f and rdjobiph.f
       If (iMethod.eq.2) Then
-         Call GetMem(' G2 ','Free','Real',ipG2t,nDum)
-         If (Timedep) Call GetMem(' G2 ','Free','Real',ipG2sq,nDum)
-         Call GetMem(' G1 ','Free','Real',ipG1t,nDum)
-         Call Free_Work(ipCMO)
+         Call mma_deallocate(G2t)
+         If (Timedep) Call mma_deallocate(G2sq)
+         Call mma_deallocate(G1t)
+         Call mma_deallocate(CMO)
       End If
 
 *     Arrays allocated in stpert.f
-      Call GetMem('CONN','Free','Real',ipHss,nDum)
-*     Arrays allocated in fckmat.f
-      Call GetMem('FASQMO','Free','Real',ipFAMO,ndens2)
-      If (iMethod.eq.2) Call GetMem('K2Int','Free','Real',k2int,nDum)
-      Call GetMem('fisqMO','Free','Real',ipfiMO,ndens2)
-      Call GetMem('f0sqMO','Free','Real',ipf0sqMO,ndens2)
-
-      If (iMethod.eq.2) Then
-         Call GetMem('RHCCIe','Free','INTE',ifpRHSCI,nisp)
-         Call GetMem('SCFile','Free','INTE',ifpSC,nisp)
-         Call GetMem('CIFile','Free','INTE',ifpCI,nisp)
+      Call mma_deallocate(Hss)
+      If (SPINPOL) Then
+         Call mma_deallocate(FAMO_SpinP)
+         Call mma_deallocate(FAMO_SpinM)
+         Call mma_deallocate(G2mm)
+         Call mma_deallocate(G2mp)
+         Call mma_deallocate(G2pp)
+         Call mma_deallocate(Fp)
+         Call mma_deallocate(Fm)
+         Call mma_deallocate(G1p)
+         Call mma_deallocate(G1m)
+         Call mma_deallocate(SFock)
       End If
-      Call GetMem('RHSFile','Free','INTE',ifpRHS,nisp)
-      Call GetMem('SigFile','Free','INTE',ifpS,nisp)
-      Call GetMem('KapFile','Free','INTE',ifpK,nisp)
+*     Arrays allocated in fckmat.f
+      Call mma_deallocate(FAMO)
+      Call mma_deallocate(Int2)
+      Call mma_deallocate(FIMO)
+      Call mma_deallocate(F0SQMO)
 
+      Call mma_deallocate(ifpRHSCI)
+      Call mma_deallocate(ifpSC)
+      Call mma_deallocate(ifpCI)
+      Call mma_deallocate(ifpRHS)
+      Call mma_deallocate(ifpS)
+      Call mma_deallocate(ifpK)
+      If (Allocated(SS)) Call mma_deallocate(SS)
 *
 *     Close files
 *
@@ -318,11 +331,7 @@ C     write (*,*) "tractl finish"
         End Do
         Call DACLOS(LuChoInt(1))
         Call DACLOS(LuChoInt(2))
-        nOrbBas =0
-        Do iSym=1,nSym
-          nOrbBas  = nOrbBas  + nOrb(iSym)*nBas(iSym)
-        End Do
-        Call GetMem('CMO_inv','Free','Real',ip_CMO_inv,nOrbBas)
+        Call mma_deallocate(CMO_Inv)
       End If
 
       If(TwoStep.and.(StepType.eq.'RUN1')) irc=ipclose(-1)
@@ -339,7 +348,6 @@ C     write (*,*) "tractl finish"
       Else
          ireturn=_RC_NOT_CONVERGED_
       End If
-      Call qStat(' ')
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -377,6 +385,5 @@ C     write (*,*) "tractl finish"
 *                                                                      *
 ************************************************************************
 *                                                                      *
-      Call QExit('MCLR')
       Return
       End

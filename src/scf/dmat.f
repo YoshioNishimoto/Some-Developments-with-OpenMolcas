@@ -12,114 +12,96 @@
 *               1992, Markus P. Fuelscher                              *
 *               1992, Piotr Borowski                                   *
 *               2003, Valera Veryazov                                  *
+*               2022, Roland Lindh                                     *
 ************************************************************************
-      SubRoutine DMat(Dens,TwoHam,nDT,NumDT,CMO,nCMO,OccNo,lthO,
-     &                nD,Ovrlp,XCf,nXCf,Vxc)
+      SubRoutine DMat(XCf,nXCf,nD)
 ************************************************************************
 *                                                                      *
 * Purpose: Compute aufbau density matrix                               *
 *                                                                      *
-* input:                                                               *
+************************************************************************
+      Use Interfaces_SCF, Only: dOne_SCF, MinDns
+      use InfSCF
+      use stdalloc, only: mma_allocate, mma_deallocate
+      use Constants, only: One
+      use SCF_Arrays, only: Dens, TwoHam, Vxc, CMO, OccNo, Ovrlp
 *   Dens    : density matrix - vector containing some (NumDT) last     *
-*             (optimized) density matrix differences - (nDT,NumDT)     *
+*             (optimized) density matrix differences - (nDT,nD,NumDT)  *
 *   TwoHam  : two-el. part of the Fock matrix - vector containing      *
-*             corresponding 2-el. contributions - (nDT,NumDT)          *
+*             corresponding 2-el. contributions - (nDT,nD,NumDT)       *
 *   Vxc     : Vxc     part of the Fock matrix - vector containing      *
-*             corresponding 2-el. contributions - (nDT,NumDT)          *
+*             corresponding 2-el. contributions - (nDT,nD,NumDT)       *
 *   CMO     : molecular orbitals of length nCMO                        *
 *   OccNo   : occupation numbers of length lthO                        *
-*                                                                      *
-* output:                                                              *
-*   Dens    : in proper position density difference is created         *
-*                                                                      *
-* called from: WfCtl, Final                                            *
-*                                                                      *
-* calls to: RWDTG, DOne                                                *
-*                                                                      *
-*----------------------------------------------------------------------*
-*                                                                      *
-* Written by:                                                          *
-* P.O. Widmark, M.P. Fuelscher and P. Borowski                         *
-* University of Lund, Sweden, 1992                                     *
-*                                                                      *
-*----------------------------------------------------------------------*
-*                                                                      *
-* history: UHF- V.Veryazov 2003                                        *
-*                                                                      *
-************************************************************************
-      Implicit Real*8 (a-h,o-z)
-      Real*8 Dens(nDT,nD,NumDT),TwoHam(nDT,nD,NumDT), Vxc(nDT,nD,NumDT),
-     &       CMO(nCMO,nD),OccNo(lthO,nD), Ovrlp(nDT), XCf(nXCf,nD)
-      Logical alpha_density
-      Real*8, Dimension(:), Allocatable:: Aux
-#include "real.fh"
-#include "mxdm.fh"
-#include "infscf.fh"
-#include "stdalloc.fh"
-#include "interfaces_scf.fh"
+      Implicit None
+      Integer nXCF, nD
+      Real*8  XCf(nXCf,nD)
 *----------------------------------------------------------------------*
 * Local variables                                                      *
 *----------------------------------------------------------------------*
+      Logical alpha_density
+      Real*8, Dimension(:), Allocatable:: Aux
+      Integer iFrom, iOnDsk, iD
+      Real*8, External:: DDot_
+      Integer nCMO
 *----------------------------------------------------------------------*
 * Start                                                                *
 *----------------------------------------------------------------------*
-*define _DEBUG_
+      nCMO=Size(CMO,1)
+*define _DEBUGPRINT_
 *     Call Timing(Cpu1,Tim1,Tim2,Tim3)
-*
-      iter_d=iter-iter0 ! get interation index
 *
 *     Form proper MapDns vector
 *
-      If (MapDns(iter_d).eq.0) Then   ! Position not defined
+      If (MapDns(iter).eq.0) Then   ! Position not defined
 *
 *        Update MapDns and eventually write earlier Dens, TwoHam,
 *        and Vxc matrices to disk.
 *
-         nDsk=Max(0,iter_d-nMem) ! is there too many densities?
+         nDsk=Max(0,iter-nMem) ! is there too many densities?
 *
          If (nDsk.eq.0) Then    ! keep the array in memory
 *
-            MapDns(iter_d)=iter_d
+            MapDns(iter)=iter
 *
          Else
 *
-            iFrom=MapDns(iter_d-nMem) ! get index of array to dump
+            iFrom=MapDns(iter-nMem) ! get index of array to dump
 *
-            MapDns(iter_d)=iFrom      ! assign to new array
+            MapDns(iter)=iFrom      ! assign to new array
 *
-            If (iter_d-nMem.eq.1) Then
-               MapDns(iter_d-nMem)=-1 !  Initiate
+            If (iter-nMem.eq.1) Then
+               MapDns(iter-nMem)=-1 !  Initiate
             Else
-               MapDns(iter_d-nMem)=MapDns(iter_d-nMem-1)-1
+               MapDns(iter-nMem)=MapDns(iter-nMem-1)-1
             End If
 *
 *           Dump the vectors
 *
-            iOnDsk=-MapDns(iter_d-nMem)
+            iOnDsk=-MapDns(iter-nMem)
             Call RWDTG(iOnDsk,Dens(1,1,iFrom),  nBT*nD,'W',
-     &                 'DENS  ',iDisk,MxDDsk)
+     &                 'DENS  ',iDisk,SIZE(iDisk,1))
             Call RWDTG(iOnDsk,TwoHam(1,1,iFrom),nBT*nD,'W',
-     &                 'TWOHAM',iDisk,MxDDsk)
+     &                 'TWOHAM',iDisk,SIZE(iDisk,1))
             Call RWDTG(iOnDsk,Vxc   (1,1,iFrom),nBT*nD,'W',
-     &                 'dVxcdR',iDisk,MxDDsk)
+     &                 'dVxcdR',iDisk,SIZE(iDisk,1))
          End If
 *
       End If
 *
 * Check if MapDns is correct
 *
-      iPsLst=MapDns(iter_d)
+      iPsLst=MapDns(iter)
       If (iPsLst.le.0) Then
          Write (6,*) 'DMat: iPsLst.le.0'
          Write (6,*) 'iPsLst=',iPsLst
-         Call QTrace
          Call Abend()
       End If
 *
 *
 * Form i-th density matrix in the position iPsLst
 *
-      If (InVec.eq.3 .and. iter_d.eq.1) Then
+      If (InVec.eq.3 .and. iter.eq.1) Then
 *
 * First density matrix is actually in the first position
 * (read from RUNFILE) on the first iteration.
@@ -140,7 +122,7 @@
          Call ChkTrD(nSym,nBas,nOrb,OccNo(1,iD),Dens(1,iD,iPsLst),Ovrlp)
       End Do ! iD
 *
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       Call NrmClc(Dens(1,1,iPsLst),nBT*nD,'DMat  ','D Iter    ')
 #endif
 *
@@ -166,7 +148,7 @@
 *        Minimized density option
 *
          Call DCopy_(nBT*nD,Dens(1,1,iPsLst),1,Dens(1,1,nDens),1)
-         If (iter_d.gt.1) Call MinDns(Dens,nBT,nDens,XCf,nXCf,nD)
+         If (iter.gt.1) Call MinDns(Dens,nBT,nDens,XCf,nXCf,nD)
 *
       Else If (.not.DDnOFF) Then
 *
@@ -187,7 +169,7 @@
       DNorm=DBLE(nD)
      &     *DDot_(nBT*nD,Dens(1,1,iPsLst),1,Dens(1,1,iPsLst),1)
 *
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
       Write (6,*) 'DNorm=',DNorm
       Call NrmClc(Dens(1,1,iPsLst),nBT*nD,'DMat  ','D iPsLst  ')
       Call NrmClc(Dens(1,1,nDens), nBT*nD,'DMat  ','D nDens   ')

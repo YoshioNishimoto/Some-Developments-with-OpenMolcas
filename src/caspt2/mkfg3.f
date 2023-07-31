@@ -42,7 +42,7 @@ C> full permutational symmetry (see ::mksmat and ::mkbmat). The
 C> same storage applies to the \f$ F \f$ matrices.
 C>
 C> @param[in]  IFF   switch to activate computation of \f$ F \f$ matrices
-C> @param[in]  CI    wave function CI coefficients, with symmetry \c LSYM
+C> @param[in]  CI    wave function CI coefficients, with symmetry \c STSYM
 C> @param[out] G1    1-body active density matrix
 C> @param[out] G2    2-body active density matrix
 C> @param[out] G3    process-local part of 3-body active density matrix
@@ -56,15 +56,18 @@ C> @param[out] idxG3 table to translate from process-local array index
 C>                   to active indices
 
       SUBROUTINE MKFG3(IFF,CI,G1,F1,G2,F2,G3,F3,idxG3)
+      use caspt2_output, only: iPrGlb, verbose, debug
+      use caspt2_gradient, only: do_grad
+#if defined (_MOLCAS_MPP_) && !defined (_GA_)
+      USE Para_Info, ONLY: nProcs, Is_Real_Par, King
+#endif
       IMPLICIT NONE
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "SysDef.fh"
 #include "WrkSpc.fh"
 #include "pt2_guga.fh"
 
-#include "para_info.fh"
       LOGICAL RSV_TSK
 
       INTEGER, INTENT(IN) :: IFF
@@ -96,7 +99,7 @@ C>                   to active indices
       INTEGER L1,LTO,LFROM
       INTEGER MEMMAX, MEMMAX_SAFE
       INTEGER NLEV2
-      INTEGER LDUM,NDUM
+      INTEGER LDUM
       INTEGER NCI,ICSF
 
       REAL*8, EXTERNAL :: DDOT_,DNRM2_
@@ -111,7 +114,6 @@ C>                   to active indices
       ! which is set to nbuf1 later, i.e. a maximum of nlev2 <= mxlev**2
       REAL*8 BUFR(MXLEV**2)
 
-      CALL QENTER('MKFG3')
 
 C Put in zeroes. Recognize special cases:
       IF(nlev.EQ.0) GOTO 999
@@ -127,13 +129,9 @@ C Put in zeroes. Recognize special cases:
 
       IF(NACTEL.EQ.0) GOTO 999
 
-      NCI=NCSF(LSYM)
+      NCI=NCSF(STSYM)
 * This should not happen, but...
       IF(NCI.EQ.0) GOTO 999
-C     write (*,*) "EPSA"
-C     do i = 1, 5
-C       write (*,'(i3,f20.10)') i,epsa(i)
-C     end do
 
 C Here, for regular CAS or RAS cases.
 
@@ -169,7 +167,6 @@ C Special pair index idx2ij allows true RAS cases to be handled:
 
 * Dummy values necessary for fooling syntax checkers:
       ldum=1
-      ndum=1
       call getmem('memmx','max','real',ldum,memmax)
 
 * Use *almost* all remaining memory:
@@ -183,6 +180,9 @@ C Special pair index idx2ij allows true RAS cases to be handled:
 * buft: ket buffer for an E_ip2 excitation of E_ip3|Psi0>
 * bufd: diagonal matrix elements to compute the F matrix
       nbuf1=max(1,min(nlev2,(memmax_safe-3*mxci)/mxci))
+      !! if gradient, nbuf1 must be consistent here and in derfg3.f
+      if (do_grad)
+     *  nbuf1=max(1,min(nlev2,(memmax_safe-(6+nlev)*mxci)/mxci/3))
       nbuf2= 1
       nbuft= 1
       nbufd= 1
@@ -213,7 +213,7 @@ C-SVC20100301: calculate maximum number of tasks possible
 * A *very* long loop over the symmetry of Sgm1 = E_ut Psi as segmentation.
 * This also allows precomputing the Hamiltonian (H0) diagonal elements.
       DO issg1=1,nsym
-       isp1=mul(issg1,lsym)
+       isp1=mul(issg1,stsym)
        nsgm1=ncsf(issg1)
        CALL H0DIAG_CASPT2(ISSG1,WORK(LBUFD),IWORK(LNOW),IWORK(LIOW))
 
@@ -334,7 +334,7 @@ C-sigma vectors in the buffer.
           ip1_buf(ibuf1)=ip1i
           lto=lbuf1+mxci*(ibuf1-1)
           call dcopy_(nsgm1,[0.0D0],0,work(lto),1)
-          CALL SIGMA1_CP2(IULEV,ITLEV,1.0D00,LSYM,CI,WORK(LTO),
+          CALL SIGMA1_CP2(IULEV,ITLEV,1.0D00,STSYM,CI,WORK(LTO),
      &     IWORK(LNOCSF),IWORK(LIOCSF),IWORK(LNOW),IWORK(LIOW),
      &     IWORK(LNOCP),IWORK(LIOCP),IWORK(LICOUP),
      &     WORK(LVTAB),IWORK(LMVL),IWORK(LMVR))
@@ -349,7 +349,7 @@ C-SVC20100301: necessary batch of sigma vectors is now in the buffer
       ! The ip1 buffer could be the same on different processes
       ! so only compute the G1 contribution when ip3 is 1, as
       ! this will only be one task per buffer.
-      if (issg1.eq.lsym.AND.ip3.eq.1) then
+      if (issg1.eq.stsym.AND.ip3.eq.1) then
         do ib=1,ibuf1
           idx=ip1_buf(ib)
           itlev=idx2ij(1,idx)
@@ -364,11 +364,6 @@ C-SVC20100301: necessary batch of sigma vectors is now in the buffer
               F1sum=F1sum+CI(i)*work(lto-1+i)*work(lbufd-1+i)
             end do
             F1(it,iu)=F1sum-EPSA(iu)*G1(it,iu)
-C           F1(it,iu)=-G1(it,iu)*dble(it+iu)
-C      F1(it,iu)=-dble(it+iu)*G1(it,iu)
-C      write (*,'(2i3,2f20.10)') it,iu,f1(it,iu),g1(it,iu)
-C     write (*,'(2i3,3f20.10)')
-C    *it,iu,f1sum,-epsa(iu)*g1(it,iu),f1(it,iu)
           end if
         end do
       end if
@@ -392,13 +387,13 @@ C-SVC20100309: use simpler procedure by keeping inner ip2-loop intact
       iylev=idx2ij(1,ip3)
       izlev=idx2ij(2,ip3)
       isyz=mul(ism(iylev),ism(izlev))
-      issg2=mul(isyz,lsym)
+      issg2=mul(isyz,stsym)
       nsgm2=ncsf(issg2)
       iy=L2ACT(iylev)
       iz=L2ACT(izlev)
       lto=lbuf2
       call dcopy_(nsgm2,[0.0D0],0,work(lto),1)
-      CALL SIGMA1_CP2(IYLEV,IZLEV,1.0D00,LSYM,CI,WORK(LTO),
+      CALL SIGMA1_CP2(IYLEV,IZLEV,1.0D00,STSYM,CI,WORK(LTO),
      &     IWORK(LNOCSF),IWORK(LIOCSF),IWORK(LNOW),IWORK(LIOW),
      &     IWORK(LNOCP),IWORK(LIOCP),IWORK(LICOUP),
      &     WORK(LVTAB),IWORK(LMVL),IWORK(LMVR))
@@ -409,10 +404,6 @@ C-SVC20100309: use simpler procedure by keeping inner ip2-loop intact
           iulev=idx2ij(2,idx)
           it=L2ACT(itlev)
           iu=L2ACT(iulev)
-C     write (*,'(4i3,f20.10)') it,iu,iy,iz,
-C    *    DDOT_(nsgm1,work(lto),1,
-C    &         work(lbuf1+mxci*(ib-1)),1)
-C     write (*,'(8i3)') it,iu,iy,iz,itlev,iulev,iylev,izlev
           G2(it,iu,iy,iz)=DDOT_(nsgm1,work(lto),1,
      &         work(lbuf1+mxci*(ib-1)),1)
           IF(IFF.ne.0) THEN
@@ -422,7 +413,6 @@ C     write (*,'(8i3)') it,iu,iy,iz,itlev,iulev,iylev,izlev
      &             work(lbuf1-1+i+mxci*(ib-1))
             end do
             F2(it,iu,iy,iz)=F2sum
-C           write (*,'(4i3,f20.10)') it,iu,iy,iz,f2sum
           END IF
         end do
       end if
@@ -485,7 +475,6 @@ C           write (*,'(4i3,f20.10)') it,iu,iy,iz,f2sum
          idxG3(4,iG3)=int(iX,I1)
          idxG3(5,iG3)=int(iY,I1)
          idxG3(6,iG3)=int(iZ,I1)
-C        write (*,'(6i3)') it,iu,iv,ix,iy,iz
         end do
         IF(IFF.ne.0) THEN
 * Elementwise multiplication of Tau with H0 diagonal - EPSA(IV):
@@ -559,43 +548,6 @@ C  only for the G1 and G2 replicate arrays
       CALL GADSUM(F2,NG2)
 
 * Correction to G2: It is now = <0| E_tu E_yz |0>
-C        do ip1=ntri2+1,nlev2
-C         itlev=idx2ij(1,ip1)
-C         iulev=idx2ij(2,ip1)
-C         it=L2ACT(itlev)
-C         iu=L2ACT(iulev)
-C         do ip3=ntri1+1,ip1
-C          iylev=idx2ij(1,ip3)
-C          izlev=idx2ij(2,ip3)
-C          iy=L2ACT(iylev)
-C          iz=L2ACT(izlev)
-C          G2(it,iu,iy,iz)=G2(iz,iy,iu,it)
-C         end do
-C        end do
-C        do ip1=1,nlev2-1
-C         itlev=idx2ij(1,ip1)
-C         iulev=idx2ij(2,ip1)
-C         it=L2ACT(itlev)
-C         iu=L2ACT(iulev)
-C         do ip3=ip1+1,nlev2
-C          iylev=idx2ij(1,ip3)
-C          izlev=idx2ij(2,ip3)
-C          iy=L2ACT(iylev)
-C          iz=L2ACT(izlev)
-C          G2(it,iu,iy,iz)=G2(iy,iz,it,iu)
-C         end do
-C        end do
-C        write (*,*) "g2 and f2 before"
-C        do it = 1, nlev
-C        do iu = 1, nlev
-C        do iv = 1, nlev
-C        do ix = 1, nlev
-C          write (*,'(4i4,2f20.10)') it,iu,iv,ix,
-C    *       g2(it,iu,iv,ix),f2(it,iu,iv,ix)
-C        end do
-C        end do
-C        end do
-C        end do
       do iu=1,nlev
        do iz=1,nlev
         do it=1,nlev
@@ -687,26 +639,13 @@ C-finished, so that GAdSUM works correctly.
 
 * Correction to G3: It is now <0| E_tu E_vx E_yz |0>
 * Similar for F3 values.
-C     call dcopy(ng3,0.0d+00,0,g3,1)
-C     call dcopy(ng3,0.0d+00,0,f3,1)
-C     If (DoPT2Num) Then
-C       DoTriPT2 = .false.
-C       If (iVibPT2.eq.1) Then
-C         G3(iDiffPT2) = G3(iDiffPT2) + PT2Delta
-C       Else
-C         G3(iDiffPT2) = G3(iDiffPT2) - PT2Delta
-C       End If
-C     End If
       DO iG3=1,NG3
-C     write (*,'(7x,"f3(",i4,") = ",f30.15,"d+00")') ig3,f3(ig3)
        iT=idxG3(1,iG3)
        iU=idxG3(2,iG3)
        iV=idxG3(3,iG3)
        iX=idxG3(4,iG3)
        iY=idxG3(5,iG3)
        iZ=idxG3(6,iG3)
-C     write (*,'(i5,6i2,f20.10)') ig3,it,iu,iv,ix,iy,iz,f3(ig3)
-C      write (*,'(i3,f20.10)') ig3,g3(ig3)
 * Correction: From <0| E_tu E_vx E_yz |0>, form <0| E_tuvxyz |0>
        if(iY.eq.iX) then
         G3(iG3)=G3(iG3)-G2(iT,iU,iV,iZ)
@@ -729,39 +668,6 @@ C      write (*,'(i3,f20.10)') ig3,g3(ig3)
        end if
        IF(IFF.ne.0) F3(iG3)=F3(iG3)-(EPSA(iU)+EPSA(iY))*G3(iG3)
       END DO
-C     write (*,*) "g1 and f1"
-C     do it = 1, nlev
-C       do iu = 1, nlev
-C         f1sum = 0.0d+00
-C         do iv = 1, nlev
-C           f1sum = f1sum + g2(it,iu,iv,iv)*epsa(iv)
-C         end do
-C         write (*,'(2i4,3f20.10)')
-C    *      it,iv,g1(it,iu),f1(it,iu),abs(f1sum-f1(it,iu))
-C       end do
-C     end do
-C     write (*,*) "g2 and f2"
-C     do it = 1, nlev
-C     do iu = 1, nlev
-C     do iv = 1, nlev
-C     do ix = 1, nlev
-C       write (*,'(4i4,2f20.10)') it,iu,iv,ix,
-C    *    g2(it,iu,iv,ix),f2(it,iu,iv,ix)
-C     end do
-C     end do
-C     end do
-C     end do
-C      write (*,*) "f1"
-C      call sqprt(f1,nlev)
-
-C     If (DoPT2Num) Then
-C       DoTriPT2 = .false.
-C       If (iVibPT2.eq.1) Then
-C         G2(iDiffPT2,1,1,1) = G2(iDiffPT2,1,1,1) + PT2Delta
-C       Else
-C         G2(iDiffPT2,1,1,1) = G2(iDiffPT2,1,1,1) - PT2Delta
-C       End If
-C     End If
 
       IF(iPrGlb.GE.DEBUG) THEN
 CSVC: if running parallel, G3/F3 are spread over processes,
@@ -787,6 +693,5 @@ C     so make sure that the _total_ fingerprint is computed
       ENDIF
 
  999  continue
-      CALL QEXIT('MKFG3')
       RETURN
       END

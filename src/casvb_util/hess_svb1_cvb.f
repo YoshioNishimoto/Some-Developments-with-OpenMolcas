@@ -8,7 +8,8 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine hess_svb1_cvb(orbs,
      >   civecp,civbs,civb,citmp,
@@ -20,7 +21,6 @@
      >   hessinp,hessout,owrk2,owrk3)
       implicit real*8 (a-h,o-z)
       logical orbopt2,strucopt2
-#include "ext_cvb.fh"
 #include "main_cvb.fh"
 #include "optze_cvb.fh"
 #include "files_cvb.fh"
@@ -28,7 +28,7 @@
 
 #include "frag_cvb.fh"
 #include "fx_cvb.fh"
-#include "malloc_cvb.fh"
+#include "WrkSpc.fh"
       dimension orbs(norb,norb)
       dimension civecp(ndet),civbs(ndet),civb(ndet),citmp(ndet)
       dimension orbinv(norb,norb),sorbs(norb,norb),owrk(norb,norb)
@@ -107,12 +107,12 @@ c  2nd-order term for structure coefficients
           call str2vbf_cvb(hessinp(1+nprorb),dvbdet)
           i1 = mstackr_cvb(ndetvb)
           i2 = mstackr_cvb(nvb)
-          call ci2ordr_cvb(civbs,dvbdet,w(i1))
-          call vb2strg_cvb(w(i1),w(i2))
-          call daxpy_(nvb,oaa2,w(i2),1,hessout(1+nprorb),1)
-          call ci2ordr_cvb(civecp,dvbdet,w(i1))
-          call vb2strg_cvb(w(i1),w(i2))
-          call daxpy_(nvb,aa1,w(i2),1,hessout(1+nprorb),1)
+          call ci2ordr_cvb(civbs,dvbdet,work(i1))
+          call vb2strg_cvb(work(i1),work(i2))
+          call daxpy_(nvb,oaa2,work(i2),1,hessout(1+nprorb),1)
+          call ci2ordr_cvb(civecp,dvbdet,work(i1))
+          call vb2strg_cvb(work(i1),work(i2))
+          call daxpy_(nvb,aa1,work(i2),1,hessout(1+nprorb),1)
           call mfreer_cvb(i1)
         endif
       elseif(proj.or.projcas)then

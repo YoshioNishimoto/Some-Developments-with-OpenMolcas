@@ -14,11 +14,10 @@
        Implicit None
        Integer        :: nss, nstate, input_to_read, iDisk
        Integer        :: luaniso
-       Character(180) :: input_file_name
+       Character(Len=180) :: input_file_name
        Integer        :: IsFreeUnit
        External       :: IsFreeUnit
        Logical        :: dbg
-       Call qEnter('SA_restart')
        dbg=.false.
 
 
@@ -75,6 +74,21 @@
           Call Quit_OnUserError()
 #endif
 
+       Else If (input_to_read .eq. 6) Then
+          ! read the ascii formatted "aniso.input" file (NEW):
+          luaniso = IsFreeUnit(18)
+          Call molcas_open(luaniso,input_file_name)
+
+          CALL read_nss(luaniso,nss,dbg)
+          CALL read_nstate(luaniso,nstate,dbg)
+
+          ! put them on RunFile:
+          Call Put_iScalar('NSTATE_SINGLE   ',nstate)
+          Call Put_iScalar('NSS_SINGLE      ',nss)
+          Call Put_iScalar('MXJOB_SINGLE    ',1)
+          Call Put_iScalar('NJOB_SINGLE     ',1)
+
+          Close(luaniso)
 
        Else
           Call WarningMessage(2,'SINGLE_ANISO:: RESTART  '//
@@ -95,6 +109,5 @@
 
        End If
 
-       Call qExit('SA_restart')
       Return
       End

@@ -50,6 +50,7 @@
 #ifndef POINTER_REMAP
       Use, Intrinsic :: ISO_C_BINDING
 #endif
+      use SpinAV
       Implicit Real*8 (a-h,o-z)
 *
       Real*8, Target:: CMO(nCMO), Occ(*), Dlt(*)
@@ -58,10 +59,6 @@
       Logical alpha_density
 *
 #include "real.fh"
-#include "WrkSpc.fh"
-      Logical Do_SpinAV
-      COMMON  / SPAVE_L  / Do_SpinAV
-      COMMON  / SPAVE_I  / ip_DSc
 
 *
 *---- Statement function for triangular storage
@@ -71,8 +68,8 @@
 *     Start                                                            *
 *----------------------------------------------------------------------*
 *
-*define _DEBUG_
-#ifdef _DEBUG_
+*define _DEBUGPRINT_
+#ifdef _DEBUGPRINT_
       Call NrmClc(CMO,nCMO,'DOne_SCF','CMO')
       nOcc=0
       Do iSym = 1, nSym
@@ -118,7 +115,7 @@
                pDlt(Ind(iRow,iCol)) = 2.0D0*Sum
             End Do
          End Do
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
          Call NrmClc(pDlt,nBs*(nBs+1)/2,'DOne_SCF','Dlt')
 *        Call RecPrt('CMO',' ',pCMO,nBs,nBs)
 *        Call RecPrt('Occ',' ',pOcc,1,nOr)
@@ -144,16 +141,16 @@
 *
             pDlt => Dlt(iOffD:iOffD+lth-1)
 *
-            ipDScc=ip_DSc+lOff
+            ipDScc=1+lOff
             Do j=1,nBas(iSym)
                Do i=1,j-1
                   ji=j*(j-1)/2+i
                   iDSc=ipDScc-1+nBas(iSym)*(j-1)+i
-                  pDlt(ji)=pDlt(ji)+xsign*2.0d0*Work(iDSc)
+                  pDlt(ji)=pDlt(ji)+xsign*2.0d0*DSc(iDSc)
                End Do
                jj=j*(j+1)/2
                iDSc=ipDScc-1+nBas(iSym)*(j-1)+j
-               pDlt(jj)=pDlt(jj)+xsign*Work(iDSc)
+               pDlt(jj)=pDlt(jj)+xsign*DSc(iDSc)
             End Do
             iOff=iOff+lth
             lOff=lOff+nBas(iSym)**2

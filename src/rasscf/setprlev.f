@@ -10,9 +10,8 @@
 ************************************************************************
       Subroutine SetPrLev(LF_IN,IPRGLB_IN,IPRLOC_IN)
       Implicit Real*8 (A-H,O-Z)
-#include "warnings.fh"
+#include "warnings.h"
 #include "output_ras.fh"
-      Parameter (ROUTINE='SETPRLEV')
       Dimension IPRLOC_IN(7)
 *
       Logical REDUCE_PRT
@@ -20,7 +19,6 @@
       Intrinsic MAX
       External GETENVF
 
-      Call QENTER(ROUTINE)
 * The local print levels are the maximum of the requested global and
 * local ones, except that if any of IPRGLB or IPRLOC(I) is zero
 *  (meaning silence), then IPRLOC(I) is set to zero.
@@ -53,5 +51,7 @@
 
       RETURN
 c Avoid unused argument warnings
+#ifdef _WARNING_WORKAROUND_
       IF (.FALSE.) CALL Unused_integer(LF_IN)
+#endif
       END

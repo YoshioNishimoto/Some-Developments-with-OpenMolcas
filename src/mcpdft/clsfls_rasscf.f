@@ -26,22 +26,22 @@
 *     history: none                                                    *
 *                                                                      *
 ************************************************************************
+#ifdef _HDF5_
+      use mh5, only: mh5_close_file
+#endif
       Implicit Real*8 (A-H,O-Z)
       Logical DoCholesky
 #include "rasdim.fh"
 #include "rasscf.fh"
 #include "general.fh"
 #include "output_ras.fh"
-      Parameter (ROUTINE='ClsFls  ')
 
-#include "davctl.fh"
-#include "qnctl.fh"
-#include "raswfn.fh"
+#include "qnctl_mcpdft.fh"
+#include "mcpdftwfn.fh"
 *----------------------------------------------------------------------*
 *     Start                                                            *
 *-------------------------------------- -------------------------------*
 C Local print level (if any)
-      Call qEnter('ClsFls')
 *---  close the JOBOLD file -------------------------------------------*
       If(JOBOLD.gt.0.and.JOBOLD.ne.JOBIPH) Then
         Call DaClos(JOBOLD)
@@ -55,14 +55,16 @@ C Local print level (if any)
         JOBIPH=-1
       End If
 #ifdef _HDF5_
-      call mh5_close_file(wfn_fileid)
+      if (wfn_fileid.ne.0) then
+        call mh5_close_file(wfn_fileid)
+        wfn_fileid=0
+      end if
 #endif
 *---  close the ORDINT file -------------------------------------------*
       CALL DecideOnCholesky(DoCholesky)
        If (.not.DoCholesky) then
          iRc=-1
-         iOpt=0
-         Call ClsOrd(iRc,iOpt)
+         Call ClsOrd(iRc)
          If ( iRc.ne.0 ) Then
            Call WarningMessage(1,'Failed to close the ORDINT file.')
          End If
@@ -78,6 +80,5 @@ C Local print level (if any)
 *----------------------------------------------------------------------*
 *     Exit                                                             *
 *----------------------------------------------------------------------*
-      Call qExit('ClsFls')
       Return
       End

@@ -23,9 +23,9 @@
 *                                                                      *
 * Object: to prescreen the integrals for Direct SCF                    *
 *                                                                      *
-*   nZeta, nEta : unpartioned length of primitives.                    *
+*   nZeta, nEta : unpartitioned length of primitives.                  *
 *                                                                      *
-*   mZeta, mEta : section length due to partioning. These are usually  *
+*   mZeta, mEta : section length due to partitioning. These are usually*
 *                 equal to nZeta and nEta.                             *
 *                                                                      *
 *   lZeta, lEta : section length after prescreening.                   *
@@ -33,11 +33,6 @@
 *   Observe that the integrals are ordered for optimal performance in  *
 *   the integral generation step whereas the 1st order density is      *
 *   canonically ordered.                                               *
-*                                                                      *
-* Called from: Twoel                                                   *
-*                                                                      *
-* Calling    : QEnter                                                  *
-*              QExit                                                   *
 *                                                                      *
 *     Author: Roland Lindh, Dept. of Theoretical Chemistry,            *
 *             University of Lund, SWEDEN                               *
@@ -47,21 +42,23 @@
 ************************************************************************
       Implicit Real*8 (A-H,O-Z)
 #include "ndarray.fh"
-      Real*8 Zeta(mZeta), ZInv(mZeta), KappAB(mZeta), P(nZeta,3),
-     &        Eta(mEta),  EInv(mEta),  KappCD(mEta),  Q(nEta, 3),
-     &       Data1(nZeta*(nDArray-1)), Data2(nEta*(nDArray-1)),
+      Real*8, Intent(out) :: Zeta(mZeta), ZInv(mZeta), KappAB(mZeta),
+     &                       P(nZeta,3), Eta(mEta), EInv(mEta),
+     &                       KappCD(mEta), Q(nEta,3)
+      Real*8 Data1(nZeta*(nDArray-1)), Data2(nEta*(nDArray-1)),
      &       Dij(nZeta), Dkl(nEta)
       Real*8 ZtMax,EtMax,abMax,cdMax,ZtMaxD,EtMaxD,abMaxD,cdMaxD
-      Integer   IndZet(nZeta), IndEta(nEta),
-     &          IndZ(nZeta), IndE(nEta)
+      Integer, Intent(out) :: lZeta, lEta, IndZet(nZeta), IndEta(nEta)
+      Integer IndZ(nZeta), IndE(nEta)
       Logical Prescreen_On_Int_Only
+      ![all the others are intent(in)]
 *
 #include "print.fh"
 #include "real.fh"
 *
 *     decalaration of local variables...
-*define _DEBUG_
-#ifdef _DEBUG_
+*define _DEBUGPRINT_
+#ifdef _DEBUGPRINT_
       Call RecPrt(' In Screen: Data1',' ',Data1,nZeta,nDArray-1)
       Call RecPrt(' In Screen: Data2',' ',Data2,nEta ,nDArray-1)
       Call FZero(P,nZeta*3)
@@ -182,8 +179,8 @@
       If (iphZ2.ne.1) Call DScal_(lEta,-One,Q(1,3),1)
 *
  999  Continue
-*define _DEBUG_
-#ifdef _DEBUG_
+*define _DEBUGPRINT_
+#ifdef _DEBUGPRINT_
       Write (6,*) ' In Screen'
       Call RecPrt(' Zeta  ',' ',Zeta,lZeta,1)
       Call RecPrt(' Eta   ',' ', Eta, lEta,1)

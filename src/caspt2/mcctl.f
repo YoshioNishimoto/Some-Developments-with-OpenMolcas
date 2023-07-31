@@ -18,11 +18,10 @@
 * SWEDEN                                     *
 *--------------------------------------------*
       SUBROUTINE MCCTL(HEFF)
+      use caspt2_output, only:iPrGlb,verbose
       IMPLICIT NONE
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
-#include "WrkSpc.fh"
 #include "eqsolv.fh"
 #include "SysDef.fh"
 #include "stdalloc.fh"
@@ -34,7 +33,6 @@
       Character(len=160) string
       real*8, allocatable :: cpu_timing(:), wall_timing(:)
 
-      CALL QENTER('MCCTL')
 
       Call mma_allocate( cpu_timing,nstate,'timing in mcctl')
       Call mma_allocate(wall_timing,nstate,'timing in mcctl')
@@ -89,6 +87,5 @@ C Compute the effective Hamiltonian:
       Call mma_deallocate(cpu_timing)
       Call mma_deallocate(wall_timing)
 
-      CALL QEXIT('MCCTL')
       RETURN
       END

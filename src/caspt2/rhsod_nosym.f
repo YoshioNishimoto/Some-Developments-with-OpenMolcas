@@ -22,15 +22,16 @@
 
 *||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||*
       SUBROUTINE RHSOD_NOSYM(IVEC)
+      use caspt2_output, only:iPrGlb,verbose
+#ifdef _MOLCAS_MPP_
+      USE Para_Info, ONLY: Is_Real_Par
+#endif
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
-#include "para_info.fh"
 
-      Call QEnter('RHSOD')
 
       IF (IPRGLB.GE.VERBOSE) THEN
         WRITE(6,'(1X,A)') ' Using special RHS on-demand algorithm,'
@@ -54,7 +55,7 @@
       CALL RHSOD_G_NOSYM(IVEC)
       CALL RHSOD_H_NOSYM(IVEC)
 
-#ifdef _DEBUG_
+#ifdef _DEBUGPRINT_
 * compute and print RHS fingerprints
       WRITE(6,'(1X,A4,1X,A3,1X,A18)') 'Case','Sym','Fingerprint'
       WRITE(6,'(1X,A4,1X,A3,1X,A18)') '====','===','==========='
@@ -72,7 +73,6 @@
       END DO
 #endif
 
-      Call QExit('RHSOD')
 
       END
 
@@ -85,10 +85,10 @@
       SUBROUTINE RHSOD_A_NOSYM(IVEC)
       USE SUPERINDEX
       USE CHOVEC_IO
+      use caspt2_output, only:iPrGlb,debug
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
       DIMENSION IOBRA(8,8), IOKET(8,8)
@@ -96,8 +96,7 @@
 #include "global.fh"
 #include "mafdecls.fh"
 #else
-      REAL*8 DBL_MB(1:IWORKLEN)
-      EQUIVALENCE (DBL_MB,WORK)
+#define DBL_MB Work
 #endif
 
       IF (iPrGlb.GE.DEBUG) THEN
@@ -108,10 +107,6 @@
 * Case A:
 C   RHS(tvx,j)=(tj,vx)+FIMO(t,j)*kron(v,x)/NACTEL
 ************************************************************************
-
-      SQRT2=SQRT(2.0D0)
-      SQRT3=SQRT(3.0D0)
-      SQRTH=1/SQRT2
 
 ************************************************************************
 CSVC: read in all the cholesky vectors (need all symmetries)
@@ -140,7 +135,6 @@ CSVC: read in all the cholesky vectors (need all symmetries)
 
         CALL RHS_ALLO (NAS,NIS,lg_W)
         CALL RHS_ACCESS (NAS,NIS,lg_W,IASTA,IAEND,IISTA,IIEND,MW)
-        NA=NAS*(IIEND-IISTA+1)
 
 ************************************************************************
 * inner loop over RHS elements in symmetry ISYM
@@ -200,10 +194,10 @@ CSVC: read in all the cholesky vectors (need all symmetries)
       SUBROUTINE RHSOD_C_NOSYM(IVEC)
       USE SUPERINDEX
       USE CHOVEC_IO
+      use caspt2_output, only:iPrGlb,debug
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
       DIMENSION IOBRA(8,8), IOKET(8,8)
@@ -211,8 +205,7 @@ CSVC: read in all the cholesky vectors (need all symmetries)
 #include "global.fh"
 #include "mafdecls.fh"
 #else
-      REAL*8 DBL_MB(1:IWORKLEN)
-      EQUIVALENCE (DBL_MB,WORK)
+#define DBL_MB Work
 #endif
 
       IF (iPrGlb.GE.DEBUG) THEN
@@ -223,10 +216,6 @@ CSVC: read in all the cholesky vectors (need all symmetries)
 * Case C:
 C   RHS(tvx,a)=(at,vx)+(FIMO(a,t)-Sum_u(au,ut))*delta(v,x)/NACTEL
 ************************************************************************
-
-      SQRT2=SQRT(2.0D0)
-      SQRT3=SQRT(3.0D0)
-      SQRTH=1/SQRT2
 
 ************************************************************************
 CSVC: read in all the cholesky vectors (need all symmetries)
@@ -255,7 +244,6 @@ CSVC: read in all the cholesky vectors (need all symmetries)
 
         CALL RHS_ALLO (NAS,NIS,lg_W)
         CALL RHS_ACCESS (NAS,NIS,lg_W,IASTA,IAEND,IISTA,IIEND,MW)
-        NA=NAS*(IIEND-IISTA+1)
 
 ************************************************************************
 * inner loop over RHS elements in symmetry ISYM
@@ -328,10 +316,10 @@ CSVC: read in all the cholesky vectors (need all symmetries)
       SUBROUTINE RHSOD_B_NOSYM(IVEC)
       USE SUPERINDEX
       USE CHOVEC_IO
+      use caspt2_output, only:iPrGlb,debug
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
       DIMENSION IOSYM(8,8)
@@ -340,8 +328,7 @@ CSVC: read in all the cholesky vectors (need all symmetries)
 #include "global.fh"
 #include "mafdecls.fh"
 #else
-      REAL*8 DBL_MB(1:IWORKLEN)
-      EQUIVALENCE (DBL_MB,WORK)
+#define DBL_MB Work
 #endif
 
       IF (iPrGlb.GE.DEBUG) THEN
@@ -355,7 +342,6 @@ C   BP(tv,jl)=((tj,vl)+(tl,vj))*(1-Kron(t,v)/2)/(2*SQRT(1+Kron(j,l))
 C   BM(tv,jl)=((tj,vl)-(tl,vj))*(1-Kron(t,v)/2)/(2*SQRT(1+Kron(j,l))
 ************************************************************************
 
-      SQRT2=SQRT(2.0D0)
       SQRTH=SQRT(0.5D0)
 
 ************************************************************************
@@ -516,10 +502,10 @@ CSVC: read in all the cholesky vectors (need all symmetries)
       SUBROUTINE RHSOD_F_NOSYM(IVEC)
       USE SUPERINDEX
       USE CHOVEC_IO
+      use caspt2_output, only:iPrGlb,debug
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
       DIMENSION IOSYM(8,8)
@@ -528,8 +514,7 @@ CSVC: read in all the cholesky vectors (need all symmetries)
 #include "global.fh"
 #include "mafdecls.fh"
 #else
-      REAL*8 DBL_MB(1:IWORKLEN)
-      EQUIVALENCE (DBL_MB,WORK)
+#define DBL_MB Work
 #endif
 
       IF (iPrGlb.GE.DEBUG) THEN
@@ -542,7 +527,6 @@ C FP(tv,ac)=((at,cv)+(av,ct))*(1-Kron(t,v)/2)/(2*SQRT(1+Kron(a,c))
 C FM(tv,ac)= -((at,cv)-(av,ct))/(2*SQRT(1+Kron(a,c))
 ************************************************************************
 
-      SQRT2=SQRT(2.0D0)
       SQRTH=SQRT(0.5D0)
 
 ************************************************************************
@@ -703,10 +687,10 @@ CSVC: read in all the cholesky vectors (need all symmetries)
       SUBROUTINE RHSOD_H_NOSYM(IVEC)
       USE SUPERINDEX
       USE CHOVEC_IO
+      use caspt2_output, only:iPrGlb,debug
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
       DIMENSION IOSYM(8,8)
@@ -715,8 +699,7 @@ CSVC: read in all the cholesky vectors (need all symmetries)
 #include "global.fh"
 #include "mafdecls.fh"
 #else
-      REAL*8 DBL_MB(1:IWORKLEN)
-      EQUIVALENCE (DBL_MB,WORK)
+#define DBL_MB Work
 #endif
       INTEGER, PARAMETER :: NOSYM = 1
       REAL*8, ALLOCATABLE :: AIBJ(:,:)
@@ -731,9 +714,8 @@ C   WP(jl,ac)=((ajcl)+(alcj))/SQRT((1+Kron(jl))*(1+Kron(ac))
 C   WM(jl,ac)=((ajcl)-(alcj))*SQRT(3.0D0)
 ************************************************************************
 
-      SQRT2=SQRT(2.0D0)
       SQRT3=SQRT(3.0D0)
-      SQRTH=1/SQRT2
+      SQRTH=SQRT(0.5D0)
 
       NV=NVTOT_CHOSYM(NOSYM)
       ALLOCATE(AIBJ(NSSHT,NSSHT))
@@ -844,10 +826,10 @@ CSVC: read in all the cholesky vectors (need all symmetries)
       SUBROUTINE RHSOD_D_NOSYM(IVEC)
       USE SUPERINDEX
       USE CHOVEC_IO
+      use caspt2_output, only:iPrGlb,debug
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
       DIMENSION IOBRA1(8,8), IOKET1(8,8), IOBRA2(8,8), IOKET2(8,8)
@@ -855,8 +837,7 @@ CSVC: read in all the cholesky vectors (need all symmetries)
 #include "global.fh"
 #include "mafdecls.fh"
 #else
-      REAL*8 DBL_MB(1:IWORKLEN)
-      EQUIVALENCE (DBL_MB,WORK)
+#define DBL_MB Work
 #endif
       DIMENSION NFIMOES(8)
 
@@ -869,9 +850,6 @@ CSVC: read in all the cholesky vectors (need all symmetries)
 C D1(tv,aj)=(aj,tv) + FIMO(a,j)*Kron(t,v)/NACTEL
 C D2(tv,aj)=(tj,av)
 ************************************************************************
-
-      SQRT2=SQRT(2.0D0)
-      SQRTH=SQRT(0.5D0)
 
 ************************************************************************
 CSVC: read in all the cholesky vectors (need all symmetries)
@@ -1012,10 +990,10 @@ CSVC: read in all the cholesky vectors (need all symmetries)
       SUBROUTINE RHSOD_E_NOSYM(IVEC)
       USE SUPERINDEX
       USE CHOVEC_IO
+      use caspt2_output, only:iPrGlb,debug
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
       DIMENSION IOBRA(8,8), IOKET(8,8)
@@ -1024,8 +1002,7 @@ CSVC: read in all the cholesky vectors (need all symmetries)
 #include "global.fh"
 #include "mafdecls.fh"
 #else
-      REAL*8 DBL_MB(1:IWORKLEN)
-      EQUIVALENCE (DBL_MB,WORK)
+#define DBL_MB Work
 #endif
 
       IF (iPrGlb.GE.DEBUG) THEN
@@ -1046,7 +1023,6 @@ C EM(v,ajl)=((aj,vl)-(al,vj))*SQRT(3/2)
 * be determined by integer division. This could be optimized by combining
 * it with loop peeling (on the todo list?).
 
-      SQRT2=SQRT(2.0D0)
       SQRTH=SQRT(0.5D0)
       SQRTA=SQRT(1.5D0)
 
@@ -1231,10 +1207,10 @@ CSVC: read in all the cholesky vectors (need all symmetries)
       SUBROUTINE RHSOD_G_NOSYM(IVEC)
       USE SUPERINDEX
       USE CHOVEC_IO
+      use caspt2_output, only:iPrGlb,debug
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "WrkSpc.fh"
 #include "eqsolv.fh"
       DIMENSION IOBRA(8,8), IOKET(8,8)
@@ -1243,8 +1219,7 @@ CSVC: read in all the cholesky vectors (need all symmetries)
 #include "global.fh"
 #include "mafdecls.fh"
 #else
-      REAL*8 DBL_MB(1:IWORKLEN)
-      EQUIVALENCE (DBL_MB,WORK)
+#define DBL_MB Work
 #endif
 
       IF (iPrGlb.GE.DEBUG) THEN
@@ -1265,7 +1240,6 @@ C GM(v,jac)=((av,cj)-(cv,aj))*SQRT(3/2)
 * be determined by integer division. This could be optimized by combining
 * it with loop peeling (on the todo list?).
 
-      SQRT2=SQRT(2.0D0)
       SQRTH=SQRT(0.5D0)
       SQRTA=SQRT(1.5D0)
 

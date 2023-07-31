@@ -33,31 +33,32 @@
 *                                                                      *
 ************************************************************************
 *
+      use OneDat, only: sNoNuc, sNoOri
       Implicit Real*8 (A-H,O-Z)
 *
 #include "rasdim.fh"
-#include "warnings.fh"
+#include "warnings.h"
 #include "rasscf.fh"
 #include "general.fh"
 #include "output_ras.fh"
 #include "orthonormalize.fh"
-      Parameter (ROUTINE='ORTHO   ')
 *
       Dimension Smat(*),SCRATCH(*),CMO(*),Temp(*)
+      character(len=8) :: Label
 *                                                                      *
 ************************************************************************
 *                                                                      *
-      Call qEnter('ORTHO')
 *                                                                      *
 ************************************************************************
 *                                                                      *
 *     Read overlap matrix SMAT:
 *
       i_Rc=0
-      i_Opt=6
+      i_Opt=ibset(ibset(0,sNoOri),sNoNuc)
       i_Component=1
       i_SymLbl=1
-      Call RdOne(i_Rc,i_Opt,'Mltpl  0',i_Component,Smat,i_SymLbl)
+      Label='Mltpl  0'
+      Call RdOne(i_Rc,i_Opt,Label,i_Component,Smat,i_SymLbl)
       If ( i_Rc.ne.0 ) Then
         Write(LF,*)' ORTHO could not read overlaps from ONEINT.'
         Write(LF,*)' RASSCF is trying to orthonormalize orbitals but'
@@ -100,7 +101,7 @@ C           Call RecPrt('CMO',' ',CMO(ip_CMO),iBas,iBas)
 *
 * --- compute W^-1/2
 *
-               Call Lowdin(Temp,SCRATCH,iOcc)
+               Call Lowdin_LP(Temp,SCRATCH,iOcc)
 *
 * --- compute C' = C*W^-1/2
 *
@@ -128,7 +129,6 @@ C           Call RecPrt('CMO',' ',CMO(ip_CMO),iBas,iBas)
 *                                                                      *
 ************************************************************************
 *                                                                      *
-      Call qExit('ORTHO')
 *                                                                      *
 ************************************************************************
 *                                                                      *

@@ -28,22 +28,18 @@
 ************************************************************************
       Implicit Real*8 (A-H,O-Z)
 #include "rasdim.fh"
-#include "warnings.fh"
+#include "warnings.h"
 #include "rasscf.fh"
 #include "general.fh"
 #include "jobiph_j.fh"
 #include "gas.fh"
 *
-      Character*80       Blank
 *---  set INVEC -> get MOs from JOBIPH file ----------------------------*
       INVEC=3
 *---  Initialize -------------------------------------------------------*
-      Do i=1,80
-         Blank(i:i)=' '
+      Do j = 1, 18
+         Title(j) = ' '
       End Do
-         Do j = 1, 18
-            Title(j) = ' '
-         End Do
 *
 *---  Read input from standard input ----------------------------------*
 *---  process TITLE    command ----------------------------------------*
@@ -61,7 +57,7 @@
 *---  process SPIN command --------------------------------------------*
       ispin=ispin_j
 *---  process SYMM command --------------------------------------------*
-      lsym=lsym_j
+      stsym=lsym_j
 *---  process FROZ command --------------------------------------------*
       call imove_cvb(nfro_j,nfro,mxsym)
 *---  process INAC command --------------------------------------------*
@@ -106,8 +102,6 @@
       DO ISYM=1,mxsym
         NAO=NASH(ISYM)
         IF(NAO.GT.1) THEN
-          NRAS1=NRS1(ISYM)
-          NRS12=NRS2(ISYM)+NRAS1
           DO NT=2,NAO
             DO NU=1,NT-1
               ITU=ITU+1
@@ -172,7 +166,6 @@ CSVC: check if NU<NT are included in the same gas space
       Subroutine RdPAM_m(Line,iNumber,rNumber)
       Implicit Real*8 (A-H,O-Z)
 #include "output_ras.fh"
-      Parameter (ROUTINE='RDPAM')
 *
 *     Subroutine read character line and
 *     read one integer and later one real

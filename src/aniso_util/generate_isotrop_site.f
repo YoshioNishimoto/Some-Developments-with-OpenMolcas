@@ -13,9 +13,9 @@
      &                                  E, M, S )
 
       Implicit none
-#include "warnings.fh"
+#include "warnings.h"
 #include "stdalloc.fh"
-      Integer, parameter        :: wp=SELECTED_REAL_KIND(p=15,r=307)
+      Integer, parameter        :: wp=kind(0.d0)
 
       Integer, intent(in)           :: nLoc
       Integer, intent(inout)        :: nexch
@@ -29,7 +29,7 @@
       Complex(kind=8), intent(out) :: S(3,nExch,nExch)
 
       ! local variables:
-      Integer         :: ib(-30:30), i, j, l
+      Integer         :: i, j, l
       Integer         :: info
 !      Complex(kind=8):: spin
       Complex(kind=8) :: redme
@@ -44,11 +44,6 @@
       Logical                       :: dbg
       dbg=.false.
 !----------------------------------------------------------------------|
-      Call qEnter('generate_isotrop_site')
-
-      Do j=-30,30
-         ib(j)=0
-      End Do
 
       nsfs=1
       nss  = nexch
@@ -227,6 +222,5 @@
       End If ! nss>=2
 
 
-      Call qExit('generate_isotrop_site')
       Return
       End subroutine generate_isotrop_site

@@ -8,18 +8,20 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine o12sa_cvb(nparm1)
       implicit real*8 (a-h,o-z)
-#include "ext_cvb.fh"
+c ... Content of CI vectors ...
+      logical, external :: tstcnt_cvb
 #include "main_cvb.fh"
 #include "optze_cvb.fh"
 #include "files_cvb.fh"
 #include "print_cvb.fh"
 
 #include "opt2_cvb.fh"
-#include "malloc_cvb.fh"
+#include "WrkSpc.fh"
 
       call ddnewopt_cvb()
       have_solved_it=.false.
@@ -27,7 +29,7 @@
 c  Find CIVBS :
       ivuse=0
       do 10 iv=1,nv
-      if(tstcnt_cvb(w(lc(iv)),4))ivuse=iv
+      if(tstcnt_cvb(work(lc(iv)),4))ivuse=iv
 10    continue
       ivuse2=3
       if(ivuse.eq.3)ivuse2=2
@@ -36,22 +38,22 @@ c  Find CIVBS :
         i1 = mstackr_cvb(nparm1)
         i2 = mstackr_cvb(nparm1)
         i3 = mstackr_cvb(nvb+nprorb)
-        call o12sa2_cvb(w(i1),w(i2),nparm1,
-     >    w(lc(ivuse2)),w(lc(ivuse)),
-     >    w(lw(9)),w(lv(2)),w(i3))
+        call o12sa2_cvb(work(i1),work(i2),nparm1,
+     >    work(lc(ivuse2)),work(lc(ivuse)),
+     >    work(lw(9)),work(lv(2)),work(i3))
         call mfreer_cvb(i1)
       else
         if(strucopt)then
-          call ddguess_cvb(w(lv(2)),nvb,nprorb)
+          call ddguess_cvb(work(lv(2)),nvb,nprorb)
         else
           call ddguess_cvb([one],1,0)
         endif
       endif
 
       i1 = mstackr_cvb(nparm1)
-      call o12sa3_cvb(w(ix(1)),w(lv(2)),
-     >  w(lv(1)),w(lw(4)),w(lw(5)),w(lw(6)),
-     >  w(lc(1)),w(lc(2)),w(lc(3)),w(lw(9)),w(i1),
+      call o12sa3_cvb(work(ix(1)),work(lv(2)),
+     >  work(lv(1)),work(lw(4)),work(lw(5)),work(lw(6)),
+     >  work(lc(1)),work(lc(2)),work(lc(3)),work(lw(9)),work(i1),
      >  nvb,nprorb,nparm1,strucopt)
       call mfreer_cvb(i1)
       return

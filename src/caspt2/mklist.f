@@ -23,7 +23,6 @@ C Subroutine for setting up the 17 lists of coupling
 C  coefficients -- See sgm.f and sgm.ol for usage.
 #include "rasdim.fh"
 #include "caspt2.fh"
-#include "output.fh"
 #include "eqsolv.fh"
 
       INTEGER LIST(*)
@@ -38,7 +37,6 @@ C  coefficients -- See sgm.f and sgm.ol for usage.
      &        LADR16,LADR17
       INTEGER NOFF
 
-      CALL QENTER('MKLIST')
 
       LADR=1
       DO ILIST=1,17
@@ -492,7 +490,6 @@ C Add to list 16: IA,IB,IAB,V= Sqr(2)
         END DO
        END DO
 
-      CALL QEXIT('MKLIST')
 
       RETURN
       END

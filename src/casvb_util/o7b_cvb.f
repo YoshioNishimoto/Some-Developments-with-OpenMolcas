@@ -8,17 +8,18 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 *                                                                      *
-* Copyright (C) 1996-2006, T. Thorsteinsson and D. L. Cooper           *
+* Copyright (C) 1996-2006, Thorstein Thorsteinsson                     *
+*               1996-2006, David L. Cooper                             *
 ************************************************************************
       subroutine o7b_cvb(nparm1,
      >  dxnrm,grdnrm,close2conv)
       implicit real*8 (a-h,o-z)
       logical close2conv
-#include "malloc_cvb.fh"
+#include "WrkSpc.fh"
 #include "direct_cvb.fh"
 #include "opt2_cvb.fh"
 
-      call o7b2_cvb(nparm1,w(ix(1)),
+      call o7b2_cvb(nparm1,work(ix(1)),
      >  dxnrm,grdnrm,close2conv)
       return
       end
