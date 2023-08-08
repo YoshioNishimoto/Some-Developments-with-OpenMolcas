@@ -2,7 +2,7 @@
 
 I'm developing analytic derivatives of CASPT2 and RASPT2 in OpenMolcas. Some ongoing and incomplete developments may be pushed here. Note that this repository is just a development snapshot. Some debug print may be shown, and the actual code is still messy (including this README). This code is based on OpenMolcas v23.02.
 
-At present, analytic first-order derivatives (gradient and derivative coupling vectors) for single-state and all multistate variants ([X]MS, XDW, and RMS) CASPT2 and RASPT2 can be computed. Most functions have to be combined with the density-fitting or Cholesky decomposition approximation. Either real or imaginary level shift may be used. The IPEA shift can also be used, but note that CASPT2/RASPT2 with the IPEA shift is not invariant with respect to rotations among active orbitals. The performance is still poor, in particular with a large number of atomic orbitals. ALASKA is very slow, but HF and SA-CASSCF is already... No symmetry constraints can be employed. You cannot perform MPI-like parallel calculations, I think.
+At present, analytic first-order derivatives (gradient and derivative coupling vectors) for single-state and all multistate variants ([X]MS, XDW, and RMS) CASPT2 and RASPT2 can be computed. Most functions have to be combined with the density-fitting or Cholesky decomposition approximation. Either real or imaginary level shift may be used. The IPEA shift can also be used, but note that CASPT2/RASPT2 with the IPEA shift is not invariant with respect to rotations among active orbitals. The performance is still poor, in particular with a large number of atomic orbitals. No symmetry constraints can be employed. You cannot perform MPI-like parallel calculations, I think.
 
 Reference:
 
@@ -13,6 +13,8 @@ Reference:
 ***
 
 Some history:
+
+August 8, 2023: CASPT2-IPEA gradient (I hope I correctly merged)
 
 July 31, 2023: Removed the wired loop for MS-CASPT2 variants (preliminary)
 
