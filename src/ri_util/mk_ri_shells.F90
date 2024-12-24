@@ -28,6 +28,7 @@ use Basis_Info, only: dbsc, Max_Shells, nCnttp, Shells
 use Sizes_of_Seward, only: S
 use RICD_Info, only: iRI_Type
 use Gateway_Info, only: UnNorm
+use getline_mod, only: Quit_On_Error
 use stdalloc, only: mma_allocate, mma_deallocate
 use Constants, only: Zero, One
 use Definitions, only: iwp, u6
@@ -36,7 +37,6 @@ implicit none
 integer(kind=iwp), intent(in) :: LuRd
 #include "Molcas.fh"
 #include "print.fh"
-#include "getlnqoe.fh"
 integer(kind=iwp) :: BasisTypes(4), i, iAng, ib, iCnttp, iEnd, iEnds, Ierr, iLast3, Indx, iPrint, iRout, iSh, iShll, iSph, iStrt, &
                      j, jShll, lAng, lSTDINP, Lu_lib, mCnttp, mdc, n, nCnt, nCntrc, nn, nPrim, nSet
 logical(kind=iwp) :: Hit, IfTest

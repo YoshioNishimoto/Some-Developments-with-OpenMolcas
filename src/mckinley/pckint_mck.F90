@@ -9,6 +9,7 @@
 ! LICENSE or in <http://www.gnu.org/licenses/>.                        *
 !***********************************************************************
 
+!#define _DEBUGPRINT_
 subroutine PckInt_mck(abab,nZeta,nab,ab)
 
 use Constants, only: Zero
@@ -31,6 +32,11 @@ do iZeta=1,nZeta
   end do
   ab(iZeta) = sqrt(xMax)
 end do
+
+#ifdef _DEBUGPRINT_
+call recprt('abab',' ',abab,nZeta,nab*2)
+call recprt('ab',' ',ab,nZeta,1)
+#endif
 
 return
 

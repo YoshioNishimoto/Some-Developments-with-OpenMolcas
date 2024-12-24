@@ -103,7 +103,8 @@ C usually print info on the total number of parameters
 
       SUBROUTINE SBDIAG_SER(ISYM,ICASE,CONDNR,CPU)
       use caspt2_output, only: iPrGlb, insane
-      use caspt2_gradient, only: do_grad
+      use caspt2_gradient, only: do_grad, do_lindep, nStpGrd, LUSTD,
+     *                           idBoriMat
       IMPLICIT REAL*8 (A-H,O-Z)
 
 #include "rasdim.fh"
@@ -113,6 +114,7 @@ C usually print info on the total number of parameters
 
 #include "SysDef.fh"
 #include "pt2_guga.fh"
+#include "caspt2_grad.fh"
 
 * For fooling some compilers:
       DIMENSION WGRONK(2)
@@ -152,7 +154,7 @@ C for temporary storage.
       END IF
 
       IDTMP0 = 0
-      If (do_grad) Then
+      If (do_grad.or.nStpGrd.EQ.2) Then
         !! correct?
         iPad = ItoB - Mod(6*NG3,ItoB)
         IDTMP0=6*NG3+iPad
@@ -355,6 +357,11 @@ C TRANSFORM B. NEW B WILL OVERWRITE AND DESTROY WORK(LVEC)
       NB=NS
       CALL GETMEM('LB','ALLO','REAL',LB,NB)
       CALL DDAFILE(LUSBT,2,WORK(LB),NB,IDB)
+      If ((do_grad.or.nStpGrd.eq.2).and.do_lindep) Then
+        !! The original B matrix is needed in the LinDepLag subroutine
+        IDB2 = idBoriMat(ISYM,ICASE)
+        CALL DDAFILE(LUSTD,1,WORK(LB),NB,IDB2)
+      End If
       IF (IPRGLB.GE.INSANE) THEN
         FP=DNRM2_(NB,WORK(LB),1)
         WRITE(6,'("DEBUG> ",A,ES21.14)') 'BMAT NORM: ', FP
@@ -516,6 +523,8 @@ C divided over processors.
 #ifdef _MOLCAS_MPP_
       SUBROUTINE SBDIAG_MPP(ISYM,ICASE,CONDNR,CPU)
       use caspt2_output, only:iPrGlb,insane
+      use caspt2_gradient, only: do_grad, do_lindep, nStpGrd, LUSTD,
+     *                           idBoriMat
 #ifdef _MOLCAS_MPP_
       USE Para_Info, ONLY: King
 #endif
@@ -617,10 +626,14 @@ C Calculate the scaling factors and store them in array LSCA.
       CALL GETMEM('SCA','ALLO','REAL',LSCA,NAS)
       DO I=1,NAS
         SD=WORK(LSD+I-1)
-        IF(SD.GT.THRSHN) THEN
-          WORK(LSCA-1+I)=(1.0D00+DBLE(I)*3.0D-6)/SQRT(SD)
+        IF (IFDORTHO) THEN
+          WORK(LSCA-1+I)=1.0D+00
         ELSE
-          WORK(LSCA-1+I)=0.0D0
+          IF(SD.GT.THRSHN) THEN
+            WORK(LSCA-1+I)=(1.0D00+DBLE(I)*3.0D-6)/SQRT(SD)
+          ELSE
+            WORK(LSCA-1+I)=0.0D0
+          END IF
         END IF
       END DO
 
@@ -835,6 +848,15 @@ C TRANSFORM B MATRIX TO O-N BASIS. BUT FIRST, SAVE O-N VECTORS.
 
       CALL PSBMAT_GETMEM ('B',lg_B,NAS)
       CALL PSBMAT_READ ('B',iCase,iSym,lg_B,NAS)
+
+      If ((do_grad.or.nStpGrd.eq.2).and.do_lindep) Then
+        !! The original B matrix is needed in the LinDepLag subroutine
+        IDB2 = idBoriMat(ISYM,ICASE)
+        call GA_Distribution (lg_B, myRank, iLo, iHi, jLo, jHi)
+        call GA_Access (lg_B, iLo, iHi, jLo, jHi, mB, LDB)
+        CALL DDAFILE(LUSTD,1,DBL_MB(mB),(iHi-iLo+1)*(jHi-jLo+1),IDB2)
+        call GA_Release (lg_B, iLo, iHi, jLo, jHi)
+      End If
 
       IF (IPRGLB.GE.INSANE) THEN
         FP=PSBMAT_FPRINT(lg_B,NAS)

@@ -17,17 +17,12 @@ C Code adapted from trd_print.f written by P. A. Malmqvist.
      &                 NRT2MAB , RT2M , CMO1, CMO2, AUGSPIN)
 
       IMPLICIT REAL*8 (A-H,O-Z)
-
-#include "prgm.fh"
-      CHARACTER*16 ROUTINE
-      PARAMETER (ROUTINE='RTDM2_PRINT')
 #include "rasdim.fh"
 #include "symmul.fh"
 #include "rassi.fh"
 #include "cntrl.fh"
 #include "WrkSpc.fh"
 #include "Files.fh"
-#include "Struct.fh"
 #include "stdalloc.fh"
       INTEGER ISTATE, JSTATE, SYM12
       INTEGER NDYSAB,NRT2MAB,AUGSPIN
@@ -105,7 +100,7 @@ C      WRITE(LU,*)'# Spin BAB 2-el rTDM density matrix.'
       WRITE(LU,*) OCAA(I)
       END DO
       WRITE(LU,*)'# Binding energy (eV)'
-      WRITE(LU,'(5E19.12)') EIJ
+      WRITE(LU,'(5ES19.12)') EIJ
 
       SYM12=MUL(LSYM1,LSYM2)
       WRITE(LU,*)'# Total Symmetry of the WF product (<N-1,N>):'
@@ -129,7 +124,7 @@ C      WRITE(LU,*)'# Spin BAB 2-el rTDM density matrix.'
         DO IO=1,NO
           WRITE(LU,*)'# Symm ',ISYM,'   Orbital ',IO
           DO i=0,NB-1
-          WRITE(LU,'(5E19.12)') CMO1(LPOS+NB*(IO-1)+i)
+          WRITE(LU,'(5ES19.12)') CMO1(LPOS+NB*(IO-1)+i)
           END DO
         END DO
         LPOS=LPOS+NB*NO
@@ -142,7 +137,7 @@ C      WRITE(LU,*)'# Spin BAB 2-el rTDM density matrix.'
         DO IO=1,NO
           WRITE(LU,*)'# Symm ',ISYM,'   Orbital ',IO
           DO i=0,NB-1
-          WRITE(LU,'(5E19.12)') CMO2(LPOS+NB*(IO-1)+i)
+          WRITE(LU,'(5ES19.12)') CMO2(LPOS+NB*(IO-1)+i)
           END DO
         END DO
         LPOS=LPOS+NB*NO
@@ -163,7 +158,7 @@ C        eliminate small numbers
          IF(ABS(DYSAB(IA)).LT.1.0D-29) THEN
             DYSAB(IA)=0.0D0
          END IF
-         write(LU,'(I7,E22.12)') IA,DYSAB(IA)
+         write(LU,'(I7,ES22.12)') IA,DYSAB(IA)
        END DO
 400    CONTINUE
        NORBSYM=NOI
@@ -206,13 +201,13 @@ C Write reduced 2-e TDM in CI basis.
                LA=IOFFA(ISYL)+L-NIL
                LO=IOFFO(ISYL)+L
                IF((IA.LE.0).or.(JA.LE.0).or.(LA.LE.0)) THEN
-               write(LU,'(I7,I7,I7,E26.12)') IO,JO,LO,0.0D0
+               write(LU,'(I7,I7,I7,ES26.12)') IO,JO,LO,0.0D0
                ELSE
                 KPOS=IA+NASHT*((LA+NASHT*(JA-1))-1)
                 IF(ABS(RT2M(KPOS)).LT.1.0D-39) THEN
                  RT2M(KPOS) = 0.0D0
                 END IF
-                write(LU,'(I7,I7,I7,E26.12)') IO,JO,LO,
+                write(LU,'(I7,I7,I7,ES26.12)') IO,JO,LO,
      &           RT2M(KPOS)
                END IF
               END DO

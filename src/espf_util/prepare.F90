@@ -15,6 +15,7 @@ subroutine Prepare(nGrdPt,Grid,B,GrdI)
 use Basis_Info, only: dbsc, nCnttp
 use Center_Info, only: dc
 use Symmetry_Info, only: nIrrep, iChTbl
+use Disp, only: ChDisp, Dirct, Disp_Fac, IndDsp, InxDsp, lDisp, Mult_Disp
 use Constants, only: One
 use Definitions, only: wp, iwp, u6
 
@@ -22,8 +23,6 @@ implicit none
 integer(kind=iwp), intent(in) :: nGrdPt
 real(kind=wp), intent(in) :: Grid(3,nGrdPt), B(nGrdPt)
 real(kind=wp), intent(out) :: GrdI(4,nGrdPt)
-#include "Molcas.fh"
-#include "disp.fh"
 integer(kind=iwp) :: iCar, iCnt, iCnttp, iComp, iIrrep, jOper, LuWr, mc, mdc, mDisp, nCnttp_Valence, nDiff, nDisp
 logical(kind=iwp) :: DoRys, TstFnc
 character, parameter :: xyz(0:2) = ['x','y','z']
@@ -63,9 +62,9 @@ do iCnttp=1,nCnttp_Valence
   end if
 end do
 
-! Initialize the Direct array. Why? I don't know.
+! Initialize the Dirct array. Why? I don't know.
 
-Direct(:) = .true.
+Dirct(:) = .true.
 
 ! Generate symmetry adapted cartesian displacements
 

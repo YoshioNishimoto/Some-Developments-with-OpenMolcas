@@ -13,6 +13,7 @@ subroutine Tr_prm_cnt(idbg,nBas_Cont,nBas_Prim)
 
 use Basis_Info, only: dbsc, nBas, nCnttp
 use Symmetry_Info, only: nIrrep
+use define_af, only: iTabMx
 use stdalloc, only: mma_allocate, mma_deallocate
 use Constants, only: Zero
 use Definitions, only: wp, iwp
@@ -20,7 +21,6 @@ use Definitions, only: wp, iwp
 implicit none
 integer(kind=iwp), intent(in) :: idbg, nBas_Cont(8), nBas_Prim(0:7)
 #include "Molcas.fh"
-#include "itmax.fh"
 #include "rinfo.fh"
 integer(kind=iwp) :: i, ia, iBas, iBasL, ic, icnt, iCnttp, iCont, idx, iOff, ip, ipbasL, iPrim, iPrint, iSym, j, k, ka, kbias, la, &
                      nBas_Cont_Tot, ncnt, nSize, nSym, numck, numcl

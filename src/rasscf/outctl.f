@@ -32,6 +32,7 @@
       use qcmaquis_interface_utility_routines, only: print_dmrg_info
 #endif
       use OneDat, only: sNoOri, sOpSiz
+      use rctfld_module
 
       Implicit Real*8 (A-H,O-Z)
 
@@ -43,7 +44,6 @@
       Character*16 ROUTINE
       Parameter (ROUTINE='OUTCTL  ')
 #include "ciinfo.fh"
-#include "rctfld.fh"
 #include "WrkSpc.fh"
 #include "stdalloc.fh"
 #include "SysDef.fh"
@@ -174,7 +174,7 @@ C Local print level (if any)
       Call CollapseOutput(0,'Orbital specifications:')
       Write(LF,*)
 
-#if defined _ENABLE_BLOCK_DMRG_ || defined _ENABLE_CHEMPS2_DMRG_ || defined _ENABLE_DICE_SHCI_
+#if defined (_ENABLE_BLOCK_DMRG_) || defined (_ENABLE_CHEMPS2_DMRG_) || defined (_ENABLE_DICE_SHCI_)
       If(.Not.DoBlockDMRG) GoTo 113
 
 #ifdef _ENABLE_DICE_SHCI_
@@ -188,9 +188,9 @@ C Local print level (if any)
       Write(LF,Fmt2//'A,T45,L6)')'Semistochastic algorithm',Dice_stoc
       Write(LF,Fmt2//'A,T45,L6)')'Full restart',dice_restart
       Write(LF,Fmt2//'A,T45,I6)')'Max iterations',dice_iter
-      Write(LF,Fmt2//'A,T45,E10.3)')'Epsilon1',
+      Write(LF,Fmt2//'A,T45,ES10.3)')'Epsilon1',
      &                           dice_eps1
-      Write(LF,Fmt2//'A,T45,E10.3)')'Epsilon2',
+      Write(LF,Fmt2//'A,T45,ES10.3)')'Epsilon2',
      &                           dice_eps2
       Write(LF,Fmt2//'A,T45,I6)')'SampleN',
      &                           dice_sampleN
@@ -218,13 +218,13 @@ C Local print level (if any)
      &                           max_sweep
       Write(LF,Fmt2//'A,T45,I6)')'Maximum number of sweeps in RDM',
      &                           max_canonical
-      Write(LF,Fmt2//'A,T45,E10.3)')'Threshold for restarting',
+      Write(LF,Fmt2//'A,T45,ES10.3)')'Threshold for restarting',
      &                           chemps2_blb
-      Write(LF,Fmt2//'A,T45,E10.3)')'Minimum Davidson tolerance',
+      Write(LF,Fmt2//'A,T45,ES10.3)')'Minimum Davidson tolerance',
      &                           davidson_tol
-      Write(LF,Fmt2//'A,T45,E10.3)')'DMRG convergence threshold',
+      Write(LF,Fmt2//'A,T45,ES10.3)')'DMRG convergence threshold',
      &                           THRE/2.0
-      Write(LF,Fmt2//'A,T45,E10.3)')'Noise prefactor',
+      Write(LF,Fmt2//'A,T45,ES10.3)')'Noise prefactor',
      &                           chemps2_noise
       Write(LF,Fmt2//'A,T45,L6)')'Restart from previous calculation',
      &                           chemps2_restart
@@ -361,7 +361,7 @@ C Local print level (if any)
       If (KSDFT.ne.'SCF'.and.KSDFT.ne.'PAM') Call Print_NQ_Info()
       Call CollapseOutput(0,'CI expansion specifications:')
 
-#if defined _ENABLE_BLOCK_DMRG_ || defined _ENABLE_CHEMPS2_DMRG_ || defined _ENABLE_DICE_SHCI_
+#if defined (_ENABLE_BLOCK_DMRG_) || defined (_ENABLE_CHEMPS2_DMRG_) || defined (_ENABLE_DICE_SHCI_)
  114  Continue
 #endif
 
@@ -419,16 +419,16 @@ C Local print level (if any)
      &     'Super-CI energy',ESX
         Write(LF,Fmt2//'A,T45,F20.8)')
      &     'RASSCF energy change',DE
-        Write(LF,Fmt2//'A,T50,E10.3)')
+        Write(LF,Fmt2//'A,T50,ES10.3)')
      &     'Max change in MO coefficients',CMAX
-        Write(LF,Fmt2//'A,T50,E10.3)')
+        Write(LF,Fmt2//'A,T50,ES10.3)')
      &     'Max non-diagonal density matrix element',ROTMAX
-        Write(LF,Fmt2//'A,T50,E10.3)')
+        Write(LF,Fmt2//'A,T50,ES10.3)')
      &     'Maximum BLB matrix element',CBLBM
         Write(LF,Fmt2//'A,I4,A,I4,A,I4,A)')
      &     '(orbital pair',IBLBM,',',JBLBM,' in symmetry',ISYMBB,')'
         If (irlxRoot.ne.0)
-     &  Write(LF,Fmt2//'A,T45,E10.3)')
+     &  Write(LF,Fmt2//'A,T45,ES10.3)')
      &     'Norm of electronic gradient',RLXGRD
 
       End if
@@ -627,6 +627,8 @@ C Local print level (if any)
 *     Also put on RUNFILE (in the future...):
 *----------------------------------------------------------------------*
       Call Put_dArray('RASSCF orbitals',CMO,NTOT2)
+      !! Fix https://molcasforum.univie.ac.at/viewtopic.php?id=1009
+      IF (IPRLEV.LT.USUAL) Call Put_dArray('RASSCF OrbE',FDIAG,NTOT)
 *----------------------------------------------------------------------*
 *     compute properties and Mulliken's orbital populations            *
 *----------------------------------------------------------------------*

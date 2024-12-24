@@ -14,10 +14,10 @@
 subroutine CtrlMO(moip,nAcO)
 
 use Symmetry_Info, only: nIrrep
+use Etwas, only: nAsh
 use Definitions, only: Iwp
 
 implicit none
-#include "etwas.fh"
 integer(kind=iwp), intent(out) :: moip(0:nIrrep-1), nAcO
 integer(kind=iwp) :: iIrrep, iTot
 

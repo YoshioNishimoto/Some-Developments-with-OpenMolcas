@@ -49,9 +49,6 @@ set (sources
      init_tsk2.F90
      in_place_diag.F90
      in_place_square.F90
-     integral_ri_2.F90
-     integral_ri_3.F90
-     integral_ricd.F90
      inv_cho_factor.F90
      iramax.F90
      mk_acd_accd_shells.F90
@@ -92,6 +89,7 @@ set (sources
      plf_ricd.F90
      post_2center_ri.F90
      put_chunk.F90
+     readbpt2.F90
      remap_u_k.F90
      remap_v_k.F90
      remove_high_exponents.F90

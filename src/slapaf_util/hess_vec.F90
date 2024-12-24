@@ -28,7 +28,7 @@ real(kind=wp), parameter :: ThrD = 1.0e-10_wp
 !                                                                      *
 ! Compute the eigenvalues and the eigenvectors of the Hessian
 
-!define _DEBUGPRINT_
+!#define _DEBUGPRINT_
 
 ! Set up a unit matrix
 
@@ -53,7 +53,7 @@ end do
 !                                                                      *
 #ifdef _DEBUGPRINT_
 call RecPrt(' Eigenvectors','(12f6.2)',EVec,nDim,nDim)
-call TriPrt(' Eigenvalues','(12E8.2)',Hess,nDim)
+call TriPrt(' Eigenvalues','(12ES9.2)',Hess,nDim)
 #endif
 !                                                                      *
 !***********************************************************************

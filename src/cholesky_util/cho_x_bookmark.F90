@@ -41,6 +41,9 @@
 subroutine Cho_X_Bookmark(Thr,mSym,nVec,delta,irc)
 
 use Cholesky, only: BkmThr, BkmVec, Cho_Real_Par, nRow_BkmThr, nSym, ThrCom
+#ifdef _DEBUGPRINT_
+use Cholesky, only: NumCho
+#endif
 use stdalloc, only: mma_allocate, mma_deallocate
 use Constants, only: Zero, One
 use Definitions, only: wp, iwp, u6
@@ -84,7 +87,7 @@ if (DebugPrint) then
   call Cho_Head(SecNam//': Bookmarks (nVec,delta)','-',80,u6)
   do iSym=1,nSym
     write(u6,'(A,I2,A)') 'Symmetry block',iSym,' Bookmarks (nVec,delta)'
-    write(u6,'(5(1X,A,I6,A,D15.8,A))') ('(',BkmVec(iRS,iSym),',',BkmThr(iRS,iSym),')',iRS=1,nRow_BkmThr)
+    write(u6,'(5(1X,A,I6,A,ES15.8,A))') ('(',BkmVec(iRS,iSym),',',BkmThr(iRS,iSym),')',iRS=1,nRow_BkmThr)
   end do
 end if
 

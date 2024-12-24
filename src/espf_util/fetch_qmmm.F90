@@ -163,7 +163,7 @@ do iAtGMX=1,nAtGMX
     Symbol = PTab(iAtNmbGMX)(iFirst:2)//'_MM'
   end if
   if ((AT(iAtGMX) == QM) .or. (AT(iAtGMX) == MMI)) then
-    write(LuXYZ,'(a8,3E24.15E3)') Symbol(1:5),CoordGMX(:,iAtGMX)*NmToAng
+    write(LuXYZ,'(a8,3ES24.15E3)') Symbol(1:5),CoordGMX(:,iAtGMX)*NmToAng
   else
     CoordMMO(:,iAtOut) = CoordGMX(:,iAtGMX)
     LabMMO(iAtOut) = Symbol
@@ -208,7 +208,7 @@ end function mmslave_copyx_wrapper
 
 end subroutine Fetch_QMMM
 
-#elif !defined (EMPTY_FILES)
+#elif ! defined (EMPTY_FILES)
 
 ! Some compilers do not like empty files
 #include "macros.fh"

@@ -22,6 +22,7 @@ subroutine CSFGRad(Grad,nGrad)
 
 !use Basis_Info, only: nBas
 use Grd_interface, only: grd_kernel, grd_mem
+use NAC, only: IsCSF
 use stdalloc, only: mma_allocate, mma_deallocate
 use Constants, only: Zero
 use Definitions, only: wp, iwp
@@ -36,7 +37,6 @@ character(len=80) :: Label
 real(kind=wp), allocatable :: aDAO(:)
 procedure(grd_kernel) :: OvrGrd
 procedure(grd_mem) :: OvrMmG
-#include "nac.fh"
 
 Grad(:) = Zero
 

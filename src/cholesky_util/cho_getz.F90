@@ -30,6 +30,9 @@ subroutine Cho_GetZ(irc,NVT,l_NVT,nBlock,l_nBlock,nV,l_nV1,l_nV2,iV1,l_iV11,l_iV
 
 use Index_Functions, only: iTri, nTri_Elem
 use Cholesky, only: iiBstR, InfVec, LuPri, nnBstR, nSym, nSys_call, NumCho, TDECOM
+#ifdef _DEBUGPRINT_
+use Cholesky, only: iPrint
+#endif
 use Cholesky_procedures, only: Cho_X_GetIP_InfVec
 use stdalloc, only: mma_allocate, mma_deallocate
 use Constants, only: Zero
@@ -49,7 +52,7 @@ real(kind=wp), allocatable :: Wrk(:)
 character(len=*), parameter :: SecNam = 'Cho_GetZ'
 integer(kind=iwp), external :: Cho_iRange
 #ifdef _DEBUGPRINT_
-integer(kind=iwp) :: n, nBlock_Max, nnB
+integer(kind=iwp) :: i, n, nBlock_Max, nnB
 integer(kind=iwp), parameter :: myDebugInfo = 100
 real(kind=wp), parameter :: Tol = 1.0e-14_wp
 #endif
@@ -259,9 +262,9 @@ do iSym=1,nSym
     kOffZ = ip_Z(iTri(jBlock,jBlock),iSym)-1
     do J_inBlock=1,nV(jBlock,iSym)
       if (iPrint >= myDebugInfo) then
-        write(LuPri,'(A,I2,A,I6,A,1P,D15.6,A,D15.6)') 'Sym=',iSym,'  J=',iV1(jBlock,iSym)+J_inBlock-1,'  Z(J,J)=', &
-                                                      Z(kOffZ+iTri(J_inBlock,J_inBlock)),'  Squared=', &
-                                                      Z(kOffZ+iTri(J_inBlock,J_inBlock))**2
+        write(LuPri,'(A,I2,A,I6,A,ES15.6,A,ES15.6)') 'Sym=',iSym,'  J=',iV1(jBlock,iSym)+J_inBlock-1,'  Z(J,J)=', &
+                                                     Z(kOffZ+iTri(J_inBlock,J_inBlock)),'  Squared=', &
+                                                     Z(kOffZ+iTri(J_inBlock,J_inBlock))**2
       end if
       if ((abs(Z(kOffZ+iTri(J_inBlock,J_inBlock))) < Tol) .or. (Z(kOffZ+iTri(J_inBlock,J_inBlock)) < -Tol)) then
         n = n+1

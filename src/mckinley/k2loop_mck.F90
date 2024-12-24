@@ -13,8 +13,8 @@
 !               1995, Anders Bernhardsson                              *
 !***********************************************************************
 
-subroutine k2Loop_mck(Coor,iAnga,iCmpa,iDCRR,nDCRR,rData,ijCmp,Alpha,nAlpha,Beta,nBeta,Coeff1,iBasn,Coeff2,jBasn,nMemab,Wk002, &
-                      m002,Wk003,m003,iStb,jStb)
+subroutine k2Loop_mck(Coor,iAnga,iCmpa,iDCRR,nDCRR,k2data, &
+                      ijCmp,Alpha,nAlpha,Beta,nBeta,Coeff1,iBasn,Coeff2,jBasn,nMemab,Wk002,m002,Wk003,m003)
 !***********************************************************************
 !                                                                      *
 ! Object: to compute zeta, kappa, and P.                               *
@@ -34,95 +34,73 @@ subroutine k2Loop_mck(Coor,iAnga,iCmpa,iDCRR,nDCRR,rData,ijCmp,Alpha,nAlpha,Beta
 !             By Anders Bernhardsson                                   *
 !***********************************************************************
 
-use, intrinsic :: iso_c_binding, only: c_f_pointer, c_loc
 use Constants, only: Zero, One
 use Definitions, only: wp, iwp
+use k2_structure, only: k2_type
 
 implicit none
-#include "ndarray.fh"
-integer(kind=iwp), intent(in) :: iAnga(4), iCmpa(4), iDCRR(0:7), nDCRR, ijCmp, nAlpha, nBeta, iBasn, jBasn, nMemab, m002, m003, &
-                                 iStb, jStb
+integer(kind=iwp), intent(in) :: iAnga(4), iCmpa(4), iDCRR(0:7), nDCRR, ijCmp, nAlpha, nBeta, iBasn, jBasn, nMemab, m002, m003
 real(kind=wp), intent(in) :: Coor(3,2), Alpha(nAlpha), Beta(nBeta), Coeff1(nAlpha,iBasn), Coeff2(nBeta,jBasn)
-real(kind=wp), intent(out) :: rData(nAlpha*nBeta*nDArray+nDScalar,nDCRR), Wk002(m002)
+type(k2_type), intent(inout) :: k2Data(nDCRR)
+real(kind=wp), intent(out) :: Wk002(m002)
 real(kind=wp), intent(inout) :: Wk003(m003)
-integer(kind=iwp) :: mStb(2), nZeta
+integer(kind=iwp) :: iZeta, lDCRR, nZeta
 real(kind=wp) :: abMax, CoorM(3,4), tmp, Tst, ZtMax
-integer(kind=iwp), external :: ip_ab, ip_abMax, ip_Alpha, ip_Beta, ip_EstI, ip_IndZ, ip_Kappa, ip_PCoor, ip_Z, ip_ZetaM, ip_ZInv, &
-                               ip_ZtMax
 real(kind=wp), external :: EstI
 
-call k2Loop_mck_internal(rData)
+nZeta = nAlpha*nBeta
 
-! This is to allow type punning without an explicit interface
-contains
+CoorM(1,1) = Coor(1,1)
+CoorM(2,1) = Coor(2,1)
+CoorM(3,1) = Coor(3,1)
 
-subroutine k2Loop_mck_internal(rData)
+do lDCRR=0,nDCRR-1
 
-  real(kind=wp), target :: rData(nAlpha*nBeta*nDArray+nDScalar,nDCRR)
-  integer(kind=iwp), pointer :: iData(:)
-  integer(kind=iwp) :: iZeta, lDCRR
+  call OA(iDCRR(lDCRR),Coor(1:3,2),CoorM(1:3,2))
+  CoorM(:,3:4) = CoorM(:,1:2)
 
-  nZeta = nAlpha*nBeta
-  mStb(1) = iStb
-  mStb(2) = jStb
+  ! Compute Zeta, P and kappa.
 
-  CoorM(1,1) = Coor(1,1)
-  CoorM(2,1) = Coor(2,1)
-  CoorM(3,1) = Coor(3,1)
+  call DoZeta(Alpha,nAlpha,Beta,nBeta,CoorM(1,1),CoorM(1,2),k2Data(lDCRR+1)%PCoor,k2Data(lDCRR+1)%Zeta,k2Data(lDCRR+1)%Kappa, &
+              k2Data(lDCRR+1)%ZInv,k2Data(lDCRR+1)%Alpha,k2Data(lDCRR+1)%Beta,k2Data(lDCRR+1)%IndZ)
 
-  do lDCRR=0,nDCRR-1
+  call SchInt_mck(CoorM,iAnga,nAlpha,nBeta,nMemab,k2Data(lDCRR+1)%Zeta,k2Data(lDCRR+1)%ZInv,k2Data(lDCRR+1)%Kappa, &
+                  k2Data(lDCRR+1)%PCoor,nZeta,Wk002,m002,Wk003,m003)
 
-    call OA(iDCRR(lDCRR),Coor(1:3,2),CoorM(1:3,2))
-    CoorM(:,3:4) = CoorM(:,1:2)
+  call PckInt_mck(Wk002,nZeta,ijCmp,k2Data(lDCRR+1)%ab)
+  !                                                                  *
+  !*******************************************************************
+  !                                                                  *
+  ! Estimate the largest contracted integral.
 
-    ! Compute Zeta, P and kappa.
+  k2data(lDCRR+1)%EstI = EstI(k2Data(lDCRR+1)%Zeta,k2Data(lDCRR+1)%Kappa,nAlpha,nBeta,Coeff1,iBasn,Coeff2,jBasn, &
+                              k2Data(lDCRR+1)%ab,iCmpa(1)*iCmpa(2),Wk002,m002,k2Data(lDCRR+1)%IndZ)
+  !                                                                  *
+  !*******************************************************************
+  !                                                                  *
+  ! Find the largest integral estimate (AO Basis).
 
-    call c_f_pointer(c_loc(rData(ip_IndZ(1,nZeta),lDCRR+1)),iData,[nAlpha*nBeta+1])
-    call DoZeta(Alpha,nAlpha,Beta,nBeta,CoorM(1,1),CoorM(1,2),rData(ip_PCoor(1,nZeta),lDCRR+1),rData(ip_Z(1,nZeta),lDCRR+1), &
-                rData(ip_Kappa(1,nZeta),lDCRR+1),rData(ip_ZInv(1,nZeta),lDCRR+1),rData(ip_Alpha(1,nZeta,1),lDCRR+1), &
-                rData(ip_Beta(1,nZeta,2),lDCRR+1),iData)
-    nullify(iData)
-
-    call SchInt_mck(CoorM,iAnga,nAlpha,nBeta,nMemab,rData(ip_Z(1,nZeta),lDCRR+1),rData(ip_ZInv(1,nZeta),lDCRR+1), &
-                    rData(ip_Kappa(1,nZeta),lDCRR+1),rData(ip_PCoor(1,nZeta),lDCRR+1),nZeta,Wk002,m002,Wk003,m003)
-
-    call PckInt_mck(Wk002,nZeta,ijCmp,rData(ip_ab(1,nZeta),lDCRR+1))
-    !                                                                  *
-    !*******************************************************************
-    !                                                                  *
-    ! Estimate the largest contracted integral.
-
-    call c_f_pointer(c_loc(rData(ip_IndZ(1,nZeta),lDCRR+1)),iData,[nAlpha*nBeta+1])
-    rData(ip_EstI(nZeta),lDCRR+1) = EstI(rData(ip_Z(1,nZeta),lDCRR+1),rData(ip_Kappa(1,nZeta),lDCRR+1),nAlpha,nBeta,Coeff1,iBasn, &
-                                         Coeff2,jBasn,rData(ip_ab(1,nZeta),lDCRR+1),iCmpa(1)*iCmpa(2),Wk002,m002,iData)
-    !                                                                  *
-    !*******************************************************************
-    !                                                                  *
-    ! Find the largest integral estimate (AO Basis).
-
-    Tst = -One
-    do iZeta=0,nZeta-1
-      Tst = max(rData(ip_Z(iZeta+1,nZeta),lDCRR+1),Tst)
-    end do
-    rData(ip_ZetaM(nZeta),lDCRR+1) = tst
-
-    Tst = -One
-    ZtMax = Zero
-    abMax = Zero
-    do iZeta=1,nZeta
-      tmp = rData(ip_ab(iZeta,nZeta),lDCRR+1)
-      if (Tst < tmp) then
-        Tst = tmp
-        ZtMax = rData(ip_Z(iZeta,nZeta),lDCRR+1)
-        abMax = rData(ip_ab(iZeta,nZeta),lDCRR+1)
-      end if
-    end do
-    rData(ip_ZtMax(nZeta),lDCRR+1) = ZtMax
-    rData(ip_abMax(nZeta),lDCRR+1) = abMax
+  Tst = -One
+  do iZeta=1,nZeta
+    Tst = max(k2Data(lDCRR+1)%Zeta(iZeta),Tst)
   end do
+  k2data(lDCRR+1)%ZetaM = tst
 
-  return
+  Tst = -One
+  ZtMax = Zero
+  abMax = Zero
+  do iZeta=1,nZeta
+    tmp = k2Data(lDCRR+1)%ab(iZeta)
+    if (Tst < tmp) then
+      Tst = tmp
+      ZtMax = k2Data(lDCRR+1)%Zeta(iZeta)
+      abMax = k2Data(lDCRR+1)%ab(iZeta)
+    end if
+  end do
+  k2data(lDCRR+1)%ZtMax = ZtMax
+  k2data(lDCRR+1)%abMax = abMax
+end do
 
-end subroutine k2Loop_mck_internal
+return
 
 end subroutine k2Loop_mck

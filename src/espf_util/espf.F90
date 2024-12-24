@@ -17,6 +17,7 @@ use Basis_Info, only: nBas
 use OneDat, only: sOpSiz
 use Symmetry_Info, only: VarR, VarT, Symmetry_Info_Dmp
 use Data_Structures, only: Alloc1DArray_Type, Alloc2DArray_Type, Alloc4DArray_Type
+use NAC, only: isNAC
 use stdalloc, only: mma_allocate, mma_deallocate
 use Constants, only: Zero
 use Definitions, only: wp, iwp, u6
@@ -24,7 +25,6 @@ use Definitions, only: wp, iwp, u6
 implicit none
 integer(kind=iwp), intent(out) :: ireturn
 logical(kind=iwp), intent(in) :: StandAlone
-#include "nac.fh"
 integer(kind=iwp) :: iComp, idum(1), iGrdTyp, iOpt, iOption, iPL, iRc, iRMax, iSyLbl, MltOrd, nAtMM, natom, nAtQM, nBas0, nGrdPt, &
                      nInts, nMult, nSize, nSym
 real(kind=wp) :: DeltaR, EnergyCl, RepNuc
@@ -188,7 +188,7 @@ call espf_write(MltOrd,iRMax,DeltaR,iGrdTyp,nGrdPt,DoTinker,DoGromacs,lMorok,Mlt
 ! Exit
 
 isNAC = isNAC_tmp
-if (.not.(StandAlone .and. DynExtPot)) then
+if (.not. (StandAlone .and. DynExtPot)) then
   call mma_deallocate(T)
   call mma_deallocate(TT)
   call mma_deallocate(TTT)

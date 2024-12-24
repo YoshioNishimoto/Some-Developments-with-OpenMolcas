@@ -30,6 +30,7 @@ use Basis_Info, only: dbsc, nCnttp
 use Center_Info, only: dc
 use Her_RW, only: HerR, HerW, iHerR, iHerW
 use Index_Functions, only: nTri_Elem1
+use Disp, only: Dirct, IndDsp
 use Definitions, only: wp, iwp, u6
 
 implicit none
@@ -41,9 +42,7 @@ real(kind=wp) :: C(3), Fact, Factor, Gmma, PTC2, TC(3), Tmp0, Tmp1
 logical(kind=iwp) :: ABeq(3), EQ, JfGrad(3,4)
 integer(kind=iwp), external :: NrOpr
 logical(kind=iwp), external :: TF
-#include "Molcas.fh"
 #include "print.fh"
-#include "disp.fh"
 
 #include "macros.fh"
 unused_var(ZInv)
@@ -150,7 +149,7 @@ do kCnttp=1,nCnttp
           iCmp = 2**iCar
           if (TF(kdc+kCnt,iIrrep,iCmp) .and. (.not. dbsc(kCnttp)%pChrg)) then
             nDisp = nDisp+1
-            if (Direct(nDisp)) then
+            if (Dirct(nDisp)) then
               ! Reset flags for the basis set centers so that
               ! we will explicitly compute the derivatives
               ! with respect to those centers. Activate flag

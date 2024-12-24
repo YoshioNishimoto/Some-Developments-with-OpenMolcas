@@ -12,7 +12,9 @@
 !               1990, IBM                                              *
 !***********************************************************************
 
-subroutine Tcrtnc_h(Coef1,n1,m1,Coef2,n2,m2,Coef3,n3,m3,Coef4,n4,m4,ACInt,mabcd,Scrtch,nScr,ACOut,IndZet,lZeta,IndEta,lEta)
+subroutine Tcrtnc_h(Coef1,n1,m1,Coef2,n2,m2,Coef3,n3,m3,Coef4,n4,m4, &
+                    ACInt,mabcd,Scrtch,nScr,ACOut, &
+                    IndZet,lZeta,IndEta,lEta)
 !***********************************************************************
 !                                                                      *
 ! Object: to transform the integrals from primitives to contracted     *
@@ -39,7 +41,7 @@ real(kind=wp), intent(out) :: Scrtch(nScr)
 ! This should be intent(out), but the aliasing/overlap (see above) prevents it
 real(kind=wp), intent(_OUT_) :: ACOut(n1*n2*n3*n4,mabcd)
 #include "print.fh"
-#include "lCache.fh"
+#include "Molcas.fh"
 integer(kind=iwp) :: IncVec, ipA2, ipA3, iPrint, iRout, lsize, lZE, nA3, nCache, nVec
 
 iRout = 18

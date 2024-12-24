@@ -16,7 +16,9 @@ subroutine procinp_caspt2
   use caspt2_output, only: iPrGlb, terse, cmpThr, cntThr, dnmThr
   use caspt2_global, only: sigma_p_epsilon, sigma_p_exponent, &
                            ipea_shift, imag_shift, real_shift
-  use caspt2_gradient, only: do_grad, do_nac, do_csf, iRoot1, iRoot2
+  use caspt2_gradient, only: do_grad, do_nac, do_csf, do_lindep, &
+                             if_invar, iRoot1, iRoot2, if_invaria, &
+                             ConvInvar, if_ssdm
   use UnixInfo, only: SuperName
 #ifdef _MOLCAS_MPP_
   use Para_Info, only:Is_Real_Par, nProcs
@@ -35,7 +37,6 @@ subroutine procinp_caspt2
 #include "stdalloc.fh"
 #include "SysDef.fh"
 #include "chocaspt2.fh"
-#include "caspt2_grad.fh"
 
   integer(kind=iwp) :: iDummy
 
@@ -46,6 +47,9 @@ subroutine procinp_caspt2
   logical(kind=iwp) :: Is_iRlxRoot_Set, do_real, do_imag, do_sigp
   ! Environment
   character(Len=180) :: Env
+  ! NAC or not
+  character(Len=16) :: mstate1
+  logical(kind=iwp) :: Found
 
   integer(kind=iwp) :: I,J,M,N
   integer(kind=iwp) :: iSym
@@ -519,15 +523,11 @@ subroutine procinp_caspt2
   ! at the moment the calculation of analytic gradients has many
   ! technical restrictions and we need to make sure that we do not
   ! run into a unsupported combination of keywords, these are:
-  ! 1. no ipea shift
-  ! 2. no symmetry
-  ! 3. all CASSCF roots included in QD-CASPT2 gradients
-  ! 4. QD-CASPT2 gradients only with CD/DF
+  ! 1. no symmetry
+  ! 2. all CASSCF roots included in QD-CASPT2 gradients
+  ! 3. QD-CASPT2 gradients only with CD/DF
 
-  ! CASPT2 is invariant with respect to rotations in active space?
-  INVAR = .true.
   call put_iScalar('mp2prpt',0)
-  if (ipea_shift /= 0.0_wp) INVAR = .false.
 
   ! check if numerical gradients were requested in GATEWAY
   call qpg_iScalar('DNG', DNG_available)
@@ -547,7 +547,9 @@ subroutine procinp_caspt2
   end if
 
   ! check first if the user specifically asked for analytic gradients
-  if (input%GRDT) then
+  ! I think GRDT keyword should be ignored for numerical gradient and last energy
+  do_lindep = .False.
+  if (input%GRDT .and. SuperName(1:18) /= 'numerical_gradient' .and. SuperName(1:11) /= 'last_energy') then
     do_grad = Input%GRDT
 
     ! quit if both analytical and numerical gradients were explicitly requested
@@ -564,11 +566,7 @@ subroutine procinp_caspt2
       call quit_onUserError
     end if
 
-    ! no analytic gradients available with IPEA
-    if (.not. INVAR) then
-      call warningMessage(2,'Analytic gradients not available with IPEA shift.')
-      call quit_onUserError
-    end if
+    if (ipea_shift.ne.0.0D+00) do_lindep = .True.
 
     ! only allow analytic gradients either with nstate = nroots or with sadref
     if ((nState /= nRoots) .and. (.not. ifsadref)) then
@@ -584,11 +582,31 @@ subroutine procinp_caspt2
                             'with density fitting or Cholesky decomposition.')
       call quit_onUserError
     end if
+
+    ! CASPT2 analytic gradients with state-dependent density available only with DF or CD
+    if ((.not. ifChol) .and. (.not.input%SADREF) .and. (nRoots.ne.1)) then
+      call warningMessage(2,'Analytic gradients with state-dependent density available only '//  &
+                            'with density fitting or Cholesky decomposition.')
+      call quit_onUserError
+    end if
+
 #ifdef _MOLCAS_MPP_
-    ! for the time being no gradients with MPI
+    ! No parallel without RI/CD
+    if ((.not. ifChol) .and. nProcs > 1) then
+      call warningMessage(2,'Analytic gradients without density fitting or Cholesky decomposition not available'//  &
+                            ' in parallel executions.')
+      call quit_onUserError
+    end if
+#endif
+
+#if defined (_MOLCAS_MPP_) && ! defined (_GA_)
+    ! for the time being no gradients without GA
+    ! Parallel CASPT2 gradient is implemented with some GA-specific subroutines
+    ! partially because I can use OpenMolcas only for which GA is required.
+    ! As long as OpenMolcas concerns, this should be no problem (at all)
     if (nProcs > 1) then
       call warningMessage(2,'Analytic gradients not available'//  &
-                            ' in parallel executions.')
+                            ' without GA installed. Install GA and link.')
       call quit_onUserError
     end if
 #endif
@@ -603,20 +621,15 @@ subroutine procinp_caspt2
   ! requested numerical gradients in GATEWAY
   if ((isStructure() == 1)) then
     ! if MPI is enabled, analytic gradients only with one process
-#ifdef _MOLCAS_MPP_
-    if (nProcs == 1) then
-#endif
       ! check the hard constraints first
-      if ((.not. DNG) .and. (nSym == 1) .and. INVAR) then
+      if ((.not. DNG) .and. (nSym == 1)) then
         do_grad = .true.
 
         ! check weaker constraints, if not met, revert to numerical gradients
         if (ifMSCoup .and. (.not. ifChol)) do_grad = .false.
+        if ((ipea_shift /= 0.0_wp) .and. (.not. ifChol)) do_grad = .false.
         if ((nState /= nRoots) .and. (.not. ifsadref)) do_grad = .false.
       end if
-#ifdef _MOLCAS_MPP_
-    end if
-#endif
   end if
 
   ! compute full unrelaxed density for gradients
@@ -625,12 +638,39 @@ subroutine procinp_caspt2
   if (do_grad) then
     call put_iScalar('mp2prpt',2)
     do_nac = input%NAC
-    if (input%iNACRoot1 == 0 .and. input%iNACRoot2 == 0) then
-      iRoot1 = iRlxRoot
-      iRoot2 = iRlxRoot
-    else
-      iRoot1 = input%iNACRoot1
-      iRoot2 = input%iNACRoot2
+
+    !! If states to be computed are requested by ALASKA
+    !! (if "@" presents in MCLR Root), always compute for these states
+    call Qpg_cArray('MCLR Root',Found,I)
+    if (Found) then
+      call Get_cArray('MCLR Root',mstate1,16)
+!     write (*,*) "mstate1"
+!     write (*,'(a)') mstate1
+      if (mstate1 /= '****************') then
+        if (index(mstate1,'@') /= 0) then
+          read(mstate1,'(1X,I7,1X,I7)') iRoot1,iRoot2
+!         write (*,*) "MCLR Root read:", iRoot1,iRoot2
+          if (iRoot1 /= 0) do_nac = .true.
+          if (iRoot1 == 0) then
+            iRoot1 = iRoot2
+            iRlxRoot = iRoot1
+            do_nac = .false.
+          end if
+        end if
+      end if
+    end if
+
+!   write (*,*) "roots after MCLR Root:",iRoot1,iRoot2
+
+    !! If nothing is specified by ALASKA, use the states in &CASPT2
+    if ((iRoot1 == 0) .and. (iRoot2 == 0)) then
+      if ((input%iNACRoot1 == 0) .and. (input%iNACRoot2 == 0)) then
+        iRoot1 = iRlxRoot
+        iRoot2 = iRlxRoot
+      else
+        iRoot1 = input%iNACRoot1
+        iRoot2 = input%iNACRoot2
+      end if
     end if
   end if
 
@@ -638,8 +678,18 @@ subroutine procinp_caspt2
     do_csf = input%CSF
   end if
 
-  IFSADREF = input%SADREF
-  IFDORTHO = input%DORTHO
+  IFSADREF   = input%SADREF
+  IFDORTHO   = input%DORTHO
+  if_invar   = input%INVAR
+  if (ipea_shift /= 0.0_wp) if_invar = .false.
+  if_invaria = input%IAINVAR
+  ConvInvar  = input%ThrConvInvar
+
+  if ((ipea_shift /= 0.0_wp) .and. do_grad .and. (.not.IFDORTHO)) then
+    call warningMessage(2,'Analytic gradients with IPEA shift'//  &
+                          ' must use the CORT or DORT option.')
+    call quit_onUserError
+  end if
 
   !! Whether the Fock matrix (eigenvalues) is constructed with
   !! the state-averaged density matrix or not.
@@ -650,10 +700,10 @@ subroutine procinp_caspt2
   !! state-specific DM, XDW-CASPT2, and RMS-CASPT2, while it is an
   !! array for SS- and MS-CASPT2 with state-averaged DM (with SADREF
   !! option) and XMS-CASPT2.
-  if (IFSADREF .or. nRoots == 1 .or. (IFXMS .and. .not.IFDW)) then
-    IFSSDM = .false.
+  if (IFSADREF .or. (nRoots == 1) .or. (IFXMS .and. (.not.IFDW))) then
+    if_ssdm = .false.
   else
-    IFSSDM = .true.
+    if_ssdm = .true.
   end if
 
 end subroutine procinp_caspt2

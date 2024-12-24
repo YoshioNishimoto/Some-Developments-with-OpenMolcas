@@ -15,6 +15,7 @@ use Basis_Info, only: nBas
 use SOAO_Info, only: iAOtSO
 use pso_stuff, only: CMO
 use Symmetry_Info, only: nIrrep
+use Etwas, only: nAsh, nIsh
 use Constants, only: Zero
 use Definitions, only: wp, iwp
 
@@ -23,7 +24,6 @@ use Definitions, only: wp, iwp
 implicit none
 real(kind=wp), intent(_OUT_) :: COUT(*)
 integer(kind=iwp), intent(in) :: icmpi, iBasi, jcmpj, jBasj, iAOi, jAOj
-#include "etwas.fh"
 integer(kind=iwp) :: i1, iaoii(4), iAsh, iCmp(4), iCnt, iIrrep, iOrb, ip1, ip2, ipC, iSO, jj, nBs(4)
 
 nBs(1) = iBasi

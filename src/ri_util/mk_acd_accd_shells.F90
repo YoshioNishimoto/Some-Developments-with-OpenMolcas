@@ -28,7 +28,8 @@ use SOAO_Info, only: iAOtSO, nSOInf, SOAO_Info_Free, SOAO_Info_Init
 use Basis_Info, only: dbsc, Extend_Shells, Max_Shells, nCnttp, Shells
 use Sizes_of_Seward, only: S
 use RICD_Info, only: Do_acCD_Basis, Skip_High_AC, Thrshld_CD
-use Integral_interfaces, only: int_wrout
+use Integral_interfaces, only: Int_PostProcess, Integral_RICD
+use define_af, only: iTabMx
 use stdalloc, only: mma_allocate, mma_deallocate
 use Constants, only: Zero, One, Half
 use Definitions, only: wp, iwp, u6
@@ -37,7 +38,6 @@ implicit none
 integer(kind=iwp), intent(in) :: iCnttp
 logical(kind=iwp), intent(in) :: W2L
 #include "Molcas.fh"
-#include "itmax.fh"
 #include "print.fh"
 integer(kind=iwp) :: i, iAng, iAngMax, iAngMin, iAO, iBS, iCho_c, iCho_p, iCmp, iCntrc, iDum, iExp_k, iExp_l, ijS, ijS_req, ijSO, &
                      ijT, ik, ikl, il, Indx, iOff, iOff_Ak, iOff_Qk, ip_Exp, iRC, iSeed, iShell, iShll, iShll_, iSO, iSph, &
@@ -48,16 +48,16 @@ integer(kind=iwp) :: i, iAng, iAngMax, iAngMin, iAO, iBS, iCho_c, iCho_p, iCmp, 
                      nSO_p, nTest, nTheta, nTheta_All, nTheta_Full, nTInt_c, nTInt_p, nTri, NumCho_c, NumCho_p
 real(kind=wp) :: Coeff_, Coeff_k, Coeff_kk, Coeff_kl, Coeff_l, Coeff_lk, Coeff_ll, Dummy(1), Exp_i, Exp_j, Fact, Thr_aCD, ThrAO, &
                  Thrs, Thrshld_CD_p
+logical(kind=iwp) :: Diagonal, Found, Hit, In_Core, Keep_Basis
+character(len=80) :: atom, author, Aux, basis, BSLbl, btype, CGTO, Label
 integer(kind=iwp), allocatable :: Con(:), ConR(:,:), iD_c(:), iD_p(:), iList2_c(:,:), iList2_p(:,:), Indkl(:), Indkl_p(:), &
                                   LTP(:,:), Prm(:)
 real(kind=wp), allocatable :: A(:), ADiag(:), C(:), Q(:), QTmp(:), Scr(:), Temp(:), TInt_c(:), TInt_p(:), Tmp(:), TP(:), tVp(:), &
                               tVt(:), tVtF(:), Vec(:), Wg(:), Z(:)
 #ifdef _DEBUGPRINT_
+real(kind=wp) :: Det
 real(kind=wp), allocatable :: H(:), tVtInv(:), U(:)
 #endif
-logical(kind=iwp) :: Diagonal, Found, Hit, In_Core, Keep_Basis
-character(len=80) :: atom, author, Aux, basis, BSLbl, btype, CGTO, Label
-procedure(int_wrout) :: Integral_RICD
 integer(kind=iwp), external :: IsFreeUnit
 
 !                                                                      *
@@ -234,7 +234,9 @@ else
   ! Generate atomic two-electron integrals to decompose.
 
   ijS_req = 0
-  call Drv2El_Atomic_NoSym(Integral_RICD,ThrAO,iCnttp,iCnttp,TInt_c,nTInt_c,In_Core,ADiag,Lu_A,ijS_req,Keep_Shell)
+  Int_PostProcess => Integral_RICD
+  call Drv2El_Atomic_NoSym(ThrAO,iCnttp,iCnttp,TInt_c,nTInt_c,In_Core,ADiag,Lu_A,ijS_req,Keep_Shell)
+  Int_PostProcess => null()
   !                                                                    *
   !*********************************************************************
   !                                                                    *
@@ -462,7 +464,9 @@ do iBS=0,nBS-1
         !                                                              *
         ! Generate atomic two-electron integrals
 
-        call Drv2El_Atomic_NoSym(Integral_RICD,ThrAO,iCnttp,iCnttp,TInt_p,nTInt_p,In_Core,ADiag,Lu_A,ijS_Req,Keep_Shell)
+        Int_PostProcess => Integral_RICD
+        call Drv2El_Atomic_NoSym(ThrAO,iCnttp,iCnttp,TInt_p,nTInt_p,In_Core,ADiag,Lu_A,ijS_Req,Keep_Shell)
+        Int_PostProcess => null()
 
         if (.not. In_Core) then
           call WarningMessage(2,'Error in Mk_RICD_Shells')
@@ -1219,12 +1223,12 @@ if (W2L) then
 
       ! Write out the exponents
 
-      write(Lu_lib,'(5(1X,D20.13))') (Shells(iShll_)%Exp(i),i=1,nExpi)
+      write(Lu_lib,'(5(1X,ES20.13))') (Shells(iShll_)%Exp(i),i=1,nExpi)
 
       ! Write out the contraction coefficients
 
       do i=1,nExpi
-        write(Lu_lib,'(5(1X,D20.13))') (Shells(iShll_)%Cff_c(i,j,1),j=1,Shells(iShll_)%nBasis)
+        write(Lu_lib,'(5(1X,ES20.13))') (Shells(iShll_)%Cff_c(i,j,1),j=1,Shells(iShll_)%nBasis)
       end do
 
     end do

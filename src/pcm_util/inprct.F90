@@ -19,6 +19,12 @@ subroutine InpRct(LuSpool)
 !             Modified for Langevin polarizabilities, March 2000 (RL)  *
 !***********************************************************************
 
+use rctfld_module, only: aFac, CLim, Conductor, CORDSI, DampIter, DieDel, DipCutOff, DipSI, DistSparse, Eps, Eps_USER, EpsInf, &
+                         EpsInf_USER, gAtom, iSLPar, lAmberPol, LATATO, lDamping, lDipRestart, lGridAverage, lLangevin, lMax, lRF, &
+                         lRFCav, lSparse, MXA, nExpo, nGridAverage, nGridSeed, nOrdInp, nSparse, PCM, PolSI, PreFac, RadInp, &
+                         RadLat, rDS, RF_Basis, RotAlpha, RotBeta, RotGamma, rSca, rSLPar, Scaaa, Scal14, Scala, Scalb, Scalc, &
+                         Solvent, TK, TK5
+use CovRad_Data, only: CovRadT_
 use Constants, only: Zero, One, Two, Three, Four, Ten, Half, Pi, deg2rad, auTokJ, kBoltzmann
 use Definitions, only: wp, iwp, u6
 
@@ -31,8 +37,6 @@ integer(kind=iwp), external :: iCLast, nToken, NumSolv
 real(kind=wp), external :: Anal_Gitt
 character(len=180), external :: Get_Ln
 #include "print.fh"
-#include "rctfld.fh"
-#include "covradt_data.fh"
 
 iRout = 1
 iPrint = nPrint(iRout)

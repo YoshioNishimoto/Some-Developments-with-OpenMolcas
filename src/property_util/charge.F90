@@ -16,6 +16,7 @@ subroutine CHARGE(NSYM,NBAS,BNAME,CMO,OCCN,SMAT,iCase,FullMlk,lSave)
 
 use SpinAV, only: Do_SpinAV, DSc
 use UnixInfo, only: ProgName
+use define_af, only: AngTp, iTabMx
 use stdalloc, only: mma_allocate, mma_deallocate
 use Constants, only: Zero, One, Two, Half
 use Definitions, only: wp, iwp, u6
@@ -42,11 +43,11 @@ real(kind=wp), allocatable, save :: Bonds(:), Chrg(:), D(:,:), D_blo(:), D_tmp(:
 character(len=LenIn4), allocatable :: LblCnt4(:)
 character(len=LenIn), allocatable :: CNAME(:)
 character(len=8), allocatable :: TNAME(:), TSwap(:)
-character(len=*), parameter :: AufBau(19) = ['01s', &
-                                             '02s','02p', &
-                                             '03s','03p', &
-                                             '04s','03d','04p', &
-                                             '05s','04d','05p', &
+character(len=*), parameter :: AufBau(19) = ['01s',                   &
+                                             '02s',            '02p', &
+                                             '03s',            '03p', &
+                                             '04s',      '03d','04p', &
+                                             '05s',      '04d','05p', &
                                              '06s','04f','05d','06p', &
                                              '07s','05f','06d','07p']
 integer(kind=iwp), external :: iPrintLevel
@@ -55,7 +56,6 @@ logical(kind=iwp), external :: Reduce_Prt
 character(len=LenIn8), external :: Clean_BName
 !character(len=4), allocatable :: TLbl(:)
 !character(len=LenIn), allocatable :: LblCnt(:)
-#include "angtp.fh"
 #include "WrkSpc.fh"
 
 !                                                                      *

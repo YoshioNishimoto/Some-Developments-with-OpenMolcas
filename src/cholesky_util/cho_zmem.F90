@@ -38,7 +38,7 @@ logical(kind=iwp), intent(in) :: DoPrint, DoCheck
 integer(kind=iwp) :: iSym, l_Mx
 real(kind=wp) :: Byte, Word(8), xl_Z
 character(len=2) :: Unt
-#if !defined (_I8_) || defined (_DEBUGPRINT_)
+#if ! defined (_I8_) || defined (_DEBUGPRINT_)
 character(len=*), parameter :: SecNam = 'Cho_ZMem'
 #endif
 
@@ -71,14 +71,14 @@ if (DoPrint) then
   write(LuPri,'(A,I8,A,F8.3,1X,A,A)') 'Total:        ',l_Z,' words (',Byte,Unt,')'
 end if
 
-#if !defined (_I8_) || defined (_DEBUGPRINT_)
+#if ! defined (_I8_) || defined (_DEBUGPRINT_)
 if (l_Z < 0) then
   write(Lupri,'(A,A)') SecNam,': dimension of Z vector array is negative!'
   write(Lupri,'(A,I8)') 'l_Z=',l_Z
   if (xl_Z > Zero) then
     write(LuPri,'(A)') 'This seems to be an integer overflow!'
     call Cho_RWord2Byte(xl_Z,Byte,Unt)
-    write(LuPri,'(A,1P,D15.6,A,D15.6,1X,A,A)') 'In double precision, xl_Z=',xl_Z,' words (',Byte,Unt,')'
+    write(LuPri,'(A,ES15.6,A,ES15.6,1X,A,A)') 'In double precision, xl_Z=',xl_Z,' words (',Byte,Unt,')'
   end if
   irc = 1
   return

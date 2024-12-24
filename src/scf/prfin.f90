@@ -34,6 +34,7 @@
                         nBT, nIterP, nnB, NoProp, nSYm, PotNuc, ThrEne, ThrOcc, Tot_Charge, nBas, nOrb, nIter
       use Constants, only: Zero
       use stdalloc, only: mma_allocate, mma_deallocate
+      use rctfld_module, only: lRF
       Implicit None
       Integer nDT,nEO,nCMO
       Real*8 Dens(nDT),TwoHam(nDT),OneHam(nDT),Ovlp(nDT),EOrb(nEO),OccNo(nEO),CMO(nCMO),MssVlc(nDT),Darwin(nDT)
@@ -41,7 +42,6 @@
       Character(LEN=80) Note
       External EFP_ON
 !
-#include "rctfld.fh"
 #include "oneswi.fh"
 !
 !---- Define local variables
@@ -189,7 +189,7 @@
          Else
             If (jPrint.ge.2) Then
                Write(6,*)
-               Write(6,'(6X,A,E11.4,A)')'All orbitals with orbital energies smaller than',ThrEne,' are printed'
+               Write(6,'(6X,A,ES11.4,A)')'All orbitals with orbital energies smaller than',ThrEne,' are printed'
             End If
          End If
          ThrOcc = -99999.0d+00

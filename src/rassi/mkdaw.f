@@ -10,17 +10,11 @@
 ************************************************************************
       SUBROUTINE MKDAW_RASSI(NLEV,NVERT,IDRT,IDOWN,IDAW,LTV)
       IMPLICIT REAL*8 (A-H,O-Z)
-#include "prgm.fh"
-      CHARACTER*16 ROUTINE
-      PARAMETER (ROUTINE='MKDAW_RASSI')
       DIMENSION IDOWN(NVERT,0:3),IDAW(NVERT,0:4),IDRT(NVERT,5)
       DIMENSION LTV(-1:NLEV)
       PARAMETER (LTAB=1)
 
 C Purpose: Construct Direct Arc Weights.
-
-
-
 
 C SET UP A LEVEL-TO-VERTEX TABLE, LTV, AND IDENTIFY MIDVERTICES:
       DO LEV=-1,NLEV
@@ -36,21 +30,7 @@ C SET UP A LEVEL-TO-VERTEX TABLE, LTV, AND IDENTIFY MIDVERTICES:
       DO LEV=-1,NLEV-1
         LTV(LEV)=1+LTV(LEV+1)
       END DO
-      DO IC=0,3
-        IDAW(NVERT,IC)=0
-      END DO
-      IDAW(NVERT,4)=1
-      DO IV=NVERT-1,1,-1
-        ISUM=0
-        DO IC=0,3
-          IDAW(IV,IC)=0
-          IDWN=IDOWN(IV,IC)
-          IF(IDWN.NE.0) THEN
-           IDAW(IV,IC)=ISUM
-           ISUM=ISUM+IDAW(IDWN,4)
-          END IF
-        END DO
-        IDAW(IV,4)=ISUM
-      END DO
+
+      CALL MKDAW(NVERT,IDOWN,IDAW)
 
       END

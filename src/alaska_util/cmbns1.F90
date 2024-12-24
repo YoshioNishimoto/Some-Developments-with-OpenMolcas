@@ -23,6 +23,7 @@ subroutine CmbnS1(Rnxyz,nZeta,la,lb,Zeta,rKappa,rFinal,Alpha,Beta,Grad,nGrad,DAO
 
 use Symmetry_Info, only: iChBas, nIrrep
 use Index_Functions, only: C_Ind
+use NAC, only: IsCSF
 use Constants, only: Two, Three
 use Definitions, only: wp, iwp
 
@@ -39,7 +40,6 @@ real(kind=wp), parameter :: exp32 = -Three/Two
 integer(kind=iwp), external :: iPrmt
 real(kind=wp), external :: DDot_
 #include "print.fh"
-#include "nac.fh"
 
 iRout = 134
 iPrint = nPrint(iRout)

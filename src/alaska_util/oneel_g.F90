@@ -44,6 +44,9 @@ use Sizes_of_Seward, only: S
 use Symmetry_Info, only: nIrrep
 use Index_Functions, only: nTri_Elem1
 use Grd_interface, only: grd_kernel, grd_mem
+use define_af, only: AngTp
+use Disp, only: ChDisp
+use NAC, only: IsCSF
 use stdalloc, only: mma_allocate, mma_deallocate
 use Constants, only: Zero, One
 use Definitions, only: wp, iwp, u6
@@ -65,11 +68,7 @@ logical(kind=iwp) :: AeqB, EQ, FreeiSD, IfGrad(3,3)
 real(kind=wp), allocatable :: DAO(:), DSO(:), DSOpr(:), Kappa(:), Krnl(:), PCoor(:,:), rFinal(:), Scr1(:), Scr2(:), Zeta(:), ZI(:)
 character(len=3), parameter :: ChOper(0:7) = ['E  ','x  ','y  ','xy ','z  ','xz ','yz ','xyz']
 integer(kind=iwp), external :: MemSO1, n2Tri, NrOpr
-#include "Molcas.fh"
-#include "angtp.fh"
 #include "print.fh"
-#include "disp.fh"
-#include "nac.fh"
 
 iRout = 112
 iPrint = nPrint(iRout)

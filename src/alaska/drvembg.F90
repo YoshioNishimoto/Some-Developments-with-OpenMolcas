@@ -36,17 +36,16 @@ use Basis_Info, only: nBas
 use Symmetry_Info, only: nIrrep
 use Para_Info, only: King
 use OFembed, only: OFE_KSDFT
+use nq_Info, only: Grid_Type, Moving_Grid
+use Disp, only: ChDisp
 use Constants, only: One
 use Definitions, only: wp, iwp, u6
-use nq_Info, only: Grid_Type, Moving_Grid
 
 implicit none
 integer(kind=iwp), intent(in) :: nGrad
 real(kind=wp), intent(inout) :: Grad(nGrad)
 real(kind=wp), intent(out) :: Temp(nGrad)
-#include "Molcas.fh"
 #include "print.fh"
-#include "disp.fh"
 integer(kind=iwp) :: iEnd, iIrrep, iPrint, iRout, jPrint, LuWr, nDens
 real(kind=wp) :: TCpu1, TCpu2, TWall1, TWall2
 logical(kind=iwp) :: Do_Grad

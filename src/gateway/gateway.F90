@@ -35,14 +35,13 @@ use Sizes_of_Seward, only: S
 use RICD_Info, only: Cho_OneCenter, Chol => Cholesky, Do_DCCD, Do_RI
 use Cholesky, only: Cho_1Center
 use Symmetry_Info, only: nIrrep, VarR, VarT
+use rctfld_module, only: lLangevin, lRF, nPCM_Info, PCM
 use stdalloc, only: mma_allocate, mma_deallocate
 use Definitions, only: wp, iwp
 
 implicit none
 integer(kind=iwp), intent(out) :: iReturn
 #include "Molcas.fh"
-#include "status.fh"
-#include "rctfld.fh"
 #include "print.fh"
 integer(kind=iwp) :: iCnt, iCnttp, iNuc, iOption, iRc, iter_S, LuSpool, mdc, nDNA, nNuc
 integer(kind=iwp), parameter :: nMamn = MaxBfn+MaxBfn_Aux

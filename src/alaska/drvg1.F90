@@ -31,10 +31,12 @@ subroutine Drvg1(Grad,Temp,nGrad)
 !             Modified for SetUp_Ints. January '00                     *
 !***********************************************************************
 
-use k2_setup, only: Data_k2
-use iSD_data, only: iSD
-use k2_arrays, only: ipZeta, ipiZet, Mem_DBLE, Aux, Sew_Scr
-use Aces_Stuff, only: G_toc, nSSDM, SSDM
+use setup, only: mSkal, MxPrm, nAux
+use iSD_data, only: iSD, nSD
+use k2_structure, only: k2Data
+use k2_arrays, only: Aux, Destroy_BraKet, Sew_Scr
+use pso_stuff, only: G_toc, nSSDM, SSDM
+use Disp, only: ChDisp, l2DI
 use Basis_Info, only: nBas, Shells
 use Sizes_of_Seward, only: S
 use Gateway_Info, only: CutInt
@@ -48,27 +50,24 @@ implicit none
 integer(kind=iwp), intent(in) :: nGrad
 real(kind=wp), intent(inout) :: Grad(nGrad)
 real(kind=wp), intent(out) :: Temp(nGrad)
-#include "Molcas.fh"
 #include "print.fh"
-#include "disp.fh"
-#include "nsd.fh"
-#include "setup.fh"
 integer(kind=iwp) :: i, iAng, iAnga(4), iAOst(4), iAOV(4), iBasAO, iBasi, iBasn, iBsInc, iCar, iCmpa(4), iCnt, iFnc(4), ijklA, &
-                     ijMax, ijS, iOpt, iost, ipEI, ipiEta, ipMem1, ipMem2, ipP, ipQ, iPrem, iPren, iPrimi, iPrInc, iPrint, ipEta, &
-                     ipxA, ipxB, ipxD, ipxG, ipZI, iRout, iS, iSD4(0:nSD,4), iSh, iShela(4), iShlla(4), iSSDM, istabs(4), j, jAng, &
-                     jBAsAO, jBasj, jBasn, jBsInc, jPrimj, jPrInc, jS, JndGrd(3,4), k2ij, k2kl, kBasAO, kBask, kBasn, kBsInc, &
-                     kBtch, kls, kPrimk, kPrInc, kS, lBasAO, lBasl, lBasn, lBsInc, lPriml, lPrInc, lRealName, lS, luGamma, &
-                     luCMOPT2, MaxShlAO, mBtch, mdci, mdcj, mdck, mdcl, Mem1, Mem2, MemMax, MemPSO, nab, nBasI, nBasT, nBtch, ncd, &
-                     nDCRR, nDCRS, nEta, nFro(8), nHmab, nHmcd, nHrrab, nij, nijkl, nOcc(8), nPairs, nQuad, nRys, nSkal, nSO, nZeta
+                     ijMax, ijS, ik2, iOpt, iost, ipMem1, ipMem2, iPrem, iPren, iPrimi, iPrInc, iPrint, iRout, iS, iSD4(0:nSD,4), &
+                     iSh, iShela(4), iShlla(4), iSSDM, istabs(4), j, jAng, jBAsAO, jBasj, jBasn, jBsInc, jk2, JndGrd(3,4), jPrimj, &
+                     jPrInc, jS, k2ij, k2kl, kBasAO, kBask, kBasn, kBsInc, kBtch, kls, kPrimk, kPrInc, kS, lBasAO, lBasl, lBasn, &
+                     lBsInc, lPriml, lPrInc, lRealName, lS, luCMOPT2, luGamma, MaxShlAO, mBtch, mdci, mdcj, mdck, mdcl, Mem1, &
+                     Mem2, MemMax, MemPSO, nab, nBasI, nBasT, nBtch, ncd, nDCRR, nDCRS, nEta, nFro(8), nHmab, nHmcd, nHrrab, nij, &
+                     nijkl, nOcc(8), nPairs, nQuad, nRys, nSkal, nSO, nZeta
 real(kind=wp) :: A_int, Cnt, Coor(3,4), P_Eff, PMax, Prem, Pren, TCpu1, TCpu2, ThrAO, TMax_all, TskHi, TskLw, TWall1, TWall2
-logical(kind=iwp) :: ABCDeq, AeqB, CeqD, DoFock, DoGrad, EQ, FreeK2, Indexation, is_error, JfGrad(3,4), lDummy, Loadvec, No_Batch, &
-                     Shijij, Skip, Triangular, Verbose
+logical(kind=iwp) :: ABCDeq, AeqB, CeqD, DoFock, DoGrad, EQ, Indexation, is_error, JfGrad(3,4), lDummy, Loadvec, No_Batch, Shijij, &
+                     Skip, Triangular
 character(len=4096) :: RealName
 character(len=72) :: formt
 character(len=8) :: Method_chk
 integer(kind=iwp), allocatable :: Ind_ij(:,:), iOffAO(:)
 real(kind=wp), allocatable :: CMOPT2(:), TMax(:,:), WRK1(:), WRK2(:)
 integer(kind=iwp), save :: MemPrm
+integer(kind=iwp), external :: IsFreeUnit
 logical(kind=iwp), external :: Rsv_GTList
 !*********** columbus interface ****************************************
 integer(kind=iwp) :: Columbus
@@ -146,9 +145,10 @@ if (Method_chk == 'CASPT2  ') then
   !! The two MO indices in the half-transformed amplitude are
   !! not CASSCF but quasi-canonical orbitals.
   call mma_allocate(CMOPT2,nBasT*nBasT,Label='CMOPT2')
+  LuCMOPT2 = isFreeUnit(66)
   call PrgmTranslate('CMOPT2',RealName,lRealName)
-  LuCMOPT2 = 61
   call MOLCAS_Open_Ext2(LuCMOPT2,RealName(1:lRealName),'DIRECT','UNFORMATTED',iost,.false.,1,'OLD',is_error)
+
   do i=1,nBasT*nBasT
     read(LuCMOPT2) CMOPT2(i)
   end do
@@ -178,7 +178,9 @@ if (Method_chk == 'CASPT2  ') then
       end do
     end do
   end if
+
   close(LuCMOPT2)
+
   write(u6,*) 'Number of Non-Frozen Occupied Orbitals = ',nOcc(1)
   write(u6,*) 'Number of     Frozen          Orbitals = ',nFro(1)
 
@@ -192,8 +194,8 @@ if (Method_chk == 'CASPT2  ') then
   end do
   call mma_allocate(G_toc,MaxShlAO**4,Label='GtocCASPT2')
 
+  LuGAMMA = isFreeUnit(65)
   call PrgmTranslate('GAMMA',RealName,lRealName)
-  LuGamma = 60
   call MOLCAS_Open_Ext2(LuGamma,RealName(1:lRealName),'DIRECT','UNFORMATTED',iost,.true.,nOcc(1)*nOcc(1)*8,'OLD',is_error)
 
   call mma_allocate(WRK1,nOcc(1)*nOcc(1),Label='WRK1')
@@ -377,9 +379,9 @@ do
       !                                                                *
       !*****************************************************************
       !                                                                *
-      call Int_Parm_g(iSD4,nSD,iAnga,iCmpa,iShlla,iShela,iPrimi,jPrimj,kPrimk,lPriml,k2ij,nDCRR,k2kl,nDCRS,mdci,mdcj,mdck,mdcl, &
-                      AeqB,CeqD,nZeta,nEta,ipZeta,ipZI,ipP,ipEta,ipEI,ipQ,ipiZet,ipiEta,ipxA,ipxB,ipxG,ipxD,l2DI,nab,nHmab,ncd, &
-                      nHmcd,nIrrep)
+      call Int_Parm_g(iSD4,nSD,iAnga,iCmpa,iShlla,iShela,iPrimi,jPrimj,kPrimk,lPriml, &
+                      k2ij,ik2,nDCRR,k2kl,jk2,nDCRS,mdci,mdcj,mdck,mdcl, &
+                      AeqB,CeqD,nZeta,nEta,l2DI,nab,nHmab,ncd,nHmcd,nIrrep)
       !                                                                *
       !*****************************************************************
       !                                                                *
@@ -419,8 +421,9 @@ do
 #             ifdef _CD_TIMING_
               call CWTIME(Pget0CPU1,Pget0WALL1)
 #             endif
-              if (Method_chk == 'CASPT2  ') call CASPT2_BTAMP(iS,jS,kS,lS,iFnc(1)*iBasn,iFnc(2)*jBasn,iFnc(3)*kBasn,iFnc(4)*lBasn, &
-                                                              iOffAO,nBasT,nOcc(1),CMOPT2(1+nbast*nfro(1)),WRK1,WRK2,G_Toc)
+              if (Method_chk == 'CASPT2  ') call CASPT2_BTAMP(LuGAMMA,iS,jS,kS,lS,iFnc(1)*iBasn,iFnc(2)*jBasn,iFnc(3)*kBasn, &
+                                                              iFnc(4)*lBasn,iOffAO,nBasT,nOcc(1),CMOPT2(1+nbast*nfro(1)),WRK1, &
+                                                              WRK2,G_Toc)
               call PGet0(iCmpa,iBasn,jBasn,kBasn,lBasn,Shijij,iAOV,iAOst,nijkl,Sew_Scr(ipMem1),nSO,iFnc(1)*iBasn,iFnc(2)*jBasn, &
                          iFnc(3)*kBasn,iFnc(4)*lBasn,MemPSO,Sew_Scr(ipMem2),Mem2,iS,jS,kS,lS,nQuad,PMax)
               if (A_Int*PMax < CutInt) cycle
@@ -436,12 +439,12 @@ do
 #             ifdef _CD_TIMING_
               call CWTIME(TwoelCPU1,TwoelWall1) ! timing_cdscf
 #             endif
-              call TwoEl_g(Coor,iAnga,iCmpa,iShela,iShlla,iAOV,mdci,mdcj,mdck,mdcl,nRys,Data_k2(k2ij),nab,nHmab,nDCRR, &
-                           Data_k2(k2kl),ncd,nHmcd,nDCRS,Pren,Prem,iPrimi,iPrInc,jPrimj,jPrInc,kPrimk,kPrInc,lPriml,lPrInc, &
+              call TwoEl_g(Coor,iAnga,iCmpa,iShela,iShlla,iAOV,mdci,mdcj,mdck,mdcl,nRys, &
+                           k2data(:,ik2),k2data(:,jk2), &
+                           nDCRR,nDCRS,Pren,Prem,iPrimi,iPrInc,jPrimj,jPrInc,kPrimk,kPrInc,lPriml,lPrInc, &
                            Shells(iSD4(0,1))%pCff(1,iBasAO),iBasn,Shells(iSD4(0,2))%pCff(1,jBasAO),jBasn, &
-                           Shells(iSD4(0,3))%pCff(1,kBasAO),kBasn,Shells(iSD4(0,4))%pCff(1,lBasAO),lBasn,Mem_DBLE(ipZeta), &
-                           Mem_DBLE(ipZI),Mem_DBLE(ipP),nZeta,Mem_DBLE(ipEta),Mem_DBLE(ipEI),Mem_DBLE(ipQ),nEta,Mem_DBLE(ipxA), &
-                           Mem_DBLE(ipxB),Mem_DBLE(ipxG),Mem_DBLE(ipxD),Temp,nGrad,JfGrad,JndGrd,Sew_Scr(ipMem1),nSO, &
+                           Shells(iSD4(0,3))%pCff(1,kBasAO),kBasn,Shells(iSD4(0,4))%pCff(1,lBasAO),lBasn, &
+                           nZeta,nEta,Temp,nGrad,JfGrad,JndGrd,Sew_Scr(ipMem1),nSO, &
                            Sew_Scr(ipMem2),Mem2,Aux,nAux,Shijij)
 #             ifdef _CD_TIMING_
               call CWTIME(TwoelCPU2,TwoelWall2)
@@ -455,6 +458,8 @@ do
 
         end do
       end do
+
+      call Destroy_BraKet()
 
     end if
 
@@ -541,9 +546,7 @@ write(u6,*) 'Derivative check:'
 write(u6,*) 'Wall/CPU',Total_Der_Wall,Total_Der_CPU
 write(u6,*) '-------------------------'
 #endif
-Verbose = .false.
-FreeK2 = .true.
-call Term_Ints(Verbose,FreeK2)
+call Term_Ints()
 !                                                                      *
 !***********************************************************************
 !                                                                      *

@@ -33,6 +33,7 @@ subroutine GetBS(DDname,BSLbl,iShll,Ref,UnNorm,LuRd,BasisTypes,STDINP,iSTDINP,L_
 
 use Basis_Info, only: dbsc, Extend_Shells, nCnttp, Shells
 use DKH_Info, only: iRELMP
+use define_af, only: AngTp, iTabMx
 use stdalloc, only: mma_allocate, mma_deallocate
 use Constants, only: Zero, One
 use Definitions, only: wp, iwp, u5, u6
@@ -47,7 +48,6 @@ logical(kind=iwp), intent(in) :: UnNorm, L_STDINP, Expert
 integer(kind=iwp), intent(in) :: LuRd
 integer(kind=iwp), intent(out) :: BasisTypes(4)
 character(len=180), intent(in) :: STDINP(MxAtom*2)
-#include "angtp.fh"
 integer(kind=iwp) :: i, iAdded, iAIMP, iAng, iDominantSet, iEnd, iErr, iFlgOne, iFrst, iMPShll, iNow, iPrevNow, iPrim, iPrint, &
                      iPrSh, iValSh, j, j1, j2, jNow, jPrSh, jValSh, lAng, lUnit, LUQRP, mCGTO(0:iTabMx), mDel, mSOC, mVal, nAdded, &
                      nAIMP, nCGTO(0:iTabMx), nCntrc, nEorb, nPrim, nProj, Nwords

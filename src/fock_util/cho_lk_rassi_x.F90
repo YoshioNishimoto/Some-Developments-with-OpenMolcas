@@ -49,7 +49,7 @@ use Definitions, only: wp, iwp, u6
 #include "intent.fh"
 
 implicit none
-type(DSBA_Type), intent(in) :: DLT, Ash(2)
+type(DSBA_Type), intent(in) :: DLT(1), Ash(2)
 type(DSBA_Type), intent(inout) :: MSQ(2), FLT(1), KSQ
 type(DSBA_Type), intent(_OUT_) :: FSQ
 real(kind=wp), intent(_OUT_) :: TUVX(*)
@@ -80,6 +80,9 @@ type(Lab_Type) :: Lab
 integer(kind=iwp), allocatable :: Indx(:,:,:), iShp_rs(:), kOffSh(:,:), nnBfShp(:,:)
 real(kind=wp), allocatable :: AbsC(:), Diag(:), Drs(:), Faa(:), Fia(:), Frs(:), Lrs(:,:), MLk(:,:,:), SumAClk(:,:,:), SvShp(:,:), &
                               VJ(:), Ylk(:,:,:)
+#ifdef _DEBUGPRINT_
+integer(kind=iwp) :: iErr
+#endif
 #ifdef _MOLCAS_MPP_
 integer(kind=iwp) :: i, myJRED1, NNBSTMX, ntv0
 real(kind=wp), allocatable :: DiagJ(:)
@@ -415,7 +418,7 @@ do jSym=1,nSym
         ! Transform the density to reduced storage
         add = .false.
         nMat = 1
-        call swap_full2rs(irc,iLoc,nRS,nMat,JSYM,[DLT],Drs,add)
+        call swap_full2rs(irc,iLoc,nRS,nMat,JSYM,DLT,Drs,add)
       end if
 
       ! BATCH over the vectors ----------------------------
@@ -1181,8 +1184,8 @@ if (timings) then
 
 end if
 
-! Print the Fock-matrix
 #ifdef _DEBUGPRINT_
+! Print the Fock-matrix
 !if (Debug) then ! to avoid double printing in RASSI-debug
 write(u6,'(6X,A)') 'TEST PRINT FROM '//SECNAM
 write(u6,'(6X,A)')

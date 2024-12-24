@@ -12,6 +12,7 @@
 subroutine FndTess(iPrint,Xs,Ys,Zs,Rs,pNs,m)
 
 use PCM_arrays, only: Centr, IntSph, MxSph, MxTs, MxVert, NewSph, NVert, PCM_N, PCMDM, PCMiSph, PCMSph, PCMTess, PCMTess, SSph, Vert
+use rctfld_module, only: iSLPar, nPCM_Info, nS, nSInit, nTS, rSLPar, rSolv
 use stdalloc, only: mma_allocate, mma_deallocate
 use Constants, only: Zero, One, Three, Half, Angstrom, deg2rad
 use Definitions, only: wp, iwp, u6
@@ -27,8 +28,6 @@ real(kind=wp) :: AREA, COSOM2, FC, FC1, Fro, HH, Omega, PP(3), PROD, R2GN, REG, 
 logical(kind=iwp) :: FIRST
 integer(kind=iwp), allocatable :: JTR(:,:), pIntS(:,:), pISph(:), pNewS(:,:), pNVert(:)
 real(kind=wp), allocatable :: At(:), CCC(:,:), CV(:,:), pCentr(:,:,:), pSSph(:), PTS(:,:), pVert(:,:,:), Xt(:), Yt(:), Zt(:)
-#include "rctfld.fh"
-#include "status.fh"
 
 ! Definition of solute cavity and computation of vertices,
 ! representative points and surfaces of the tesserae by the
@@ -364,7 +363,7 @@ end if
 !***********************************************************************
 !                                                                      *
 ! Re-allocate with actual dimensioning
-if (RctFld_Status /= Active) then
+if (.not. allocated(PCMSph)) then
 
   ! Allocate PCM arrays
   call mma_allocate(PCMSph,4,NS,Label='PCMSph')

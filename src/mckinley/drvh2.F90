@@ -33,6 +33,7 @@ use Index_Functions, only: nTri_Elem
 use Basis_Info, only: dbsc, nCnttp, nBas
 use Symmetry_Info, only: nIrrep
 use McK_interface, only: hss_kernel, mck_mem
+use rctfld_module, only: PCM
 use stdalloc, only: mma_allocate, mma_deallocate
 use Constants, only: Zero
 use Definitions, only: wp, iwp, u6
@@ -42,7 +43,6 @@ integer(kind=iwp), intent(in) :: nHess
 real(kind=wp), intent(inout) :: Hess(nHess)
 real(kind=wp), intent(out) :: Temp(nHess)
 logical(kind=iwp), intent(in) :: show
-#include "rctfld.fh"
 integer(kind=iwp) :: i, iIrrep, nComp, nDens, nFock
 real(kind=wp) :: TCpu1, TCpu2, TWall1, TWall2
 character(len=80) :: Label

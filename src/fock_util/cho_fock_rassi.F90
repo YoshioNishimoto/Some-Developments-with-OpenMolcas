@@ -46,7 +46,7 @@ use Definitions, only: wp, iwp, u6
 #include "intent.fh"
 
 implicit none
-type(DSBA_Type), intent(in) :: DLT, MO1(2), MO2(2)
+type(DSBA_Type), intent(in) :: DLT(1), MO1(2), MO2(2)
 type(DSBA_Type), intent(inout) :: FLT(1)
 real(kind=wp), intent(_OUT_) :: TUVX(*)
 #include "rassi.fh"
@@ -57,12 +57,13 @@ real(kind=wp) :: Fact, TCC1, TCC2, TCINT1, TCINT2, tcoul(2), TCR1, TCR2, TCR3, T
                  TOTCPU1, TOTCPU2, TOTWALL, TOTWALL1, TOTWALL2, tread(2), TWC1, TWC2, TWINT1, TWINT2, TWR1, TWR2, TWR3, TWR4, &
                  TWR7, TWX1, TWX2
 logical(kind=iwp) :: add, DoReord
-#ifdef _DEBUGPRINT_
-logical(kind=iwp) :: Debug
-#endif
 character(len=50) :: CFmt
 type(SBA_Type), target :: Laq(2)
 type(twxy_type) :: Scr
+#ifdef _DEBUGPRINT_
+integer(kind=iwp) :: ISYM
+logical(kind=iwp) :: Debug
+#endif
 real(kind=wp), allocatable :: Drs(:), Frs(:), Lrs(:,:)
 real(kind=wp), pointer :: VJ(:) => null()
 real(kind=wp), parameter :: FactCI = One, FactXI = -One
@@ -171,7 +172,7 @@ do jSym=1,nSym
       ! Transform the density to reduced storage
       add = .false.
       mDen = 1
-      call swap_full2rs(irc,iLoc,nRS,mDen,JSYM,[DLT],Drs,add)
+      call swap_full2rs(irc,iLoc,nRS,mDen,JSYM,DLT,Drs,add)
     end if
 
     ! BATCH over the vectors ----------------------------

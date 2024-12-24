@@ -37,17 +37,16 @@ use Index_Functions, only: nTri_Elem
 use Basis_Info, only: dbsc, nCnttp
 use Gateway_global, only: Onenly, Test
 use Symmetry_Info, only: nIrrep
+use rctfld_module, only: iCharge_Ref
+use Disp, only: lDisp
+use Etwas, only: nAsh, nIsh
 use stdalloc, only: mma_allocate, mma_deallocate
 use Constants, only: Zero, Half
 use Definitions, only: wp, iwp, u6
 
 implicit none
 integer(kind=iwp), intent(out) :: ireturn
-#include "Molcas.fh"
-#include "disp.fh"
 #include "print.fh"
-#include "etwas.fh"
-#include "rctfld.fh"
 #include "warnings.h"
 integer(kind=iwp) :: i, iCnttp, iDummer, iopt, iPrint, irc, iRout, lLine, nDiff, nGrad, nHess, nsAtom
 real(kind=wp) :: dum1, dum2, dum3, TCpu1, TCpu2, Time, TWall1, TWall2

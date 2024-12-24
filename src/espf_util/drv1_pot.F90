@@ -30,6 +30,7 @@ use iSD_data, only: iSD
 use Basis_Info, only: dbsc, MolWgh, Shells
 use Center_Info, only: dc
 use Sizes_of_Seward, only: S
+use define_af, only: AngTp
 use stdalloc, only: mma_allocate, mma_deallocate
 use Constants, only: Zero, One, Two, Three
 use Definitions, only: wp, iwp, u6
@@ -38,7 +39,6 @@ implicit none
 integer(kind=iwp), intent(in) :: ngrid, ncmp, nordop
 real(kind=wp), intent(in) :: FD(*), CCoor(3,ngrid)
 real(kind=wp), intent(out) :: pot(ncmp,ngrid)
-#include "angtp.fh"
 #include "print.fh"
 integer(kind=iwp) :: i, iAng, iAO, iBas, iCmp, iCnt, iCnttp, iDCRR(0:7), iDCRT(0:7), igeo, &
                      iPrim, iPrint, iRout, iS, iShell, iShll, iSmLbl, iStabM(0:7), iStabO(0:7), iuv, jAng, jAO, &

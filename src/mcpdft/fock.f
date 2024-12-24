@@ -270,7 +270,7 @@ C
 C
 c     Calculate Fock matrix for occupied orbitals.
 C
-      If (iFinal.eq.1) CALL FOCKOC_m(Q,F,CMO)
+      If (iFinal.eq.1) CALL FOCKOC(Q,F,CMO)
 C
       If(ipFint.ne.ip_Dummy) Then
         Call GetMem('TmpPUVX','Free','Real',ipFint,nFint)
@@ -309,7 +309,8 @@ c     interaction matrix.
 c
 C          ********** IBM-3090 MOLCASs Release: 90 02 22 **********
 C
-      use mspdft, only: dogradmspd, iFxyMS, iIntS
+      use mspdft, only: iFxyMS, iIntS
+      use mspdft_grad, only: dogradmspd
       use mcpdft_output, only: debug, lf, iPrLoc
 
       IMPLICIT REAL*8 (A-H,O-Z)
@@ -548,7 +549,7 @@ C
       END IF
 
       call xflush(6)
-      CALL FOCKOC_m(Q,F,CMO)
+      CALL FOCKOC(Q,F,CMO)
 C
       Call GetMem('fockt','Free','REAL',iTF,NTOT4)
 C

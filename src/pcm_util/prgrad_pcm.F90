@@ -45,7 +45,7 @@ write(u6,*)
 if (iPrint == 4) then
   call mma_allocate(CGrad,3,MxAtom,label='CGrad')
   call mma_allocate(CNames,MxAtom,label='CNames')
-  call TrGrd_Alaska_(CGrad,CNames,Grad,nGrad,iCen)
+  call TrGrd_Alaska(CGrad,CNames,Grad,nGrad,iCen)
   write(u6,'(1x,A,A)') ' Irreducible representation: ',lIrrep(0)
   write(u6,'(1x,A)') '--------------------------------------------------'
   write(u6,'(1x,A)') '                    X           Y           Z     '
@@ -75,7 +75,7 @@ else
   do iGrad=1,mGrad
     Temp = Grad(iGrad)
     if (abs(Temp) < 1.0e-15_wp) Temp = Zero
-    write(u6,'(16X,A,15X,E15.7)') Names(iGrad),Temp
+    write(u6,'(16X,A,15X,ES15.7)') Names(iGrad),Temp
   end do
 
   !if (nGrad > 21) then

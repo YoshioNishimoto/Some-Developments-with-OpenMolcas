@@ -13,13 +13,13 @@ subroutine DataSol(IDSolv)
 ! Database of optical and physical data for various solvent.
 
 use Solvent_Data, only: Init_Solvent_Data, SolvData
+use rctfld_module, only: DerEPS, Eps, EPS_USER, EpsInf, EpsInf_USER, kT, MXA, nTT, rDiff, rSolv, rWT, TCE, vMol
 use Constants, only: Zero, One
 use Definitions, only: iwp
 
 implicit none
 integer(kind=iwp), intent(in) :: IDSolv
 integer(kind=iwp) :: i
-#include "rctfld.fh"
 
 call Init_Solvent_Data()
 

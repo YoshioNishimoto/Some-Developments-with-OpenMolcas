@@ -11,10 +11,10 @@
 
 subroutine ECP_shells(iAtmNr,List)
 
+use define_af, only: iTabMx
 use Definitions, only: iwp, u6
 
 implicit none
-#include "itmax.fh"
 integer(kind=iwp), intent(in) :: iAtmNr
 integer(kind=iwp), intent(out) :: List(0:iTabMx)
 

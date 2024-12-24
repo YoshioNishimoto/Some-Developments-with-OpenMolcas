@@ -10,44 +10,10 @@
 *                                                                      *
 * Copyright (C) 2021, Yoshio Nishimoto                                 *
 ************************************************************************
-!       SUBROUTINE MSGradPrep(UEFF)
-! C
-!       USE CHOVEC_IO
-!       use caspt2_gradient, only: iRoot1, iRoot2
-! C
-!       IMPLICIT REAL*8 (A-H,O-Z)
-! C
-! #include "rasdim.fh"
-! #include "caspt2.fh"
-! #include "eqsolv.fh"
-! #include "WrkSpc.fh"
-! #include "sigma.fh"
-
-! #include "caspt2_grad.fh"
-! #include "csfbas.fh"
-! C
-! #include "pt2_guga.fh"
-! C
-! #include "chocaspt2.fh"
-! C
-!       DIMENSION UEFF(nState,nState)
-!       DIMENSION VECROT(nState,nState)
-! C
-!       iRoot1 = iRlxRoot
-!       iRoot2 = iRlxRoot
-!       DO ilStat = 1, nState
-!         DO jlStat = 1, nState
-!           TMP = UEFF(ilStat,iRoot1)*UEFF(jlStat,iRoot2)
-!      *        + UEFF(ilStat,iRoot2)*UEFF(jlStat,iRoot1)
-!           VECROT(ilStat,jlStat) = TMP*0.5D+00
-!         END DO
-!       END DO
-! C
-!       END SUBROUTINE MSGradPrep
-C
-C-----------------------------------------------------------------------
 C
       Subroutine MS_Res(MODE,IST,JST,Scal)
+C
+C     Compute the derivative of E^PT2 with respct to the T amplitude
 C
       Implicit Real*8 (A-H,O-Z)
 C
@@ -762,7 +728,7 @@ C
         call abend
       End If
 C
-      If (Mode.eq.0) Then
+      If (Mode.eq.0 .or. (.not.IFXMS.and..not.IFRMS)) Then
         do I=1,Istate-1
           call ddafile(LUCIEX,0,CI,Nconf,ID)
         end do
@@ -785,6 +751,9 @@ C
       Subroutine XMS_Grad(CLag,H0,U0,UEFF,OMGDER)
 C
       use caspt2_gradient, only: do_nac, do_csf, iRoot1, iRoot2
+#ifdef _MOLCAS_MPP_
+      USE Para_Info, ONLY: Is_Real_Par
+#endif
       Implicit Real*8 (A-H,O-Z)
 C
 #include "rasdim.fh"
@@ -823,12 +792,8 @@ C
      &              1.0D+00,U0,nState,UEFF,nState,
      &              0.0D+00,SLag,nState)
         Call DCopy_(nState**2,SLag,1,UEFF,1)
-C       write (6,*) "ueff in xms basis"
-C       call sqprt(ueff,nstate)
 C
         !! Then actual calculation
-C       write (*,*) "ipfimo"
-C       call sqprt(work(ipfimo),nbast)
         Call DCopy_(nCLag ,[0.0D+00],0,Work(ipCLag),1)
         Do iStat = 1, nState
           Call LoadCI_XMS('C',0,Work(ipCI1),iStat,U0)
@@ -843,18 +808,8 @@ C
 C
             Call DCopy_(nAshT**2,[0.0D+00],0,Work(ipDG1),1)
             Call DCopy_(nAshT**4,[0.0D+00],0,Work(ipDG2),1)
-C         Call Cnst_SA_CLag(iStat.eq.jStat,Work(ipTG1),Work(ipTG2),
-C    *                      Work(ipDG1),Work(ipDG2),EEE)
-C     write (*,*) istat,jstat,eee
-
-C         call sqprt(work(ipdg1),nasht)
-C         call sqprt(work(ipdg2),nasht**2)
             Call CnstInt(1,Work(ipDG1),Work(ipDG2))
-C         call sqprt(work(ipdg1),nasht)
-C         call sqprt(work(ipdg2),nasht**2)
-C         call abend
 C
-C         Scal = UEFF(iStat,iRlxRoot)*UEFF(jStat,iRlxRoot)
             If (do_nac) Then
               Scal =(UEFF(iStat,iRoot1)*UEFF(jStat,iRoot2)
      *             + UEFF(jStat,iRoot1)*UEFF(iStat,iRoot2))*0.5d+00
@@ -868,29 +823,10 @@ C       write (*,*) istat,jstat,scal
             end if
             Call DScal_(nAshT**2,Scal,Work(ipDG1),1)
             Call DScal_(nAshT**4,Scal,Work(ipDG2),1)
-C         call sqprt(work(ipdg1),nasht)
-C         call sqprt(work(ipdg2),nasht**2)
 C
             Call GetMem('DG3   ','ALLO','REAL',ipDG3 ,nAshT**6)
-C         Call GetMem('DF1   ','ALLO','REAL',ipDF1 ,nAshT**2)
-C         Call GetMem('DF2   ','ALLO','REAL',ipDF2 ,nAshT**4)
-C         Call GetMem('DF3   ','ALLO','REAL',ipDF3 ,nAshT**6)
             Call DCopy_(nAshT**6,[0.0D+00],0,Work(ipDG3),1)
-C         Call DCopy_(nAshT**2,[0.0D+00],0,Work(ipDF1),1)
-C         Call DCopy_(nAshT**4,[0.0D+00],0,Work(ipDF2),1)
-C         Call DCopy_(nAshT**6,[0.0D+00],0,Work(ipDF3),1)
-C         IFF=1
-C         JSTATE = iStat
-C         If (iStat.eq.jStat) Then
-C         Call CLagSym(nAshT,Work(ipDG1),Work(ipDG2),
-C    *                 Work(ipDF1),Work(ipDF2),0)
-C         Call CnstCLag(IFF,Work(ipCLag+nConf*(iStat-1)),
-C    *                  Work(ipDG1),Work(ipDG2),Work(ipDG3),
-C    *                  Work(ipDF1),Work(ipDF2),Work(ipDF3),
-C    *                  Work(ipTG1),
-C    *                  Work(ipDF1),Work(ipDF2),Work(ipDF3),
-C    *     U0)
-C         Else
+C
             STSYM=1
             NTG1=NASHT**2
             NTG3=(NTG1*(NTG1+1)*(NTG1+2))/6
@@ -899,11 +835,7 @@ C         Else
      &                  WORK(ipDG1),WORK(ipDG2),NTG3,WORK(ipDG3),
      &                  Work(ipCLag+nConf*(iStat-1)),
      &                  Work(ipCLag+nConf*(jStat-1)))
-C         End If
             Call GetMem('DG3   ','FREE','REAL',ipDG3 ,nAshT**6)
-C         Call GetMem('DF1   ','FREE','REAL',ipDF1 ,nAshT**2)
-C         Call GetMem('DF2   ','FREE','REAL',ipDF2 ,nAshT**4)
-C         Call GetMem('DF3   ','FREE','REAL',ipDF3 ,nAshT**6)
           End Do
         End Do
 C
@@ -973,13 +905,6 @@ C           write (*,*) istat,jstat,scal
           End Do
         End Do
 C
-      !! Back transformation of UEFF (XMS basis to CASSCF basis)
-      !! SLag is used as a working array
-C     Call DGEMM_('N','N',nState,nState,nState,
-C    &            1.0D+00,U0,nState,UEFF,nState,
-C    &            0.0D+00,Work(ipTG2),nState)
-C     Call DCopy_(nState**2,Work(ipTG2),1,UEFF,1)
-C
       !! Either subtract the CI derivative of Heff(1)
       !! or add off-diagonal couplings in rhs_sa (Z-vector)
       !Call DaXpY_(nCLag,-1.0D+00,Work(ipCLag),1,CLag,1)
@@ -994,15 +919,9 @@ C
             If (ABS(SLag(iStat+nState*(jStat-1))).le.1.0d-10) Cycle
             Call LoadCI_XMS('C',0,Work(ipCI2),jStat,U0)
 C
-C         Call Dens2T_RPT2(Work(ipCI1),Work(ipCI2),
-C    *                     Work(ipSGM1),Work(ipSGM2),
-C    *                     Work(ipTG1),Work(ipTG2))
             Call Dens1T_RPT2(Work(ipCI1),Work(ipCI2),
      *                       Work(ipSGM1),Work(ipTG1))
-C         call sqprt(work(iptg1),nasht)
             Scal = SLag(iStat+nState*(jStat-1))*2.0d+00
-C         write (*,*) "istat,jstat=",istat,jstat
-C         write (*,*) "scal = ", scal
             Call DaXpY_(nAshT**2,Scal,Work(ipTG1),1,Work(ipG1),1)
           End Do
         End Do
@@ -1020,7 +939,6 @@ C       ----- Calculate orbital derivatives -----
 C
         Call GetMem('RDMEIG','ALLO','REAL',ipRDMEIG,nAshT**2)
         Call GetMem('DPT   ','ALLO','REAL',ipDPT  ,nBasSq)
-C     Call GetMem('FIFA  ','ALLO','REAL',ipFIFA ,nBasSq)
 C
         Call DCopy_(nBasSq,[0.0D+00],0,Work(ipDPT),1)
 
@@ -1053,8 +971,6 @@ C       Call SQUARE(Work(LFIFA),Work(ipFIFA),1,nOrbI,nOrbI)
         Call CnstTrf(Work(LTOrb),Work(ipTrf))
 C
         !! FIFA: natural -> quasi-canonical
-C       write (*,*) "fifasa"
-C       call sqprt(work(ipfifasa),norbi)
         If (IFDW .or. IFRMS) Then
           Call DGemm_('T','N',nOrbI,nOrbI,nOrbI,
      *                1.0D+00,Work(ipTrf),nBasI,Work(ipFIFASA),nOrbI,
@@ -1064,9 +980,6 @@ C       call sqprt(work(ipfifasa),norbi)
      *                0.0D+00,Work(ipFIFASA),nOrbI)
         End If
         Call DCopy_(nBasSq,Work(ipFIFASA),1,Work(ipFIFA),1)
-C     Call SQUARE(Work(LFIFA),Work(ipFIFA),1,nOrbI,nOrbI)
-C     write (*,*) "fifa in quasi-canonical correct"
-C     call sqprt(work(ipfifa),norbi)
 C
         !! Orbital derivatives of FIFA
         !! Both explicit and implicit orbital derivatives are computed
@@ -1154,21 +1067,16 @@ C
         !! c: Finally, compute explicit CI derivative
         !! y_{I,T} = w_{ST} <I|f|S>
         !! Here, ipG1 is FIFA = ftu
-C     write (*,*) einact
-C     call sqprt(work(ipg1),nasht)
-C     do i = 1, nstate*(nstate+1)/2
-C     write (*,'(i3,f20.10)') i,slag(i)
-C     end do
         Call CLagEigT(Work(ipCLag),Work(ipG1),SLag,EINACT)
-C     do i = 1, nconf*nstate
-C     write (*,'(i3,f20.10)') i,work(ipclag+i-1)
-C     end do
 C
         !! 2) Implicit CI derivative
         Call CLagEig(.False.,Work(ipCLag),Work(ipRDMEIG))
-C     do i = 1, nconf*nstate
-C     write (*,'(i3,f20.10)') i,work(ipclag+i-1)
-C     end do
+C
+#ifdef _MOLCAS_MPP_
+        if (is_real_par()) then
+          call GADSUM(Work(ipCLag),nConf*nState)
+        end if
+#endif
 C
         Call GetMem('RDMEIG','FREE','REAL',ipRDMEIG,nAshT**2)
         Call GetMem('G1    ','FREE','REAL',ipG1    ,nAshT**2)
@@ -1210,7 +1118,7 @@ C
         Call GetMem('CI1   ','FREE','REAL',ipCI1 ,nConf)
       End If
 C
-      !! Finally, add to the full CI derivative array
+      !! Finally, add to the total CI derivative array
       Call DaXpY_(nConf*nState,1.0D+00,Work(ipCLag),1,CLag,1)
 C     IDCIEX = ISAV
 C
@@ -1220,6 +1128,9 @@ C-----------------------------------------------------------------------
 C
       !! From poly3
       SUBROUTINE CLagEigT(CLag,RDMEIG,SLag,EINACT)
+#ifdef _MOLCAS_MPP_
+      USE Para_Info, ONLY: nProcs, Is_Real_Par
+#endif
 C
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rasdim.fh"
@@ -1255,6 +1166,11 @@ C
           Call Poly1_CLagT(Work(LCI1),Work(LCI2),
      *                     CLag(1,iStat),CLag(1,jStat),RDMEIG,Scal)
           !! Inactive terms
+#ifdef _MOLCAS_MPP_
+          !! The inactive contributions are computed in all processes,
+          !! whereas GADSUM will be done later, so divide
+          if (is_real_par()) Scal=Scal/DBLE(nProcs)
+#endif
           Call DaXpY_(nConf,Scal*EINACT,Work(LCI1),1,CLag(1,jStat),1)
           Call DaXpY_(nConf,Scal*EINACT,Work(LCI2),1,CLag(1,iStat),1)
         End Do
@@ -1429,7 +1345,7 @@ C    *        Call DaXpY_(NSGM,2.0d+00*RDMEIG(IT,IU),SGM1,1,CLag,1)
 *      needed to achieve better load balancing. So it exits from the task
 *      list. It has to do it here since each process gets at least one
 *      task.
-#if defined (_MOLCAS_MPP_) && !defined (_GA_)
+#if defined (_MOLCAS_MPP_) && ! defined (_GA_)
       IF (IS_REAL_PAR().AND.KING().AND.(NPROCS.GT.1)) GOTO 501
 #endif
 
@@ -1451,6 +1367,9 @@ C
       Subroutine CnstInt(Mode,INT1,INT2)
 C
       Use CHOVEC_IO
+#ifdef _MOLCAS_MPP_
+      USE Para_Info, ONLY: Is_Real_Par
+#endif
 C
       Implicit Real*8 (A-H,O-Z)
 C
@@ -1648,6 +1567,10 @@ C     call sqprt(fimo,12)
       End Do
       End If
 C
+#ifdef _MOLCAS_MPP_
+      if (is_real_par()) CALL GADSUM (INT2,nAshT**4)
+#endif
+C
       Do IT = 1, nAshT
         Do iU = 1, nAshT
           Do iX = 1, nAshT
@@ -1788,8 +1711,8 @@ C
 C-----------------------------------------------------------------------
 C
       SUBROUTINE DENS1T_RPT2 (CI1,CI2,SGM1,G1)
-#ifdef _MOLCAS_MPP_
-      USE Para_Info, ONLY: Is_Real_Par, King
+#if defined (_MOLCAS_MPP_) && ! defined (_GA_)
+      USE Para_Info, ONLY: nProcs, Is_Real_Par, King
 #endif
       use caspt2_output, only:iPrGlb,debug
       IMPLICIT NONE
@@ -1895,7 +1818,7 @@ CSVC: The master node now continues to only handle task scheduling,
 C     needed to achieve better load balancing. So it exits from the task
 C     list.  It has to do it here since each process gets at least one
 C     task.
-#if defined (_MOLCAS_MPP_) && !defined (_GA_)
+#if defined (_MOLCAS_MPP_) && ! defined (_GA_)
       IF (IS_REAL_PAR().AND.KING().AND.(NPROCS.GT.1)) GOTO 501
 #endif
 
@@ -1934,6 +1857,8 @@ C
 C
       Dimension OMGDER(nState,nState),HEFF(nState,nState),
      *          SLag(nState,nState)
+C
+C     Computes the derivative of weight factor in XDW-CASPT2
 C
       Do ilStat = 1, nState
         Ebeta = HEFF(ilStat,ilStat)

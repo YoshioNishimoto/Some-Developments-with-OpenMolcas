@@ -18,6 +18,7 @@ use SOAO_Info, only: iAOtSO, iSOInf, iOffSO, nSOInf, SOAO_Info_Init
 use real_spherical, only: iSphCr, LblCBs, LblSBs
 use Gateway_global, only: Primitive_Pass
 use Sizes_of_Seward, only: S
+use define_af, only: iTabMx
 use stdalloc, only: mma_allocate, mma_deallocate
 use Constants, only: Zero, One
 use Definitions, only: wp, iwp, u6
@@ -26,7 +27,6 @@ implicit none
 #include "Molcas.fh"
 integer(kind=iwp), intent(in) :: nMamn
 character(len=LenIn8), intent(out) :: Mamn(nMamn)
-#include "itmax.fh"
 #include "rinfo.fh"
 #include "print.fh"
 integer(kind=iwp) :: i, iAng, iAO, iAtoms, iBas, iBas_Aux, iBas_Frag, iChBs, iChxyz, iCnt, iCntrc, iCnttp, iCo, iComp, iCounter, &

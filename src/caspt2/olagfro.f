@@ -165,11 +165,12 @@ C
 #include "rasdim.fh"
 #include "caspt2.fh"
 #include "WrkSpc.fh"
+#include "caspt2_grad.fh"
 C
       Dimension DPT2(*),OLag(*)
 C
-      Call GetMem('EPS','Allo','Real',ipEPS,nBasT)
-      Call Get_dArray('RASSCF OrbE',Work(ipEPS),nBasT)
+C     Call GetMem('EPS','Allo','Real',ipEPS,nBasT)
+C     Call Get_dArray('RASSCF OrbE',Work(ipEPS),nBasT)
 C
 C     write(6,*) "DPT2 before frozen orbital"
 C     call sqprt(dpt2,nbast)
@@ -179,12 +180,14 @@ C     do i = 1, nbast
 C       write(6,'(i3,f20.10)') i,work(ipeps+i-1)
 C     end do
       iMO  = 1
+C     write (*,*) "now using the fifa energies"
+C     call sqprt(work(ipfifa),nbast)
       DO iSym = 1, nSym
         nOrbI = nBas(iSym)-nDel(iSym)
         nFroI = nFro(iSym)
         If (nOrbI.gt.0.and.nFroI.gt.0) Then
           nIshI = nIsh(iSym)
-          ! nBasI = nBas(iSym)
+          nBasI = nBas(iSym)
           !! Make sure that the frozen orbital of the orbital Lagrangian
           !! is zero
           Call DCopy_(nOrbI*nFroI,[0.0D+00],0,OLag,1)
@@ -194,8 +197,10 @@ C         write(6,*) iorb,jorb,OLag(iMO+iOrb-1+nOrbI*(jOrb-1))
 C         write(6,*) work(ipeps+iorb-1),work(ipeps+jorb-1)
               Tmp = -0.5D+00*(OLag(iMO+iOrb-1+nOrbI*(jOrb-1))
      *                       -OLag(iMO+jOrb-1+nOrbI*(iOrb-1)))
-     *            /(Work(ipEPS+iOrb-1)-Work(ipEPS+jOrb-1))
+C    *            /(Work(ipEPS+iOrb-1)-Work(ipEPS+jOrb-1))
 C    *            /(Work(ipFIFA+iOrb-1+nBasI*(iOrb-1))-EPSI(jOrb-nFroI))
+     *            /(Work(ipFIFA+iOrb-1+nBasI*(iOrb-1))
+     *             -Work(ipFIFA+jOrb-1+nBasI*(jOrb-1)))
 C         write(6,*) tmp
               DPT2(iMO+iOrb-1+nOrbI*(jOrb-1))
      *          = DPT2(iMO+iOrb-1+nOrbI*(jOrb-1)) + Tmp
@@ -209,7 +214,7 @@ C         write(6,*) tmp
 C     write(6,*) "DPT2 after frozen orbital"
 C     call sqprt(dpt2,nbast)
 C
-      Call GetMem('EPS','Free','Real',ipEPS,nBasT)
+C     Call GetMem('EPS','Free','Real',ipEPS,nBasT)
 C
       End Subroutine OLagFro1
 C
@@ -389,6 +394,9 @@ C
 
       USE CHOVEC_IO
       use Cholesky, only: InfVec, nDimRS
+#ifdef _MOLCAS_MPP_
+      USE Para_Info, ONLY: Is_Real_Par, King
+#endif
 
       IMPLICIT REAL*8 (A-H,O-Z)
 
@@ -399,6 +407,10 @@ C
 #include "chocaspt2.fh"
 #include "WrkSpc.fh"
 #include "caspt2_grad.fh"
+#ifdef _MOLCAS_MPP_
+#include "global.fh"
+!#include "mafdecls.fh"
+#endif
 
       Dimension DPT2AO(*),DPT2CAO(*),FPT2AO(*),FPT2CAO(*),WRK(*)
       Integer ISTLT(8),ISTSQ(8),iSkip(8),ipWRK(8)
@@ -406,6 +418,22 @@ C
       integer nnbstr(8,3)
 
       ! INFVEC(I,J,K)=IWORK(ip_INFVEC-1+MAXVEC*N2*(K-1)+MAXVEC*(J-1)+I)
+
+      !! It shoudl be zero, but just in case
+      CALL DCopy_(nBasSq,[0.0D+00],0,FPT2AO,1)
+      CALL DCopy_(nBasSq,[0.0D+00],0,FPT2CAO,1)
+
+#ifdef _MOLCAS_MPP_
+      If (Is_Real_Par()) Then
+        !! To broadcast DPT2AO and DPT2CAO
+        If (.not.King()) Then
+          Call DCopy_(nBasSq,[0.0D+00],0,DPT2AO,1)
+          Call DCopy_(nBasSq,[0.0D+00],0,DPT2CAO,1)
+        End If
+        CALL GADSUM (DPT2AO,nBasSq)
+        CALL GADSUM (DPT2CAO,nBasSq)
+      End If
+#endif
 
       iSym = iSym0
       call getritrfinfo(nnbstr,maxvec,n2)
@@ -550,6 +578,13 @@ C
           FPT2CAO(j+nBasI*(i-1)) = Tmp
         End Do
       End Do
+C
+#ifdef _MOLCAS_MPP_
+      If (Is_Real_Par()) Then
+        CALL GADSUM (FPT2AO,nBasSq)
+        CALL GADSUM (FPT2CAO,nBasSq)
+      End If
+#endif
 C
       Return
 C

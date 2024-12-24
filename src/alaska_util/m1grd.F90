@@ -32,6 +32,7 @@ subroutine M1Grd( &
 use Basis_Info, only: dbsc, nCnttp
 use Center_Info, only: dc
 use Index_Functions, only: nTri_Elem1
+use Disp, only: Dirct, IndDsp
 use Constants, only: One, Two, Pi
 use Definitions, only: wp, iwp, u6
 
@@ -45,9 +46,7 @@ logical(kind=iwp) :: EQ, JfGrad(3,4)
 integer(kind=iwp), external :: NrOpr
 logical(kind=iwp), external :: TF
 external :: TNAI1, Fake, Cff2D
-#include "Molcas.fh"
 #include "print.fh"
-#include "disp.fh"
 
 #include "macros.fh"
 unused_var(ZInv)
@@ -182,7 +181,7 @@ do kCnttp=1,nCnttp
           if (TF(kdc+kCnt,iIrrep,iCmp) .and. (.not. dbsc(kCnttp)%pChrg)) then
             ! Displacement is symmetric
             nDisp = nDisp+1
-            if (Direct(nDisp)) then
+            if (Dirct(nDisp)) then
               ! Reset flags for the basis set centers so that
               ! we will explicitly compute the derivatives
               ! with respect to those centers. Activate flag
@@ -271,9 +270,10 @@ do kCnttp=1,nCnttp
 
         ! Compute integrals with the Rys quadrature.
 
-        call Rysg1(iAnga,nRys,nZeta,Array(ipA),Array(ipB),[One],[One],Array(ipZ),Array(ipZI),nZeta,[One],[One],1,Array(ipPx), &
-                   nZeta,TC,1,Coori,Coora,CoorAC,Array(ip),nArray,TNAI1,Fake,Cff2D,Array(ipDAO),nDAO,Grad,nGrad,JfGrad,JndGrd, &
-                   lOp,iuvwx)
+        call Rysg1(iAnga,nRys,nZeta,Array(ipA),Array(ipB),[One],[One], &
+                   Array(ipZ),Array(ipZI),nZeta,[One],[One],1, &
+                   Array(ipPx),nZeta,TC,1,Coori,Coora,CoorAC, &
+                   Array(ip),nArray,TNAI1,Fake,Cff2D,Array(ipDAO),nDAO,Grad,nGrad,JfGrad,JndGrd,lOp,iuvwx)
 
       end do
     end do

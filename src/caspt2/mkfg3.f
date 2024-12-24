@@ -58,8 +58,9 @@ C>                   to active indices
       SUBROUTINE MKFG3(IFF,CI,G1,F1,G2,F2,G3,F3,idxG3)
       use caspt2_output, only: iPrGlb, verbose, debug
       use fciqmc_interface, only: DoFCIQMC, mkfg3fciqmc
-      use caspt2_gradient, only: do_grad
-#if defined (_MOLCAS_MPP_) && !defined (_GA_)
+      use caspt2_gradient, only: do_grad, nbuf1_grad, nStpGrd,
+     *                           iTasks_grad, nTasks_grad
+#if defined (_MOLCAS_MPP_) && ! defined (_GA_)
       USE Para_Info, ONLY: nProcs, Is_Real_Par, King
 #endif
       IMPLICIT NONE
@@ -182,8 +183,17 @@ C Special pair index idx2ij allows true RAS cases to be handled:
 * bufd: diagonal matrix elements to compute the F matrix
       nbuf1=max(1,min(nlev2,(memmax_safe-3*mxci)/mxci))
       !! if gradient, nbuf1 must be consistent here and in derfg3.f
-      if (do_grad)
-     *  nbuf1=max(1,min(nlev2,(memmax_safe-(6+nlev)*mxci)/mxci/3))
+      if (do_grad .or. nStpGrd==2) then
+        !! Compute approximate available memory in derfg3.f
+        !! allocated in DENS
+        memmax_safe = memmax_safe - 16*NBAST**2 - 3*NASHT**2
+        !! allocated in CLagX
+        memmax_safe = memmax_safe - 2*(NG1+NG2+NG3)
+        nbuf1=max(1,min(nlev2,(memmax_safe-(6+nlev)*mxci)/mxci/3))
+        nbuf1_grad = nbuf1
+        nTasks_grad = 0
+        iTasks_grad(:) = 0
+      end if
       nbuf2= 1
       nbuft= 1
       nbufd= 1
@@ -515,12 +525,17 @@ C-SVC20100309: use simpler procedure by keeping inner ip2-loop intact
      &    iSubTask, ip1sta, ip1end, ip3, nbtot
         call xFlush(6)
       END IF
+      !! consistent tasks must be executed here and in derfg3.f for grad
+      if (do_grad .or. nStpGrd==2) then
+        nTasks_grad = nTasks_grad + 1
+        iTasks_grad(nTasks_grad) = iSubTask
+      end if
 
 CSVC: The master node now continues to only handle task scheduling,
 C     needed to achieve better load balancing. So it exits from the task
 C     list.  It has to do it here since each process gets at least one
 C     task.
-#if defined (_MOLCAS_MPP_) && !defined (_GA_)
+#if defined (_MOLCAS_MPP_) && ! defined (_GA_)
       IF (IS_REAL_PAR().AND.KING().AND.(NPROCS.GT.1)) GOTO 501
 #endif
 

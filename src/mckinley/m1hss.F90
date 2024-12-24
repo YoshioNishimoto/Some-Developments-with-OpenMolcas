@@ -30,13 +30,12 @@ use McKinley_global, only: sIrrep
 use Index_Functions, only: iTri, nTri_Elem1
 use Basis_Info, only: dbsc, nCnttp
 use Center_Info, only: dc
+use Disp, only: IndDsp
 use Constants, only: Zero
 use Definitions, only: wp, iwp
 
 implicit none
 #include "hss_interface.fh"
-#include "Molcas.fh"
-#include "disp.fh"
 integer(kind=iwp) :: iAnga(4), iBeta, iCar, iCent, iComp, iDCRT(0:7), iIrrep, ipA, ipAOff, ipArr, ipB, ipBOff, iStop, iuvwx(4), &
                      jAtom, jCar, JndGrd(0:2,0:3,0:7), JndHss(0:3,0:2,0:3,0:2,0:7), kCnt, kCnttp, kdc, lDCRT, LmbdT, Maxi, Mini, &
                      mOp(4), nArray, nDAO, nDCRT, nDisp, nip, nnIrrep, nRys

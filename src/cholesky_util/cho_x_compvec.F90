@@ -65,7 +65,7 @@ real(kind=wp), parameter :: Mnt = 60.0_wp
 character(len=*), parameter :: SecNam = 'Cho_X_CompVec'
 integer(kind=iwp), external :: Cho_F2SP
 #ifdef _DEBUGPRINT_
-integer(kind=iwp) :: nBlock_Max, nnB, nTot, nTot2
+integer(kind=iwp) :: i, nBlock_Max, nnB, nTot, nTot2
 integer(kind=iwp), parameter :: myDebugInfo = 100
 real(kind=wp), parameter :: Tol = 1.0e-14_wp
 #endif
@@ -197,8 +197,8 @@ do iSym=1,nSym
         write(LuPri,'(A,I8)') 'iSym=',iSym
         write(LuPri,'(A,I8)') 'jBlock=',jBlock
         write(LuPri,'(A,I8)') 'J=',iV1(jBlock,iSym)+J_inBlock-1
-        write(LuPri,'(A,1P,D15.6)') 'Z(J,J)=',Z(kOffZ+iTri(J_inBlock,J_inBlock))
-        write(LuPri,'(A,1P,D15.6)') 'Tolerance=',Tol
+        write(LuPri,'(A,ES15.6)') 'Z(J,J)=',Z(kOffZ+iTri(J_inBlock,J_inBlock))
+        write(LuPri,'(A,ES15.6)') 'Tolerance=',Tol
         call Cho_Quit('Division by small or negative number in '//SecNam,103)
       end if
 #     endif

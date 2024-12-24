@@ -31,6 +31,10 @@ real(kind=wp), intent(in) :: Thr
 #include "warnings.h"
 integer(kind=iwp) :: i, iAddr, iD_Col, ij, is, istart, js, k, kAddr, kCol, ks, kScr, lindep, lmax, nMem_Col
 real(kind=wp) :: Acc, XMax
+#ifdef _DEBUGPRINT_
+integer(kind=iwp) :: n_NegInpDiag
+real(kind=wp) :: d_NegInpDiag
+#endif
 integer(kind=iwp), allocatable :: list(:)
 
 #ifdef _DEBUGPRINT_
@@ -47,7 +51,7 @@ do i=1,n
 end do
 write(u6,'(A,I10,A,I10)') 'GET_PIVOT_IDX: number of negative input diagonals:',n_NegInpDiag,' out of ',n
 if (n_NegInpDiag > 0) then
-  write(u6,'(A,1P,D12.4)') 'GET_PIVOT_IDX: most negative diagonal:          ',d_NegInpDiag
+  write(u6,'(A,ES12.4)') 'GET_PIVOT_IDX: most negative diagonal:          ',d_NegInpDiag
 end if
 #endif
 

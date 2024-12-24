@@ -30,7 +30,7 @@ use Center_Info, only: dc
 use Symmetry_Info, only: nIrrep, iOper
 use Gateway_Info, only: ThrInt, CutInt
 use Int_Options, only: Disc, Disc_Mx, DoFock, DoIntegrals, ExFac, FckNoClmb, FckNoExch, PreSch, Thize, W2Disc
-use Integral_Interfaces, only: DeDe_SCF
+use Integral_Interfaces, only: DeDe_SCF, Int_PostProcess, No_Routine
 use stdalloc, only: mma_allocate, mma_deallocate
 use Constants, only: Zero, One, Quart
 use Definitions, only: wp, iwp, u6
@@ -40,15 +40,14 @@ integer(kind=iwp), parameter :: nTInt = 1
 integer(kind=iwp) :: i, iCnt, iCnttp, iComp, iDpos, iFpos, iIrrep, ijS, iOpt, iRC, iS, j, jS, klS, kS, lOper, lS, maxDens, mdc, &
                      mDens, nBas_Valence(0:7), nBasC, nBT, nBVT, nBVTi, nFock, nij, nOneHam, nSkal, nSkal_Valence
 real(kind=wp) :: A_int, Dtst, P_Eff, TCpu1, TCpu2, ThrAO, TInt(nTInt), TMax_all, TWall1, TWall2
-logical(kind=iwp) :: DoGrad, EnergyWeight, FreeK2, Indexation, lNoSkip, Verbose
+logical(kind=iwp) :: DoGrad, EnergyWeight, Indexation, lNoSkip
 character(len=8) :: Label
 integer(kind=iwp), allocatable :: ij(:)
 real(kind=wp), allocatable, target :: Dens(:), Fock(:)
 real(kind=wp), allocatable :: DMax(:,:), FragDensSO(:), OneHam(:), TMax(:,:)
-external :: No_Routine
-!define _DEBUGPRINT_
+!#define _DEBUGPRINT_
 #ifdef _DEBUGPRINT_
-integer(kind=iwp) :: iFD
+integer(kind=iwp) :: iFD, nFD
 character(len=80) :: Line
 #endif
 
@@ -67,6 +66,7 @@ W2Disc = .true.
 PreSch = .false.
 Disc_Mx = Zero      ! Default value
 Disc = Zero         ! Default value
+Int_PostProcess => No_Routine
 
 ! Handle both the valence and the fragment basis set
 
@@ -149,10 +149,11 @@ do iIrrep=0,nIrrep-1
   end do
 end do
 #ifdef _DEBUGPRINT_
-iFD = 1
+iFD = 0
 do iIrrep=0,nIrrep-1
-  call TriPrt('Combined density',' ',Dens(iFD),nBas(iIrrep))
-  iFD = iFD+nBas(iIrrep)*(nBas(iIrrep)+1)/2
+  nFD = nBas(iIrrep)*(nBas(iIrrep)+1)/2
+  call TriPrt('Combined density',' ',Dens(iFD+1:iFD+nFD),nBas(iIrrep))
+  iFD = iFD+nFD
 end do
 #endif
 call mma_deallocate(FragDensSO)
@@ -170,10 +171,11 @@ call DeDe_SCF(Dens,Fock,nBT,mDens)
 if (nIrrep == 1) then
   call RecPrt('Desymmetrized Density:',' ',pDq,nBas(0),nBas(0))
 else
-  iFD = 1
+  iFD = 0
   do iIrrep=0,nIrrep-1
-    call TriPrt('Desymmetrized density',' ',pDq(iFD),nBas(iIrrep))
-    iFD = iFD+nBas(iIrrep)*(nBas(iIrrep)+1)/2
+    nFD = nBas(iIrrep)*(nBas(iIrrep)+1)/2
+    call TriPrt('Desymmetrized density',' ',pDq(iFD+1:iFD+nFD),nBas(iIrrep))
+    iFD = iFD+nFD
   end do
 end if
 #endif
@@ -260,16 +262,17 @@ do
   lNoSkip = lNoSkip .and. (lS <= nSkal_Valence)
 
   if (lNoSkip) then
-    call Eval_IJKL(iS,jS,kS,lS,TInt,nTInt,No_Routine)
+    call Eval_IJKL(iS,jS,kS,lS,TInt,nTInt)
 #   ifdef _DEBUGPRINT_
     write(u6,*) 'Drv2El_FAIEMP: for iS, jS, kS, lS =',is,js,ks,ls
     if (nIrrep == 1) then
       call RecPrt('updated Fock',' ',pFq,nBas(0),nBas(0))
     else
-      iFD = 1
+      iFD = 0
       do iIrrep=0,nIrrep-1
-        call TriPrt('updated Fock',' ',pFq(iFD),nBas(iIrrep))
-        iFD = iFD+nBas(iIrrep)*(nBas(iIrrep)+1)/2
+        nFD = nBas(iIrrep)*(nBas(iIrrep)+1)/2
+        call TriPrt('updated Fock',' ',pFq(iFD+1:iFD+nFD),nBas(iIrrep))
+        iFD = iFD+nFD
       end do
     end if
 #   endif
@@ -301,22 +304,22 @@ call mma_deallocate(TMax)
 !                                                                      *
 !     Terminate integral environment.
 
-Verbose = .false.
-FreeK2 = .true.
-call Term_Ints(Verbose,FreeK2)
+call Term_Ints()
 
 call Free_DeDe(Dens,Fock,nBT)
 
 call mma_deallocate(Dens)
+Int_PostProcess => null()
 #ifdef _DEBUGPRINT_
 write(u6,*)
 write(u6,*)
 write(u6,'(a)') 'SO Integrals of type Frag2El Component 1'
-iFD = 1
+iFD = 0
 do iIrrep=0,nIrrep-1
   write(Line,'(1X,A,I1)') ' Diagonal Symmetry Block ',iIrrep+1
-  call TriPrt(Line,' ',Fock(iFD),nBas_Valence(iIrrep))
-  iFD = iFD+nBas_Valence(iIrrep)*(nBas_Valence(iIrrep)+1)/2
+  nFD = nBas_Valence(iIrrep)*(nBas_Valence(iIrrep)+1)/2
+  call TriPrt(Line,' ',Fock(iFD+1:iFD+nFD),nBas_Valence(iIrrep))
+  iFD = iFD+nFD
 end do
 #endif
 !                                                                      *
@@ -348,10 +351,11 @@ end do
 
 ! write out the results
 #ifdef _DEBUGPRINT_
-iFD = 1
+iFD = 0
 do iIrrep=0,nIrrep-1
-  call TriPrt('OneHam at end',' ',OneHam(iFD),nBas_Valence(iIrrep))
-  iFD = iFD+nBas_Valence(iIrrep)*(nBas_Valence(iIrrep)+1)/2
+  nFD = nBas_Valence(iIrrep)*(nBas_Valence(iIrrep)+1)/2
+  call TriPrt('OneHam at end',' ',OneHam(iFD+1:iFD+nFD),nBas_Valence(iIrrep))
+  iFD = iFD+nFD
 end do
 #endif
 iRC = -1

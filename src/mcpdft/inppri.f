@@ -29,9 +29,10 @@
       use OneDat, only: sNoOri
       Use Functionals, only: Init_Funcs, Print_Info
       Use KSDFT_Info, only: CoefR, CoefX
-      use mspdft, only: dogradmspd
+      use mspdft_grad, only: dogradmspd
       use mcpdft_output, only: silent, usual, lf, iPrLoc
       use Fock_util_global, only: docholesky
+      use rctfld_module
 
       Implicit Real*8 (A-H,O-Z)
 #include "rasdim.fh"
@@ -39,7 +40,6 @@
 #include "general.fh"
 #include "gas.fh"
 #include "ciinfo.fh"
-#include "rctfld.fh"
 #include "WrkSpc.fh"
       Character*8   Fmt1,Fmt2, Label
       Character*120  Line,BlLine,StLine
@@ -307,8 +307,8 @@ C.. for RAS
         KSDFT2 = KSDFT(index(KSDFT,'T:')+2:)
         Write(LF,Fmt2//'A)') 'This is a MC-PDFT calculation '//
      &   'with functional: '//KSDFT
-        Write(LF,Fmt2//'A,T45,E10.3)')'Exchange scaling factor',CoefX
-        Write(LF,Fmt2//'A,T45,E10.3)')'Correlation scaling factor',
+        Write(LF,Fmt2//'A,T45,ES10.3)')'Exchange scaling factor',CoefX
+        Write(LF,Fmt2//'A,T45,ES10.3)')'Correlation scaling factor',
      &                                 CoefR
        end if
        If (dogradPDFT.or.dogradMSPD) then

@@ -38,6 +38,7 @@
 
 subroutine Name_to_lm(BName,l,m)
 
+use define_af, only: AngTp
 use Definitions, only: iwp
 
 implicit none
@@ -45,7 +46,6 @@ character(len=*), intent(in) :: BName
 integer(kind=iwp), intent(out) :: l, m
 character :: Letter
 integer(kind=iwp) :: i, lx, ly, lz
-#include "angtp.fh"
 
 Letter = BName(3:3)
 call LoCase(Letter)

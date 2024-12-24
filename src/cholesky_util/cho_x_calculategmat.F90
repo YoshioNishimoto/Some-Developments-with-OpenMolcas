@@ -42,6 +42,9 @@ use Cholesky_procedures, only: Cho_CGM_InfVec
 use stdalloc, only: mma_allocate, mma_deallocate
 use Constants, only: Zero
 use Definitions, only: wp, iwp
+#ifdef _DEBUGPRINT_
+use Definitions, only: u6
+#endif
 
 implicit none
 integer(kind=iwp), intent(out) :: irc
@@ -167,7 +170,7 @@ do iSym=1,nSym
   call DDAFile(lUnit,iOpt,G,size(G),iDisk)
 # ifdef _DEBUGPRINT_
   call TriPrt('G-matix',' ',G,NVT(iSym))
-  write(u6,'(A,I2,A,1P,D16.7)') 'G matrix, sym.',iSym,': Norm = ',sqrt(dDot_(size(G),G,1,G,1))
+  write(u6,'(A,I2,A,ES16.7)') 'G matrix, sym.',iSym,': Norm = ',sqrt(dDot_(size(G),G,1,G,1))
 # endif
   call mma_deallocate(Wrk)
   call mma_deallocate(G)

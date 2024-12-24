@@ -35,6 +35,8 @@ subroutine COSGrd( &
 use PCM_arrays, only: PCM_SQ, PCMTess
 use Center_Info, only: dc
 use Index_Functions, only: nTri_Elem1
+use rctfld_module, only: nTS
+use Disp, only: IndDsp
 use Constants, only: Zero, One, Two, Pi
 use Definitions, only: wp, iwp, u6
 
@@ -48,10 +50,7 @@ logical(kind=iwp) :: JfGrad(3,4)
 character(len=3), parameter :: ChOper(0:7) = ['E  ','x  ','y  ','xy ','z  ','xz ','yz ','xyz']
 integer(kind=iwp), external :: NrOpr
 external :: Cff2D, Fake, TNAI1
-#include "Molcas.fh"
 #include "print.fh"
-#include "disp.fh"
-#include "rctfld.fh"
 
 #include "macros.fh"
 unused_var(rFinal)
@@ -217,7 +216,9 @@ do iTs=1,nTs
     nT = nZeta
     mRys = nRys
 
-    call Rysg1(iAnga,mRys,nT,Array(ipA),Array(ipB),[One],[One],Zeta,ZInv,nZeta,[One],[One],1,P,nZeta,TC,1,Coori,Coori,CoorAC, &
+    call Rysg1(iAnga,mRys,nT,Array(ipA),Array(ipB),[One],[One], &
+               Zeta,ZInv,nZeta,[One],[One],1, &
+               P,nZeta,TC,1,Coori,Coori,CoorAC, &
                Array(nip),nArray,TNAI1,Fake,Cff2D,Array(ipDAO),nDAO*nTri_Elem1(nOrdOp),Grad,nGrad,JfGrad,JndGrd,lOp,iuvwx)
 
     !call RecPrt(' In COSgrd:Grad',' ',Grad,nGrad,1)
