@@ -1,116 +1,38 @@
-OpenMolcas
-==========
+# Some-Developments-with-OpenMolcas
 
-OpenMolcas is a quantum chemistry software package developed by scientists
-and intended to be used by scientists. It includes programs to apply many
-different electronic structure methods to chemical systems, but its key
-feature is the multiconfigurational approach, with methods like CASSCF and
-CASPT2.
+I'm developing analytic derivatives of CASPT2 and RASPT2 in OpenMolcas. Some ongoing and incomplete developments may be pushed here. Note that this repository is just a development snapshot. Some debug print may be shown, and the actual code is still messy (including this README). This code is based on OpenMolcas v23.10.
 
-OpenMolcas is not a fork or reimplementation of
-[Molcas](http://www.molcas.org), it *is* a large part of the Molcas codebase
-that has been released as free and open-source software (FOSS) under the Lesser
-General Public License (LGPL). Some parts of Molcas remain under a different
-license by decision of their authors (or impossibility to reach them), and are
-therefore not included in OpenMolcas.
+At present, analytic first-order derivatives (gradient and derivative coupling vectors) for single-state and all multistate variants ([X]MS, XDW, and RMS) CASPT2 and RASPT2 can be computed. Most functions have to be combined with the density-fitting or Cholesky decomposition approximation. Either real or imaginary level shift may be used. The IPEA shift can also be used, but note that CASPT2/RASPT2 with the IPEA shift is not invariant with respect to rotations among active orbitals. The performance is still poor, in particular with a large number of atomic orbitals. No symmetry constraints can be employed. MPI-like parallel calculations are now supported, I think.
 
-**Latest references**:
+2023 codes are already publicly available as a part of OpenMolcas
 
-* "OpenMolcas: From Source Code to Insight."
-  *J. Chem. Theory Comput.* **15** (2019) 5925-5964.
-  [doi:10.1021/acs.jctc.9b00532](https://doi.org/10.1021/acs.jctc.9b00532)
+Reference:
 
-* "Modern quantum chemistry with [Open]Molcas."
-  *J. Chem. Phys.* **152** (2020) 214117.
-  [doi:10.1063/5.0004835](https://doi.org/10.1063/5.0004835)
+- Nishimoto, Y. "Analytic Gradients for Restricted Active Space Second-order Perturbation Theory (RASPT2)" The Journal of Chemical Physics 2021, 154, 194103. DOI: 10.1063/5.0050074
+- Nishimoto, Y.; Battaglia, S.; Lind, R. "Analytic First-Order Derivatives of (X)MS, XDW, and RMS Variants of the CASPT2 and RASPT2 Methods" Journal of Chemical Theory and Computation 2022, 18, 4269--4281. DOI: 10.1021/acs.jctc.2c00301
+- Nishimoto, Y. "Analytic first-order derivatives of CASPT2 with IPEA shift" The Journal of Chemical Physics 2023, 158, 174112. DOI: 10.1063/5.0147611
+- Nishimoto, Y. "Analytic First-Order Derivatives of CASPT2 combined with the Polarizable Continuum Model" ChemRxiv DOI: 10.26434/chemrxiv-2024-05mq8
 
-* "The OpenMolcas *Web*: A Community-Driven Approach to Advancing Computational Chemistry."
-  *J. Chem. Theory Comput.* **19** (2023) 6933-6991.
-  [doi:10.1021/acs.jctc.3c00182](https://doi.org/10.1021/acs.jctc.3c00182)
+***
 
-Installation
-------------
+Some history:
 
-For more detailed information, please refer to the [wiki
-pages](https://gitlab.com/Molcas/OpenMolcas/-/wikis/home).
+December 24, 2024: SA-CASSCF/PCM and parallel CASPT2/PCM gradient, hopefully
 
-OpenMolcas is configured with [CMake](https://cmake.org). A quick way to get it
-up and running is the following:
+August 8, 2023: CASPT2-IPEA gradient (I hope I correctly merged)
 
-1.  Clone the repository:
+July 31, 2023: Removed the wired loop for MS-CASPT2 variants (preliminary)
 
-    ```
-    git clone https://gitlab.com/Molcas/OpenMolcas.git
-    ```
+July 31, 2023: Now, based on v23.02
 
-2.  Get the `lapack` submodule (only needed if you don't use another linear
-    algebra library like MKL or OpenBLAS):
+May 13, 2021: An old patch for RASPT2 gradient
 
-    ```
-    cd OpenMolcas
-    git submodule update --init External/lapack
-    cd ..
-    ```
+March 22, 2021: State-specific density matrix (may work without the SADREF keyword)
 
-3.  Create a new directory and run `cmake` from it:
+March 19, 2021: Possibly RASPT2 (without the diagonal approximation)
 
-    ```
-    mkdir build
-    cd build
-    cmake ../OpenMolcas
-    ```
+March 11, 2021: Initial commit (RASPT2-D)
 
-4.  Compile with `make`:
+***
 
-    ```
-    make
-    ```
-
-5.  Run the verification suite (failures in "grayzone" tests are expected):
-
-    ```
-    pymolcas verify
-    ```
-
-For running other calculations you should define the `MOLCAS` environment
-variable to point to the `build` directory. Run `pymolcas --help` to see the
-available options of the script. In particular it is recommended to run:
-```
-pymolcas -setup
-```
-for your first installation.
-
-Documentation
--------------
-
-The documentation can be found in the
-[`doc`](https://gitlab.com/Molcas/OpenMolcas/tree/master/doc) directory, you
-can read it in [HTML format](https://molcas.gitlab.io/OpenMolcas/sphinx/) or
-[PDF format](https://molcas.gitlab.io/OpenMolcas/Manual.pdf). Note that most
-of it precedes the creation of OpenMolcas and it is probably outdated in
-several points. It may also mention features not available in OpenMolcas.
-
-Help
-----
-
-OpenMolcas is a community-supported software and as such it doesn't have an
-official technical support. If you have any problems or questions, you can use
-the [Issues](/../issues) page or the [Molcas
-forum](https://molcasforum.univie.ac.at), and hopefully
-some other user or developer will be able to help you.
-
-If you need technical support, you can acquire a [Molcas
-license](http://www.molcas.org/order.html).
-
-Contributing
-------------
-
-Since OpenMolcas is FOSS, you can download it, modify it and distribute it
-freely (according to the terms of the LGPL). If you would like your
-contributions to be included in the main repository, please contact one of the
-developers, write a message in the
-[forum](https://molcasforum.univie.ac.at) or submit a
-[merge
-request](https://docs.gitlab.com/ee/user/project/merge_requests/getting_started.html).
-Everyone is welcome to send patches, suggestions and bug reports, but please
-let us know if you would like to be a "developer" member of the `Molcas` group.
+I think I will not make my previous NEVPT2 implementation in GAMESS-US publicly available for some reasons.
