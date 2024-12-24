@@ -1,0 +1,104 @@
+# There can only be a single "include" per file
+
+include:
+  # Templates
+  - local: "/.gitlab-ci_templates.yml"
+  # Configurations defined in an external file
+  - local: "/.gitlab-ci_configs.yml"
+  # Bulk of the jobs, conditionally
+  - local: "/.gitlab-ci_bulk.yml"
+    rules:
+      - if: '$CI_PROJECT_PATH != "Molcas/OpenMolcas" || $OUTSOURCE != "true"'
+  # ... or outsource them
+  - local: "/.gitlab-ci_outsource.yml"
+    rules:
+      - if: '$CI_PROJECT_PATH == "Molcas/OpenMolcas" && $OUTSOURCE == "true"'
+  # Jobs for building the documentation
+  - local: "/doc/.gitlab-ci.yml"
+
+# Prevent duplicate branch & MR pipelines
+
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_OPEN_MERGE_REQUESTS =~ /(^|,)Molcas\/OpenMolcas!\d+($|,)/'
+      when: never
+    - when: always
+
+# A release job to be scheduled
+
+create_release:
+  stage: deploy
+  image: registry.gitlab.com/gitlab-org/release-cli
+  needs:
+    # Note: the doc job defines and exports TAG
+    - job: doc
+      artifacts: true
+  script: |
+    echo "Creating release $TAG"
+  release:
+    tag_name: ${TAG}
+    tag_message: "verified commit"
+    description: "Automatic release from latest master"
+    ref: $CI_COMMIT_SHA
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule" && $CREATE_RELEASE'
+      when: on_success
+
+# A special job for running checks on the code
+
+checks:
+  stage: build
+  interruptible: true
+  script:
+    - |
+      if [ -n "${CI_MERGE_REQUEST_TARGET_BRANCH_NAME}" ] ; then
+        git remote get-url upstream || git remote add upstream "${CI_MERGE_REQUEST_PROJECT_URL}"
+        git fetch upstream
+        TARGET_BRANCH="upstream/${CI_MERGE_REQUEST_TARGET_BRANCH_NAME}"
+      else
+        TARGET_BRANCH="origin/master"
+      fi
+      TARGET_SHA=$(git show-ref -s ${TARGET_BRANCH})
+      TMPDIR=$(mktemp -d)
+      for FILE in $(git diff-index --cached --name-only ${TARGET_SHA})
+      do
+        git checkout-index --prefix=${TMPDIR}/ ${FILE} 2> /dev/null || true
+      done
+      echo "diff between ${CI_COMMIT_SHA} and ${TARGET_SHA}"
+    - |
+      echo
+      echo "POSSIBLE HEADER ISSUES"
+      echo "----------------------"
+      sbin/copyright -r ${TMPDIR} || FAILED=1
+    - |
+      echo
+      echo "POSSIBLE STYLE ISSUES"
+      echo "---------------------"
+      export MOLCAS=${TMPDIR}
+      sbin/check_style || FAILED=1
+    - |
+      echo
+      echo "POSSIBLE TEST ISSUES"
+      echo "--------------------"
+      export MOLCAS=${TMPDIR}
+      sbin/check_tests || FAILED=1
+    - |
+      if [ "$FAILED" == "1" ] ; then
+        false
+      fi
+  rules: !reference [.compile-jobs, rules]
+
+# A dummy job to start manual pipelines
+
+starter:
+  stage: .pre
+  script: echo "Run the pipeline!"
+  rules: !reference [.manual-start, rules]
+
+# In this pipeline, no clone is needed
+# (override definition from bulk include)
+
+.use-clone:
+  - job: starter
+    optional: true
+    artifacts: false
