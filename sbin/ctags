@@ -1,0 +1,48 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+#***********************************************************************
+# This file is part of OpenMolcas.                                     *
+#                                                                      *
+# OpenMolcas is free software; you can redistribute it and/or modify   *
+# it under the terms of the GNU Lesser General Public License, v. 2.1. *
+# OpenMolcas is distributed in the hope that it will be useful, but it *
+# is provided "as is" and without any express or implied warranties.   *
+# For more details see the full text of the license in the file        *
+# LICENSE or in <http://www.gnu.org/licenses/>.                        *
+#                                                                      *
+# Copyright (C) 2015, Steven Vancoillie                                *
+#               2020, Ignacio Fdez. Galván                             *
+#***********************************************************************
+#
+# ctags
+#
+# Simple wrapper to make ctags find all the source code
+# in OpenMolcas.
+#
+# Steven Vancoillie, June 2015
+#
+# Ignacio Fdez. Galván, 2020: Translated from Perl to Python
+
+import sys
+import os
+import subprocess as sp
+
+thisfile = os.path.basename(__file__)
+MOLCAS_DRIVER = os.environ.get('MOLCAS_DRIVER', 'pymolcas')
+DRIVER_base = os.path.basename(MOLCAS_DRIVER)
+
+try:
+  MOLCAS = os.environ['MOLCAS']
+except KeyError:
+  sys.exit('MOLCAS not set, set it or use command {} {}'.format(DRIVER_base, thisfile))
+
+# run ctags command
+try:
+  print('running ctags...')
+  command = ['ctags', '-h', '.h.inc.fh', '--langmap=c:.c.h,fortran:.f.f90.F.F90.inc.fh', '--fortran-kinds=+i+L', '-R']
+  sp.call(command + sys.argv[1:])
+  print('done')
+except OSError:
+  print('Error: ctags not available')
+  sys.exit(1)

@@ -1,0 +1,73 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+#***********************************************************************
+# This file is part of OpenMolcas.                                     *
+#                                                                      *
+# OpenMolcas is free software; you can redistribute it and/or modify   *
+# it under the terms of the GNU Lesser General Public License, v. 2.1. *
+# OpenMolcas is distributed in the hope that it will be useful, but it *
+# is provided "as is" and without any express or implied warranties.   *
+# For more details see the full text of the license in the file        *
+# LICENSE or in <http://www.gnu.org/licenses/>.                        *
+#                                                                      *
+# Copyright (C) 2015, Steven Vancoillie                                *
+#               2020, Ignacio Fdez. Galván                             *
+#***********************************************************************
+#
+# gtags
+#
+# Simple wrapper to make gtags find all the source code
+# in OpenMolcas.
+#
+# Steven Vancoillie, June 2015
+#
+# Ignacio Fdez. Galván, 2020: Translated from Perl to Python
+
+import sys
+import os
+import subprocess as sp
+
+thisfile = os.path.basename(__file__)
+MOLCAS_DRIVER = os.environ.get('MOLCAS_DRIVER', 'pymolcas')
+DRIVER_base = os.path.basename(MOLCAS_DRIVER)
+
+try:
+  MOLCAS = os.environ['MOLCAS']
+except KeyError:
+  sys.exit('MOLCAS not set, set it or use command {} {}'.format(DRIVER_base, thisfile))
+
+# check if gtags exists in our path
+try:
+  sp.check_call(['gtags', '--version'], stdout=sp.PIPE, stderr=sp.STDOUT)
+except:
+  print('Error: gtags not available')
+  sys.exit(1)
+
+# gtags needs a minimal configuration file to work with ctags
+HOME = os.environ.get('HOME')
+MOLCAS_CONF_DIR = os.path.join(HOME, '.Molcas')
+if not os.isdir(MOLCAS_CONF_DIR):
+  try:
+    os.mkdir(MOLCAS_CONF_DIR)
+  except:
+    sys.exit('cannot create {}'.format(MOLCAS_CONF_DIR))
+
+gtags_conf = os.path.join(MOLCAS_CONF_DIR, 'gtags.conf')
+if not os.path.isfile(gtags_conf):
+  try:
+    with open(gtags_conf, 'w+') as f:
+      f.write('''#gtags configuration for OpenMolcas
+default:\\
+    :langmap=C\:.c.h:\\
+    :langmap=Fortran\:.f.f90.F.F90.inc.fh:\\
+    :gtags_parser=C\:/usr/lib/x86_64-linux-gnu/gtags/exuberant-ctags.so:\\
+    :gtags_parser=Fortran\:/usr/lib/x86_64-linux-gnu/gtags/exuberant-ctags.so:
+'''
+  except:
+    sys.exit('cannot open {}'.format(gtags_conf))
+
+# run gtags command
+print('running gtags...')
+sp.call('gtags', '--gtagsconf', gtags_conf])
+print('done')
