@@ -69,6 +69,7 @@ ISlPar(39) = 0      ! local field factor switch
 ISlPar(40) = 0      ! [unused]
 ISlPar(41) = 0      ! vacuum SCF flag
 ISlPar(42) = 0      ! number of solute atoms
+ISlPar(43) = 1      ! Type for dynamically weighted solvation
 
 ! Initialize the real array.
 
@@ -128,6 +129,8 @@ RSlPar(49) = Zero       ! GDisp
 RSlPar(50) = Zero       ! GRep
 RSlPar(51) = Zero       ! Total Cavity surface (SCav)
 RSlPar(52) = Zero       ! Total Cavity volume (VCav)
+RSlPar(53) = Zero       ! Zeta for Gaussian blurring
+RSlPar(54) = Zero       ! Zeta for dynamically weighted solvation
 
 return
 

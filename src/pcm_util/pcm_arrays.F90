@@ -32,7 +32,7 @@ use Definitions, only: wp, iwp
 implicit none
 private
 
-integer(kind=iwp), parameter :: MxSph = 1000, MxTs = 6000, MxVert = 20
+integer(kind=iwp), parameter :: MxSph = 2000, MxTs = 6000, MxVert = 20
 integer(kind=iwp) :: nTiles
 real(kind=wp), parameter :: DiagScale = 1.0694_wp
 integer(kind=iwp), allocatable :: IntSph(:,:), NewSph(:,:), nVert(:), PCM_N(:), PCMiSph(:)

@@ -157,6 +157,10 @@ c     &                    ExFac,nBMX,CMO)
 c      End If
 
 *     Inactive-active contribution to ECAS
+C     write (*,*) "FI and D in AO"
+C         do i = 1, ntot1
+C         write (*,'(i3,2f20.10)') i,fi(i),work(itmp1+i-1)
+C         end do
       VIA=dDot_(nTot1,FI,1,Work(iTmp1),1)
       ECAS=EMY+VIA
       If ( iPrLev.ge.DEBUG ) then

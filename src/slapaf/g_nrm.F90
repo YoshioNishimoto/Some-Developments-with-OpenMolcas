@@ -26,17 +26,30 @@ real(kind=wp), intent(in) :: Grad(nInter,Iter)
 integer(kind=iwp), intent(out) :: mIntEff
 integer(kind=iwp) :: i, j
 real(kind=wp) :: Fabs
+logical(kind=iwp), external :: RF_On
 
 ! Compute the norm of the cartesian force vector.
 !
 ! |dE/dx|=Sqrt(dE/dx|u|dE/dx)
 
 Fabs = Zero
+!write (*,*) "in g_nrm"
+!write (*,*) "degen = ", degen
+!write (*,*) "gx    = ", gx(:,:,iter)
+!write (*,*) "grad  = ", grad(:,iter)
 do i=1,size(Gx,2)
   do j=1,3
     Fabs = Fabs+Degen(j,i)*Gx(j,i,Iter)**2
   end do
 end do
+if (RF_On()) then
+  write (6,'(x,"computing norm with the internal force, which is wrong (in alaska/g_norm.F90")')
+  Fabs = Zero
+  do i=1,nInter
+    Fabs = Fabs+Grad(i,Iter)**2
+  end do
+  Fabs = Fabs/nInter
+end if
 Fabs = sqrt(Fabs)
 #ifdef _DEBUGPRINT_
 write(u6,42) Fabs

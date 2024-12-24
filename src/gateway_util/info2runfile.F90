@@ -62,6 +62,7 @@ call Put_iArray('nOrb',nDel,nIrrep) ! nDel is corrupted here!
 ! VarR and VarT
 
 if (lRF .and. (.not. PCM)) VarT = .true.
+!if (PCM) VarR = .true.
 Pseudo = .false.
 do iCnttp=1,nCnttp
   Pseudo = Pseudo .or. (dbsc(iCnttp)%pChrg .and. dbsc(iCnttp)%Fixed)

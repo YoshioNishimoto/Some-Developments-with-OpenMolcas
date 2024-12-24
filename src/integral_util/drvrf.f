@@ -92,8 +92,10 @@
       Call DaXpY_(nh1,One,RFld(1,2),1,RFld(1,1),1)
 !
       ERFSelf=RepNuc-RepNuc_Temp
+C     write (*,*) "repnuc,repnu_temp = ", repnuc,repnuc_temp
       EEE=DDot_(nh1,RFld(1,2),1,D,1)
       ERFSelf=ERFSelf-Half*EEE
+C     write (*,*) "erfself, eee = ", erfself, eee
 
 !
       Call Put_dScalar('RF Self Energy',ERFSelf)

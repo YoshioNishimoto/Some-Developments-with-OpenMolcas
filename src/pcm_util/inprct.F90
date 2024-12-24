@@ -21,9 +21,10 @@ subroutine InpRct(LuSpool)
 
 use rctfld_module, only: aFac, CLim, Conductor, CORDSI, DampIter, DieDel, DipCutOff, DipSI, DistSparse, Eps, Eps_USER, EpsInf, &
                          EpsInf_USER, gAtom, iSLPar, lAmberPol, LATATO, lDamping, lDipRestart, lGridAverage, lLangevin, lMax, lRF, &
-                         lRFCav, lSparse, MXA, nExpo, nGridAverage, nGridSeed, nOrdInp, nSparse, PCM, PolSI, PreFac, RadInp, &
-                         RadLat, rDS, RF_Basis, RotAlpha, RotBeta, RotGamma, rSca, rSLPar, Scaaa, Scal14, Scala, Scalb, Scalc, &
-                         Solvent, TK, TK5
+                         lRFCav, lSparse, MXA, nExpo, nGridAverage, nGridSeed, nOrdInp, nSparse, PCM, PolSI, PreFac, Ptype_inp, &
+                         RadInp, RadLat, rDS, RF_Basis, RotAlpha, RotBeta, RotGamma, rSca, rSLPar, Scaaa, Scal14, Scala, Scalb, &
+                         Scalc, Solvent, TK, TK5
+use DWSol, only: DWType,DWZeta
 use CovRad_Data, only: CovRadT_
 use Constants, only: Zero, One, Two, Three, Four, Ten, Half, Pi, deg2rad, auTokJ, kBoltzmann
 use Definitions, only: wp, iwp, u6
@@ -31,7 +32,7 @@ use Definitions, only: wp, iwp, u6
 implicit none
 integer(kind=iwp), intent(in) :: LuSpool
 integer(kind=iwp) :: i, I_Sph, i_sph_inp, iChrct, ii, iPrint, iRout, istatus, ITypRad, jRout, Last, n
-real(kind=wp) :: aArea, epscm, poltot, r_min_Sphere, Radius, tal, Temp, val
+real(kind=wp) :: aArea, epscm, poltot, r_min_Sphere, Radius, tal, Temp, val, ZetaASC
 character(len=180) :: KWord, Key
 integer(kind=iwp), external :: iCLast, nToken, NumSolv
 real(kind=wp), external :: Anal_Gitt
@@ -151,6 +152,19 @@ lLangevin = .false.
 ! default solvent
 Solvent = 'WATER'
 ISlPar(15) = NumSolv(Solvent)
+
+! polyhedron type
+Ptype_inp = 0
+ISlPar(10) = Ptype_inp ! it is originally 2, but unused so hack this
+
+! Gaussian blurring
+ZetaASC = 4.9_wp
+RSlPar(53) = Zero
+
+! dynamically weighted state-averaging (in DWSol)
+DWZeta = 0.0_wp
+DWType = 1_iwp
+
 !                                                                      *
 !***********************************************************************
 !                                                                      *
@@ -433,6 +447,49 @@ do
       ! Restart dipoles from scratch in each QM iteration
       ! This sometimes gives better convergence.
       lDiprestart = .true.
+    case ('PTYP')
+      !                                                                *
+      !***** PTYP ******************************************************
+      !                                                                *
+      ! Polyhedron type used in polygen.F90
+      ! 1: icosahedron, 2: pentakis dodecahedron, 3: tetrahedron
+      KWord = Get_Ln(LuSpool)
+      call Get_I1(1,Ptype_inp)
+      ISlPar(10) = Ptype_inp
+    case ('GAUS')
+      !                                                                *
+      !***** GAUS ******************************************************
+      !                                                                *
+      ! Gaussian blurring for ASC charges
+      if (RSlPar(53)==Zero) then
+        RSlPar(53) = 4.9_wp
+      else
+        RSlPar(53) = ZetaASC
+      end if
+    case ('ZETA')
+      !                                                                *
+      !***** ZETA ******************************************************
+      !                                                                *
+      ! Zeta for Gaussian blurring
+      KWord = Get_Ln(LuSpool)
+      call Get_F1(1,ZetaASC)
+      RSlPar(53) = ZetaASC
+    case ('DWSO')
+      !                                                                *
+      !***** DWSO ******************************************************
+      !                                                                *
+      ! Zeta for dynamically weighted state-averaged density
+      KWord = Get_Ln(LuSpool)
+      call Get_F1(1,DWZeta)
+      RSlPar(54) = DWZeta
+    case ('DWTY')
+      !                                                                *
+      !***** DWTY ******************************************************
+      !                                                                *
+      ! how to dynamically weight the solvation density
+      KWord = Get_Ln(LuSpool)
+      call Get_I1(1,DWType)
+      ISlPar(17) = DWType
     case ('END ')
       !                                                                *
       !***** END  ******************************************************
@@ -488,6 +545,10 @@ if (lLangevin) then
 
   tk5 = Half*tk
 
+end if
+if (iprint >= 6 .and. RSlPar(53) /= Zero) then
+  write(u6,'(X,"Approximate Gaussian blurring is activated")')
+  write(u6,'(X,"ZetaASC = ", f5.3)') RSlPar(53)
 end if
 !                                                                      *
 !***********************************************************************

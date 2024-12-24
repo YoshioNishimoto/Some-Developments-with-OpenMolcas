@@ -42,11 +42,13 @@ use finfld, only: force
 #endif
 use Index_Functions, only: nTri_Elem1
 use Grd_interface, only: grd_kernel, grd_mem
-use rctfld_module, only: lLangevin, lMax, lRF, PCM
+use rctfld_module, only: lLangevin, lMax, lRF, nTS, PCM
 use Disp, only: ChDisp, HF_Force
 use stdalloc, only: mma_allocate, mma_deallocate
 use Constants, only: Zero
 use Definitions, only: wp, iwp, u6
+use PCM_alaska, only: lSA,DSA_AO,PCM_SQ_ind,PCM_SQ_ori,DSS_ori,def_solv
+use NAC, only: isNAC
 
 implicit none
 integer(kind=iwp), intent(in) :: nGrad
@@ -58,7 +60,7 @@ character(len=80) :: Label
 character(len=8) :: Method
 logical(kind=iwp) :: DiffOp, lECP, lFAIEMP, lPP
 integer(kind=iwp), allocatable :: lOper(:), lOperf(:)
-real(kind=wp), allocatable :: Coor(:,:), Coorf(:,:), D_Var(:), Fock(:)
+real(kind=wp), allocatable :: Coor(:,:), Coorf(:,:), D_Var(:), Fock(:), TempPCM(:)
 procedure(grd_kernel) :: COSGrd, FragPGrd, KneGrd, M1Grd, M2Grd, NAGrd, OvrGrd, PCMGrd, PPGrd, PrjGrd, RFGrd, SROGrd, WelGrd, XFdGrd
 procedure(grd_mem) :: FragPMmG, KneMmG, M1MmG, M2MmG, NAMmG, OvrMmG, PCMMmG, PPMmG, PrjMmG, RFMmg, SROMmG, WelMmg, XFdMmg
 #ifdef _NEXTFFIELD_
@@ -354,7 +356,7 @@ if (.not. HF_Force) then
     ! The PCM / COSMO model
 
     if (iCOSMO <= 0) then
-      iPrint = 15
+!     iPrint = 15
       PCM_SQ(:,:) = PCM_SQ(:,:)/real(nIrrep,kind=wp)
     end if
     lOper(1) = 1
@@ -368,8 +370,57 @@ if (.not. HF_Force) then
         call PrGrad(Label,Temp,nGrad,ChDisp)
       end if
     else
+      !! PCM_SQ is used inside the OneEl_g
+      !! PCM_SQ = polarized by state-averaged density
       Label = ' The Electronic Reaction Field Contribution (PCM)'
       call OneEl_g(PCMGrd,PCMMmG,Temp,nGrad,DiffOp,Coor,D_Var,nDens,lOper,nComp,nOrdOp,Label)
+      if (lSA) then
+        !! PCM_SQ is induced by the state-averaged density matrix (not effective density)
+        !! The above is the explicit part of D^SS*(V^N + V^{e,SA})
+        call mma_allocate(TempPCM,nGrad,Label='TempPCM')
+
+        !! -q^{e,SA}*C*q^{e,SA}/2 term
+        !! implicit part of D^SS*V^{e,SA} and -D^{e,SA}*V^{e,SA}/2 -> -(D^SA-D^SS)*V^SA
+        if (isNAC) then
+          call dswap_(2*nTS,PCM_SQ_ind,1,PCM_SQ,1)
+          PCM_SQ(1,:) = 0.0d+00
+          !! PCM_SQ contains q^{e,SS} only (no nuclear contributions)
+        else
+          if (def_solv==1 .or. def_solv==3) then
+            call daxpy_(2*nTS,-1.0d+00,PCM_SQ_ind,1,PCM_SQ,1)
+            !! PCM_SQ contains q^{e,SA} - q^{e,SS} only (no nuclear contributions)
+          else if (def_solv==4) then
+            !! Construct implicit - 0.5*D(SA)*V(SS) -> V(SSind) - V(SS)/2 in PCM_SQ
+            call dswap_(2*nTS,PCM_SQ_ind,1,PCM_SQ,1)
+            PCM_SQ(1,:) = 0.0d+00
+            call daxpy_(nTS,-0.5d+00,PCM_SQ_ori(2,1),2,PCM_SQ(2,1),2)
+!           PCM_SQ(2,:) = PCM_SQ(2,:) - 0.5d+00*PCM_SQ_ori(2,:)
+          end if
+        end if
+        call OneEl_g(PCMGrd,PCMMmG,TempPCM,nGrad,DiffOp,Coor,DSA_AO,nDens,lOper,nComp,nOrdOp,Label)
+        if (isNAC) then
+          PCM_SQ(1,:) = PCM_SQ_ind(1,:)
+          call dswap_(2*nTS,PCM_SQ_ind,1,PCM_SQ,1)
+          call daxpy_(nGrad,+1.0d+00,TempPCM,1,Temp,1)
+        else
+          if (def_solv==1 .or. def_solv==3) then
+            call daxpy_(2*nTS,+1.0d+00,PCM_SQ_ind,1,PCM_SQ,1)
+            call daxpy_(nGrad,-1.0d+00,TempPCM,1,Temp,1)
+          else if (def_solv==4) then
+            call daxpy_(nTS,+0.5d+00,PCM_SQ_ori(2,1),2,PCM_SQ(2,1),2)
+            PCM_SQ(1,:) = PCM_SQ_ori(1,:)
+            call dswap_(2*nTS,PCM_SQ_ind,1,PCM_SQ,1)
+            call daxpy_(nGrad,+1.0d+00,TempPCM,1,Temp,1)
+
+            !! -0.5*D(SS)*V(SA)
+            PCM_SQ(1,:) = 0.0d+00
+            call OneEl_g(PCMGrd,PCMMmG,TempPCM,nGrad,DiffOp,Coor,DSS_ori,nDens,lOper,nComp,nOrdOp,Label)
+            PCM_SQ(1,:) = PCM_SQ_ori(1,:)
+            call daxpy_(nGrad,-0.5d+00,TempPCM,1,Temp,1)
+          end if
+        end if
+        call mma_deallocate(TempPCM)
+      end if
       if (iPrint >= 15) then
         Label = ' Reaction Field (PCM) Contribution'
         call PrGrad(Label,Temp,nGrad,ChDisp)

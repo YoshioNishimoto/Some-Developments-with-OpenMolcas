@@ -19,6 +19,7 @@ subroutine PolyGen(MaxT,MxSph,Ptype,Pflag,TsAre,TsNum,XEN,YEN,ZEN,REN,TsEff,CV,J
 use stdalloc, only: mma_allocate, mma_deallocate
 use Constants, only: One, Four, Half, Pi
 use Definitions, only: wp, iwp, u6
+use rctfld_module, only: Ptype_inp
 
 implicit none
 integer(kind=iwp), intent(in) :: MaxT, MxSph, Pflag
@@ -200,6 +201,8 @@ else
   end if
 end if
 
+if (Ptype_inp /= 0) Ptype = Ptype_inp
+
 ! carica gli opportuni valori iniziali
 
 if (Ptype == Icosa) then
@@ -255,7 +258,7 @@ else if (Ptype == Tetra) then
   end do
 end if
 NVPT = NV+1
-if (NVPT > 1000) then
+if (NVPT > MxSph) then
   write(u6,*) 'NVPT out of range in polygen',nvpt
   call Abend()
 end if
@@ -283,7 +286,7 @@ do j=1,NE0
     CV(:,NVPT) = v3(:)
     ednew(j,l+1) = NVPT
     NVPT = NVPT+1
-    if (NVPT > 1000) then
+    if (NVPT > MxSph) then
       write(u6,*) 'NVPT out of range in polygen',nvpt
       call Abend()
     end if
@@ -324,7 +327,7 @@ do j=1,NT0
       TrNew(n+1,l,j) = NVPT
 
       NVPT = NVPT+1
-      if (NVPT > 1000) then
+      if (NVPT > MxSph) then
         write(u6,*) 'NVPT out of range in polygen',nvpt
         call Abend()
       end if

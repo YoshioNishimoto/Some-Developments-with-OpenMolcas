@@ -32,7 +32,6 @@ set (sources
      drv_ef_pcm.F90
      dsd.F90
      dver.F90
-     dwsol.F90
      fndbnd.F90
      fndsph.F90
      fndtess.F90
@@ -71,6 +70,7 @@ set (sources
      tessera.F90
      uatm.F90
      v_ef_pcm.F90
+     dwsol.F90
 )
 
 # Source files defining modules that should be available to other *_util directories

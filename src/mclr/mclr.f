@@ -45,9 +45,11 @@
      &                  CMO_Inv, CMO,
      &                  Int1, pINT1, INT2, pINT2, G2t, G2sq, G1t,
      &                  FIMO, F0SQMO
+      use rctfld_module, only: iCharge_Ref, NonEQ_Ref
       use Str_Info, only: DFTP, CFTP, DTOC, CNSM
       use negpre, only: SS
       use PDFT_Util, only :Do_Hybrid,WF_Ratio,PDFT_Ratio
+      use pcm_grad, only: PCM_grad_init, PCM_grad_final
 *     Added for CMS NACs
       use Definitions, only: iwp, u6
       Implicit Real*8 (a-h,o-z)
@@ -62,6 +64,7 @@
 #include "detdim.fh"
 #include "dmrginfo_mclr.fh"
 #include "csfsd.fh"
+#include "cicisp_mclr.fh"
       Integer, Allocatable:: ifpK(:), ifpS(:), ifpRHS(:),
      &            ifpCI(:), ifpSC(:), ifpRHSCI(:)
 
@@ -82,8 +85,9 @@
       character(len=16) :: StdIn
       character(len=180) :: Line
       character(len=128) :: FileName
-      logical(kind=iwp) :: Exists
+      logical(kind=iwp) :: Exists, DoRys
       integer(kind=iwp), external :: isFreeUnit
+      logical(kind=iwp), external :: RF_On
       Logical :: CalcNAC_Opt = .False., MECI_via_SLAPAF = .False.
 
 *   This used to be after the CWTIME() functional call                 *
@@ -218,12 +222,20 @@ c      idp=rtoi
 *
       Call OpnFls_MCLR(iPL)
       Call IpInit()
-*                                                                      *
+*
 ************************************************************************
 *                                                                      *
 *     Read input
 *
       Call InpCtl_MCLR(iPL)
+*
+************************************************************************
+*                                                                      *
+*     Prepare for PCM
+*
+      nDiff = 1
+      DoRys = .true.
+      call IniSew(DoRys,nDiff)
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -247,9 +259,49 @@ c      idp=rtoi
       nacpar=(nnA+1)*nnA/2
       nacpr2=(nacpar+1)*nacpar/2
 
+      if (RF_On()) then
+      ! if (NonEq_Ref) then
+      !   call WarningMessage(2,'Error in MCLR')
+      !   write(u6,*) 'NonEq=.True., invalid option'
+      !   call Abend()
+      ! end if
+      ! call Init_RctFld(.false.,iCharge_Ref)
+      ! call PCM_grad_init(iCharge_Ref,ipCI,iRlxRoot,nconf,ncsf,nRoots,
+     *!                    nSym,ntAsh,ntBsqr,ntBtri,
+     *!                    nFro,nIsh,nAsh,nA,nOrb,ipMat,
+     *!                    xispsm)
+      ! !! Construct INT1 with the correct PCM contributions
+      ! call mma_deallocate(Int1)
+      ! call InpOne()
+C     Call FckMat
+C     Call StPert
+      end if
+
       Call Start_MCLR()
 *
       nisp=max(8,nDisp)
+*                                                                      *
+************************************************************************
+*                                                                      *
+*     PCM
+*
+      if (RF_On()) then
+      ! if (NonEq_Ref) then
+      !   call WarningMessage(2,'Error in MCLR')
+      !   write(u6,*) 'NonEq=.True., invalid option'
+      !   call Abend()
+      ! end if
+      ! call Init_RctFld(.false.,iCharge_Ref)
+      ! call PCM_grad_init(iCharge_Ref,ipCI,iRlxRoot,nconf,ncsf,nRoots,
+     *!                    nSym,ntAsh,ntBsqr,ntBtri,
+     *!                    nFro,nIsh,nAsh,nA,nOrb,ipMat,
+     *!                    xispsm)
+      ! !! Construct INT1 with the correct PCM contributions
+      ! call mma_deallocate(Int1)
+      ! call InpOne()
+C     Call FckMat
+C     Call StPert
+      end if
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -419,6 +471,9 @@ c      idp=rtoi
 *     Close files
 *
       Call ClsFls_MCLR()
+      call ClsSew()
+      if (RF_On()) Call Free_RctFld()
+      if (RF_On()) Call PCM_grad_final()
 *
       If (NewCho) Then
         Call Cho_X_Final(irc)

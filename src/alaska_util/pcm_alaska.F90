@@ -244,7 +244,6 @@ Module PCM_alaska
   !! tentative patch for MECI calculations with XMS-type CASPT2
   !! "Reaction Field" has been overwritten, but the correct reaction field is needed
   !! for computing H0 in XMS-type calculations
-  !! For PTED, ALASKA should not be called.
   h1 = 0.0d+00
   TwoHam = 0.0d+00
   Call DrvRF(h1,TwoHam,DSA_AO,RepNuc,nDens,First,Dff,NonEq)

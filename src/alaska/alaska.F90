@@ -42,6 +42,8 @@ use NAC, only: DoCSF, EDiff, isNAC
 use stdalloc, only: mma_allocate, mma_deallocate
 use Constants, only: Zero, One, Half
 use Definitions, only: wp, iwp, u6
+use PCM_alaska, only: lSA, PCM_alaska_lSA, PCM_alaska_final, PCM_alaska_prep
+use rctfld_module, only: lRF, PCM
 
 implicit none
 integer(kind=iwp), intent(in) :: LuSpool
@@ -95,6 +97,8 @@ if (RF_On()) then
     call Abend()
   end if
   call Init_RctFld(.false.,iCharge_Ref)
+  !! Check SA-CASSCF or not (and some initialization)
+  call PCM_alaska_lSA()
 end if
 !                                                                      *
 !***********************************************************************
@@ -125,6 +129,10 @@ call Close_LuSpool(LuSpool)
 
 call Get_iScalar('Columbus',Columbus)
 call Get_iScalar('colgradmode',colgradmode)
+
+! Some preparations for SA-CASSCF gradient
+! ASC charges have been overwritten in MCLR, so compute correct ones
+if ((lRF.and.PCM) .and. lSA) call PCM_alaska_prep()
 
 !-- Start computing the gradients
 !                                                                      *
@@ -259,6 +267,7 @@ if (.not. Test) then
   !*********************************************************************
   !                                                                    *
 end if
+if (RF_on()) call PCM_alaska_final()
 !                                                                      *
 !***********************************************************************
 !                                                                      *

@@ -10,6 +10,7 @@
 ************************************************************************
       Subroutine PrInp_MCLR(iPL)
       use Exp, only: nexp_max
+      use PCM_grad, only: RFPERT
 ************************************************************************
 *                                                                      *
 *     Echo input                                                       *
@@ -333,6 +334,17 @@
      &         'Linear response function is computed '//
      &                       'for Restricted Hartree-Fock wavefunction'
          End If
+      End If
+*
+      If ( RFpert ) then
+        Write(6,*)
+        Write(6,Fmt1)'Reaction field specifications:'
+        Write(6,Fmt1)'------------------------------'
+        Write(6,*)
+        Write(6,'(6X,A)')'The Reaction field is added as a '//
+     &                   'perturbation and has been determined '//
+     &                   'in a previous calculation'
+        Write(6,*)
       End If
 *                                                                      *
 ************************************************************************

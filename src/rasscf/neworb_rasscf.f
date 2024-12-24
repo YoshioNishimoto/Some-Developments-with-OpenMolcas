@@ -296,8 +296,8 @@ C
         DO NT=1,ngssh(igas,isym)
          II=II+NT
          OCCN(NO1+NT)=FTR(II)
-c        FDIAG(NO1+NT)=0.0D0
-         FDIAG(NO1+NT)=FP(II+NFO+NIO+NFI_+ISTFCK)
+         FDIAG(NO1+NT)=0.0D0
+C        FDIAG(NO1+NT)=FP(II+NFO+NIO+NFI_+ISTFCK)
         END DO
 
        ENDIF  ! end of if(NGAS(1).ne.0)

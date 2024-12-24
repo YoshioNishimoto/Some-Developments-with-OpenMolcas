@@ -243,10 +243,10 @@ do iSym=1,nSym
       nList(i) = kVec
       kVec = kVec + lVec
     end do
-    bStat = GA_CREATE_IRREG(MT_DBL,nCalAO,NumCVt,'WRK1',1,1,NLIST,NPROCS,LG_V1)
+    bStat = GA_CREATE_IRREG(MT_DBL,nCalAO,NumCVt,'WRK1',[1],1,NLIST,NPROCS,LG_V1)
     !! resultant vector is horizontal stripe
     !! This global array is constructed so that each local memory corresponds to the AOs processed on each node
-    bStat = bStat .and. GA_CREATE_IRREG(MT_DBL,nCalAO,NumCVt,'WRK2',nList_AO,NPROCS,1,1,LG_V2)
+    bStat = bStat .and. GA_CREATE_IRREG(MT_DBL,nCalAO,NumCVt,'WRK2',nList_AO,NPROCS,[1],1,LG_V2)
 
     use_GA = bStat !! This does not mean anything, actually
 
@@ -295,7 +295,7 @@ do iSym=1,nSym
     call GA_Release(lg_V1,iLo1,iHi1,jLo1,jHi1)
     bStat = GA_destroy(lg_V1)
     !! Remake a horizontal GA, it is used as a resultant array
-    bStat = GA_CREATE_IRREG(MT_DBL,nCalAO,NumAux,'WRK1',nList_AO,NPROCS,1,1,lg_V1)
+    bStat = GA_CREATE_IRREG(MT_DBL,nCalAO,NumAux,'WRK1',nList_AO,NPROCS,[1],1,lg_V1)
 
     !! DGEMM can be done locally
     call GA_Distribution(lg_V1,myRank,iLo1,iHi1,jLo1,jHi1)

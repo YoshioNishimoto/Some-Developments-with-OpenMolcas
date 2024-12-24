@@ -38,7 +38,7 @@ character(len=LenIn) :: Namei
 character(len=10) :: ESPFKey
 character(len=180) :: Line
 logical(kind=iwp) :: DispX, DispY, DispZ, Do_ESPF, DoDirect, DoFirst, DoTinker, DynExtPot, Exists, External_Coor_List, Found, &
-                     Is_Roots_Set, KeepOld, NMCart, StandAlone
+                     internal, Is_Roots_Set, KeepOld, NMCart, StandAlone
 integer(kind=iwp), allocatable :: IsMM(:)
 real(kind=wp), allocatable :: EnergyArray(:,:), GradArray(:,:), OldGrads(:,:), Grad(:), GNew(:), MMGrd(:,:), BMtrx(:,:), &
                               TMtrx(:,:), Coor(:,:), Energies_Ref(:), XYZ(:,:), AllC(:,:), Disp(:), Deg(:,:), Mltp(:), C(:,:), &
@@ -197,6 +197,12 @@ call Get_dScalar('Numerical Gradient rDelta',rDelta)
 if (nAtMM == 0) call GenCxCTL(iRC,NMCart,rDelta)
 
 call qpg_dArray('CList',Found,nCList)
+internal = .true.
+if (rDelta < 0) then
+  Found = .false.
+  internal = .false.
+  rDelta = abs(rDelta)
+end if
 if (Found) then
   External_Coor_List = .true.
   call Get_iScalar('No of Internal Coordinates',mInt)
@@ -329,9 +335,17 @@ else
       if (rTest == Zero) rTest = huge(rTest)
       rMax = min(rMax,rTest)
     end do
+    write (6,*) "atom = ", i
+    write (6,*) dispx,dispy,dispz
+    write (6,*) rdelta, rmax
     if (DispX) Disp((i-1)*3+1) = rDelta*rMax
     if (DispY) Disp((i-1)*3+2) = rDelta*rMax
     if (DispZ) Disp((i-1)*3+3) = rDelta*rMax
+    if (.not.internal) then
+      Disp((i-1)*3+1) = rDelta
+      Disp((i-1)*3+2) = rDelta
+      Disp((i-1)*3+3) = rDelta
+    end if
   end do
   !call RecPrt('Disp',' ',Disp,1,nDisp)
 end if
@@ -525,6 +539,7 @@ do
 
   call dcopy_(3*nAtoms,xyz(:,iDisp),1,C,1)
   !call RecPrt('C',' ',C,3*nAtoms,1)
+  call RecPrt('C',' ',C,3*nAtoms,1)
   call Put_Coord_New(C,nAtoms)
 
   ! Compute integrals
@@ -708,8 +723,12 @@ do
   !call Get_Energy(EnergyArray(iRoot,iDisp))
   if (nRoots > 1) then
     call Get_dArray('Last energies',EnergyArray(1,iDisp),nRoots)
+    do iroot = 1, nroots
+    write (6,*) EnergyArray(iRoot,iDisp)
+    end do
   else
     call Get_dScalar('Last energy',EnergyArray(iRoot,iDisp))
+    write (6,*) EnergyArray(iRoot,iDisp)
   end if
 
   ! Restore directory and prgm database
@@ -909,15 +928,19 @@ do iR=1,nRoots
   Tmp2(:) = Zero
   Tmp(:,:) = Zero
 
-  ! Transform the gradient in PCO basis to the internal coordinate
-  ! format.
+  if (internal) then
+    ! Transform the gradient in PCO basis to the internal coordinate
+    ! format.
 
-  call DGEMM_('N','N',nDisp,1,nDisp,One,TMtrx,nDisp,GradArray(1,iR),nDisp,Zero,Tmp2,nDisp)
+    call DGEMM_('N','N',nDisp,1,nDisp,One,TMtrx,nDisp,GradArray(1,iR),nDisp,Zero,Tmp2,nDisp)
 
-  ! Transform internal coordinates to Cartesian.
+    ! Transform internal coordinates to Cartesian.
 
-  call DGEMM_('N','N',3*nAtoms,1,nDisp,One,BMtrx,3*nAtoms,Tmp2,nDisp,Zero,Tmp,3*nAtoms)
-  !call RecPrt('Tmp',' ',Tmp,3,nAtoms)
+    call DGEMM_('N','N',3*nAtoms,1,nDisp,One,BMtrx,3*nAtoms,Tmp2,nDisp,Zero,Tmp,3*nAtoms)
+    !call RecPrt('Tmp',' ',Tmp,3,nAtoms)
+  else
+    call DCOPY_(3*nAtoms,GradArray(1,iR),1,Tmp,1)
+  end if
 
   ! Modify with degeneracy factors.
 
@@ -957,7 +980,7 @@ do iR=1,nRoots
       TempY = Tmp(2,iAtom)
       TempZ = Tmp(3,iAtom)
       Namei = AtomLbl(iAtom)
-      write(LuWr,'(2X,A,3X,3F12.6)') Namei,TempX,TempY,TempZ
+      write(LuWr,'(2X,A,3X,3F14.8)') Namei,TempX,TempY,TempZ
     end do
     write(LuWr,'(2x,A)') '---------------------------------------------'
   end if

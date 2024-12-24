@@ -101,15 +101,44 @@
              ArrayOut(Index1)=Fact*ArrayIn(indexC)
             End If
            Else
-            If (iT.gt.jT) Then
-             indexC=indexc+1
-             Index1=ipMat(iSym,jSym)+
-     &               (jBas-1)*norb(iSym)+iBas-ij-1
-             Index2=ipMat(jSym,iSym)+
-     &               (iBas-1)*norb(jSym)+jBas-ji-1
-             ArrayOut(Index1)=Fact*ArrayIn(indexC)
-             If (iBas.le.nB(isym))
-     &        ArrayOut(Index2)=Fact*ArrayIn(indexC)
+            If (ActRot) Then
+             !! No preconditioning for active-active for the moment
+             If (iT.gt.jT.or.(iT.eq.jT.and.iBas.gt.jBas.and.
+     *          (iT.eq.1.or.iT.eq.2.or.iT.eq.3))) Then
+              If (iT.eq.jT) Then
+                ij=nIsh(iSym) ! i1
+                ji=nIsh(jSym) ! j1
+                ij=0
+                ji=0
+              End If
+              if (iT.eq.4) then
+                ij=0
+                ji=j1
+              end if
+              ij=0
+              ji=0
+              indexC=indexc+1
+C             If (iT.gt.jT) Then
+              Index1=ipMat(iSym,jSym)+
+     &                (jBas-1)*norb(iSym)+iBas-ij-1
+              Index2=ipMat(jSym,iSym)+
+     &                (iBas-1)*norb(jSym)+jBas-ji-1
+              ArrayOut(Index1)=Fact*ArrayIn(indexC)
+              If (iBas.le.nB(isym))
+     &         ArrayOut(Index2)=Fact*ArrayIn(indexC)
+C             End If
+             End If
+            Else
+             If (iT.gt.jT) Then
+              indexC=indexc+1
+              Index1=ipMat(iSym,jSym)+
+     &                (jBas-1)*norb(iSym)+iBas-ij-1
+              Index2=ipMat(jSym,iSym)+
+     &                (iBas-1)*norb(jSym)+jBas-ji-1
+              ArrayOut(Index1)=Fact*ArrayIn(indexC)
+              If (iBas.le.nB(isym))
+     &         ArrayOut(Index2)=Fact*ArrayIn(indexC)
+             End If
             End If
            End If
           End Do

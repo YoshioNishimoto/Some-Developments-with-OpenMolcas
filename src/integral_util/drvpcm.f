@@ -184,11 +184,15 @@
 !
 !---- Do the nuclear contribution
 !
-      Do iTile = 1, nTs
-         Call EFNuc(Tessera(1,iTile),Z_Nuc,Cord,MaxAto,
-     &             VTessera(1,iTile),nOrdOp)
-         VTessera(2,iTile)=Zero
-      End Do
+C     If (First) Then
+        Do iTile = 1, nTs
+           Call EFNuc(Tessera(1,iTile),Z_Nuc,Cord,MaxAto,
+     &               VTessera(1,iTile),nOrdOp)
+           VTessera(2,iTile)=Zero
+        End Do
+C     Else
+C       VTessera = Zero
+C     End If
 !
 !---- Do the electronic contribution
 !
@@ -197,6 +201,10 @@
       FactOp(:)=One
       lOper2(:)=255
 !
+!     write (6,*) "density for Drv1_PCM in drvpcm.f"
+!     do i = 1, nh1
+!     write (6,'(i3,f20.10)') i,d(i)
+!     end do
       Call Drv1_PCM(FactOp,nTs,D,nh1,Tessera,lOper2,VTessera,nOrdOp)
 !
       Call mma_deallocate(lOper2)
@@ -216,6 +224,10 @@
 !     electronic.
 !
       Call PCM_Driver(DMat,VTessera,QTessera,nTs)
+C     write (6,*) "QTessera"
+C     do itile = 1, nts
+C     write (6,'(i4,2f20.10)') itile,qtessera(1,itile),qtessera(2,itile)
+C     end do
 !
 !---- Make the slow charges (also called orientational charges or
 !     frozen charges). This is always done regardless if they ever
@@ -303,6 +315,10 @@
         EEN = EEN + QTessera(2,iTile) * VTessera(1,iTile)
         EEE = EEE + QTessera(2,iTile) * VTessera(2,iTile)
       End Do
+C     write (*,*) "enn =" ,enn
+C     write (*,*) "ene =" ,ene
+C     write (*,*) "een =" ,een
+C     write (*,*) "eee =" ,eee
       If (First) then
          RepNuc = RepNuc + Half * ENN
          If(NonEq)
@@ -340,6 +356,10 @@
          Call CmpInt(Integrals(ip(1)),nInt,nBas,nIrrep,lOper)
          Alpha=One
          Call DaXpY_(nInt,Alpha,Integrals(ip(1)),1,h1,1)
+C       write (6,*) "pcm contribution (nuc)"
+C       do i = 1, nint
+C         write (6,'(i3,f20.10)') i,integrals(ip(1)+i-1)
+C       end do
          Call mma_deallocate(Integrals)
 !
 !------  Save the modified h1 matrix
@@ -360,6 +380,10 @@
       Call CmpInt(Integrals(ip(1)),nInt,nBas,nIrrep,lOper)
       Alpha=One
       Call DaXpY_(nInt,Alpha,Integrals(ip(1)),1,TwoHam,1)
+C       write (6,*) "pcm contribution"
+C       do i = 1, nint
+C         write (6,'(i3,f20.10)') i,integrals(ip(1)+i-1)
+C       end do
       Call mma_deallocate(Integrals)
 !                                                                      *
 !***********************************************************************

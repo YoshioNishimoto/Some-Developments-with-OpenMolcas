@@ -12,6 +12,8 @@
 ************************************************************************
       Subroutine PutRlx(D,DS,P,DAO,C)
       use spin_correlation, only: tRootGrad
+      use rctfld_module, only: lRF,RslPar
+      use DWSol, only: DWSol_wgt,DWZeta,W_SOLV
       Implicit Real*8 (a-h,o-z)
 #include "rasdim.fh"
 #include "general.fh"
@@ -173,6 +175,50 @@
       Call TraCtl2(C,Work(ipPUVX),Work(ipTUVX),
      &             Work(ipDI),Work(ipFI),
      &             Work(ipDA),Work(ipFA),ipr,lsquare,ExFac)
+*
+      if (IPCMROOT <=0 .or. DWZeta /= 0.0d+00) then
+        !! Polarize PCM etc with weighted density
+        kDisk = IADR15(3)
+        Call GetMem('TEMP','ALLO','REAL',ipWRK1,NACPAR)
+        Call GetMem('TEMP','ALLO','REAL',ipWRK2,NACPAR)
+        Call GetMem('TEMP','ALLO','REAL',ipDA_ave,MAX(NACPAR,NZ))
+        Call GetMem('TEMP','ALLO','REAL',ipDS_ave,MAX(NACPAR,NZ))
+*
+        call dcopy_(NACPAR,[0.0d+00],0,Work(ipDA_ave),1)
+        call dcopy_(NACPAR,[0.0d+00],0,Work(ipDS_ave),1)
+*
+        call DWSol_wgt(ENER(:,ITER))
+        Do i=1,lRoots
+          wgt = W_SOLV(i)
+          Call DDaFile(JOBIPH,2,Work(ipWRK1),NACPAR,kDisk)
+          Call DDaFile(JOBIPH,2,Work(ipWRK2),NACPAR,kDisk)
+          Call DDaFile(JOBIPH,0,rdum,NACPR2,kDisk)
+          Call DDaFile(JOBIPH,0,rdum,NACPR2,kDisk)
+          if (wgt == 0.0d+00) cycle
+!          if (i.eq.2) wgt = 0.40d+00
+!          if (i.eq.1) wgt = 0.40d+00
+!          if (i.eq.3) wgt = 0.20d+00
+          call daxpy_(NACPAR,wgt,Work(ipWRK1),1,Work(ipDA_ave),1)
+          call daxpy_(NACPAR,wgt,Work(ipWRK2),1,Work(ipDS_ave),1)
+        End Do
+*
+*       Construc D-ACTIVE AND D-INACTIVE IN AO BASIS
+*
+        CALL DCOPY_(NACPAR,Work(ipDS_ave),1,Work(ipD),1)
+        call dcopy_(NZ,Work(ipDS),1,Work(ipDS_ave),1)
+        Call DBLOCK(Work(ipD))
+        CALL Get_D1A_RASSCF(C,Work(ipD),Work(ipDS))
+*
+        CALL DCOPY_(NACPAR,Work(ipDA_ave),1,Work(ipD),1)
+        call dcopy_(NZ,Work(ipDA),1,Work(ipDA_ave),1)
+        Call DBLOCK(Work(ipD))
+        CALL Get_D1A_RASSCF(C,Work(ipd),Work(ipDA))
+*
+        Call GetMem('TEMP','FREE','REAL',ipWRK1,NACPAR)
+        Call GetMem('TEMP','FREE','REAL',ipWRK2,NACPAR)
+      end if
+*
+C     write (6,*) "sgfcin from putrlx doing SS density"
       CALL SGFCIN(C,WORK(ipF),Work(ipFI),Work(ipDI),Work(ipDA),
      &                                              Work(ipDS))
       call dcopy_(ntot4,[0.0d0],0,Work(ipF),1)
@@ -183,6 +229,24 @@
       iTmp=newfock
       newFock=-99999
 *
+      if (IPCMROOT <=0 .or. DWZeta /= 0.0d+00) then
+        !! The rest uses state-specific density, so restore them
+        call dcopy_(NZ,Work(ipDA_ave),1,Work(ipDA),1)
+        call dcopy_(NZ,Work(ipDS_ave),1,Work(ipDS),1)
+        Call GetMem('TEMP','FREE','REAL',ipDA_ave,MAX(NACPAR,NZ))
+        Call GetMem('TEMP','FREE','REAL',ipDS_ave,MAX(NACPAR,NZ))
+*
+        Call GetMem('TEMP','ALLO','REAL',ipWRK1,nTot1)
+        Call GetMem('TEMP','ALLO','REAL',ipWRK2,nTot1)
+        Call Fold(nSym,nBas,Work(ipD),Work(ipWRK1))
+        Call Fold(nSym,nBas,Work(ipDA),Work(ipWRK2))
+        Call Daxpy_(nTot1,1.0D+00,Work(ipWRK1),1,Work(ipWRK2),1)
+        Call Put_dArray('D1ao',Work(ipWRK2),nTot1)
+        Call Fold(nSym,nBas,Work(ipDS),Work(ipWRK1))
+        Call Put_dArray('D1sao',Work(ipWRK1),nTot1)
+        Call GetMem('TEMP','FREE','REAL',ipWRK1,nTot1)
+        Call GetMem('TEMP','FREE','REAL',ipWRK2,nTot1)
+      end if
       Call Fmat(C,Work(ipPUVX),Work(ipD),Work(ipDA),Work(ipFI),
      &          Work(ipFA))
       newFock=itmp

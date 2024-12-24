@@ -14,6 +14,7 @@
      &                        idsym,reco,jspin)
       use Arrays, only: W_CMO_Inv=>CMO_Inv, W_CMO=>CMO, G1t, G2t, FAMO,
      &                  FIMO
+      use PCM_grad, only: do_RF
 *
 *                              ~
 *     Constructs  F  = <0|[E  ,H]|0> ( + <0|[[E  , Kappa],H]|0> )
@@ -54,6 +55,25 @@
 *
       Fact=-One
       call dcopy_(ndens2,[0.0d0],0,Fock,1)
+      If (ActRot) Then
+        Call GetMem('DAct','ALLO','REAL',ipDAct,ntash*ntash)
+        Call GetMem('DAct','ALLO','REAL',ipFAct,nmba)
+C       Call DCopy_(ntash*ntash,0.0d+00,0,Work(ipDAct),1)
+C       do iash = 1, nash(idsym)
+C         iorb = nish(idsym)+iash
+C         do jash = 1, iash-1 !! nash(idsym)
+C           jorb = nish(idsym)+jash
+C           Work(ipDAct+iAsh-1+nAsh(idSym)*(jAsh-1))
+C    *        = rkappa(iorb+nOrb(idSym)*(jorb-1))*0.5d+00
+C           Work(ipDAct+jAsh-1+nAsh(idSym)*(iAsh-1))
+C    *        = rkappa(iorb+nOrb(idSym)*(jorb-1))*0.5d+00
+C           rkappa(iorb+nOrb(idSym)*(jorb-1)) = 0.0D+00
+C         end do
+C       end do
+        !! F(D)pq = ((pq|tu)-(pt|qu)/2)*Dtu, then
+        !! Fpq = F(D)pr*Drq(SA)
+C       Call DActTrf(Work(ipDAct),Work(ipFAct),Fock,idSym)
+      End If
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -370,7 +390,47 @@
       Call abend()
       End If
 #endif
+*
+      !! Compute the PCM electrostatic integrals induced by the response
+      !! density
+      if (do_RF) then
+      ! !! First, compute the response density in the MO basis
+      ! Do iS=1,nSym
+      !   If (nOrb(iS).ne.0) Then
+      !     Do jS=1,nSym
+      !       If (iEOr(iS-1,jS-1)+1.eq.idsym.and.nOrb(jS).ne.0) Then
+      !            Call DGEMM_('N','N',
+     &!                        nOrb(iS),nOrb(jS),nOrb(jS),
+     &!                        One,rkappa(ipMat(is,js)),nOrb(iS),
+     &!                            DI%SB(js)%A2,nOrb(jS),
+     &!                        Zero,Dens2(ipMat(iS,jS)),nOrb(iS))
+      !            Call DGEMM_('T','T',nOrb(jS),nOrb(iS),nOrb(iS),
+     &!                        One,Dens2(ipMat(iS,jS)),nOrb(iS),
+     &!                            W_CMO(ipCM(is)),nOrb(iS),
+     &!                        Zero,DLT(1)%SB(iS)%A2,nOrb(jS))
+      !            Call DGEMM_('T','T',nOrb(jS),nOrb(jS),nOrb(iS),
+     &!                        One,DLT(1)%SB(iS)%A2,nOrb(iS),
+     &!                            W_CMO(ipCM(js)),nOrb(jS),
+     &!                        Zero,Dens2(ipMat(iS,jS)),nOrb(jS))
 
+      !            Call DGEMM_('T','T',nOrb(jS),nOrb(iS),nOrb(iS),
+     &!                        One,DI%SB(js)%A2,nOrb(iS),
+     &!                            W_CMO(ipCM(is)),nOrb(iS),
+     &!                        Zero,DLT(1)%SB(iS)%A2,nOrb(jS))
+      !            Call DGEMM_('T','T',nOrb(jS),nOrb(jS),nOrb(iS),
+     &!                        One, DLT(1)%SB(iS)%A2,nOrb(iS),
+     &!                             W_CMO(ipCM(js)),nOrb(jS),
+     &!                        Zero,DI%SB(js)%A2,nOrb(jS))
+      !       EndIf
+      !     End Do
+      !   EndIf
+      ! End Do
+      ! !! D(MO) -> D(AO)
+      ! call PCM_grad_D2V(dens,vint,.false.,.false.,.false.)
+      ! call square(TwoHam,PCMZMO,1,nBas(1),nBas(1))
+      ! call tcmo(PCMZMO,1,1)
+      end if
+*
       Do iS=1,nSym
          jS=iEOr(iS-1,idsym-1)+1
 *
@@ -458,6 +518,10 @@
         Call mma_deallocate(MT2)
         Call mma_deallocate(MT1)
       EndIf
+      If (ActRot) Then
+        Call GetMem('DAct','FREE','REAL',ipDAct,ntash*ntash)
+        Call GetMem('DAct','FREE','REAL',ipFAct,norb(1)*norb(1))
+      End If
 #ifdef _DEBUGPRINT_
       Write (LuWr,*) 'Exit RInt_Generic'
 #endif

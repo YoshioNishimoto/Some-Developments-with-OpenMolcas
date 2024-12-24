@@ -8,8 +8,12 @@
 * For more details see the full text of the license in the file        *
 * LICENSE or in <http://www.gnu.org/licenses/>.                        *
 ************************************************************************
-      Subroutine RHS_NAC(Fock,SLag)
+      Subroutine RHS_NAC(Fock,SLag,ipS2)
       use ipPage, only: W
+      use rctfld_module, only: lRf
+      use PCM_grad, only: PrepPCM2,DSSMO,DSSAO,PCMSSMO,PCMSSAO,
+     *                    PCM_grad_CLag
+      use ISRotation, only: InvSCF,ISR,InvEne
       Implicit None
 #include "Input.fh"
 #include "Pointers.fh"
@@ -21,10 +25,11 @@
 #include "cands.fh"
       Real*8 Fock(*)
       real*8, optional :: SLag(*)
+      Integer, optional :: ipS2
       Integer ng1,ng2,i,j,k,l,ij,kl,ijkl,ij2,kl2,ijkl2
       Integer iTri
       Integer ipIn,opOut,ipnOut,nConfL,nConfR,iRC,LuDens
-      Real*8 factor
+      Real*8 factor,dum,eee
       External ipIn,opOut,ipnOut
 *
       Integer iSLag !,jR,kR
@@ -34,12 +39,15 @@
 ************************************************************************
 *                                                                      *
       iTri(i,j)=Max(i,j)*(Max(i,j)-1)/2+Min(i,j)
+C      calL compute_lag
+C      call abend
 *                                                                      *
 ************************************************************************
 *                                                                      *
       ng1=ntAsh*(ntAsh+1)/2
       ng2=ng1*(ng1+1)/2
-      If (PT2) Then
+C     If (PT2) Then
+      If (.not.InvEne) Then
         Call mma_allocate(G1q,n1dens,Label='G1q')
         Call mma_allocate(G2q,n2dens,Label='G2q')
       Else
@@ -60,7 +68,16 @@
       nConfR=Max(nconf1,nint(xispsm(State_sym,1)))
       Call mma_allocate(CIL,nConfL,Label='CIL')
       Call mma_allocate(CIR,nConfR,Label='CIR')
-      If (PT2) Then
+C     If (PT2) Then
+C     If (.not.InvEne) then
+      If (PT2 .or. (.not.InvEne .and. InvSCF)) then
+C       call daxpy_(nRoots**2,1.0d+00,ISR%p,1,SLag,1)
+        if (.not.PT2) then
+C         SLag(NSSA(1)+nRoots*(NSSA(2)-1))
+C    *      = SLag(NSSA(1)+nRoots*(NSSA(2)-1)) + 0.5d+00
+          SLag(NSSA(2)+nRoots*(NSSA(1)-1))
+     *      = SLag(NSSA(2)+nRoots*(NSSA(1)-1)) + 1.0d+00
+        end if
         Call PT2_SLag()
       Else
         irc=ipIn(ipCI)
@@ -74,8 +91,17 @@
         Call Densi2(2,G1r,G2r,
      &                CIL,CIR,0,0,0,n1dens,n2dens)
       End If
+      if (lRF) nconf = ncsf(State_sym)
       Call mma_deallocate(CIL)
       Call mma_deallocate(CIR)
+*
+C     If (lRF .and. .not.InvEne .and. InvSCF) then
+      If (lRF .and. (PT2 .or. (.not.InvEne .and. InvSCF))) then
+        !! Update state-specific quantities using rotated G1r
+        call dcopy_(ntash**2,g1r,1,dssmo,1)
+        call PrepPCM2(2,dssmo,dssao,pcmssao,pcmssmo)
+        Call PCM_grad_CLag(2,ipCI,ipS2,SLag)
+      end if
 *
 **    Symmetrize densities
 **    For the one-particle density, save the antisymmetric part too
@@ -97,7 +123,7 @@
         G1m(ij)=Zero
       End Do
 *
-      !! The anti-symmetric RDM is contructed somewhere in the CASPT2
+      !! The anti-symmetric RDM is constructed somewhere in the CASPT2
       !! module. It will be read from disk in out_pt2.f.
       If (PT2) Call DCopy_(ng1,[zero],0,G1m,1)
 *
@@ -195,6 +221,10 @@
           End Do
         End Do
       End Do
+C     write (6,*) "calling compute_energy"
+C     call compute_energy(eee,G1r,G2r,dum)
+C     write (6,*) "eee = ", eee
+C     call abend
 
 * Note: 1st arg = zero for no inactive density (TDM)
       Call mma_allocate(T,nDens2,Label='T')

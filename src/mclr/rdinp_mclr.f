@@ -27,12 +27,14 @@
       Use Exp, only: NewPre, nexp_max
       use negpre
       Use Fock_util_global, only: Deco, dmpk, Estimate, Nscreen, Update
+      Use PCM_grad, only: RFPERT
+      Use ISRotation, only: CGS
       Implicit Real*8 (a-h,o-z)
 #include "Input.fh"
 #include "Files_mclr.fh"
 #include "disp_mclr.fh"
 #include "sa.fh"
-      Parameter ( nCom=38 )
+      Parameter ( nCom=41 )
       Character*72 Line
       Character*4 Command,ComTab(nCom)
       Character*8 Label
@@ -45,7 +47,8 @@
      &            'EXPD','NEGP','LOWM','ELHE','SAVE',
      &            'RASS','DISO','CASI','SALA','NODE',
      &            'ESTE','MOUT','MASS','NAC ','$$$$',
-     &            'THER','CHOF','TWOS'/
+     &            'THER','CHOF','TWOS','ACTR','CGS ',
+     &            'RFPE'/
       Integer iDum(1)
 *----------------------------------------------------------------------*
 *     Locate "start of input"                                          *
@@ -56,9 +59,10 @@
 *----------------------------------------------------------------------*
       debug=.False.
       Epsilon_Undef=.True.
-      Call Basis_Info_Get()
-      Call Center_Info_Get()
-      Call Get_info_Static()
+      !! Replaced with IniSew in mclr.f
+C     Call Basis_Info_Get()
+C     Call Center_Info_Get()
+C     Call Get_info_Static()
       istate=1     ! State for which the Lagrangian is calc.
       override=.false.
       If (debug) write(6,*) 'Got Basis_Info and Center_Info'
@@ -105,6 +109,9 @@
       Update=.true.
       Estimate=.false.
       TwoStep=.false.
+      ActRot=.false.
+      CGS=.false.
+      RFPERT=.false.
       StepType='xxxx'
 *----------------------------------------------------------------------*
 *     Read the input stream line by line and identify key command      *
@@ -201,6 +208,12 @@
           Go to 210
         Case (38)
           Go to 220
+        Case (39)
+          Go to 230
+        Case (40)
+          Go to 240
+        Case (41)
+          Go to 250
       End Select
 *---  TITL ------------------------------------------------------------*
 10    Continue
@@ -491,6 +504,15 @@
       End If
       TwoStep=.true.
       If (debug) Write(6,*) 'TWOSTEP kind: '//StepType
+      Goto 100
+*---  Process the "ACTRot" input card ---------------------------------*
+230   ActRot=.True.
+      Goto 100
+*---  Process the "CGS" input card ------------------------------------*
+240   CGS=.True.
+      Goto 100
+*---  Process the "RFPErt" input card ------------------------------------*
+250   RFPERT=.True.
       Goto 100
 *----------------------------------------------------------------------*
 *     "End of input"                                                   *

@@ -36,6 +36,7 @@
       irc=ipin(ipCId)
       irc=ipin(ipS2)
       Do i=0,nroots-1
+C        write (6,*) i+1, erasscf(i+1),rin_ene+potnuc-ERASSCF(i+1)
          EC=(rin_ene+potnuc-ERASSCF(i+1))*Weight(i+1)
          Call Daxpy_(ncsf(State_Sym),EC,
      &               W(ipCId)%Vec(1+i*ncsf(state_sym)),1,

@@ -95,6 +95,7 @@
       use wadr, only: DMAT, PMAT, PA, FockOcc, TUVX, FI, FA, DSPN,
      &                D1I, D1A, OccN, CMO, DIAF
       use sxci
+      use DWSol, only: DWSol_init,DWSol_final,DWZeta
 
       Implicit Real*8 (A-H,O-Z)
 
@@ -265,6 +266,7 @@
        IRETURN=iRc
        GOTO 9990
       End If
+      if (lRF) call DWSol_init(IPCMROOT,nRoots)
 
 
 * Local print level may have changed:
@@ -322,6 +324,7 @@
         end if
       end if
 #endif
+*
       FI(:)=0.0D0
       FA(:)=0.0D0
       DIAF(:)=0.0D0
@@ -812,6 +815,7 @@ c         write(6,*) (UVX(ind),ind=1,NACPR2)
           CALL DMRGCTL(CMO,DMAT,DSPN,PMAT,PA,FI,D1I,D1A,TUVX,IFINAL,0)
 #endif
         else
+C         write (*,*) "cictl 800"
           CALL CICTL(CMO,DMAT,DSPN,PMAT,PA,FI,FA,D1I,D1A,TUVX,IFINAL)
 
           if(dofcidump)then
@@ -1108,6 +1112,7 @@ c.. upt to here, jobiph are all zeros at iadr15(2)
             CALL DMRGCTL(CMO,DMAT,DSPN,PMAT,PA,FI,D1I,D1A,TUVX,IFINAL,1)
 #endif
         else
+C         write (*,*) "cictl 1000"
           CALL CICTL(CMO,DMAT,DSPN,PMAT,PA,FI,FA,D1I,D1A,TUVX,IFINAL)
         end if
 
@@ -1656,6 +1661,8 @@ c Clean-close as much as you can the CASDFT stuff...
       if( l_casdft ) goto 2010
 
 ** IPT2 = 1 for OUTO, CANOnical keyword...
+C        write (*,*) "before lpt2 = ", lpt2
+C        call sqprt(cmo,12)
       IF(IPT2.EQ.1) THEN
         IAD=IADR15(9)
         CALL DDAFILE(JOBIPH,2,CMO,NTOT2,IAD)
@@ -1663,6 +1670,8 @@ c Clean-close as much as you can the CASDFT stuff...
         IAD=IADR15(2)
         CALL DDAFILE(JOBIPH,2,CMO,NTOT2,IAD)
       ENDIF
+C        write (*,*) "after lpt2"
+C        call sqprt(cmo,12)
         If ( IPRLEV.ge.DEBUG ) then
          Write(LF,*)
          Write(LF,*) ' CMO in RASSCF after DDAFILE'
@@ -1754,7 +1763,12 @@ c Clean-close as much as you can the CASDFT stuff...
         continue
 #endif
       else
+C         write (*,*) "cictl 1700"
         CALL CICTL(CMO,DMAT,DSPN,PMAT,PA,FI,FA,D1I,D1A,TUVX,IFINAL)
+      end if
+      if (lRF .and. (iPCMRoot <= 0 .or. DWZeta/=0.0D+00)) then
+        IAD15 = IADR15(6)
+        CALL DDAFILE(JOBIPH,1,ENER,mxRoot*mxIter,IAD15)
       end if
 
       EAV=0.0d0
@@ -1969,6 +1983,7 @@ c  i_root>0 gives natural spin orbitals for that root
         end if
       end if
 #endif
+      if (lRF) call DWSol_final()
 
 c deallocating TUVX memory...
       Call mma_deallocate(TUVX)

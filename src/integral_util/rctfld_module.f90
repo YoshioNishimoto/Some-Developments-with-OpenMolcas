@@ -53,25 +53,25 @@ Module Rctfld_Module
       integer lRFStrt, lRFEnd
       logical lRF, lLangevin, RF_Basis, PCM, Conductor, NonEq_ref,      &
      &        DoDeriv,lRFCav,LSparse,LGridAverage,lDamping,lAmberPol,   &
-     &        Done_Lattice,lFirstIter,lDiprestart
+     &        Done_Lattice,lFirstIter,lDiprestart,GauASC
       common /lRct/ lRFStrt,                                            &
      &              lRF, lLangevin, RF_Basis, PCM, Conductor, NonEq_ref,&
      &              DoDeriv,lRFCav,LSparse,LGridAverage,lDamping,       &
      &              lAmberPol,                                          &
-     &              Done_Lattice,lFirstIter,lDiprestart,                &
+     &              Done_Lattice,lFirstIter,lDiprestart,GauASC,         &
      &              lRFEnd
       integer :: lMax, nMM, latato, nexpo, maxa, maxb, maxc,            &
      &              iRFStrt, nabc, nCavxyz,                             &
      &              nGrid, nGrid_Eff,nSparse,                           &
      &              ISlPar(MxPar),NSinit,NS,nTs,NTT(MxA),NOrdInp(MxA),  &
      &              nPCM_Info,iCharge_ref,nGridAverage,nGridSeed,       &
-     &              iRFEnd
+     &              PType_inp,iRFEnd
       common /iRct/ iRFStrt,                                            &
      &              lMax, nMM, latato, nexpo, maxa, maxb, maxc,         &
      &              nabc, nCavxyz, nGrid, nGrid_Eff,nSparse,            &
      &              ISlPar,NSinit,NS,nTs,NTT,NOrdInp,                   &
      &              nPCM_Info,iCharge_ref,nGridAverage,nGridSeed,       &
-     &              iRFEnd
+     &              PType_inp,iRFEnd
       real(kind=8) :: Cordsi(3,4), rRfStrt,                             &
      &              EpsInf_User,                                        &
      &              Eps_User,rds, polsi, dipsi, radlat,                 &
@@ -81,7 +81,7 @@ Module Rctfld_Module
      &              Eps,EpsInf,DerEps,RSolv,VMol,TCE,GCav,GDis,GRep,    &
      &              RDiff(MxA),KT(MxA),RWT(MxA),RadInp(MxA),            &
      &              RSlPar(MxPar),dampIter,dipCutoff,                   &
-     &              scal14, rRFEnd
+     &              scal14,ZetaASC,rRFEnd
 
       common /rRct/ rRFStrt,                                            &
      &              EpsInf_User,                                        &
@@ -92,7 +92,7 @@ Module Rctfld_Module
      &              Eps,EpsInf,DerEps,RSolv,VMol,TCE,GCav,GDis,GRep,    &
      &              RDiff,KT,RWT,RadInp,                                &
      &              RSlPar,dampIter,dipCutoff,                          &
-     &              scal14,                                             &
+     &              scal14,ZetaASC,                                     &
      &              rRFEnd
 
 

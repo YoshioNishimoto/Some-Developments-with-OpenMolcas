@@ -44,6 +44,9 @@
 #ifdef _DEBUGPRINT_
       use define_af, only: Angtp
 #endif
+#ifdef _MOLCAS_MPP_
+      USE Para_Info, ONLY: Is_Real_Par, myRank, nProcs
+#endif
       Implicit None
       Integer nTs, nFD, nOrdOp
       Real*8 A(3), B(3), C(3), FD(nFD), FactOp(nTs), CCoor(4,nTs),
@@ -64,6 +67,7 @@
      &        nDAO, lDCRR, nDCRR, iTile, iuv, nStabO, LmbdT, LmbdR,
      &        lDCRT, nDCRT, kk, ipFnlC, iComp, nOrder,
      &        NrOpr, nStabM
+      Integer HiTs, LoTs
       Integer, External :: n2Tri, MemSO1
       Real*8  FactND
       Real*8, External:: DDot_
@@ -75,6 +79,9 @@
       Data ChOper/'E  ','x  ','y  ','xy ','z  ','xz ','yz ','xyz'/
       Integer i
 #endif
+#ifdef _MOLCAS_MPP_
+      Integer job_equal,remainder
+#endif
 !
 !     Statement functions
       nElem(ixyz) = (ixyz+1)*(ixyz+2)/2
@@ -85,6 +92,33 @@
       Call mma_allocate(ZI,S%m2Max,Label='ZI')
       Call mma_allocate(Kappa,S%m2Max,Label='Kappa')
       Call mma_allocate(PCoor,S%m2Max,3,Label='PCoor')
+!
+#ifdef _MOLCAS_MPP_
+      LoTs = 1
+      HiTs = nTs
+      ! Parallel can be done only for energy computation, so turn off
+      ! if nOrdOp = 1, called from pcm_ef_grd
+      if (is_real_par() .and. nOrdOp.eq.0) then
+        job_equal = nTs/nProcs
+        remainder = mod(nTs,nProcs)
+
+        jS = 1
+        do iS = 1, myRank+1
+          LoTs = jS
+          if (iS <= remainder) then
+            jS = jS + job_equal+1
+          else
+            jS = jS + job_equal
+          end if
+          HiTs = jS-1
+        end do
+        VTessera(:,1,:) = VTessera(:,1,:)/nProcs
+        VTessera(:,2,:) = 0.0d+00 ! just in case
+      end if
+#else
+      LoTs = 1
+      HiTs = nTs
+#endif
 !                                                                      *
 !***********************************************************************
 !                                                                      *
@@ -95,7 +129,7 @@
 !-----Double loop over shells. These loops decide the integral type
 !
 
-
+      nComp = (nOrdOp+1)*(nOrdOp+2)/2
       Do iS = 1, nSkal
          iShll  = iSD( 0,iS)
          If (Shells(iShll)%Aux) Go To 100
@@ -140,7 +174,6 @@
 !           Allocate memory for the final integrals, all in the
 !           primitive basis.
 !
-            nComp = (nOrdOp+1)*(nOrdOp+2)/2
             lFinal = S%MaxPrm(iAng) * S%MaxPrm(jAng)
      &             * nElem(iAng)*nElem(jAng)
      &             * nComp
@@ -235,7 +268,8 @@
 !
 !--------------Loop over operators
 !
-               Do 5000 iTile = 1, nTs
+!              Do 5000 iTile = 1, nTs
+               Do 5000 iTile = LoTs, HiTs
                   If (FactOp(iTile).eq.Zero) Go To 5000
                   call dcopy_(3,Ccoor(1,iTile),1,C,1)
 !
@@ -384,6 +418,11 @@
       Call mma_deallocate(Kappa)
       Call mma_deallocate(ZI)
       Call mma_deallocate(Zeta)
+!
+#ifdef _MOLCAS_MPP_
+      if (is_real_par() .and. nOrdOp.eq.0)
+     *  CALL GADSUM(VTessera,nComp*2*nTs)
+#endif
 !
       Return
       End SubRoutine Drv1_PCM

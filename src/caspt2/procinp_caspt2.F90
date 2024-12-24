@@ -60,6 +60,8 @@ subroutine procinp_caspt2
   integer(kind=iwp) :: iDNG
   integer(kind=iwp), external :: isStructure
 
+  logical(kind=iwp), external :: RF_On
+
   ! Hzero and Focktype are merged together into Hzero. We keep the
   ! variable Focktype not to break the input keyword which is documented
   ! in the manual. However, eventually we will have to keep only Hzero
@@ -549,8 +551,8 @@ subroutine procinp_caspt2
   ! check first if the user specifically asked for analytic gradients
   ! I think GRDT keyword should be ignored for numerical gradient and last energy
   do_lindep = .False.
-  if (input%GRDT .and. SuperName(1:18) /= 'numerical_gradient' .and. SuperName(1:11) /= 'last_energy') then
-    do_grad = Input%GRDT
+  if ((input%GRDT .or. input%NAC) .and. SuperName(1:18) /= 'numerical_gradient' .and. SuperName(1:11) /= 'last_energy') then
+    do_grad = Input%GRDT .or. input%NAC
 
     ! quit if both analytical and numerical gradients were explicitly requested
     if (DNG) then
@@ -689,6 +691,11 @@ subroutine procinp_caspt2
     call warningMessage(2,'Analytic gradients with IPEA shift'//  &
                           ' must use the CORT or DORT option.')
     call quit_onUserError
+  end if
+
+  if (do_grad .and. RF_On() .and. .not.if_invar) then
+    call warningMessage(2,'Analytic gradients with IPEA shift'//  &
+                          ' and PCM is not fully analytic.')
   end if
 
   !! Whether the Fock matrix (eigenvalues) is constructed with

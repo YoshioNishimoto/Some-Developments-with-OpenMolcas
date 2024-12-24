@@ -234,6 +234,7 @@ C
       Dimension UEFF(nState,nState),U0(nState,nState),H0(nState,nState)
       Character(Len=16) mstate1
       LOGICAL DEB,Found
+      logical, external :: RF_On
 C
       Dimension HEFF1(nState,nState),WRK1(nState,nState),
      *          WRK2(nState,nState)
@@ -312,7 +313,9 @@ C
       End If
 
       !! Now, compute the state Lagrangian and do some projections
-      Call CLagFinal(Work(ipCLagFull),Work(ipSLag))
+      !! If PCM, we have to obtain internal state rotation parameters
+      !! self-consistently, so we should not call this subroutine
+      If (.not.RF_On()) Call CLagFinal(Work(ipCLagFull),Work(ipSLag))
 
       !! Add MS-CASPT2 contributions
       If (IFMSCOUP) Then
@@ -459,6 +462,12 @@ C
       End If
 
       !! D^PT2 in AO (not used?)
+      if (RFpert.and.IFMSCOUP) then
+        !! Recompute DPT2AO and DPT2AO for PCM
+        Call Recompute_DPT2AO(Work(ipDPT2),Work(ipDPT2C),
+     *                        Work(ipDPT2AO),Work(ipDPT2CAO))
+      end if
+
       If (DEB) call TriPrt('DPT2AO', '', work(ipDPT2AO), nBast)
       Do i = 1, nBasTr
         Write (LuPT2,*) Work(ipDPT2AO+i-1)
@@ -469,6 +478,21 @@ C
       Do i = 1, nBasTr
         Write (LuPT2,*) Work(ipDPT2CAO+i-1)
       End Do
+
+      if (RFpert) then
+        !! For CASPT2/PCM gradient
+        !! The implicit derivative contributions have not been
+        !! considered in the CASPT2 module
+        if (ifmscoup) then
+        call daxpy_(nBasTr,0.5D+00,Work(ipDPT2CAO),1,Work(ipDPT2AO),1)
+        else
+        call daxpy_(nBasTr,1.0D+00,Work(ipDPT2CAO),1,Work(ipDPT2AO),1)
+        end if
+        Call Put_dArray('D1aoVar',Work(ipDPT2AO),nBasTr)
+      else
+        !! not sure this is OK
+        Call Put_dArray('D1aoVar',Work(ipDPT2AO),0)
+      end if
 
       ! close gradient files
       Close (LuPT2)
@@ -749,7 +773,7 @@ C
       End Subroutine OLagFinal
 C
 C-----------------------------------------------------------------------
-
+C
       Subroutine CnstFIFAFIMO(MODE)
 
       use caspt2_gradient, only: TraFro
@@ -896,3 +920,66 @@ C
       Return
 C
       End Subroutine CnstFIFAFIMO
+C
+C-----------------------------------------------------------------------
+C
+      Subroutine Recompute_DPT2AO(DPT2,DPT2C,DPT2AO,DPT2CAO)
+C
+      use definitions, only: iwp,wp
+      use stdalloc, only: mma_deallocate
+C
+      Implicit Real*8 (A-H,O-Z)
+C
+#include "rasdim.fh"
+#include "caspt2.fh"
+#include "WrkSpc.fh"
+#include "caspt2_grad.fh"
+C
+      real(kind=wp), intent(in) :: DPT2(nBasTr),DPT2C(nBasTr)
+      real(kind=wp), intent(inout) :: DPT2AO(nBasTr),DPT2CAO(nBasTr)
+C
+      Call GETMEM('WRK1','ALLO','REAL',ipWRK1,NBSQT)
+      Call GETMEM('WRK2','ALLO','REAL',ipWRK2,nBasSq)
+      Call GETMEM('WRK3','ALLO','REAL',ipWRK3,nBasSq)
+      Call GETMEM('WRK4','ALLO','REAL',ipWRK4,nBasSq)
+      IDISK=IAD1M(1)
+      CALL DDAFILE(LUONEM,2,WORK(ipWRK1),NBSQT,IDISK)
+
+      call dcopy_(nBasTr,[0.0d+00],0,DPT2AO,1)
+      call dcopy_(nBasTr,[0.0d+00],0,DPT2CAO,1)
+C
+      iBasTr = 1
+      iBasSq = 1
+      Do iSym = 1, nSym
+       call OLagTrf(1,iSym,WORK(ipWRK1),DPT2 ,Work(ipWRK3),Work(ipWRK2))
+       call OLagTrf(1,iSym,WORK(ipWRK1),DPT2C,Work(ipWRK4),Work(ipWRK2))
+        nBasI = nBas(iSym)
+        liBasTr = iBasTr
+        liBasSq = iBasSq
+        ljBasSq = iBasSq
+        Do iBasI = 1, nBasI
+          Do jBasI = 1, iBasI
+            liBasSq = iBasSq + iBasI-1 + nBasI*(jBasI-1)
+            ljBasSq = iBasSq + jBasI-1 + nBasI*(iBasI-1)
+            If (iBasI.eq.jBasI) Then
+              DPT2AO (liBasTr) = Work(ipWRK3+liBasSq-1)
+              DPT2CAO(liBasTr) = Work(ipWRK4+liBasSq-1)
+            Else
+              val = Work(ipWRK3+liBasSq-1)+Work(ipWRK3+ljBasSq-1)
+              DPT2AO (liBasTr) = val!*0.5d+00
+              val = Work(ipWRK4+liBasSq-1)+Work(ipWRK4+ljBasSq-1)
+              DPT2CAO(liBasTr) = val!*0.5d+00
+            End If
+            liBasTr = liBasTr + 1
+          End Do
+        End Do
+        iBasTr = iBasTr + nBasI*(nBasI+1)/2
+C       iBasSq = iBasSq + nBasI*nBasI
+      End Do
+C
+      Call GETMEM('WRK1','FREE','REAL',ipWRK1,NBSQT)
+      Call GETMEM('WRK2','FREE','REAL',ipWRK2,nBasSq)
+      Call GETMEM('WRK3','FREE','REAL',ipWRK3,nBasSq)
+      Call GETMEM('WRK4','FREE','REAL',ipWRK4,nBasSq)
+
+      End Subroutine Recompute_DPT2AO

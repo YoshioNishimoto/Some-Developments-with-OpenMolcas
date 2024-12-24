@@ -14,6 +14,10 @@
 ********************************************************************
       use Arrays, only: CMO
       use ipPage, only: W
+      use PCM_grad, only: def_solv,do_RF,DSSAO,DSCFAO,PCMSCFMO,PCMSCFAO,
+     *                    PCM_grad_D2v
+      use rctfld_module, only: lRF
+      use ISRotation, only: ISR_final2
       Implicit Real*8 (a-h,o-z)
 #include "detdim.fh"
 #include "Input.fh"
@@ -75,7 +79,7 @@
 *      OBS nBuf might not be def.
        Call mma_MaxDBLE(nBuf)
        Call mma_allocate(Dtmp,nDens2,Label='DTmp')
-
+*
 *
 *
 *
@@ -413,8 +417,10 @@ c
            End Do
            Call dDaFile(LUJOB ,2,G1q,ng1,jDisk)
 
-           If (PT2.and.nRoots.gt.1) Call Get_dArray("D1mo",G1q,ng1)
-
+           If ((PT2.and.nRoots.gt.1).or.(do_RF.and.def_solv.ne.3)) then
+C          if (.not.InvEne) then !?
+             Call Get_dArray_chk("D1mo",G1q,ng1)
+           End If
          end if
        EndIf
 *
@@ -715,6 +721,15 @@ c      Call mma_deallocate(Temp)
        If (override) mstate(1:1)='+'
        Call Put_cArray('MCLR Root',mstate,16)
 *
+      !! In the end, it may be useful to generate ASCs using the relaxed
+      !! density matrix for non-equilibrium solvation model
+      if (lRF) then
+        Call Get_dArray('D1aoVar',DSSAO,ntBtri)
+        call unfold(DSSAO,ntot1,DSCFAO,nLCMO,nSym,nBas)
+        call PCM_grad_D2V(DSCFAO,PCMSCFMO,PCMSCFAO,.false.,.false.,
+     *                    .false.,.false.)
+      end if
+*
        Call mma_deallocate(K1)
        Call mma_deallocate(K2)
        Call mma_deallocate(DAO)
@@ -727,6 +742,7 @@ c      Call mma_deallocate(Temp)
        Call mma_deallocate(CMON)
        Call mma_deallocate(Dtmp)
        Call mma_deallocate(D_K)
+       call ISR_final2()
 
        irc=ipclose(-1)
 *

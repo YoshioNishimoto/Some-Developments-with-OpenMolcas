@@ -12,7 +12,7 @@
 subroutine FndTess(iPrint,Xs,Ys,Zs,Rs,pNs,m)
 
 use PCM_arrays, only: Centr, IntSph, MxSph, MxTs, MxVert, NewSph, NVert, PCM_N, PCMDM, PCMiSph, PCMSph, PCMTess, PCMTess, SSph, Vert
-use rctfld_module, only: iSLPar, nPCM_Info, nS, nSInit, nTS, rSLPar, rSolv
+use rctfld_module, only: iSLPar, nPCM_Info, nS, nSInit, nTS, Ptype_inp, rSLPar, rSolv
 use stdalloc, only: mma_allocate, mma_deallocate
 use Constants, only: Zero, One, Three, Half, Angstrom, deg2rad
 use Definitions, only: wp, iwp, u6
@@ -60,6 +60,7 @@ Ret = RSlPar(3)
 Fro = RSlPar(4)
 TsAre = RSlPar(7)
 RSolv = RSlPar(19)
+Ptype_inp = ISlPar(10)
 ITsNum = ISlPar(11)
 
 ! PEDRA works with Angstroms
@@ -334,7 +335,8 @@ do I=1,NS
   if (IPRINT == 2) write(u6,1200) I,Xs(I),Ys(I),Zs(I),Rs(I),pSSph(I)
   Scav = Scav+pSSph(I)
 end do
-if (IPRINT == 2) write(u6,1300) NTS,Scav,VCav
+!if (IPRINT == 2) write(u6,1300) NTS,Scav,VCav
+write(u6,1300) NTS,Scav,VCav
 
 ! Trasforma i risultati in bohr
 Rs(1:NS) = Rs(1:NS)/Angstrom

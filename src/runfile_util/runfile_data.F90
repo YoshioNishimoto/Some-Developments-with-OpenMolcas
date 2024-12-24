@@ -95,7 +95,7 @@ character(len=lw), parameter :: LabelsCA(nTocCA) = [ &
 !> - '``D1ao``'                     One particle density matrix, AO basis.
 !> - '``D1ao_ab``'
 !> - '``D1aoVar``'                  Generalized one particle density matrix, AO basis.
-!> - '``D1av``'                     Average one particle density matrix, AO basis.
+!> - '``D1av``'                     Average one particle density matrix, MO basis.
 !> - '``D1mo``'                     One particle density matrix, MO basis.
 !> - '``D1sao``'                    One particle spin density matrix, AO basis.
 !> - '``D1activeao``'               One particle density matrix, AO basis, active orbitals
@@ -158,6 +158,7 @@ character(len=lw), parameter :: LabelsCA(nTocCA) = [ &
 !> - '``Last Dipole Moments``'
 !> - '``Un_cen Effective Charge``'
 !> - '``Un_cen Coordinates``'
+!> - '``D1ao_PCM``'                 One particle density matrix in AO that polarizes ASCs during RASSCF
 
 character(len=lw), parameter :: LabelsDA(nTocDA) = [ &
                                 'Analytic Hessian','Center of Charge','Center of Mass  ','CMO_ab          ', & !   1-  4
@@ -210,7 +211,7 @@ character(len=lw), parameter :: LabelsDA(nTocDA) = [ &
                                 'MSPDFTD6        ','TwoEIntegral    ','D1MOt           ','D1INTER         ', & ! 189-192
                                 'P2INTER         ','D1AO_MS         ','D1SAO_MS        ','MS_FINAL_ROT    ', & ! 193-196
                                 'F1MS            ','F2MS            ','FxyMS           ','SH_Ovlp_Save    ', & ! 297-200
-                                'Old_Phase       ','<rhoB|VnucA>    ','                ','                ', & ! 201-204
+                                'Old_Phase       ','<rhoB|VnucA>    ','D1ao_PCM        ','D1mo_prev       ', & ! 201-204
                                 '                ','                ','                ','                ', & ! 205-208
                                 '                ','                ','                ','                ', & ! 209-212
                                 '                ','                ','                ','                ', & ! 213-216

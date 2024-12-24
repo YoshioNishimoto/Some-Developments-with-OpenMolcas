@@ -102,6 +102,11 @@
           irc=ipin(ipCI1)
           irc=ipin(ipci2)
           Do i=0,nroots-1
+             if (weight(i+1).eq.0.0d+00) then
+                call dcopy_(nCSF(iCSM),[0.0d+00],0,
+     &                      W(ipci2)%Vec(1+i*ncsf(issm)),1)
+                cycle
+             end if
              call dcopy_(nCSF(iCSM),W(ipCI1)%Vec(1+i*ncsf(icsm)),1,
      &                   CIDET,1)
              Call SigmaVec(CIDET,W(ipci2)%Vec(1+i*ncsf(issm)),

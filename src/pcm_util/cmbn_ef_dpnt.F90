@@ -36,7 +36,11 @@ real(kind=wp) :: QTot
 real(kind=wp), parameter :: tol = 1.0e-8_wp
 logical(kind=iwp), external :: TF
 
+real(kind=wp) :: tmpGrad(nGrad)
+
 iIrrep = 0
+
+!call dcopy_(nGrad,Grad,1,tmpGrad,1)
 
 mdc = 0
 iCen = 1
@@ -62,6 +66,11 @@ do iCnttp=1,nCnttp
     iCen = iCen+nIrrep/dc(mdc)%nStab
   end do
 end do
+
+!write (6,'(" Gradient contributions in Cmbn_EF_DPnt")')
+!do iCar = 1, nGrad/3
+!  write (6,'(i3,3f20.10)') iCar,(Grad(iCen+3*(iCar-1))-tmpGrad(iCen+3*(iCar-1)),iCen=1,3)
+!end do
 
 return
 

@@ -31,7 +31,7 @@ Module PCM_grad
 
   use definitions, only: iwp,wp,u6
   use stdalloc, only: mma_allocate, mma_deallocate
-  use DWSol, only: DWSol_init,DWSol_final,DWSol_wgt,DWSolv,W_SOLV
+  use DWSol, only: DWSol_init,DWSol_final,DWSol_wgt,DWZeta,W_SOLV
 
   Implicit None
 
@@ -220,12 +220,6 @@ contains
   nOrb(1:8)      => nOrb_(1:8)
   ipCM(1:8)      => ipCM_(1:8)
   ipMat(1:8,1:8) => ipMat_(1:64)
-! write (*,*) "ipCM"
-! write (*,'(8i4)') ipcm(1:8)
-! write (*,*) "ipMat"
-! do i = 1, 8
-! write (*,'(8i4)') ipmat(i,1:8)
-! end do
   iToc(1:3)      => iToc_(1:3) !! 3 is sufficient for the moment
 
   xispsm(1:MXPCSM,1:MXPICI) => xispsm_(1:MXPCSM*MXPICI)
@@ -282,9 +276,8 @@ contains
 ! write (u6,*) "def_solv = ", def_solv
 
   !! For weighted solvation
-  !! assume that noneq is irrelevant in MCLR
-  call DWSol_init(IPCMROOT,nRoots,.false.)
-  call DWSol_wgt(2,ERASSCF)
+  call DWSol_init(IPCMROOT,nRoots)
+  call DWSol_wgt(ERASSCF)
   write (u6,*) "weight of the solvation density"
   do i = 1, nroots
     write (u6,*) "weight:",i,W_solv(i)
@@ -307,7 +300,7 @@ contains
     InvSCF    = .true.
   end if
 
-  if (DWSolv%DWZeta /= 0.0d+00) InvSCF = .false.
+  if (DWZeta /= 0.0d+00) InvSCF = .false.
 
   End Subroutine PCM_grad_init
 !
@@ -361,7 +354,7 @@ contains
 
   real(kind=wp) :: PotNuc,rdum(1)
   real(kind=wp), allocatable :: Htmp(:),Gtmp(:),D1ao(:)
-  integer(kind=iwp) :: leng,iSym,ip1
+  integer(kind=iwp) :: leng,iSym!,i
   logical(kind=iwp) :: NonEq,First,Dff,Do_DFT,lRF
 
   leng = ntBtri
@@ -399,11 +392,9 @@ contains
 !           write (*,'(i3,3f20.10)')i,htmp(i),gtmp(i),d1ao(i)
 !           end do
 
-  ip1 = 1
   do iSym = 1, nSym
-    call square(Htmp(ip1),PCMSCFAO(ipCM(iSym),2),1,nBas(iSym),nBas(iSym))
-    call square(Gtmp(ip1),PCMSCFAO(ipCM(iSym),3),1,nBas(iSym),nBas(iSym))
-    ip1 = ip1 + nBas(iSym)*(nBas(iSym)+1)/2
+    call square(Htmp,PCMSCFAO(1,2),1,nBas(iSym),nBas(iSym))
+    call square(Gtmp,PCMSCFAO(1,3),1,nBas(iSym),nBas(iSym))
   end do
   call dcopy_(ntBsqr,PCMSCFAO(1,2),1,PCMSCFAO(1,1),1)
   call daxpy_(ntBsqr,1.0d+00,PCMSCFAO(1,3),1,PCMSCFAO(1,1),1)
@@ -413,9 +404,11 @@ contains
 ! call sqprt(pcmscfao(1,1),nbas(1))
 ! call sqprt(pcmscfao(1,2),nbas(1))
 ! call sqprt(pcmscfao(1,3),nbas(1))
-  call tcmo(PCMSCFMO(1,1),1,1)
-  call tcmo(PCMSCFMO(1,2),1,1)
-  call tcmo(PCMSCFMO(1,3),1,1)
+  do iSym = 1, nSym
+    call tcmo(PCMSCFMO(1,1),iSym,1)
+    call tcmo(PCMSCFMO(1,2),iSym,1)
+    call tcmo(PCMSCFMO(1,3),iSym,1)
+  end do
 ! write (*,*) "inside PrepPCM PCMSCFMO"
 ! call sqprt(pcmscfmo(1,1),nbas(1))
 ! call sqprt(pcmscfmo(1,2),nbas(1))
@@ -444,11 +437,9 @@ contains
   Call DrvXV(Htmp,Gtmp,D1ao,PotNuc,leng,First,Dff,NonEq,lRF, &
              'SCF',0.0d+00,iCharge_PCM,iSpin,rdum,rdum,0,'1234',Do_DFT)
 
-  ip1 = 1
   do iSym = 1, nSym
-    call square(Htmp(ip1),PCMSSAO(ipCM(iSym),2),1,nBas(iSym),nBas(iSym))
-    call square(Gtmp(ip1),PCMSSAO(ipCM(iSym),3),1,nBas(iSym),nBas(iSym))
-    ip1 = ip1 + nBas(iSym)*(nBas(iSym)+1)/2
+    call square(Htmp,PCMSSAO(1,2),1,nBas(iSym),nBas(iSym))
+    call square(Gtmp,PCMSSAO(1,3),1,nBas(iSym),nBas(iSym))
   end do
   call dcopy_(ntBsqr,PCMSSAO(1,2),1,PCMSSAO(1,1),1)
   call daxpy_(ntBsqr,1.0d+00,PCMSSAO(1,3),1,PCMSSAO(1,1),1)
@@ -458,9 +449,11 @@ contains
 ! call sqprt(pcmssao(1,2),nbas(1))
 ! call sqprt(pcmssao(1,3),nbas(1))
   PCMSSMO = PCMSSAO
-  call tcmo(PCMSSMO(1,1),1,1)
-  call tcmo(PCMSSMO(1,2),1,1)
-  call tcmo(PCMSSMO(1,3),1,1)
+  do iSym = 1, nSym
+    call tcmo(PCMSSMO(1,1),iSym,1)
+    call tcmo(PCMSSMO(1,2),iSym,1)
+    call tcmo(PCMSSMO(1,3),iSym,1)
+  end do
 
   if (def_solv /= 3) then
     call dcopy_(ntBsqr*3,PCMSSAO,1,PCMSSAOori,1)
@@ -497,7 +490,7 @@ contains
 
   real(kind=wp) :: PotNuc,rdum(1)
   real(kind=wp), allocatable :: Htmp(:),Gtmp(:),D1ao(:)
-  integer(kind=iwp) :: leng,iSym,ip1!,i
+  integer(kind=iwp) :: leng,iSym!,i
   logical(kind=iwp) :: NonEq,First,Dff,Do_DFT,lRF
 
   leng = ntBtri
@@ -524,19 +517,19 @@ contains
   Call DrvXV(Htmp,Gtmp,D1ao,PotNuc,leng,First,Dff,NonEq,lRF, &
              'SCF',0.0d+00,iCharge_PCM,iSpin,rdum,rdum,0,'1234',Do_DFT)
 
-  ip1 = 1
   do iSym = 1, nSym
-    call square(Htmp(ip1),PCMAO(1,2),1,nBas(iSym),nBas(iSym))
-    call square(Gtmp(ip1),PCMAO(1,3),1,nBas(iSym),nBas(iSym))
-    ip1 = ip1 + nBas(iSym)*(nBas(iSym)+1)/2
+    call square(Htmp,PCMAO(1,2),1,nBas(iSym),nBas(iSym))
+    call square(Gtmp,PCMAO(1,3),1,nBas(iSym),nBas(iSym))
   end do
   call dcopy_(ntBsqr,PCMAO(1,2),1,PCMAO(1,1),1)
   call daxpy_(ntBsqr,1.0d+00,PCMAO(1,3),1,PCMAO(1,1),1)
 
   PCMMO = PCMAO
-  call tcmo(PCMMO(1,1),1,1)
-  call tcmo(PCMMO(1,2),1,1)
-  call tcmo(PCMMO(1,3),1,1)
+  do iSym = 1, nSym
+    call tcmo(PCMMO(1,1),iSym,1)
+    call tcmo(PCMMO(1,2),iSym,1)
+    call tcmo(PCMMO(1,3),iSym,1)
+  end do
 
   if (allocated(Htmp)) Call mma_deallocate(Htmp)
   if (allocated(Gtmp)) Call mma_deallocate(Gtmp)
@@ -563,8 +556,8 @@ contains
   real(kind=wp), pointer :: G1q(:,:) => null()
   integer(kind=iwp) :: nconfl,nconfr,nconf1,i,ij,j,jR,kR,ng1,ng2
 
-  nconf1 = ncsf(state_sym)
-  nConfL =Max(nconf1,int(xispsm(state_sym,1)))
+  nconf1 = ncsf(1) !! for the moment
+  nConfL =Max(nconf1,int(xispsm(1,1)))
   nConfR =nConfL
 
   ng1 = ntash*ntash
@@ -577,7 +570,6 @@ contains
 
   if (mode==1) G1q(1:ntAsh,1:ntAsh) => DSCFMO(:,1:ntAsh)
   if (mode==2) G1q(1:ntAsh,1:ntAsh) => DSSMO(:,1:ntAsh)
-  G1r = 0.0d+00
   G1q = 0.0d+00
 
 ! write (*,*) "PCM_grad_dens with mode = ", mode
@@ -585,9 +577,8 @@ contains
     Do jR = 1, nRoots
     ! if (mode==2 .and. jR /= iRlxRoot) cycle
       if (W_SOLV(jR).le.1.0d-10) cycle
-      Call CSF2SD(W(ipCI)%Vec(1+(jR-1)*nconf1),CIL,state_sym)
-      Call CSF2SD(W(ipCI)%Vec(1+(jR-1)*nconf1),CIR,state_sym)
-      G1r = 0.0d+00
+      Call CSF2SD(W(ipCI)%Vec(1+(jR-1)*nconf1),CIL,1)
+      Call CSF2SD(W(ipCI)%Vec(1+(jR-1)*nconf1),CIR,1)
       Call Densi2(1,G1r,G2r,CIL,CIR,0,0,0,ng1,ng2)
 !     write (*,*) "jR = ", jR
 !     call sqprt(g1r,nash(1))
@@ -611,8 +602,8 @@ contains
       jR = iRlxRoot
       kR = iRlxRoot
     end if
-    Call CSF2SD(W(ipCI)%Vec(1+(jR-1)*nconf1),CIL,state_sym)
-    Call CSF2SD(W(ipCI)%Vec(1+(kR-1)*nconf1),CIR,state_sym)
+    Call CSF2SD(W(ipCI)%Vec(1+(jR-1)*nconf1),CIL,1)
+    Call CSF2SD(W(ipCI)%Vec(1+(kR-1)*nconf1),CIR,1)
     Call Densi2(1,G1r,G2r,CIL,CIR,0,0,0,ng1,ng2)
     !! For RDM1
     call daxpy_(ntAsh*ntAsh,1.0D+00,G1r,1,G1q,1)
@@ -628,7 +619,7 @@ contains
   call mma_deallocate(G1r)
   call mma_deallocate(G2r)
 
-  nConf=ncsf(state_sym)
+  nConf=ncsf(1)
   !! use weights
 ! if (mode==1) call dscal_(ntAsh**2,1.0d+00/dble(nRoots),G1q,1)
 
@@ -736,7 +727,7 @@ contains
   real(kind=wp), intent(out) :: vintMO(ntBsqr,3),vintAO(ntBsqr,3)
   logical(kind=iwp), intent(in) :: first_, Dff_, NonEq_, Do_DFT_
 
-  integer(kind=iwp) :: leng,iSym,ip1 ! ,i,iB,iiB,ijB,iOrb,iS,j,jB
+  integer(kind=iwp) :: leng,iSym ! ,i,iB,iiB,ijB,iOrb,iS,j,jB
   real(kind=wp) :: PotNuc,rdum(1)
   real(kind=wp), allocatable :: Htmp(:),Gtmp(:),D1ao(:)
   logical(kind=iwp) :: first, Dff, NonEq, Do_DFT, lRF
@@ -769,20 +760,20 @@ contains
   Call DrvXV(Htmp,Gtmp,D1ao,PotNuc,leng,First,Dff,NonEq,lRF, &
              'SCF',0.0d+00,iCharge_PCM,iSpin,rdum,rdum,0,'1234',Do_DFT)
 
-  ip1 = 1
   do iSym = 1, nSym
-    call square(Htmp(ip1),vintAO(ipCM(iSym),2),1,nBas(iSym),nBas(iSym))
-    call square(Gtmp(ip1),vintAO(ipCM(iSym),3),1,nBas(iSym),nBas(iSym))
-    ip1 = ip1 + nBas(iSym)*(nBas(iSym)+1)/2
+    call square(Htmp,vintAO(1,2),1,nBas(iSym),nBas(iSym))
+    call square(Gtmp,vintAO(1,3),1,nBas(iSym),nBas(iSym))
   end do
   call dcopy_(ntBsqr,vintAO(1,2),1,vintAO(1,1),1)
   call daxpy_(ntBsqr,1.0d+00,vintAO(1,3),1,vintAO(1,1),1)
 
   vintMO = vintAO
 ! PCMSCFMO = PCMSCFAO
-  call tcmo(vintMO(1,1),1,1)
-  call tcmo(vintMO(1,2),1,1)
-  call tcmo(vintMO(1,3),1,1)
+  do iSym = 1, nSym
+    call tcmo(vintMO(1,1),iSym,1)
+    call tcmo(vintMO(1,2),iSym,1)
+    call tcmo(vintMO(1,3),iSym,1)
+  end do
 
   if (allocated(Htmp)) Call mma_deallocate(Htmp)
   if (allocated(Gtmp)) Call mma_deallocate(Gtmp)
@@ -804,12 +795,12 @@ contains
 !
 !-----------------------------------------------------------------------
 !
-  Subroutine PCM_grad_TimesE2(idSym,rKappa,FockOut,ipCIOut)
-  use ISRotation, only: ISR
+  Subroutine PCM_grad_TimesE2(mode,idSym,rKappa,FockOut,ipCIOut)
+  use Arrays, only: G1t
 
   implicit none
 
-  integer(kind=iwp), intent(in) :: idSym,ipCIOut
+  integer(kind=iwp), intent(in) :: mode,idSym,ipCIOut
   real(kind=wp), intent(in) :: rKappa(*)
   real(kind=wp), intent(inout) :: FockOut(*)
 
@@ -856,7 +847,7 @@ contains
   Call mma_deallocate(WRK)
 
   !! Then, CI response density (DZACTMO), which has been computed in CIDens_sa
-  !! through ci_kap (iStpPCM=2) or out_pt2 (iStpPCM=3)
+  !! through ci_kap (mode=1) or out_pt2 (mode=2)
 ! write (*,*) "dzactmo"
 ! call sqprt(dzactmo,nash(1))
   Do iS=1,nSym
@@ -886,27 +877,26 @@ contains
   DZMO = 0.0D+00
   Do iS=1,nSym
     If (nBas(iS).gt.0) Then
-      jS=iEOr(is-1,iDSym-1)+1
       Do iA=1,nAsh(is)
-        Do jA=1,nAsh(js)
-          rd=DSCFMO(nA(is)+iA,nA(js)+jA) ! solvent density during SCF
+        Do jA=1,nAsh(is)
+          rd=DSCFMO(nA(is)+iA,nA(is)+jA) ! solvent density during SCF
           ip1=nBas(iS)*(nIsh(is)+iA-1)+ipCM(is)
-          ip2=nBas(iS)*(nIsh(js)+jA-1) +ipMat(is,js)
+          ip2=nBas(iS)*(nIsh(is)+jA-1) +ipmat(is,is)
           Call DaXpY_(nBas(iS),Rd,PCMZMO(ip1,3),1,DZMO(ip2),1)
         End Do
       End Do
     End If
   End Do
 
-  If (iDsym.eq.1) Then
-! If (state_sym.eq.1) Then !?
+! If (iDsym.eq.1) Then
+  If (state_sym.eq.1) Then !?
     Do iS=1,nSym
       If (nBas(iS)*nIsh(iS).gt.0) &
         Call DaXpY_(nBas(iS)*nIsh(is),2.0d+00,PCMZMO(ipMat(is,is),3),1,DZMO(ipMat(is,is)),1)
     End Do
   End If
 
-  if (iStpPCM==2) then
+  if (mode==1) then
     !! during Z-vector, compute kappa (DZAO)
     DZAO = 0.0D+00
     Do iS=1,nSym
@@ -917,7 +907,7 @@ contains
       end if
     End Do
     call daxpy_(ntBsqr,2.0d+00,DZAO,1,FockOut,1)
-  else if (iStpPCM==3) then
+  else if (mode==2) then
     !! only for the connection term
     call daxpy_(ntBsqr,2.0d+00,DZMO,1,FockOut,1)
     !! No CI response
@@ -934,30 +924,25 @@ contains
     If (nBas(iS).gt.0) Then
       jS=iEOr(is-1,iDSym-1)+1
       Do jA=1,nAsh(js)
-!       ip1=nIsh(iS)+1+nBas(jS)*(nIsh(js)+jA-1)!+ipCM(is)
-        ip1=nIsh(iS)+1 + nBas(iS)*(nIsh(js)+jA-1)+ipMat(iS,iS)-1
-        ip2=nIsh(iS)+1 + nBas(iS)*(nIsh(js)+jA-1)+ipMat(iS,jS)-1
-        call daxpy_(nAsh(iS),+1.0d+00,PCMZMO(ip1,3),1,DZMO(ip2),1)
+        ip1=nIsh(iS)+1+nBas(jS)*(nIsh(js)+jA-1)!+ipCM(is)
+        ip1=nIsh(iS)+1 + nBas(jS)*(nIsh(js)+jA-1)!+ipCM(is)
+        !! multiplied by two here, instead of doing for ipCIOUT
+        call daxpy_(nAsh(iS),+2.0d+00,PCMZMO(ip1,3),1,DZMO(ip1),1)
       end do
     end if
   end do
 ! write (*,*) "DZMO"
 ! call sqprt(dzmo,norb(1))
 
-  !! Evaluate the CI derivative
-  !! Note that ipCIOUT will be weighted with (2)W_SOLV
-  call dswap_(nRoots,weight,1,W_SOLV,1)
-  call dscal_(nRoots,2.0d+00,weight,1)
+  !! This contribution should be weighted with W_SOLV,
+  !! but the scaling will be done in ISR_TimesE2
+  !! do not forget that ipCIOUT has been weighted by the weighted (=1/nRoots, at present) array
+! call dswap_(nRoots,weight,1,W_SOLV,1)
   Call CISigma_sa(0,state_sym,state_sym,DZMO,SIZE(DZMO),rdum,1,rdum,1,ipCI,ipCIOUT,.False.)
-  call dscal_(nRoots,0.5d+00,weight,1)
-  call dswap_(nRoots,weight,1,W_SOLV,1)
+! call dswap_(nRoots,weight,1,W_SOLV,1)
 
   !! consider the weight of the derivative
-  if (DWSolv%DWZeta /= 0.0d+00) then
-    call DWder(2,idsym,DZMO,SIZE(DZMO),DZMO,SIZE(DZMO),ISR%Ap, &
-               ntash,nRoots,ERASSCF,itoc,LUJOB, &
-               nSym,nAsh,nIsh,nBas,ipCM)
-  end if
+  if (DWZeta /= 0.0d+00) call PCM_grad_DWder(2,idsym,DZMO,SIZE(DZMO))
 
   End Subroutine PCM_grad_TimesE2
 !
@@ -1035,11 +1020,11 @@ contains
   SScori  = 0.0d+00 !! to original (unrotated) state-specific density
 
   do iS = 1, nSym
-    If (nAsh(iS).gt.0) Then
+    If (nBas(iS).gt.0) Then
       jS=iEOr(is-1,state_sym-1)+1
       Do jA=1,nAsh(js)
-!       ip1=nIsh(iS)+1+nBas(jS)*(nIsh(js)+jA-1)!+ipCM(is)
-        ip1=nIsh(iS)+1 + nBas(iS)*(nIsh(js)+jA-1) + ipMat(iS,jS)-1 !+ipCM(is)
+        ip1=nIsh(iS)+1+nBas(jS)*(nIsh(js)+jA-1)!+ipCM(is)
+        ip1=nIsh(iS)+1 + nBas(jS)*(nIsh(js)+jA-1)!+ipCM(is)
         if (def_solv == 1) then
           !! subtract implicit D^SS*V(e,SCF)/2
           call daxpy_(nAsh(iS),+1.0d+00,PCMSSMO(ip1,3),1,SCFcont(ip1),1)
@@ -1156,11 +1141,7 @@ contains
 
   !! consider the weight of the derivative
   idsym = state_sym !?
-  if (DWSolv%DWZeta /= 0.0d+00) then
-    call DWder(2,idsym,SCFcont,SIZE(FIMO),SCFcont,SIZE(FIMO),ISR%RVec, &
-               ntash,nRoots,ERASSCF,itoc,LUJOB, &
-               nSym,nAsh,nIsh,nBas,ipCM)
-  end if
+  if (DWZeta.ne.0.0d+00) call PCM_grad_DWder(1,idsym,SCFcont,SIZE(FIMO))
 
   !! Add the (unweighted) state-specific contributions
   !! Putting real(nRoots) directly into daxpy_ does not work, somehow
@@ -1297,8 +1278,8 @@ contains
   Do iRoots = 1, nRoots
     Call DCopy_(ncsf(State_Sym),CIDER(1,iRoots),1,DERtmp,1)
     Do jRoots = 1, nRoots
-      Scal = DDot_(ncsf(State_Sym),DERtmp,1,CI(1,jRoots),1)
-      Call DaXpY_(ncsf(State_Sym),-Scal,CI(1,jRoots),1,CIDER(1,iRoots),1)
+      Scal = DDot_(ncsf(1),DERtmp,1,CI(1,jRoots),1)
+      Call DaXpY_(ncsf(1),-Scal,CI(1,jRoots),1,CIDER(1,iRoots),1)
     End Do
   End Do
 
@@ -1317,7 +1298,7 @@ contains
   real(kind=wp), intent(inout) :: ERASSCF_(nRoots)
 
   real(kind=wp) :: ecorr
-  integer(kind=iwp) :: iRoot,iA,jA,ip1,ip2,iS,jS,iRlxRoot_sav,idSym
+  integer(kind=iwp) :: iRoot,iA,jA,ip1,ip2,iS,jS,iRlxRoot_sav
   logical(kind=iwp) :: isNAC_sav
 !
 ! Subtract (add) the surplus solvation energies from the ERASSCF.
@@ -1325,7 +1306,8 @@ contains
 ! contributions from the solvent effect, so the purpose of this subroutine is
 ! to subtract the surplus energies so that ERASSCF is eigenvalues.
 !
-  idSym = 1
+  iS = 1
+  jS = 1
 
   iRlxRoot_sav = iRlxRoot
   isNAC_sav    = isNAC
@@ -1334,34 +1316,32 @@ contains
   write (6,*) "original erasscf = ", erasscf(iroot),erasscf_(iroot)
     ecorr = 0.0d+00
 
-    do iS = 1, nSym
-!     jS=iEOr(is-1,state_sym-1)+1
-      !! inactive
-      do iA = 1, nIsh(iS)
-        ip2 = iA-1 + nOrb(iS)*(iA-1) + ipMat(iS,iS)
-        if (def_solv.eq.1) then
-          !! - D^SS * V(e,SS) / 2
-          ecorr = ecorr - 2.0d+00*pcmscfmo(ip2,3)
-        else if (def_solv.eq.2) then
-          !! - D^SS * (V(N,SA)+V(e,SA)) / 2
-          ecorr = ecorr - 2.0d+00*pcmscfmo(ip2,1) &
-          !! + D^SA * V(N,SS) / 2
-                        + 2.0d+00*pcmssmo(ip2,2)
-        else if (def_solv.eq.3) then
-          !! - D^SS * V(e,SA) / 2
-          ecorr = ecorr - 2.0d+00*pcmscfmo(ip2,3)
-        else if (def_solv.eq.4) then
-          !! - D^SS * V(e,SA) / 2
-          ecorr = ecorr - 2.0d+00*pcmscfmo(ip2,3)
-        else if (def_solv.eq.5) then
-          !! - D^SS * V(e,SA) / 2
-          ecorr = ecorr - 2.0d+00*pcmscfmo(ip2,3)
-        else if (def_solv.eq.6) then
-          !! - D^SS * V(e,SA) / 2
-          ecorr = ecorr - 2.0d+00*pcmscfmo(ip2,3)
-        end if
-      end do
+    !! inactive
+    do iA = 1, nIsh(iS)
+      ip2 = iA-1 + nOrb(iS)*(iA-1) + ipMat(iS,iS)
+      if (def_solv.eq.1) then
+        !! - D^SS * V(e,SS) / 2
+        ecorr = ecorr - 2.0d+00*pcmscfmo(ip2,3)
+      else if (def_solv.eq.2) then
+        !! - D^SS * (V(N,SA)+V(e,SA)) / 2
+        ecorr = ecorr - 2.0d+00*pcmscfmo(ip2,1) &
+        !! + D^SA * V(N,SS) / 2
+                      + 2.0d+00*pcmssmo(ip2,2)
+      else if (def_solv.eq.3) then
+        !! - D^SS * V(e,SA) / 2
+        ecorr = ecorr - 2.0d+00*pcmscfmo(ip2,3)
+      else if (def_solv.eq.4) then
+        !! - D^SS * V(e,SA) / 2
+        ecorr = ecorr - 2.0d+00*pcmscfmo(ip2,3)
+      else if (def_solv.eq.5) then
+        !! - D^SS * V(e,SA) / 2
+        ecorr = ecorr - 2.0d+00*pcmscfmo(ip2,3)
+      else if (def_solv.eq.6) then
+        !! - D^SS * V(e,SA) / 2
+        ecorr = ecorr - 2.0d+00*pcmscfmo(ip2,3)
+      end if
     end do
+
     ecorr = ecorr * 0.5d+00
 
     if (def_solv==4 .or. def_solv==5 .or. def_solv==6) then
@@ -1372,33 +1352,29 @@ contains
     end if
 
     !! active
-    do iS = 1, nSym
-!     jS=iEOr(is-1,state_sym-1)+1
-      jS=iEOr(is-1,idSym-1)+1
-      do iA = 1, nash(iS)
-        do jA = 1, nash(jS)
-!         ip1 = iA+nA(iS) + ntAsh*(jA+nA(jS)-1)
-          ip2 = nIsh(iS)+iA-1 + nOrb(iS)*(nIsh(jS)+jA-1) + ipMat(iS,jS) ! ipCM(iS)
-          if (def_solv.eq.1) then
-            !! - D^SS * V(e,SA) / 2
-            ecorr = ecorr - 0.5d+00*DSCFMO(iA+nA(iS),jA+nA(jS))*pcmscfmo(ip2,3)
-          else if (def_solv.eq.2) then
-            !! - D^SS * (V(N,SA)+V(e,SA)) / 2
-            ecorr = ecorr - 0.5d+00*DSCFMO(iA+nA(iS),jA+nA(jS))*pcmscfmo(ip2,1) &
-            !! + D^SA * V(N,SS) / 2
-                            + 0.5d+00*DSCFMO(iA+nA(iS),jA+nA(jS))*pcmssmo(ip2,2)
-          else if (def_solv.eq.3) then
-            ecorr = ecorr - 0.5d+00*DSCFMO(iA+nA(iS),jA+nA(jS))*pcmscfmo(ip2,3)
-          else if (def_solv.eq.4) then
-            ecorr = ecorr - 0.5d+00*DSSMO(iA+nA(iS),jA+nA(jS))*pcmscfmo(ip2,3)
-          else if (def_solv.eq.5) then
-            ecorr = ecorr + DSCFMO(iA+nA(iS),jA+nA(jS))*(pcmscfmo(ip2,2)+0.5d+00*pcmscfmo(ip2,3))
-            ecorr = ecorr - DSSMO(iA+nA(iS),jA+nA(jS))*pcmscfmo(ip2,1)
-          else if (def_solv.eq.6) then
-            ecorr = ecorr + DSCFMO(iA+nA(iS),jA+nA(jS))*(pcmscfmo(ip2,2)+0.5d+00*pcmscfmo(ip2,3))
-            ecorr = ecorr - DSSMO(iA+nA(iS),jA+nA(jS))*pcmscfmo(ip2,2)
-          end if
-        end do
+    do iA = 1, nash(1)
+      do jA = 1, nash(1)
+        ip1 = iA+nA(iS) + ntAsh*(jA+nA(jS)-1)
+        ip2 = nIsh(iS)+iA-1 + nOrb(jS)*(nIsh(jS)+jA-1) + ipCM(iS)
+        if (def_solv.eq.1) then
+          !! - D^SS * V(e,SA) / 2
+          ecorr = ecorr - 0.5d+00*DSCFMO(iA,jA)*pcmscfmo(ip2,3)
+        else if (def_solv.eq.2) then
+          !! - D^SS * (V(N,SA)+V(e,SA)) / 2
+          ecorr = ecorr - 0.5d+00*DSCFMO(iA,jA)*pcmscfmo(ip2,1) &
+          !! + D^SA * V(N,SS) / 2
+                          + 0.5d+00*DSCFMO(iA,jA)*pcmssmo(ip2,2)
+        else if (def_solv.eq.3) then
+          ecorr = ecorr - 0.5d+00*DSCFMO(iA,jA)*pcmscfmo(ip2,3)
+        else if (def_solv.eq.4) then
+          ecorr = ecorr - 0.5d+00*DSSMO(iA,jA)*pcmscfmo(ip2,3)
+        else if (def_solv.eq.5) then
+          ecorr = ecorr + DSCFMO(iA,jA)*(pcmscfmo(ip2,2)+0.5d+00*pcmscfmo(ip2,3))
+          ecorr = ecorr - DSSMO(iA,jA)*pcmscfmo(ip2,1)
+        else if (def_solv.eq.6) then
+          ecorr = ecorr + DSCFMO(iA,jA)*(pcmscfmo(ip2,2)+0.5d+00*pcmscfmo(ip2,3))
+          ecorr = ecorr - DSSMO(iA,jA)*pcmscfmo(ip2,2)
+        end if
       end do
     end do
 
@@ -1448,5 +1424,96 @@ contains
   return
 
   End Subroutine PCM_grad_PT2
+!
+!-----------------------------------------------------------------------
+!
+  Subroutine PCM_grad_DWder(mode,idsym,dercont,ndercont)
+
+  use ISRotation, only: ISR
+  use DWSol, only: DWSol_der
+
+  implicit none
+
+  integer(kind=iwp), intent(in) :: mode,idSym,ndercont
+  real(kind=wp), intent(in) :: dercont(ndercont)
+
+  real(kind=wp), allocatable :: G1q(:),DERHII(:),DEROMG(:)
+
+  integer(kind=iwp) :: i,iA,ip1,iS,j,jA,jS,jDisk,k,ng1,ng2
+  real(kind=wp) :: Ealpha,Ebeta,Egamma,OMGDER,rdum(1),Scal
+!
+! derivative of the dynamical weight
+! I think this implementation uses the following constraint condition
+! w_I^Z * (<I|H|I> - E_I)
+! where E is used as a parameter
+!
+  ng1=ntash*(ntash+1)/2
+  ng2=ng1*(ng1+1)/2
+  Call mma_allocate(G1q,ng1,Label='G1q')
+  call mma_allocate(DERHII,nRoots,Label='DERHII')
+  call mma_allocate(DEROMG,nRoots,Label='DEROMG')
+  DERHII = 0.0D+00
+  DEROMG = 0.0D+00
+
+  i = iPCMROOT
+  Ealpha = ERASSCF(i)
+  jdisk=itoc(3)
+  Do j = 1, nRoots
+    Call dDaFile(LUJOB ,2,G1q,ng1,jDisk)
+    Call dDaFile(LUJOB ,0,rdum,ng1,jDisk)
+    Call dDaFile(LUJOB ,0,rdum,Ng2,jDisk)
+    Call dDaFile(LUJOB ,0,rdum,Ng2,jDisk)
+
+    OMGDER = 0.0d+00
+    Do iS=1,nSym
+      If (nAsh(iS).gt.0) Then
+        jS=iEOr(is-1,iDSym-1)+1
+        Do iA=1,nAsh(is)
+          Do jA=1,nAsh(js)
+            ip1=nIsh(iS)+iA-1 + nBas(jS)*(nIsh(js)+jA-1)+ipCM(is)
+!           write (*,*) dercont(ip1),G1q(max(iA,jA)*(max(iA,jA)-1)/2+min(iA,jA))
+            OMGDER = OMGDER + dercont(ip1)*G1q(max(iA,jA)*(max(iA,jA)-1)/2+min(iA,jA))
+          End Do
+        End Do
+      End If
+    End Do
+    DEROMG(j) = OMGDER
+!   write (6,*) "deromg = ", deromg
+
+!   Ebeta = ERASSCF(j)
+!   Scal = -2.0d+00*DWZeta*W_SOLV(j)*(Ealpha-Ebeta)*DEROMG
+!   WRK(i) = WRK(i) + Scal
+!   WRK(j) = WRK(j) - Scal
+
+!   do k = 1, nRoots
+!     Egamma = ERASSCF(k)
+!     Scal = 2.0d+00*DWZeta*W_SOLV(j)*W_SOLV(k)*(Ealpha-Egamma)*DEROMG
+!     WRK(i) = WRK(i) + Scal
+!     WRK(k) = WRK(k) - Scal
+!   end do
+  End Do
+
+  call DWSol_Der(DEROMG,DERHII,ERASSCF)
+
+! write (6,*) "mode = ", mode
+! write (6,*) wrk
+
+  !! this contributions should not be treated as multipliers, I guess
+  do i = 1, nRoots
+    if (mode==1) then
+      !! will be multiplied by 0.5 later
+      ISR%Rvec(i,i) = ISR%Rvec(i,i) + DERHII(i)*0.5d+00
+    else if (mode==2) then
+      ISR%Ap(i,i)   = ISR%Ap(i,i)   - DERHII(i)*0.25d+00 ! why 1/4?
+    end if
+  end do
+
+  call mma_deallocate(G1q)
+  call mma_deallocate(DERHII)
+  call mma_deallocate(DEROMG)
+
+  return
+
+  End Subroutine PCM_grad_DWder
 
 End Module PCM_grad

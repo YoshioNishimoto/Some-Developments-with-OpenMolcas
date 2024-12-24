@@ -132,6 +132,7 @@ c
       Integer iEndofinput(8), imass, nfiles, nUserPT, nsRot
 c
       Logical TwoStep
+      Logical ActRot
       Character(len=4) StepType
 
       Common/dInput/ ERASSCF,ESCF,PotNuc,Coor,weight,
@@ -153,7 +154,7 @@ c
      &               page,lcalc,TimeDep,iMCPD,iMSPD,PT2,
      &               SpinPol,elechess,save,
      &               TwoPert,BasCon, double, multi, mout,
-     &               lmass, newCho, TwoStep, isCMSNAC
+     &               lmass, newCho, TwoStep, isCMSNAC, ActRot
       Common/cInput/ perturbation, AtLbl, HeaderJP,Header1I,
      &               TitleJP,SewLab,Bline,titlein, ChIrr, cmass,
      &               StepType

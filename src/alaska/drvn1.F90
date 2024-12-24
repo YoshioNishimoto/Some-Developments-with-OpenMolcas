@@ -33,6 +33,8 @@ use Disp, only: ChDisp, Dirct, IndDsp
 use Symmetry_Info, only: iChBas, nIrrep
 use Constants, only: Zero, One, Two, Three, Half
 use Definitions, only: wp, iwp, u6
+use PCM_alaska, only: lSA, PCM_SQ_ind
+use NAC, only: isNAC
 
 implicit none
 integer(kind=iwp), intent(in) :: nGrad
@@ -205,7 +207,7 @@ if (iPrint >= 15) then
   call PrGrad(Lab,Temp,nGrad,ChDisp)
 end if
 
-call DaXpY_(nGrad,One,Temp,1,Grad,1)
+if (.not.isNAC) call DaXpY_(nGrad,One,Temp,1,Grad,1)
 
 !***********************************************************************
 !                                                                      *
@@ -439,10 +441,20 @@ else if (lRF .and. PCM) then
 
   Temp(:) = Zero
 
+  if (lSA) then
+    !! use the induced charges by the effective density matrix
+    call dswap_(2*nTS,PCM_SQ,1,PCM_SQ_ind,1)
+    !! after swap:
+    !! PCM_SQ     = induced by the effective density matrix
+    !! PCM_SQ_ind = induced by the state-averaged density matrix
+  end if
+
   ! Loop over tiles
 
   do iTs=1,nTs
+    ! for SA-CASSCF, use charges induced by the effective density
     ZA = PCM_SQ(1,iTs)+PCM_SQ(2,iTS)
+    if (isNAC) ZA = PCM_SQ(2,iTS) ! no nuclear-nuclear contributions for NAC
     NoLoop = ZA == Zero
     ZA = ZA/real(nIrrep,kind=wp)
     if (NoLoop) cycle
@@ -526,6 +538,11 @@ else if (lRF .and. PCM) then
       end do       ! End over centers, jCnt
     end do         ! End over basis set types, jCnttp
   end do           ! End of tiles
+
+  if (lSA) then
+    call dswap_(2*nTS,PCM_SQ,1,PCM_SQ_ind,1)
+  end if
+  ! Now, PCM_SQ is induced by SA density
 
   if (iPrint >= 15) then
     Lab = ' The Nuclear Reaction Field (PCM) Contribution'

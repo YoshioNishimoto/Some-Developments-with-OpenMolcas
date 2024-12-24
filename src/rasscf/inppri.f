@@ -39,6 +39,7 @@
       use Functionals, only: Init_Funcs, Print_Info
       use KSDFT_Info, only: CoefR, CoefX
       use rctfld_module
+      use DWSol, only: DWSol_fixed,DWType,DWZeta
 
       Implicit Real*8 (A-H,O-Z)
 #include "rasdim.fh"
@@ -586,8 +587,41 @@ C.. for GAS
          Tot_Charge=Tot_Nuc_Charge+Tot_El_Charge
          iCharge=Int(Tot_Charge)
          Call PrRF(.False.,NonEq,iCharge,2)
-         Write(LF,Fmt2//'A,T45,I2)')' Reaction field from state:',
-     &                              IPCMROOT
+
+         if (DWZeta < 0.0d+00) then
+           Call DWSol_fixed(i,j)
+           if (i==0 .and. j==0) then
+             Write(LF,Fmt2//'A)') 'Unrecognized negative DWZeta (DWSOl)'
+             Write(LF,Fmt2//'A,T51,A)')
+     &         'Dynamically weighted solvation is ',
+     &         'automatically turned off!'
+           else
+             Write(LF,Fmt2//'A,T45,I2,X,I2)')
+     &         'Reaction field from states:', i, j
+             if (max(i,j) > nRoots) then
+               Write(LF,Fmt2//'A)')
+     &           'The specified state is too high! Cannot proceed...'
+               Call Quit_OnUserError()
+             end if
+           end if
+         else if (IPCMROOT <= 0) then
+           Write(LF,Fmt2//'A,T44,A)')'Reaction field from state:',
+     &                               ' State-Averaged'
+           if (DWZeta /= 0.0d+00) then
+             Write(LF,Fmt2//'A,T51,A)')
+     &         'Dynamically weighted solvation is ',
+     &         'automatically turned off!'
+             DWZeta = 0.0d+00
+           end if
+         else
+           Write(LF,Fmt2//'A,T44,I2)')'Reaction field from state:',
+     &                                IPCMROOT
+           if (DWZeta > 0.0d+00) then
+             Write(LF,Fmt2//'A,ES10.3,A,I1,A)')
+     &         'Dynamically weighted solvation is used with DWSOlv = ',
+     &         DWZeta," (DWTYpe = ",DWType,")"
+           end if
+         end if
        End If
        Call CollapseOutput(0,'Optimization specifications:')
        If ( RFpert ) then

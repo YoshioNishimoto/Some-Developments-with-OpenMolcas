@@ -344,8 +344,13 @@ C Local print level (if any)
          Tot_Charge=Tot_Nuc_Charge+Tot_El_Charge
          iCharge=Int(Tot_Charge)
          Call PrRF(.False.,NonEq,iCharge,2)
-         Write(LF,Fmt2//'A,T45,I2)')' Reaction field from state:',
-     &                              IPCMROOT
+         if (IPCMROOT <= 0) then
+           Write(LF,Fmt2//'A,T45,T15)')' Reaction field from state:',
+     &                                 ' State-Averaged'
+         else
+           Write(LF,Fmt2//'A,T45,I2)')' Reaction field from state:',
+     &                                IPCMROOT
+         end if
       End If
       If ( RFpert ) then
          Write(LF,*)
@@ -536,13 +541,15 @@ C Local print level (if any)
          End Do
        Else
          Do i=1,lRoots
-           Call PrintResult(LF,Fmt2//'A,I3,A,F16.8)',
+C          Call PrintResult(LF,Fmt2//'A,I3,A,F16.8)',
+           Call PrintResult(LF,Fmt2//'A,I3,A,F20.12)',
      & 'RASSCF root number',I,' Total energy:',Work(ipEneTmp+i-1),1)
          End Do
        End If
       ELSE IF(IPRLEV.GE.TERSE .AND..NOT.lOPTO) THEN
         Do i=1,lRoots
-           Call PrintResult(LF,Fmt2//'A,I3,A,F16.8)',
+C          Call PrintResult(LF,Fmt2//'A,I3,A,F16.8)',
+           Call PrintResult(LF,Fmt2//'A,I3,A,F20.12)',
      & 'RASSCF root number',I,' Total energy:',Work(ipEneTmp+i-1),1)
         End Do
 * End of long if-block C over IPRLEV

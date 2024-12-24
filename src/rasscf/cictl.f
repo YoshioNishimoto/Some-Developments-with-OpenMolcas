@@ -75,6 +75,8 @@
       use wadr, only: FMO
       use gugx, only: IFCAS,  NOCSF,  IOCSF, NOW1, IOW1
       use sxci, only: IDXSX
+      use mod_solv, only: mod_solvx
+      use DWSol, only: DWSol_wgt,DWZeta,W_SOLV
 
       Implicit Real* 8 (A-H,O-Z)
 
@@ -201,7 +203,7 @@ C Local print level (if any)
       end if
 #endif
 
-      If ( lRf .or. KSDFT.ne.'SCF' .or. Do_ESPF) THEN
+      If ( lRf .or. KSDFT.ne.'SCF' .or. Do_ESPF .and. IPCMROOT>0) THEN
 *
 * In case of a reaction field in combination with an average CAS
 * select the potential of the appropriate state.
@@ -216,7 +218,164 @@ C Local print level (if any)
 *
         CALL GETMEM('D1A_FULL','ALLO','REAL',LRCT_F,NTOT2)
         CALL GETMEM('D1S_FULL','ALLO','REAL',LRCT_FS,NTOT2)
-        If (IFinal.eq.0) Then
+*
+        if (IPCMROOT > 0 .and. DWZeta /= 0.0d+00) then
+          Call GetMem('TEMP','ALLO','REAL',ipDA_ave,NAC**2)
+          Call GetMem('TEMP','ALLO','REAL',ipDS_ave,NAC**2)
+          Call GetMem('TEMP','ALLO','REAL',ipD,NACPAR)
+          call dcopy_(NACPAR,[0.0d+00],0,Work(ipDA_ave),1)
+          call dcopy_(NACPAR,[0.0d+00],0,Work(ipDS_ave),1)
+*
+          ITERcurr = 1
+          if (ITER.ne.1) ITERcurr = ITER-1
+          call DWSol_wgt(ENER(:,ITERcurr))
+*
+          if (iFinal.eq.0 .or. iFinal.eq.1) then
+            jDisk = IADR15(3)
+            Do i=1,nRoots
+              wgt = W_SOLV(i)
+!          if (i.eq.2) wgt = 0.40d+00
+!          if (i.eq.1) wgt = 0.40d+00
+!          if (i.eq.3) wgt = 0.20d+00
+C             write (6,*) "weight:",i,wgt
+              Call DDaFile(JOBIPH,2,Work(ipD    ),NACPAR,jDisk)
+              Call DDaFile(JOBIPH,2,Work(LRCT_FS),NACPAR,jDisk)
+              Call DDaFile(JOBIPH,0,rdum,NACPR2,jDisk)
+              Call DDaFile(JOBIPH,0,rdum,NACPR2,jDisk)
+C             if (wgt == 0.0d+00) cycle
+              if (wgt < 1.0d-10) cycle
+              call daxpy_(NACPAR,wgt,Work(ipD    ),1,Work(ipDA_ave),1)
+              call daxpy_(NACPAR,wgt,Work(LRCT_FS),1,Work(ipDS_ave),1)
+                if (.false. .and. ITER/=1) then
+                  do j = 1, nacpar
+                   write (6,'(i3,f20.10)') j,work(ipd+j-1)
+                  end do
+                  call Get_dArray('D1mo_prev',Work(ipD),NACPAR)
+                  do j = 1, nacpar
+                   write (6,'(i3,f20.10)') j,work(ipd+j-1)
+                  end do
+                  call daxpy_(NACPAR,wgt,Work(ipD),1,Work(ipDA_ave),1)
+                  call dscal_(NACPAR,0.5d+00,Work(ipDA_ave),1)
+                  call Put_dArray('D1mo_prev',Work(ipDA_ave),NACPAR)
+                endif
+            End Do
+          else if (iFinal.eq.2) then
+            Call mma_allocate(CIVEC,NCONF,Label='CIVEC')
+            Call mma_allocate(Dtmp,NAC**2,Label='Dtmp')
+            Call mma_allocate(DStmp,NAC**2,Label='DStmp')
+            Call mma_allocate(Ptmp,NACPR2,Label='Ptmp')
+*
+            iDisk = IADR15(4)
+            do i = 1, nRoots
+              wgt = W_SOLV(i)
+!          if (i.eq.2) wgt = 0.40d+00
+!          if (i.eq.1) wgt = 0.40d+00
+!          if (i.eq.3) wgt = 0.20d+00
+C             write (6,*) "weight:",i,wgt
+              If (NACTEL.EQ.0) THEN
+                CIVEC(1)=1.0D0
+              Else
+                if(.not.(doDMRG))then
+!                  write(*,*)"run the load back CI vector part" ! yma
+                    iOpt=2
+* load back one CI vector at the time
+                    Call DDafile(JOBIPH,iOpt,CIVEC,nConf,iDisk)
+                   !call DVcPrt('BLUBB-start CI PCM',' ',CIVEC,nConf)
+                End If
+              end if
+
+* compute density matrices
+
+              If ( NAC.ge.1 ) Then
+
+                 If (NACTEL.eq.0) THEN
+                    Dtmp(:)=0.0D0
+                    DStmp(:)=0.0D0
+                    Ptmp(:)=0.0D0
+                 Else
+
+                   if(doDMRG)then
+#ifdef _DMRG_
+                   ! copy the DMs from d1rf/d2rf for ipcmroot
+                   call dcopy_(NACPAR,rf1,1,Dtmp,1)
+                   if (twordm_qcm) then
+                     call dcopy_(NACPR2,rf2,1,Ptmp,1)
+                   end if
+                   DStmp(:)=0.0D0
+#endif
+                  else
+                    Call mma_allocate(PAtmp,NACPR2,Label='PAtmp')
+                    Call mma_allocate(Pscr,NACPR2,Label='Pscr')
+                    CALL Lucia_Util('Densi',
+     &                              CI_Vector=CIVEC(:))
+                    If (IFCAS.GT.2 .OR. iDoGAS) Then
+                      Call CISX(IDXSX,Dtmp,DStmp,Ptmp,PAtmp,Pscr)
+                    End If
+                    Call mma_deallocate(Pscr)
+                    Call mma_deallocate(PAtmp)
+                  end if ! doDMRG/doBLOK or CI
+                End If
+              Else
+                 Dtmp(:)=0.0D0
+                 DStmp(:)=0.0D0
+                 Ptmp(:)=0.0D0
+              End If
+              call daxpy_(NACPAR,wgt,Dtmp,1,Work(ipDA_ave),1)
+              call daxpy_(NACPAR,wgt,DStmp,1,Work(ipDS_ave),1)
+            End Do
+            Call mma_deallocate(DStmp)
+            Call mma_deallocate(Dtmp)
+            Call mma_deallocate(Ptmp)
+            Call mma_deallocate(CIVEC)
+          End If
+*
+*         Construc D-ACTIVE AND D-INACTIVE IN AO BASIS
+*
+*
+          CALL DCOPY_(NACPAR,Work(ipDS_ave),1,Work(ipD),1)
+          Call DBLOCK(Work(ipD))
+          CALL Get_D1A_RASSCF(CMO,Work(ipD),Work(LRCT_FS))
+*
+          CALL DCOPY_(NACPAR,Work(ipDA_ave),1,Work(ipD),1)
+          Call DBLOCK(Work(ipD))
+          CALL Get_D1A_RASSCF(CMO,Work(ipD),D1A)
+*
+          Call GetMem('TEMP','FREE','REAL',ipDA_ave,NAC**2)
+          Call GetMem('TEMP','FREE','REAL',ipDS_ave,NAC**2)
+          Call GetMem('TEMP','FREE','REAL',ipD,NACPAR)
+*
+          CALL SGFCIN(CMO,FMO,FI,D1I,D1A,Work(LRCT_FS))
+        Else If (IPCMROOT<=0) then
+           !! Use state-averaged density
+           !! D1MO and P2MO have been stored on the disk
+C          Call SGFCIN(CMO,FMO,FI,D1I,Work(LRCT_F),Work(LRCT_FS))
+            CALL GETMEM('TmpDS' ,'Allo','REAL',ipTmpDS ,NACPAR)
+            CALL GETMEM('TmpD1S','Allo','REAL',ipTmpD1S,NTOT2 )
+            call dcopy_(NACPAR,DS,1,Work(ipTmpDS),1)
+            IF ( NASH(1).NE.NAC ) CALL DBLOCK(Work(ipTmpDS))
+            Call Get_D1A_RASSCF(CMO,Work(ipTmpDS),Work(ipTmpD1S))
+
+            CALL GETMEM('TmpDS' ,'Free','REAL',ipTmpDS ,NACPAR)
+*
+            CALL SGFCIN(CMO,FMO,FI,D1I,D1A,Work(ipTmpD1S))
+            CALL GETMEM('TmpD1S','Free','REAL',ipTmpD1S,NTOT2 )
+C          Call mma_allocate(Dtmp,NAC**2,Label='Dtmp')
+C          Call Get_dArray('D1mo',Dtmp,NACPAR) ! Put on RUNFILE
+C          write (*,*) "state averaged d1mo for PCM?", nac,nacpar
+C          do i = 1, nacpar
+C            write (*,'(i3,f20.10)') i,dtmp(i)
+C          end do
+C          Call mma_deallocate(Dtmp)
+C          if (iter.ne.1) then
+C          Call mma_allocate(Ptmp,NACPR2,Label='Ptmp')
+C          Call Get_dArray('P2mo',Ptmp,NACPR2) ! Put on RUNFILE
+C          write (*,*) "state averaged p2mo for PCM?", nac,nacpr2
+C          do i = 1, nacpr2
+C            write (*,'(i3,f20.10)') i,ptmp(i)
+C          end do
+C          Call mma_deallocate(Ptmp)
+C          end if
+        Else If (IFinal.eq.0) Then
 *
 * Use normal MOs
 *
@@ -513,11 +672,27 @@ c          If(n_unpaired_elec+n_paired_elec/2.eq.nac) n_Det=1
 #endif
            else
 ! Normal Davidson algorithm
+C      write (*,*) "before ener"
+C      write (*,*) ener(1,iter),ener(2,iter),ener(3,iter)
+C      write (*,*) "FMO"
+C          do i = 1, nacpar
+C            write (*,'(i3,f20.10)') i,fmo(i)
+C          end do
              Call DavCtl(FMO,TUVX,IFINAL)
+C      write (*,*) "after ener"
+C      write (*,*) ener(1,iter),ener(2,iter),ener(3,iter)
            end if
          end if
       endif
-
+*
+      if (IFINAL>=1 .and. lRF .and. iPCMRoot <= 0) then
+        !! If the density used for polarizing ASC is state-averaged,
+        !! modify the RASSCF energy so that the formulation of the
+        !! solvation energy is convenient for later use
+        !! State-specific solvation cannot be used for MCLR
+        !! (for the moment, at least)
+        call mod_solvx(ifinal,ener,CMO)
+      end if
 *
 * C
 * CALCULATE DENSITY MATRICES
@@ -664,6 +839,10 @@ c
              Scal = Weight(kRoot)
            End If
          End Do
+C          write (*,*) "state-specific density for ",jRoot,lRoots
+C          do i = 1, nacpar
+C            write (*,'(i3,f20.10)') i,dtmp(i)
+C          end do
          Call daXpY_(NACPAR,Scal,Dtmp,1,D,1)
          Call daXpY_(NACPAR,Scal,DStmp,1,DS,1)
          Call daXpY_(NACPR2,Scal,Ptmp,1,P,1)
@@ -688,6 +867,18 @@ C and for now don't bother with 2-electron active density matrices
      $           [nac,nac,1], [0,0,jRoot-1])
 #endif
        End Do
+C          write (*,*) "state averaged d1mo"
+C          do i = 1, nacpar
+C            write (*,'(i3,f20.10)') i,d(i)
+C          end do
+C          write (*,*) "state averaged ds"
+C          do i = 1, nacpar
+C            write (*,'(i3,f20.10)') i,ds(i)
+C          end do
+C          write (*,*) "state averaged p"
+C          do i = 1, nacpr2
+C            write (*,'(i3,f20.10)') i,p(i)
+C          end do
 
       ELSE  ! SplitCAS run
         Call DDafile(JOBIPH,2,CIVEC,nConf,iDisk)
@@ -745,6 +936,7 @@ C and for now don't bother with 2-electron active density matrices
      &              ' ',PA,NACPAR)
       END IF
       Call Put_dArray('D1mo',D,NACPAR) ! Put on RUNFILE
+      if (lRf.and.IPCMROOT<=0) Call Put_dArray('P2mo',P,NACPR2) ! Put on RUNFILE
 c
       IF ( NASH(1).NE.NAC ) CALL DBLOCK(D)
       Call Timing(Rado_2,dum1,dum2,dum3)
@@ -934,7 +1126,7 @@ CSVC: if CISElect is used, roots should be traced regardless of orbital
 C     rotation, so in that case ignore the automatic tracing and follow
 C     the relative CISE root given in the input by the 'CIRF' keyword.
 *
-      If (lRF.and.KeyCISE.and.KeyCIRF) Then
+      If (lRF.and.KeyCISE.and.KeyCIRF.and.IPCMROOT>0) Then
         JPCMROOT=IPCMROOT
         IPCMROOT=IROOT(ICIRFROOT)
         Call Put_iScalar("RF CASSCF root",IPCMROOT)
@@ -942,7 +1134,7 @@ C     the relative CISE root given in the input by the 'CIRF' keyword.
           Write (6,'(1X,A,I3,A,I3)') 'RF Root has flipped from ',
      &                 JPCMROOT, ' to ',IPCMROOT
         End If
-      Else If (lRF) Then
+      Else If (lRF.and.IPCMROOT>0) Then
         Call Qpg_iScalar('RF CASSCF root',Exist)
         If (.NOT.Exist) Then
 *
@@ -983,7 +1175,7 @@ C     the relative CISE root given in the input by the 'CIRF' keyword.
      &      .and. mConf .eq. nConf
      &      .and. iFinal.ne.2
      &      .and. (ABS(RotMax).lt.1.0D-3 .or. KeyCISE)
-     &     ) Then
+     &     .and..false.) Then
 
            rNorm = 1.0d0
            ! Shouldn't the overlap in this case be always 1?

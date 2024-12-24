@@ -85,7 +85,7 @@ C
         WALLT=TIOTF10-TIOTF0
         write(6,'(a,2f10.2)')" CLagD   : CPU/WALL TIME=", cput,wallt
 #ifdef _MOLCAS_MPP_
-        if (is_real_par()) CALL GADSUM (deasum,1)
+        if (is_real_par()) CALL GADSUM ([deasum],1)
 #endif
         write(6,*) "Deasum = ", deasum
 #ifdef _MOLCAS_MPP_
@@ -2013,7 +2013,11 @@ C
           Scal = DDOT_(nConf,Work(LCI1),1,CLag(1,jlStat),1)
      *         - DDOT_(nConf,Work(LCI2),1,CLag(1,ilStat),1)
           Scal = Scal/(REFENE(jlStat)-REFENE(ilStat))
-          SLag(ijst) = SLag(ijst) + Scal
+          !! check the scaling below
+          !! For SS-CASPT2, 1/2 ?
+          !! For MS-CASPT2, no scaling ?
+          !! something must be wrong
+          SLag(ijst) = SLag(ijst) + Scal!*0.5d+00 !! check the scaling
           IF (IPRGLB.GE.VERBOSE) THEN
             write(6,*)
             write(6,'(1x,"SLag for State ",i1,"-",i1," = ",f20.10)')

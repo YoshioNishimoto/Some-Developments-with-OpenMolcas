@@ -54,7 +54,7 @@ real(kind=wp), allocatable :: Tmp(:), C(:,:), Scr(:,:), Temp(:,:)
 character, parameter :: xyz(0:2) = ['x','y','z']
 integer(kind=iwp), external :: iPrintLevel, iPrmt, NrOpr
 real(kind=wp), external :: DDot_
-logical(kind=iwp), external :: Reduce_Prt
+logical(kind=iwp), external :: Reduce_Prt, RF_On
 
 iRout = 99
 iPrint = nPrint(iRout)
@@ -445,7 +445,7 @@ end do
 ! a previous MCLR
 
 if (isNAC) then
-  No_Nuc = .true.
+  if (.not.RF_On()) No_Nuc = .true.
   ! Get the state energies
   call Get_iScalar('Number of roots',nRoots)
   call mma_Allocate(Tmp,nRoots,Label='Tmp')
@@ -572,6 +572,7 @@ end if
 ! Set up data for the utilization of the translational
 ! and rotational invariance of the energy.
 
+!TRSymm = .True.
 if (TRSymm) then
   write(u6,*) 'Unsupported option: TRSymm'
   call Abend()
@@ -649,10 +650,10 @@ if (TRSymm) then
         end do
       end do
     end do
-    if (iPrint >= 99) then
+!   if (iPrint >= 99) then
       call RecPrt(' Information',' ',C,4,lDisp(0))
       write(LuWr,*) (IndCar(i),i=1,lDisp(0))
-    end if
+!   end if
 
     ! Set up coefficient for the translational equations
 
@@ -670,6 +671,7 @@ if (TRSymm) then
 
     ! Set up coefficient for the rotational invariance
 
+write (*,*) "T_Only = ", T_Only
     if (.not. T_Only) then
       do i=1,3
         j = i+1
@@ -692,6 +694,7 @@ if (TRSymm) then
       end do
     end if
     if (iPrint >= 99) call RecPrt(' The A matrix',' ',Am,nTR,lDisp(0))
+    call RecPrt(' The A matrix',' ',Am,nTR,lDisp(0))
 
     ! Now, transfer the coefficient of those gradients which will
     ! not be computed directly.
@@ -757,11 +760,11 @@ if (TRSymm) then
       Temp(:,iTR) = Am(:,iTemp(iTR))
       Am(:,iTemp(iTR)) = Zero
     end do
-    if (iPrint >= 99) then
+!   if (iPrint >= 99) then
       call RecPrt(' The A matrix',' ',Am,nTR,lDisp(0))
       call RecPrt(' The T matrix',' ',Temp,nTR,nTR)
       write(LuWr,*) (iTemp(iTR),iTR=1,nTR)
-    end if
+!   end if
 
     ! Compute the inverse of the T matrix
 
@@ -779,9 +782,11 @@ if (TRSymm) then
     call unitmat(Am,lDisp(0))
     do iTR=1,nTR
       ldsp = iTemp(iTR)
-      call dcopy_(lDisp(0),Scr(1,iTR),nTR,Am(1,lDisp),lDisp(0))
+!     call dcopy_(lDisp(0),Scr(1,iTR),nTR,Am(1,lDisp),lDisp(0))
+      call dcopy_(lDisp(0),Scr(1,iTR),nTR,Am(1,lDsp),lDisp(0))
     end do
     if (iPrint >= 99) call RecPrt('Final A matrix',' ',Am,lDisp(0),lDisp(0))
+    call RecPrt('Final A matrix',' ',Am,lDisp(0),lDisp(0))
 
     call mma_deallocate(Scr)
     call mma_deallocate(IndCar)

@@ -59,13 +59,23 @@
             If (iT.ne.jT) Then !
              indexC=indexc+1 !
              Index1=ipMat(iSym,jSym)+(jBas-1)*nOrb(iSym)+iBas-1 !
+             Index2=ipMat(jSym,iSym)+(iBas-1)*nOrb(jSym)+jBas-1 !
              ArrayOut(IndexC)=ArrayIn(index1) !
             End If !
            Else
-            If (iT.gt.jT) Then
-             indexC=indexc+1
-             Index1=ipMat(iSym,jSym)+(jBas-1)*nOrb(iSym)+iBas-1
-             ArrayOut(IndexC)=ArrayIn(index1)
+            If (ActRot) Then
+             If (iT.gt.jT.or.(iT.eq.jT.and.iBas.gt.jBas.and.
+     *          (iT.eq.1.or.iT.eq.2.or.iT.eq.3))) Then
+              indexC=indexc+1
+              Index1=ipMat(iSym,jSym)+(jBas-1)*nOrb(iSym)+iBas-1
+              ArrayOut(IndexC)=ArrayIn(index1)
+             End If
+            Else
+             If (iT.gt.jT) Then
+              indexC=indexc+1
+              Index1=ipMat(iSym,jSym)+(jBas-1)*nOrb(iSym)+iBas-1
+              ArrayOut(IndexC)=ArrayIn(index1)
+             End If
             End If
            End If
           End Do

@@ -206,6 +206,11 @@ if (lab4 == 'MLTP') then
       Molecular_Charge = PrTot(1)*Fact
     else if (lPole == 1) then
       tmp = sqrt(PrTot(1)**2+PrTot(2)**2+PrTot(3)**2)
+      write (u6,*) "until I finish the debug"
+      write (u6,'(f20.10)') PrTot(1)*fact
+      write (u6,'(f20.10)') PrTot(2)*fact
+      write (u6,'(f20.10)') PrTot(3)*fact
+      write (u6,'("factor = ",f20.10)') fact
       write(u6,'(4X,4(A,A,ES12.4))') labs(1),'=',PrTot(1)*Fact,labs(2),'=',PrTot(2)*Fact,labs(3),'=',PrTot(3)*Fact, &
                                      '           Total','=',tmp*Fact
       if (abs(Molecular_Charge) > 0.9_wp) then
