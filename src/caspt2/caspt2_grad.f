@@ -12,8 +12,7 @@
 ************************************************************************
       Subroutine GrdIni
 C
-      use caspt2_gradient, only: do_nac,do_lindep,LUGRAD,LUSTD,iStpGrd,
-     *                           idBoriMat
+      use caspt2_gradient, only: do_nac,LUGRAD,iStpGrd
       IMPLICIT REAL*8 (A-H,O-Z)
 C
 #include "rasdim.fh"
@@ -46,6 +45,7 @@ C
       !! this is the right way to use manipulate files...
       FileName = 'PT2GRD'
       Call f_inquire(FileName,Exists)
+      write (*,*) "exists = ", exists
       If (Exists) iStpGrd = 0
       ! Not sure none/mf/mf_wa     
       CALL DANAME_MF_wa(LUGRAD,'PT2GRD')
@@ -136,47 +136,7 @@ C
         Call GETMEM('DPT2Canti','ALLO','REAL',ipDPT2Canti,nBasSq)
         Call DCopy_(nBasSq ,[0.0D+00],0,Work(ipDPT2Canti),1)
       End If
-C
-      MaxLen = 0
-      Do iCase = 1, 11
-        Do iSym = 1, nSym
-          nAS = nASUP(iSym,iCase)
-          MaxLen = Max(MaxLen,nAS*nAS)
-        End Do
-      End Do
-C
-      Call GETMEM('WRK','ALLO','REAL',ipWRK,MaxLen)
-      Call DCopy_(MaxLen,[0.0D+00],0,Work(ipWRK),1)
-C
-      idSD = 1
-C     write (*,*) "iflindep = ", iflindeplag
-      If (do_lindep) Then
-        Do iCase = 1, 11
-          DO iSym = 1, nSym
-            idBoriMat(iSym,iCase) = idSD
-            NAS=NASUP(ISYM,ICASE)
-            NS=(NAS*(NAS+1))/2
-            CALL DDAFILE(LuSTD,0,Work(ipWRK),NS,idSD)
-            idSD_ = idBoriMat(iSym,iCase)
-            CALL DDAFILE(LuSTD,1,Work(ipWRK),NS,idSD_)
-          End Do
-        End Do
-      End If
-C
-      If (MAXIT.NE.0) Then
-        Do iCase = 1, 11
-          Do iSym = 1, nSym
-            idSDMat(iSym,iCase) = idSD
-            nAS = nASUP(iSym,iCase)
-            CALL DDAFILE(LuSTD,0,Work(ipWRK),nAS*nAS,idSD)
-            idSDer = idSDMat(iSym,iCase)
-            ! idSDMat(iSym,iCase))
-            CALL DDAFILE(LuSTD,1,Work(ipWRK),nAS*nAS,idSDer)
-          End Do
-        End Do
-      End If
-      Call GETMEM('WRK','FREE','REAL',ipWRK,MaxLen)
-C
+
       Return
 
       End Subroutine GrdIni
@@ -186,8 +146,7 @@ C-----------------------------------------------------------------------
       Subroutine GrdCls(IRETURN,UEFF,U0,H0)
 C
       use caspt2_output, only: iPrGlb, verbose
-      use caspt2_gradient, only: do_nac,do_csf,iRoot1,iRoot2,LUGRAD,
-     *                           LUSTD
+      use caspt2_gradient, only: do_nac,do_csf,iRoot1,iRoot2,LUGRAD
       IMPLICIT REAL*8 (A-H,O-Z)
 C
 #include "rasdim.fh"
@@ -406,6 +365,7 @@ C
       Close (LuPT2)
 C
       If (IfChol) Call DaClos(LUAPT2)
+      Call DaClos(LUSTD)
       Call DaClos(LUGRAD)
 C
  9000 CONTINUE
@@ -452,8 +412,6 @@ C     write(6,*) "LuGamma is ", LuGamma
 C     write(6,*) "bshift =", bshift
 C     Call Put_dScalar('BSHIFT',BSHIFT)
 C
-      !! Close files
-      Call DaClos(LUSTD)
 C
       Return
 C
@@ -491,14 +449,13 @@ C
 C
       use caspt2_output, only:iPrGlb,usual
       use caspt2_global, only:ipea_shift
-      use caspt2_gradient, only: if_invar
       IMPLICIT REAL*8 (A-H,O-Z)
 C
 #include "rasdim.fh"
 #include "caspt2.fh"
 #include "caspt2_grad.fh"
 C
-      If (.not.if_invar .and. IPRGLB.GE.USUAL) Then
+      If (.not.INVAR .and. IPRGLB.GE.USUAL) Then
         Write (6,*)
         Write (6,'(3X,"This is a non-invariant CASPT2 calculation")')
         If (ipea_shift.NE.0.0D+00)

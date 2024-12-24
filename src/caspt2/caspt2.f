@@ -294,7 +294,7 @@ C       Call EQCTL2(ICONV)
              WRITE(6,'(20A4)')('****',I=1,20)
              WRITE(6,*)' CASPT2 PROPERTY SECTION'
            END IF
-           CALL PRPCTL(UEFF,U0)
+           CALL PRPCTL(UEFF)
          ELSE IF (nStpGrd == 2) THEN
            ! don't say anything, it will be clear it's in
            ! the second run that we compute the properties
@@ -496,6 +496,7 @@ C     transition density matrices.
         Call DCopy_(nState**2,Ueff,1,UeffSav,1)
         If (IFXMS .or. IFRMS) Call DCopy_(nState**2,U0,1,U0Sav,1)
 !
+        If (IFXMS .or. IFRMS) Call DCopy_(nState*nState,U0Sav,1,U0,1)
         !!Somehow H0 is wrong for XDW-CASPT2
         !!Maybe, H0(1,1) is computed with rotated basis with DW-density,
         !!while the true value is computed with SA-density

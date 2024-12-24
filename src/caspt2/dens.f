@@ -16,12 +16,11 @@
 * UNIVERSITY OF LUND                         *
 * SWEDEN                                     *
 *--------------------------------------------*
-      SUBROUTINE DENS(IVEC,DMAT,UEFF,U0)
+      SUBROUTINE DENS(IVEC,DMAT,UEFF)
       USE CHOVEC_IO
       use caspt2_output, only: iPrGlb, verbose, debug
       use caspt2_global, only: real_shift, imag_shift
-      use caspt2_gradient, only: do_grad, do_csf, if_invar, iRoot1, 
-     *                           iRoot2
+      use caspt2_gradient, only: do_grad, do_csf, iRoot1, iRoot2
 #ifdef _MOLCAS_MPP_
       USE Para_Info, ONLY: Is_Real_Par, King
 #endif
@@ -36,7 +35,7 @@ C
 #include "caspt2_grad.fh"
 #include "pt2_guga.fh"
 #include "chocaspt2.fh"
-      DIMENSION DMAT(*),UEFF(nState,nState),U0(nState,nState)
+      DIMENSION DMAT(*),UEFF(nState,nState)
       Dimension VECROT(nState)
 
 
@@ -318,9 +317,9 @@ C
         !! orbitals, off-diagonal elements of the density obtained
         !! as DEPSA is incorrect, so remove them. The true density
         !! is computed after everything.
-        If (.not.if_invar) Then
+        If (.not.INVAR) Then
           !! But, save the diagonal elements
-          CALL GETMEM('DEPSAD','ALLO','REAL',ipDEPSAD,nAshT)
+          CALL GETMEM('DEPSA ','ALLO','REAL',ipDEPSAD,nAshT)
           Call DCopy_(nAshT,Work(ipDEPSA),nAshT+1,Work(ipDEPSAD),1)
           !! Clear
           Call DCopy_(nAshT**2,[0.0D+00],0,Work(ipDEPSA),1)
@@ -667,15 +666,11 @@ C    *              0.0D+00,Work(ipWRK1),nAshT)
 C       Call DGemm_('N','T',nAshT,nAshT,nAshT,
 C    *              1.0D+00,Work(ipWRK1),nAshT,Work(ipTrfL),nBasT,
 C    *              0.0D+00,Work(ipRDMEIG),nAshT)
-        If (.not.if_invar) Then !test
+        If (.not.INVAR) Then !test
           CALL GETMEM('CLagT','ALLO','REAL',ipCLagT,nConf*nState)
           CALL GETMEM('EigT ','ALLO','REAL',ipEigT ,nAshT**2)
           Call DCopy_(nConf*nState,Work(ipCLag),1,Work(ipCLagT),1)
           Call DCopy_(nAshT**2,Work(ipRDMEIG),1,Work(ipEigT),1)
-          If (IFDW .and .zeta >= 0.0d+00) then
-            CALL GETMEM('OMGT ','ALLO','REAL',ipOMGT ,nState*nState)
-            Call DCopy_(nState**2,Work(ipOMGDER),1,Work(ipOMGT),1)
-          end if
         End If
         !! Use canonical CSFs rather than natural CSFs in CLagEig
         ISAV = IDCIEX
@@ -685,20 +680,18 @@ C    *              0.0D+00,Work(ipRDMEIG),nAshT)
 C
         !! Now, here is the best place to compute the true off-diagonal
         !! active density for non-invariant CASPT2
-        If (.not.if_invar) Then
-          Call DCopy_(nSLag,[0.0d+00],0,Work(ipSLag),1)
+        If (.not.INVAR) Then
           !! Add the density that comes from CI Lagrangian
           Call DEPSAOffC(Work(ipCLag),Work(ipDEPSA),Work(ipFIFA),
-     *                   Work(ipFIMO),Work(ipWRK1),Work(ipWRK2),U0)
+     *                   Work(ipFIMO),
+     *                   Work(ipWRK1),Work(ipWRK2))
           !! Add the density that comes from orbital Lagrangian
           Call DEPSAOffO(Work(ipOLag),Work(ipDEPSA),Work(ipFIFA))
           !! Restore the diagonal elements
           Call DCopy_(nAshT,Work(ipDEPSAD),1,Work(ipDEPSA),nAshT+1)
           CALL GETMEM('DEPSAD','FREE','REAL',ipDEPSAD,nAshT)
-          IF (IPRGLB.GE.verbose) THEN
-            write(6,*) "DEPSA computed again"
-            call sqprt(work(ipdepsa),nasht)
-          END IF
+          write(6,*) "DEPSA computed again"
+          call sqprt(work(ipdepsa),nasht)
           If (NRAS1T+NRAS3T.NE.0) Then
             !! Remove the off-diagonal blocks for RASPT2
             Do II = 1, nRAS1T
@@ -723,12 +716,6 @@ C
           CALL DPT2_Trf(Work(LDPT),Work(ipDPTAO),
      *                  Work(LCMOPT2),Work(ipDEPSA),
      *                  Work(LDSUM))
-          !! For IPEA shift with state-dependent density
-          If (IFSSDM.and.(jState.eq.iRlxRoot.or.nStLag.gt.1)) Then
-            iSym = 1
-            Call OLagTrf(1,iSym,Work(LCMOPT2),Work(ipDPT),
-     *                   Work(ipDPTAO),Work(ipWRK1))
-          End If
           !! Some transformations similar to EigDer
           Call EigDer2(Work(ipRDMEIG),Work(ipTrf),Work(ipFIFA),
      *                 Work(ipRDMSA),Work(ipDEPSA),
@@ -737,19 +724,15 @@ C
           Call DCopy_(nConf*nState,Work(ipCLagT),1,Work(ipCLag),1) !test
          !test
           Call DaXpY_(nAshT**2,1.0D+00,Work(ipEigT),1,Work(ipRDMEIG),1)
-          call DCopy_(nState*nState,[0.0D+00],0,Work(ipSLag),1)
+          call DCopy_(nState*(nState-1)/2,[0.0D+00],0,Work(ipSLag),1)
           CALL GETMEM('CLagT','FREE','REAL',ipCLagT,nConf*nState)
           CALL GETMEM('EigT ','FREE','REAL',ipEigT ,nAshT**2)
-          if (IFDW .and .zeta >= 0.0d+00) then
-            Call DCopy_(nState*nState,Work(ipOMGT),1,Work(ipOMGDER),1)
-            CALL GETMEM('OMGT ','FREE','REAL',ipOMGT ,nState*nState)
-          end if
           !! RDMEIG contributions
           !! Use canonical CSFs rather than natural CSFs
           !! Now, compute the configuration Lagrangian
           Call CLagEig(IFSSDM,Work(ipCLag),Work(ipRDMEIG))
           !! Now, compute the state Lagrangian and do some projections
-C         Call CLagFinal(Work(ipCLag),Work(ipSLag))
+          Call CLagFinal(Work(ipCLag),Work(ipSLag))
         End If
 C
         !! Restore integrals without frozen orbitals, although not sure
@@ -860,10 +843,10 @@ C
         ! This should be done only for iRlxRoot
         If (IFSSDM.and.(jState.eq.iRlxRoot.or.nStLag.gt.1)) Then
           CALL TIMING(CPTF0,CPE,TIOTF0,TIOE)
-!         If (.not.if_invar) Then
-!           write(6,*) "SS density matrix with IPEA not implemented"
-!           Call abend()
-!         End If
+          If (.not.INVAR) Then
+            write(6,*) "SS density matrix with IPEA not implemented"
+            Call abend()
+          End If
 C
           !! Construct the SCF density
           !! We first need to construct the density averaged over all
@@ -874,7 +857,7 @@ C
           Do iState = 1, nState
 C           Call DaXpY_(nDRef,Wgt,Work(LDMix+nDRef*(iState-1)),1,
 C    *                  Work(ipWRK1),1)
-            Call LoadCI_XMS('N',1,WORK(LCI),iState,U0)
+            Call LoadCI(WORK(LCI),iState)
             call POLY1(WORK(LCI))
             call GETDREF(WORK(ipWRK2))
             Call DaXpY_(nDRef,Wgt,Work(ipWRK2),1,Work(ipWRK1),1)
