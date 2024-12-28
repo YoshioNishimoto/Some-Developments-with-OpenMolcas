@@ -121,10 +121,10 @@ C Form VEC1 from the BRA vector, transformed to covariant form.
            CALL RHS_ALLO(NAS1,NIS1,LSCR)
            CALL RHS_READ(NAS1,NIS1,LSCR,ICASE1,ISYM1,IVEC) !! IBRA)
            IF (IVEC.NE.JVEC.AND.ILOOP.EQ.1) THEN
-            IF (SCAL.ne.1.0D+00) CALL DSCAL_(NVEC1,SCAL,WORK(LSCR),1)
+            IF (SCAL.ne.1.0D+00) CALL RHS_SCAL(NAS1,NIS1,LSCR,SCAL)
             CALL RHS_ALLO(NAS1,NIS1,LSCR2)
             CALL RHS_READ(NAS1,NIS1,LSCR2,ICASE1,ISYM1,JVEC)
-            Call DaXpY_(NAS1*NIS1,1.0D+00,Work(LSCR2),1,Work(LSCR),1)
+            CALL RHS_DAXPY(NAS1,NIS1,1.0D+00,LSCR2,LSCR)
             CALL RHS_FREE(NAS1,NIS1,LSCR2)
            END IF
            CALL RHS_STRANS (NAS1,NIS1,1.0D0,LSCR,LVEC1,ICASE1,ISYM1)
@@ -132,10 +132,10 @@ C Form VEC1 from the BRA vector, transformed to covariant form.
           ELSE
            CALL RHS_READ(NAS1,NIS1,LVEC1,ICASE1,ISYM1,IVEC) !! IBRA)
            IF (IVEC.NE.JVEC.AND.ILOOP.EQ.1) THEN
-            IF (SCAL.ne.1.0D+00) CALL DSCAL_(NVEC1,SCAL,WORK(LVEC1),1)
+            IF (SCAL.ne.1.0D+00) CALL RHS_SCAL(NAS1,NIS1,LVEC1,SCAL)
             CALL RHS_ALLO(NAS1,NIS1,LSCR2)
             CALL RHS_READ(NAS1,NIS1,LSCR2,ICASE1,ISYM1,JVEC)
-            Call DaXpY_(NAS1*NIS1,1.0D+00,Work(LSCR2),1,Work(LVEC1),1)
+            CALL RHS_DAXPY(NAS1,NIS1,1.0D+00,LSCR2,LVEC1)
             CALL RHS_FREE(NAS1,NIS1,LSCR2)
            END IF
           END IF
@@ -200,10 +200,10 @@ C (p,q)=(t,i), (a,t), and (a,i), resp.
               CALL RHS_ALLO(NAS2,NIS2,LVEC2)
               CALL RHS_READ(NAS2,NIS2,LVEC2,ICASE2,ISYM2,IVEC) !! IKET)
               IF (IVEC.NE.JVEC.AND.ILOOP.EQ.2) THEN
-              IF (SCAL.ne.1.0D+00) CALL DSCAL_(NVEC2,SCAL,WORK(LVEC2),1)
+               IF (SCAL.ne.1.0D+00) CALL RHS_SCAL(NAS2,NIS2,LVEC2,SCAL)
                CALL RHS_ALLO(NAS2,NIS2,LSCR2)
                CALL RHS_READ(NAS2,NIS2,LSCR2,ICASE2,ISYM2,JVEC)
-              Call DaXpY_(NAS2*NIS2,1.0D+00,Work(LSCR2),1,Work(LVEC2),1)
+               CALL RHS_DAXPY(NAS2,NIS2,1.0D+00,LSCR2,LVEC2)
                CALL RHS_FREE(NAS2,NIS2,LSCR2)
               END IF
 #ifdef _MOLCAS_MPP_
@@ -236,6 +236,8 @@ C (p,q)=(t,i), (a,t), and (a,i), resp.
  401    CONTINUE
  400  CONTINUE
 
+ 1000 CONTINUE
+
       CALL GADSUM(DPT2,NDPT2)
 
       IF(IVEC.NE.JVEC) THEN
@@ -250,7 +252,6 @@ C Transpose the density matrix.
         END DO
         CALL GETMEM('SCR','FREE','REAL',LSCR,NDPT2)
       END IF
- 1000 CONTINUE
 
 C Transform vectors back to eigenbasis of H0(diag).
       CALL PTRTOSR(1,IVEC,IVEC)

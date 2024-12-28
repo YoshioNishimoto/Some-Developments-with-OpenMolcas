@@ -47,7 +47,7 @@ incomplete.
 #endif
 
 /* Bit extraction (ibits) with zero length */
-#if ( __PGI )
+#if (( __PGI ) && ( __PGIC__ < 20 ))
 #undef IBITS_LEN_ZERO
 #else
 #define IBITS_LEN_ZERO
@@ -82,6 +82,13 @@ With PGI 20 ( __PGIC__ >= 20 ) it compiles, but it appears to be buggy at runtim
 #define SIZE_INITIALIZATION
 #endif
 
+/* Intrinsic functions in initialization */
+#if ( __PGI )
+#undef INTRINSIC_INITIALIZATION
+#else
+#define INTRINSIC_INITIALIZATION
+#endif
+
 /* Safe character member initialization */
 #if (( __GNUC__ ) && ( GCC_VERSION < 80000 ))
 #undef CHAR_MEMBER_INIT
@@ -94,4 +101,9 @@ With PGI 20 ( __PGIC__ >= 20 ) it compiles, but it appears to be buggy at runtim
 #undef EMPTY_TYPE_INIT
 #else
 #define EMPTY_TYPE_INIT
+#endif
+
+/* Compiler bug (see https://community.intel.com/t5/Intel-Fortran-Compiler/Wrong-results-with-ifx-2024-0-1/td-p/1554375) */
+#if (__INTEL_LLVM_COMPILER)
+#define _BUGGY_INTEL_LLVM_
 #endif

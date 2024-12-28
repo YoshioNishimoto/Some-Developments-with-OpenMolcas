@@ -67,11 +67,14 @@ C     For 2c-2e ERI derivatives,
 C     D(tP,tQ) = tD_{pq} * C_{mu p} C_{nu q} * (mu nu|tP)
 C     then saved.
 C
-      Subroutine OLagNS_RI(iSym0,DPT2C,DPT2Canti,A_PT2,nChoVec)
+      Subroutine OLagNS_RI(iSym0,DPT2C,DPT2Canti,A_PT2)
 C
       Use CHOVEC_IO
       use caspt2_output, only: iPrGlb, verbose
-      use caspt2_gradient, only: do_csf
+      use caspt2_gradient, only: do_csf, iStpGrd
+#ifdef _MOLCAS_MPP_
+      USE Para_Info, ONLY: Is_Real_Par, King
+#endif
 C
       Implicit Real*8 (A-H,O-Z)
 C
@@ -82,6 +85,10 @@ C
 #include "chocaspt2.fh"
 #include "WrkSpc.fh"
 #include "caspt2_grad.fh"
+#ifdef _MOLCAS_MPP_
+#include "global.fh"
+#include "mafdecls.fh"
+#endif
 C
       Integer Active, Inactive, Virtual
       Parameter (Inactive=1, Active=2, Virtual=3)
@@ -92,13 +99,15 @@ C
       DATA NUMERR / 0 /
 #endif
 C
-      Dimension DPT2C(*),DPT2Canti(*),A_PT2(nChoVec,nChoVec)
+      Dimension DPT2C(*),DPT2Canti(*),A_PT2(MaxVec_PT2,MaxVec_PT2)
+#ifdef _MOLCAS_MPP_
+      integer, allocatable :: map2(:)
+#endif
 C
       Call ICopy(NSYM,NISH,1,nSh(1,Inactive),1)
       Call ICopy(NSYM,NASH,1,nSh(1,Active  ),1)
       Call ICopy(NSYM,NSSH,1,nSh(1,Virtual ),1)
 C
-
       IF (IPRGLB.GE.VERBOSE) THEN
         WRITE(6,'(1X,A)') ' Using RHSALL2+ADDRHS algorithm'
       END IF
@@ -125,8 +134,12 @@ C
       END DO
       NBGRP=MXBGRP
 
+      !! With iStpGrd = -1, we try to allocate 4 large arrays
+      iStpGrd_sav = iStpGrd
+      iStpGrd = -1
       CALL MEMORY_ESTIMATE(JSYM,IWORK(LBGRP),NBGRP,
      &                     NCHOBUF,MXPIQK,NADDBUF)
+      iStpGrd = iStpGrd_sav
       IF (IPRGLB.GT.VERBOSE) THEN
         WRITE(6,*)
         WRITE(6,'(A,I12)') '  Number of Cholesky batches: ',IB2-IB1+1
@@ -159,6 +172,24 @@ C
         WRITE(6,'(A,I12)') '  Cholesky vectors in this group = ', NV
         WRITE(6,*)
       END IF
+
+#ifdef _MOLCAS_MPP_
+      If (Is_Real_Par()) Then
+        myRank = GA_NodeID()
+        NPROCS = GA_nNodes()
+
+        Allocate (MAP2(NPROCS))
+        MAP2 = 0
+        MAP2(myRank+1) = NV
+        call GAIGOP(MAP2,NPROCS,'+')
+        ndim2 = sum(map2)
+
+        do i = nprocs, 2, -1
+          map2(i) = sum(map2(1:i-1))+1
+        end do
+        map2(1) = 1
+      End If
+#endif
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -351,56 +382,16 @@ C
         END DO
 C
         !! BraAI
-        If (nIsh(iSym0)*nAsh(iSym0).ne.0) Then
-        Call Cholesky_Vectors(2,Inactive,Active,JSYM,Work(LBRA),nBra,
-     &                        IBSTA,IBEND)
-        Call Get_Cholesky_Vectors(Inactive,Active,JSYM,
-     &                            Work(LKET),nKet,
-     &                            JBSTA,JBEND)
-        Call DGEMM_('T','N',NVI,NVJ,nIsh(iSym0)*nAsh(iSym0),
-     &              1.0D+00,Work(LBRA),nIsh(iSym0)*nAsh(iSym0),
-     &                      Work(LKET),nIsh(iSym0)*nAsh(iSym0),
-     &              1.0D+00,A_PT2(IOFFCV,JOFFCV),nChoVec)
-        End If
+        Call Cnst_A_PT2(Inactive,Active)
 C
         !! BraSI
-        If (nIsh(iSym0)*nSsh(iSym0).ne.0) Then
-        Call Cholesky_Vectors(2,Inactive,Virtual,JSYM,Work(LBRA),nBra,
-     &                        IBSTA,IBEND)
-        Call Get_Cholesky_Vectors(Inactive,Virtual,JSYM,
-     &                            Work(LKET),nKet,
-     &                            JBSTA,JBEND)
-        Call DGEMM_('T','N',NVI,NVJ,nIsh(iSym0)*nSsh(iSym0),
-     &              1.0D+00,Work(LBRA),nIsh(iSym0)*nSsh(iSym0),
-     &                      Work(LKET),nIsh(iSym0)*nSsh(iSym0),
-     &              1.0D+00,A_PT2(IOFFCV,JOFFCV),nChoVec)
-        End If
+        Call Cnst_A_PT2(Inactive,Virtual)
 C
         !! BraSA
-        If (nAsh(iSym0)*nSsh(iSym0).ne.0) Then
-        Call Cholesky_Vectors(2,Active,Virtual,JSYM,Work(LBRA),nBra,
-     &                        IBSTA,IBEND)
-        Call Get_Cholesky_Vectors(Active,Virtual,JSYM,
-     &                            Work(LKET),nKet,
-     &                            JBSTA,JBEND)
-        Call DGEMM_('T','N',NVI,NVJ,nAsh(iSym0)*nSsh(iSym0),
-     &              1.0D+00,Work(LBRA),nAsh(iSym0)*nSsh(iSym0),
-     &                      Work(LKET),nAsh(iSym0)*nSsh(iSym0),
-     &              1.0D+00,A_PT2(IOFFCV,JOFFCV),nChoVec)
-        End If
+        Call Cnst_A_PT2(Active,Virtual)
 C
         !! BraAA
-        If (nAsh(iSym0)*nAsh(iSym0).ne.0) Then
-        Call Cholesky_Vectors(2,Active,Active,JSYM,Work(LBRA),nBra,
-     &                        IBSTA,IBEND)
-        Call Get_Cholesky_Vectors(Active,Active,JSYM,
-     &                            Work(LKET),nKet,
-     &                            JBSTA,JBEND)
-        Call DGEMM_('T','N',NVI,NVJ,nAsh(iSym0)*nAsh(iSym0),
-     &              1.0D+00,Work(LBRA),nAsh(iSym0)*nAsh(iSym0),
-     &                      Work(LKET),nAsh(iSym0)*nAsh(iSym0),
-     &              1.0D+00,A_PT2(IOFFCV,JOFFCV),nChoVec)
-        End If
+        Call Cnst_A_PT2(Active,Active)
         JOFFCV = JOFFCV + NVJ
       END DO !! end of JBGRP loop
       IOFFCV = IOFFCV + NVI
@@ -422,6 +413,9 @@ C
 *                                                                      *
 * End of loop over JSYM
       END DO
+#ifdef _MOLCAS_MPP_
+      If (Is_Real_Par()) Deallocate (map2)
+#endif
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -436,12 +430,17 @@ C      as DRAs with the name RHS_XX_XX_XX with XX a number representing
 C      the case, symmetry, and rhs vector respectively.
 C
 C
-      Call DScal_(nChoVec**2,2.0D+00,A_PT2,1)
+      Call DScal_(MaxVec_PT2**2,2.0D+00,A_PT2,1)
 C
       If (NBGRP.ne.0) SCLNEL = SCLNEL/DBLE(NBGRP)
       Call DScal_(nBasSq,SCLNEL,DPT2C,1)
       If (do_csf) Call DScal_(nBasSq,SCLNEL,DPT2Canti,1)
 C
+#ifdef _MOLCAS_MPP_
+      If (is_real_par()) then
+        CALL GADSUM (A_PT2,MaxVec_PT2**2)
+      end if
+#endif
 C
       Return
 C
@@ -606,14 +605,38 @@ C
       nAS = nASup(iSym,iCase)
       If (nIN.ne.0) Then
         nIS = nISup(iSym,iCase)
-        nVec = nIN*nIS
+        nVec = nAS*nIS
         If (nVec.ne.0) Then
+#ifdef _MOLCAS_MPP_
+          IF (Is_Real_Par()) THEN
+            ! copy global array to local buffer
+            Call RHS_ALLO(nAS,nIS,lg_V)
+            CALL RHS_READ_C(lg_V,iCase,iSym,iVecC2)
+            CALL GETMEM('VEC1','ALLO','REAL',ipT,NVEC)
+            CALL GA_GET(lg_V,1,nAS,1,nIS,WORK(ipT),nAS)
+            If (do_csf) Then
+              CALL RHS_READ_C(lg_V,iCase,iSym,7)
+              CALL GETMEM('VEC2','ALLO','REAL',ipTanti,NVEC)
+              CALL GA_GET(lg_V,1,nAS,1,nIS,WORK(ipTanti),nAS)
+            End If
+            CALL RHS_FREE(nAS,nIS,lg_V)
+            CALL GASYNC
+          ELSE
+            Call RHS_ALLO(nAS,nIS,ipT)
+            CALL RHS_READ_C(ipT,iCase,iSym,iVecC2)
+            If (do_csf) Then
+              Call RHS_ALLO(nAS,nIS,ipTanti)
+              CALL RHS_READ_C(ipTanti,iCase,iSym,7)
+            End If
+          END IF
+#else
           Call RHS_ALLO(nAS,nIS,ipT)
           CALL RHS_READ_C(ipT,iCase,iSym,iVecC2)
           If (do_csf) Then
             Call RHS_ALLO(nAS,nIS,ipTanti)
             CALL RHS_READ_C(ipTanti,iCase,iSym,7)
           End If
+#endif
         End If
       End If
 C
@@ -662,8 +685,18 @@ C
      *            1.0D+00,TJVX(1,1,1,1),NT*NJ,Cho_Ket(1,1,1),NV*NX,
      *            1.0D+00,Cho_BraD(1,1,1),NT*NJ)
 C
+#ifdef _MOLCAS_MPP_
+        IF (Is_Real_Par()) THEN
+          CALL GETMEM('VEC1','FREE','REAL',ipT,NVEC)
+          If (do_csf) CALL GETMEM('VEC2','FREE','REAL',ipTanti,NVEC)
+        Else
+          CALL RHS_FREE(nAS,nIS,ipT)
+          If (do_csf) CALL RHS_FREE(nAS,nIS,ipTanti)
+        End If
+#else
       CALL RHS_FREE(nAS,nIS,ipT)
       If (do_csf) CALL RHS_FREE(nAS,nIS,ipTanti)
+#endif
 C
       RETURN
 C
@@ -720,10 +753,25 @@ C
         nASP = nASup(iSym,iCase)
         If (nINP.ne.0) Then
           nISP = nISup(iSym,iCase)
-          nVec = nINP*nISP
+          nVec = nASP*nISP
           If (nVec.ne.0) Then
+#ifdef _MOLCAS_MPP_
+            IF (Is_Real_Par()) THEN
+              ! copy global array to local buffer
+              Call RHS_ALLO(nASP,nISP,lg_V)
+              CALL RHS_READ_C(lg_V,iCase,iSym,iVecC2)
+              CALL GETMEM('VEC1','ALLO','REAL',ipTP,NVEC)
+              CALL GA_GET(lg_V,1,nASP,1,nISP,WORK(ipTP),nASP)
+              CALL RHS_FREE(nASP,nISP,lg_V)
+              CALL GASYNC
+            ELSE
+              Call RHS_ALLO(nASP,nISP,ipTP)
+              CALL RHS_READ_C(ipTP,iCase,iSym,iVecC2)
+            END IF
+#else
             Call RHS_ALLO(nASP,nISP,ipTP)
             CALL RHS_READ_C(ipTP,iCase,iSym,iVecC2)
+#endif
           End If
         End If
 C
@@ -754,7 +802,15 @@ C
           END DO
         END DO
 C
+#ifdef _MOLCAS_MPP_
+        IF (Is_Real_Par()) THEN
+          CALL GETMEM('VEC1','FREE','REAL',ipTP,NVEC)
+        Else
+          CALL RHS_FREE(nASP,nISP,ipTP)
+        End If
+#else
         CALL RHS_FREE(nASP,nISP,ipTP)
+#endif
       END IF
 C
       IF(NINDEP(ISYM,3).GT.0) THEN
@@ -764,10 +820,24 @@ C
         nASM = nASup(iSym,iCase)
         If (nINM.ne.0) Then
           nISM = nISup(iSym,iCase)
-          nVec = nINM*nISM
+          nVec = nASM*nISM
           If (nVec.ne.0) Then
+#ifdef _MOLCAS_MPP_
+            IF (Is_Real_Par()) THEN
+              Call RHS_ALLO(nASM,nISM,lg_V)
+              CALL RHS_READ_C(lg_V,iCase,iSym,iVecC2)
+              CALL GETMEM('VEC1','ALLO','REAL',ipTM,NVEC)
+              CALL GA_GET(lg_V,1,nASM,1,nISM,WORK(ipTM),nASM)
+              Call RHS_FREE(nASM,nISM,lg_V)
+              CALL GASYNC
+            ELSE
+              Call RHS_ALLO(nASM,nISM,ipTM)
+              CALL RHS_READ_C(ipTM,iCase,iSym,iVecC2)
+            END IF
+#else
             Call RHS_ALLO(nASM,nISM,ipTM)
             CALL RHS_READ_C(ipTM,iCase,iSym,iVecC2)
+#endif
           End If
         End If
 C
@@ -799,7 +869,15 @@ C
           END DO
         END DO
 C
+#ifdef _MOLCAS_MPP_
+        IF (Is_Real_Par()) THEN
+          CALL GETMEM('VEC1','FREE','REAL',ipTM,NVEC)
+        Else
+          CALL RHS_FREE(nASM,nISM,ipTM)
+        End If
+#else
         CALL RHS_FREE(nASM,nISM,ipTM)
+#endif
       END IF
 C
       Call DGEMM_('T','N',NV*NL,NCHO,NT*NJ,
@@ -847,14 +925,37 @@ C
       nAS = nASup(iSym,iCase)
       If (nIN.ne.0) Then
         nIS = nISup(iSym,iCase)
-        nVec = nIN*nIS
+        nVec = nAS*nIS
         If (nVec.ne.0) Then
+#ifdef _MOLCAS_MPP_
+          IF (Is_Real_Par()) THEN
+            Call RHS_ALLO(nAS,nIS,lg_V)
+            CALL RHS_READ_C(lg_V,iCase,iSym,iVecC2)
+            CALL GETMEM('VEC1','ALLO','REAL',ipT,NVEC)
+            CALL GA_GET(lg_V,1,nAS,1,nIS,WORK(ipT),nAS)
+            If (do_csf) Then
+              CALL RHS_READ_C(lg_V,iCase,iSym,7)
+              CALL GETMEM('VEC2','ALLO','REAL',ipTanti,NVEC)
+              CALL GA_GET(lg_V,1,nAS,1,nIS,WORK(ipTanti),nAS)
+            End If
+            Call RHS_FREE(nAS,nIS,lg_V)
+            CALL GASYNC
+          ELSE
+            Call RHS_ALLO(nAS,nIS,ipT)
+            CALL RHS_READ_C(ipT,iCase,iSym,iVecC2)
+            If (do_csf) Then
+              Call RHS_ALLO(nAS,nIS,ipTanti)
+              CALL RHS_READ_C(ipTanti,iCase,iSym,7)
+            End If
+          END IF
+#else
           Call RHS_ALLO(nAS,nIS,ipT)
           CALL RHS_READ_C(ipT,iCase,iSym,iVecC2)
           If (do_csf) Then
             Call RHS_ALLO(nAS,nIS,ipTanti)
             CALL RHS_READ_C(ipTanti,iCase,iSym,7)
           End If
+#endif
         End If
       End If
 C
@@ -906,8 +1007,18 @@ C
      *            1.0D+00,AUVX(1,1,1,1),NA*NU,Cho_Ket(1,1,1),NV*NX,
      *            1.0D+00,Cho_BraD(1,1,1),NA*NU)
 C
+#ifdef _MOLCAS_MPP_
+        IF (Is_Real_Par()) THEN
+          CALL GETMEM('VEC1','FREE','REAL',ipT,NVEC)
+          If (do_csf) CALL GETMEM('VEC2','FREE','REAL',ipTanti,NVEC)
+        Else
+          CALL RHS_FREE(nAS,nIS,ipT)
+          If (do_csf) CALL RHS_FREE(nAS,nIS,ipTanti)
+        End If
+#else
       CALL RHS_FREE(nAS,nIS,ipT)
       If (do_csf) CALL RHS_FREE(nAS,nIS,ipTanti)
+#endif
 C
       RETURN
 C
@@ -959,14 +1070,37 @@ C
       nAS = nASup(iSym,iCase)
       If (nIN.ne.0) Then
         nIS = nISup(iSym,iCase)
-        nVec = nIN*nIS
+        nVec = nAS*nIS
         If (nVec.ne.0) Then
+#ifdef _MOLCAS_MPP_
+          IF (Is_Real_Par()) THEN
+            Call RHS_ALLO(nAS,nIS,lg_V)
+            CALL RHS_READ_C(lg_V,iCase,iSym,iVecC2)
+            CALL GETMEM('VEC1','ALLO','REAL',ipT,NVEC)
+            CALL GA_GET(lg_V,1,nAS,1,nIS,WORK(ipT),nAS)
+            If (do_csf) Then
+              CALL RHS_READ_C(lg_V,iCase,iSym,7)
+              CALL GETMEM('VEC2','ALLO','REAL',ipTanti,NVEC)
+              CALL GA_GET(lg_V,1,nAS,1,nIS,WORK(ipTanti),nAS)
+            End If
+            Call RHS_FREE(nAS,nIS,lg_V)
+            CALL GASYNC
+          ELSE
+            Call RHS_ALLO(nAS,nIS,ipT)
+            CALL RHS_READ_C(ipT,iCase,iSym,iVecC2)
+            If (do_csf) Then
+              Call RHS_ALLO(nAS,nIS,ipTanti)
+              CALL RHS_READ_C(ipTanti,iCase,iSym,7)
+            End If
+          END IF
+#else
           Call RHS_ALLO(nAS,nIS,ipT)
           CALL RHS_READ_C(ipT,iCase,iSym,iVecC2)
           If (do_csf) Then
             Call RHS_ALLO(nAS,nIS,ipTanti)
             CALL RHS_READ_C(ipTanti,iCase,iSym,7)
           End If
+#endif
         End If
       End If
 C
@@ -1026,8 +1160,18 @@ C
         ENDDO
       ENDDO
 C
+#ifdef _MOLCAS_MPP_
+        IF (Is_Real_Par()) THEN
+          CALL GETMEM('VEC1','FREE','REAL',ipT,NVEC)
+          If (do_csf) CALL GETMEM('VEC2','FREE','REAL',ipTanti,NVEC)
+        Else
+          CALL RHS_FREE(nAS,nIS,ipT)
+          If (do_csf) CALL RHS_FREE(nAS,nIS,ipTanti)
+        End If
+#else
       CALL RHS_FREE(nAS,nIS,ipT)
       If (do_csf) CALL RHS_FREE(nAS,nIS,ipTanti)
+#endif
 C
       RETURN
 C
@@ -1078,10 +1222,24 @@ C
       nAS = nASup(iSym,iCase)
       If (nIN.ne.0) Then
         nIS = nISup(iSym,iCase)
-        nVec = nIN*nIS
+        nVec = nAS*nIS
         If (nVec.ne.0) Then
+#ifdef _MOLCAS_MPP_
+          IF (Is_Real_Par()) THEN
+            Call RHS_ALLO(nAS,nIS,lg_V)
+            CALL RHS_READ_C(lg_V,iCase,iSym,iVecC2)
+            CALL GETMEM('VEC1','ALLO','REAL',ipT,NVEC)
+            CALL GA_GET(lg_V,1,nAS,1,nIS,WORK(ipT),nAS)
+            Call RHS_FREE(nAS,nIS,lg_V)
+            CALL GASYNC
+          ELSE
+            Call RHS_ALLO(nAS,nIS,ipT)
+            CALL RHS_READ_C(ipT,iCase,iSym,iVecC2)
+          END IF
+#else
           Call RHS_ALLO(nAS,nIS,ipT)
           CALL RHS_READ_C(ipT,iCase,iSym,iVecC2)
+#endif
         End If
       End If
 C
@@ -1109,7 +1267,15 @@ C
      *            1.0D+00,AUVL,NA*NU,Cho_Ket,NV*NL,
      *            1.0D+00,Cho_BraD,NA*NU)
 C
+#ifdef _MOLCAS_MPP_
+        IF (Is_Real_Par()) THEN
+          CALL GETMEM('VEC1','FREE','REAL',ipT,NVEC)
+        Else
+          CALL RHS_FREE(nAS,nIS,ipT)
+        End If
+#else
       CALL RHS_FREE(nAS,nIS,ipT)
+#endif
 C
       RETURN
 C
@@ -1168,10 +1334,25 @@ C
         nASP = nASup(iSym,iCase)
         If (nINP.ne.0) Then
           nISP = nISup(iSym,iCase)
-          nVec = nINP*nISP
+          nVec = nASP*nISP
           If (nVec.ne.0) Then
+#ifdef _MOLCAS_MPP_
+            IF (Is_Real_Par()) THEN
+              ! copy global array to local buffer
+              Call RHS_ALLO(nASP,nISP,lg_V)
+              CALL RHS_READ_C(lg_V,iCase,iSym,iVecC2)
+              CALL GETMEM('VEC1','ALLO','REAL',ipTP,NVEC)
+              CALL GA_GET(lg_V,1,nASP,1,nISP,WORK(ipTP),nASP)
+              CALL RHS_FREE(nASP,nISP,lg_V)
+              CALL GASYNC
+            ELSE
+              Call RHS_ALLO(nASP,nISP,ipTP)
+              CALL RHS_READ_C(ipTP,iCase,iSym,iVecC2)
+            END IF
+#else
             Call RHS_ALLO(nASP,nISP,ipTP)
             CALL RHS_READ_C(ipTP,iCase,iSym,iVecC2)
+#endif
           End If
         End If
 
@@ -1226,7 +1407,15 @@ C
           ENDDO
         ENDDO
 C
+#ifdef _MOLCAS_MPP_
+        IF (Is_Real_Par()) THEN
+          CALL GETMEM('VEC1','FREE','REAL',ipTP,NVEC)
+        Else
+          CALL RHS_FREE(nASP,nISP,ipTP)
+        End If
+#else
         CALL RHS_FREE(nASP,nISP,ipTP)
+#endif
       END IF
 C
 C     ---- EM
@@ -1238,10 +1427,24 @@ C
         nASM = nASup(iSym,iCase)
         If (nINM.ne.0) Then
           nISM = nISup(iSym,iCase)
-          nVec = nINM*nISM
+          nVec = nASM*nISM
           If (nVec.ne.0) Then
+#ifdef _MOLCAS_MPP_
+            IF (Is_Real_Par()) THEN
+              Call RHS_ALLO(nASM,nISM,lg_V)
+              CALL RHS_READ_C(lg_V,iCase,iSym,iVecC2)
+              CALL GETMEM('VEC1','ALLO','REAL',ipTM,NVEC)
+              CALL GA_GET(lg_V,1,nASM,1,nISM,WORK(ipTM),nASM)
+              Call RHS_FREE(nASM,nISM,lg_V)
+              CALL GASYNC
+            ELSE
+              Call RHS_ALLO(nASM,nISM,ipTM)
+              CALL RHS_READ_C(ipTM,iCase,iSym,iVecC2)
+            END IF
+#else
             Call RHS_ALLO(nASM,nISM,ipTM)
             CALL RHS_READ_C(ipTM,iCase,iSym,iVecC2)
+#endif
           End If
         End If
 C
@@ -1298,7 +1501,15 @@ C
           ENDDO
         ENDDO
 C
+#ifdef _MOLCAS_MPP_
+        IF (Is_Real_Par()) THEN
+          CALL GETMEM('VEC1','FREE','REAL',ipTM,NVEC)
+        Else
+          CALL RHS_FREE(nASM,nISM,ipTM)
+        End If
+#else
         CALL RHS_FREE(nASM,nISM,ipTM)
+#endif
       END IF
 C
       RETURN
@@ -1357,10 +1568,25 @@ C
         nASP = nASup(iSym,iCase)
         If (nINP.ne.0) Then
           nISP = nISup(iSym,iCase)
-          nVec = nINP*nISP
+          nVec = nASP*nISP
           If (nVec.ne.0) Then
+#ifdef _MOLCAS_MPP_
+            IF (Is_Real_Par()) THEN
+              ! copy global array to local buffer
+              Call RHS_ALLO(nASP,nISP,lg_V)
+              CALL RHS_READ_C(lg_V,iCase,iSym,iVecC2)
+              CALL GETMEM('VEC1','ALLO','REAL',ipTP,NVEC)
+              CALL GA_GET(lg_V,1,nASP,1,nISP,WORK(ipTP),nASP)
+              CALL RHS_FREE(nASP,nISP,lg_V)
+              CALL GASYNC
+            ELSE
+              Call RHS_ALLO(nASP,nISP,ipTP)
+              CALL RHS_READ_C(ipTP,iCase,iSym,iVecC2)
+            END IF
+#else
             Call RHS_ALLO(nASP,nISP,ipTP)
             CALL RHS_READ_C(ipTP,iCase,iSym,iVecC2)
+#endif
           End If
         End If
 C
@@ -1391,7 +1617,15 @@ C
           END DO
         END DO
 C
+#ifdef _MOLCAS_MPP_
+        IF (Is_Real_Par()) THEN
+          CALL GETMEM('VEC1','FREE','REAL',ipTP,NVEC)
+        Else
+          CALL RHS_FREE(nASP,nISP,ipTP)
+        End If
+#else
         CALL RHS_FREE(nASP,nISP,ipTP)
+#endif
       END IF
 C
 C     ---- FM
@@ -1403,10 +1637,24 @@ C
         nASM = nASup(iSym,iCase)
         If (nINM.ne.0) Then
           nISM = nISup(iSym,iCase)
-          nVec = nINM*nISM
+          nVec = nASM*nISM
           If (nVec.ne.0) Then
+#ifdef _MOLCAS_MPP_
+            IF (Is_Real_Par()) THEN
+              Call RHS_ALLO(nASM,nISM,lg_V)
+              CALL RHS_READ_C(lg_V,iCase,iSym,iVecC2)
+              CALL GETMEM('VEC1','ALLO','REAL',ipTM,NVEC)
+              CALL GA_GET(lg_V,1,nASM,1,nISM,WORK(ipTM),nASM)
+              Call RHS_FREE(nASM,nISM,lg_V)
+              CALL GASYNC
+            ELSE
+              Call RHS_ALLO(nASM,nISM,ipTM)
+              CALL RHS_READ_C(ipTM,iCase,iSym,iVecC2)
+            END IF
+#else
             Call RHS_ALLO(nASM,nISM,ipTM)
             CALL RHS_READ_C(ipTM,iCase,iSym,iVecC2)
+#endif
           End If
         End If
 C
@@ -1438,7 +1686,15 @@ C
           END DO
         END DO
 C
+#ifdef _MOLCAS_MPP_
+        IF (Is_Real_Par()) THEN
+          CALL GETMEM('VEC1','FREE','REAL',ipTM,NVEC)
+        Else
+          CALL RHS_FREE(nASM,nISM,ipTM)
+        End If
+#else
         CALL RHS_FREE(nASM,nISM,ipTM)
+#endif
       END IF
 C
       Call DGEMM_('T','N',NC*NX,NCHO,NA*NU,
@@ -1509,10 +1765,25 @@ C
         nASP = nASup(iSym,iCase)
         If (nINP.ne.0) Then
           nISP = nISup(iSym,iCase)
-          nVec = nINP*nISP
+          nVec = nASP*nISP
           If (nVec.ne.0) Then
+#ifdef _MOLCAS_MPP_
+            IF (Is_Real_Par()) THEN
+              ! copy global array to local buffer
+              Call RHS_ALLO(nASP,nISP,lg_V)
+              CALL RHS_READ_C(lg_V,iCase,iSym,iVecC2)
+              CALL GETMEM('VEC1','ALLO','REAL',ipTP,NVEC)
+              CALL GA_GET(lg_V,1,nASP,1,nISP,WORK(ipTP),nASP)
+              CALL RHS_FREE(nASP,nISP,lg_V)
+              CALL GASYNC
+            ELSE
+              Call RHS_ALLO(nASP,nISP,ipTP)
+              CALL RHS_READ_C(ipTP,iCase,iSym,iVecC2)
+            END IF
+#else
             Call RHS_ALLO(nASP,nISP,ipTP)
             CALL RHS_READ_C(ipTP,iCase,iSym,iVecC2)
+#endif
           End If
         End If
 C
@@ -1576,7 +1847,15 @@ C
           ENDDO
         ENDDO
 C
+#ifdef _MOLCAS_MPP_
+        IF (Is_Real_Par()) THEN
+          CALL GETMEM('VEC1','FREE','REAL',ipTP,NVEC)
+        Else
+          CALL RHS_FREE(nASP,nISP,ipTP)
+        End If
+#else
         CALL RHS_FREE(nASP,nISP,ipTP)
+#endif
       END IF
 C
 C     ---- GM
@@ -1588,10 +1867,24 @@ C
         nASM = nASup(iSym,iCase)
         If (nINM.ne.0) Then
           nISM = nISup(iSym,iCase)
-          nVec = nINM*nISM
+          nVec = nASM*nISM
           If (nVec.ne.0) Then
+#ifdef _MOLCAS_MPP_
+            IF (Is_Real_Par()) THEN
+              Call RHS_ALLO(nASM,nISM,lg_V)
+              CALL RHS_READ_C(lg_V,iCase,iSym,iVecC2)
+              CALL GETMEM('VEC1','ALLO','REAL',ipTM,NVEC)
+              CALL GA_GET(lg_V,1,nASM,1,nISM,WORK(ipTM),nASM)
+              Call RHS_FREE(nASM,nISM,lg_V)
+              CALL GASYNC
+            ELSE
+              Call RHS_ALLO(nASM,nISM,ipTM)
+              CALL RHS_READ_C(ipTM,iCase,iSym,iVecC2)
+            END IF
+#else
             Call RHS_ALLO(nASM,nISM,ipTM)
             CALL RHS_READ_C(ipTM,iCase,iSym,iVecC2)
+#endif
           End If
         End If
 C
@@ -1658,7 +1951,15 @@ C
           ENDDO
         ENDDO
 
+#ifdef _MOLCAS_MPP_
+        IF (Is_Real_Par()) THEN
+          CALL GETMEM('VEC1','FREE','REAL',ipTM,NVEC)
+        Else
+          CALL RHS_FREE(nASM,nISM,ipTM)
+        End If
+#else
         CALL RHS_FREE(nASM,nISM,ipTM)
+#endif
       END IF
 C
       RETURN
@@ -1711,10 +2012,25 @@ C
       nVec = 0
       If (nINP.ne.0) Then
         nISP = nISup(iSym,iCase)
-        nVec = nINP*nISP
+        nVec = nASP*nISP
         If (nVec.ne.0) Then
+#ifdef _MOLCAS_MPP_
+          IF (Is_Real_Par()) THEN
+            ! copy global array to local buffer
+            Call RHS_ALLO(nASP,nISP,lg_V)
+            CALL RHS_READ_C(lg_V,iCase,iSym,iVecC2)
+            CALL GETMEM('VEC1','ALLO','REAL',ipTP,NVEC)
+            CALL GA_GET(lg_V,1,nASP,1,nISP,WORK(ipTP),nASP)
+            CALL RHS_FREE(nASP,nISP,lg_V)
+            CALL GASYNC
+          ELSE
+            Call RHS_ALLO(nASP,nISP,ipTP)
+            CALL RHS_READ_C(ipTP,iCase,iSym,iVecC2)
+          END IF
+#else
           Call RHS_ALLO(nASP,nISP,ipTP)
           CALL RHS_READ_C(ipTP,iCase,iSym,iVecC2)
+#endif
         End If
       End If
 C
@@ -1796,7 +2112,17 @@ C
         ENDDO
       ENDDO
 C
-      IF (nVec.ne.0) CALL RHS_FREE(nINP,nISP,ipTP)
+      IF (nVec.ne.0) Then
+#ifdef _MOLCAS_MPP_
+        IF (Is_Real_Par()) THEN
+          CALL GETMEM('VEC1','FREE','REAL',ipTP,NVEC)
+        Else
+          CALL RHS_FREE(nINP,nISP,ipTP)
+        End If
+#else
+        CALL RHS_FREE(nINP,nISP,ipTP)
+#endif
+      End If
 C
 C     ---- HM
 C
@@ -1807,10 +2133,24 @@ C
       nVec = 0
       If (nINM.ne.0) Then
         nISM = nISup(iSym,iCase)
-        nVec = nINM*nISM
+        nVec = nASM*nISM
         If (nVec.ne.0) Then
+#ifdef _MOLCAS_MPP_
+          IF (Is_Real_Par()) THEN
+            Call RHS_ALLO(nASM,nISM,lg_V)
+            CALL RHS_READ_C(lg_V,iCase,iSym,iVecC2)
+            CALL GETMEM('VEC1','ALLO','REAL',ipTM,NVEC)
+            CALL GA_GET(lg_V,1,nASM,1,nISM,WORK(ipTM),nASM)
+            Call RHS_FREE(nASM,nISM,lg_V)
+            CALL GASYNC
+          ELSE
+            Call RHS_ALLO(nASM,nISM,ipTM)
+            CALL RHS_READ_C(ipTM,iCase,iSym,iVecC2)
+          END IF
+#else
           Call RHS_ALLO(nASM,nISM,ipTM)
           CALL RHS_READ_C(ipTM,iCase,iSym,iVecC2)
+#endif
         End If
       End If
 C
@@ -1890,11 +2230,89 @@ C
         ENDDO
       ENDDO
 C
-      If (nVec.ne.0) CALL RHS_FREE(nINM,nISM,ipTM)
+      IF (nVec.ne.0) Then
+#ifdef _MOLCAS_MPP_
+        IF (Is_Real_Par()) THEN
+          CALL GETMEM('VEC1','FREE','REAL',ipTM,NVEC)
+        Else
+          CALL RHS_FREE(nINM,nISM,ipTM)
+        End If
+#else
+        CALL RHS_FREE(nINM,nISM,ipTM)
+#endif
+      End If
 C
       Return
 C
       End Subroutine OLagNS_RI_H
+C
+C-----------------------------------------------------------------------
+C
+      Subroutine Cnst_A_PT2(block1,block2)
+C
+      IMPLICIT REAL*8 (A-H,O-Z)
+C
+      integer, intent(in) :: block1,block2
+C
+#ifdef _MOLCAS_MPP_
+      logical :: bstat
+#endif
+C
+      ndim1 = nSh(iSym0,block1)*nSh(iSym0,block2)
+      if (ndim1 == 0) return
+C
+#ifdef _MOLCAS_MPP_
+      if (is_real_par()) then
+        !! The BRAD vector is first put from local Work(LBRA) to the
+        !! global LG_V1 array. The data is shared among all processes.
+        !! The bare Cholesky vector (Work(LKET)) is local.
+
+        !! NV(I): Number of local Cholesky vectors for Work(LBRA)
+        !! NDIM2: number of total Cholesky vectors for this batch
+        !!        (usually NV*NPROCS)
+        !! NVJ: number of local Cholesky vectors for Work(LKET)
+        bStat = GA_CREATE_IRREG(MT_DBL,NDIM1,NDIM2,'BRAD',
+     *                          1,1,MAP2,NPROCS,LG_V1)
+        Call Cholesky_Vectors(2,block1,block2,JSYM,Work(LBRA),
+     &                        nBra,IBSTA,IBEND)
+        !! finds out the range of the global array g_a that process
+        !! iproc owns.
+        CALL GA_DISTRIBUTION(LG_V1,MYRANK,ILOV1,IHIV1,JLOV1,JHIV1)
+        !! provides access to local data in the specified patch of
+        !! the array owned by the calling process
+        CALL GA_ACCESS(LG_V1,ILOV1,IHIV1,JLOV1,JHIV1,MV1,NDIM1)
+        CALL DCOPY_(NDIM1*(JHIV1-JLOV1+1),WORK(LBRA),1,DBL_MB(MV1),1)
+        !! releases access to a global array, when the data was
+        !! accessed for writing
+        CALL GA_RELEASE_UPDATE(LG_V1,ILOV1,IHIV1,JLOV1,JHIV1)
+        CALL GA_SYNC()
+C
+        !! ket is ndim1*NVJ dimension
+        Call Get_Cholesky_Vectors(block1,block2,JSYM,Work(LKET),nKet,
+     &                            JBSTA,JBEND)
+C
+        do iRank = 0, NPROCS-1
+          CALL GA_DISTRIBUTION(LG_V1,iRank,ILOV1,IHIV1,JLOV1,JHIV1)
+          CALL GA_GET(LG_V1,ILOV1,IHIV1,JLOV1,JHIV1,WORK(LBRA),NDIM1)
+          Call DGEMM_('T','N',JHIV1-JLOV1+1,NVJ,ndim1,
+     *                1.0d+00,work(lbra),ndim1,work(lket),ndim1,
+     * 1.0D+00,A_PT2(IOFFCV+JLOV1-1,JOFFCV+MAP2(myRank+1)-1),MaxVec_PT2)
+        end do
+        bStat =  GA_DESTROY(LG_V1)
+      else
+#endif
+        Call Cholesky_Vectors(2,block1,block2,JSYM,Work(LBRA),nBra,
+     &                        IBSTA,IBEND)
+        Call Get_Cholesky_Vectors(block1,block2,JSYM,Work(LKET),nKet,
+     &                            JBSTA,JBEND)
+        Call DGEMM_('T','N',NVI,NVJ,ndim1,
+     &              1.0D+00,Work(LBRA),ndim1,Work(LKET),ndim1,
+     &              1.0D+00,A_PT2(IOFFCV,JOFFCV),MaxVec_PT2)
+#ifdef _MOLCAS_MPP_
+      end if
+#endif
+C
+      End Subroutine Cnst_A_PT2
 C
       End Subroutine OLagNS_RI
 C

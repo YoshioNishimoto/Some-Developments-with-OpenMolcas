@@ -1,0 +1,79 @@
+#!/bin/bash
+#***********************************************************************
+# This file is part of OpenMolcas.                                     *
+#                                                                      *
+# OpenMolcas is free software; you can redistribute it and/or modify   *
+# it under the terms of the GNU Lesser General Public License, v. 2.1. *
+# OpenMolcas is distributed in the hope that it will be useful, but it *
+# is provided "as is" and without any express or implied warranties.   *
+# For more details see the full text of the license in the file        *
+# LICENSE or in <http://www.gnu.org/licenses/>.                        *
+#***********************************************************************
+#
+# git hook that prevents accidental commits to protected branches
+# or protected directories, and runs some style checks
+
+RC=0
+SBIN=0
+
+TMPDIR=$(mktemp -d)
+trap 'rm -rf "$TMPDIR"' EXIT
+
+# checkout changed files
+for FILE in $(git diff-index --cached --name-only HEAD)
+do
+    git checkout-index --prefix=$TMPDIR/ $FILE 2> /dev/null
+done
+DIR=$PWD
+(cd $TMPDIR ; "$DIR"/sbin/copyright -r .)
+
+# temporarily set MOLCAS to $TMPDIR to run style checks
+export MOLCAS=$TMPDIR
+if [ -x sbin/check_style ]
+then
+    if ! sbin/check_style
+    then
+        RC=1
+    fi
+    if ! sbin/check_tests
+    then
+        RC=1
+    fi
+fi
+
+if (( $RC ))
+then
+    exit $RC
+fi
+
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+case "$BRANCH" in
+  # protected branches: disallow
+  master)
+    echo "    ==========================================================="
+    echo "    You tried to commit to the master branch."
+    echo "    This is not recommended, even in your own fork."
+    echo ""
+    echo "    If you really want to do so,"
+    echo "    use the \"--no-verify\" flag with \"git commit\"".
+    echo ""
+    echo "    Maybe you wanted to commit to a different branch, in that"
+    echo "    case you should \"git checkout\" that branch first."
+    echo ""
+    echo "    You can always create a new local branch to commit to:"
+    echo "    \"git branch <new-branch-name>\""
+    echo "    ==========================================================="
+    RC=3
+    ;;
+  # any other branch: continue
+  *)
+    ;;
+esac
+
+if (( $RC ))
+then
+    exit $RC
+fi
+
+exit $RC

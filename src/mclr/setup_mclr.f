@@ -18,6 +18,7 @@
 * for the integrals needed in sigma gen
 #include "Input.fh"
       integer dsym
+      Integer, External:: iPntSO
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -104,6 +105,15 @@
      &                          iint1*nRs1(is)+
      &                          iint2*nRs2(is)+
      &                          iint3*nRs3(is)
+                  If (ActRot) Then
+                    write (6,*) "RAS1,RAS2,RAS3"
+                    write (6,*) nrs1(is),nrs2(is),nrs3(is)
+                    write (6,*) "ndensc before = ", ndensc
+                    nDensC=nDensC+nRs1(is)*(nRs1(is)-1)/2
+     *                           +nRs2(is)*(nRs2(is)-1)/2
+     *                           +nRs3(is)*(nRs3(is)-1)/2
+                    write (6,*) "ndensc after = ", ndensc
+                  End If
                End If
             End If
          End Do
@@ -201,7 +211,7 @@
       Do i = 1, nSym
          If (nFro(i).ne.0) Then
             Call WarningMessage(2,
-     &               'MCLR module can not handle frozen orbitals!')
+     &               'MCLR module cannot handle frozen orbitals!')
             Call Abend()
          End If
       End Do
@@ -211,7 +221,7 @@
       Do i = 1, nSym
          If (nDel(i).ne.0) Then
             Call WarningMessage(2,
-     &               'MCLR module can not handle deleted orbitals!')
+     &               'MCLR module cannot handle deleted orbitals!')
             Call Abend()
          End If
       End Do

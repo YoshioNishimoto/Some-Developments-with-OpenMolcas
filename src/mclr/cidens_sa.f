@@ -10,6 +10,8 @@
 ************************************************************************
       SubRoutine CIDens_sa(RSP,iLS,iRS,iL,iR,rP,rD)
       use ipPage, only: W
+      use pcm_grad, only: do_RF,DZACTMO,iStpPCM
+      use ISRotation, only: InvSCF,ISR
       Implicit Real*8(a-h,o-z)
 #include "detdim.fh"
 #include "cicisp_mclr.fh"
@@ -21,6 +23,7 @@
 #include "spinfo_mclr.fh"
 #include "cands.fh"
 #include "dmrginfo_mclr.fh"
+#include "sa.fh"
       Real*8 rP(*),rD(*)
       Logical RSP
       integer opout
@@ -74,6 +77,7 @@
       Call mma_allocate(Pe,n2dens,Label='Pe')
       call dcopy_(n1dens,[0.0d0],0,rD,1)
       call dcopy_(n2dens,[0.0d0],0,rP,1)
+      if (do_RF) call dcopy_(n1dens,[0.0d+00],0,DZACTMO,1)
 
 *
       nConfL=Max(ncsf(il),nint(xispsm(il,1)))
@@ -122,7 +126,78 @@
            call daxpy_(n2dens,weight(i+1),Pe,1,rp,1)
            call daxpy_(n1dens,Weight(i+1),De,1,rD,1)
         End If
+*
+        !! rotations between internal states
+        if (.not.InvSCF) then
+          if (iStpPCM==2) then
+            irc=ipin(iLS)
+            Call CSF2SD(W(iLS)%Vec(1+i*ncsf(il)),CIL,iL)
+            irc=opout(iLS)
+          else if (iStpPCM==3) then
+            irc=ipin(iRS)
+            Call CSF2SD(W(iRS)%Vec(1+i*ncsf(ir)),CIL,iR)
+            irc=opout(iRS)
+          end if
+          do j = 0, i
+            scal = ISR%p(i+1,j+1)
+C           write (6,*) i+1,j+1,scal
+            if (abs(scal).le.1.0d-10) cycle
+            if (iStpPCM==2) then
+              irc=ipin(iLS)
+              Call CSF2SD(W(iLS)%Vec(1+j*ncsf(il)),CIR,iL)
+              irc=opout(iLS)
+            else if (iStpPCM==3) then
+              irc=ipin(iRS)
+              Call CSF2SD(W(iRS)%Vec(1+j*ncsf(ir)),CIR,iR)
+              irc=opout(iRS)
+            end if
+            irc=ipnout(-1)
+            icsm=iR
+            issm=iL
+            Call Densi2(2,De,Pe,CIL,CIR,0,0,0,n1dens,n2dens)
+            call dscal_(n1dens,scal,De,1)
+            call dscal_(n2dens,scal,Pe,1)
+            If (RSP) Then
+               Do iA=1,nnA
+                 Do jA=1,nnA
+                   Do kA=1,nnA
+                    Do la=1,nnA
+                     ij1=nnA*(iA-1)+ja
+                     ij2=nna*(ja-1)+ia
+                     kl1=nnA*(ka-1)+la
+                     kl2=nna*(la-1)+ka
+                     if (ij1.ge.kl1)
+     &               rp(itri(ij1,kl1))=rp(itri(ij1,kl1))+
+     &                Pe(itri(ij1,kl1))+Pe(itri(ij2,kl2))
+                    End Do
+                   End Do
+                 End Do
+               End Do
+               Do iA=1,nnA
+                  Do jA=1,nnA
+                     ij1=nnA*(iA-1)+ja
+                     ij2=nna*(ja-1)+ia
+                     rD(ij1)=rD(ij1) + De(ij1)+De(ij2)
+                  End Do
+               End Do
+            Else
+               call daxpy_(n2dens,1.0d+00,Pe,1,rp,1)
+               call daxpy_(n1dens,1.0d+00,De,1,rD,1)
+            End If
+          end do
+        end if
       End Do
+*
+      !! PCM: for implicit contributions
+      if (do_RF) call dcopy_(n1dens,rD,1,DZACTMO,1)
+C     write (*,*) "asdf"
+C     call sqprt(rd,nna)
+C      write (*,*) "g2r"
+C      do i = 1, itri(ntash**2,ntash**2)
+C      write (*,'(i4,f20.10)') i,rp(i)*2.0d+00
+C      end do
+C      call abend
+C     call abend
 *
       Call mma_deallocate(CIL)
       Call mma_deallocate(CIR)

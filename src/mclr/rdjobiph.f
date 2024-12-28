@@ -33,13 +33,10 @@
 #include "SysDef.fh"
 #include "sa.fh"
 #include "dmrginfo_mclr.fh"
-#include "warnings.h"
       Character*72 Line
       Character*8 Method
-      character(len=128) :: FileName
-      character(len=16) :: StdIn
       real*8 dv_ci2  ! yma added
-      Logical Found,Exists
+      Logical Found
       Real*8 rdum(1)
       Character(Len=1), Allocatable:: TempTxt(:)
       Real*8, Allocatable::  Tmp2(:)
@@ -181,111 +178,6 @@ C
             Call Abend()
          Else
             If (iGo.ne.2) SA=.true.
-          ! If (Method.eq.'CASPT2  ' .and. iGo.eq.0) Then
-C         !   call caspt2(ireturn)
-C         !   write (*,*) "start"
-C         !   call start_alaska()
-          !   !! This most likely means that density for the state
-          !   !! has not been computed
-          !   LuInput = 11
-          !   LuInput = IsFreeUnit(LuInput)
-          !   call StdIn_Name(StdIn)
-          !   call Molcas_open(LuInput,StdIn)
-          
-          !   write(LuInput,'(A)') '>ECHO OFF'
-          !   write(LuInput,'(A)') '>export MCLR_OLD_TRAP=$MOLCAS_TRAP'
-          !   write(LuInput,'(A)') '>export MOLCAS_TRAP=ON'
-          
-          !   FileName = 'CASPTINP'
-          !   call f_inquire(Filename,Exists)
-          !   write (*,*) "exists?",exists
-          
-          !   if (Exists) then
-          !     LuSpool2 = 77
-          !     LuSpool2 = IsFreeUnit(LuSpool2)
-          !     call Molcas_Open(LuSpool2,Filename)
-          
-          !     do
-          !       read(LuSpool2,'(A)',iostat=istatus) Line
-          !       write (*,'(a)') line
-          !       if (istatus > 0) call Abend()
-          !       if (istatus < 0) exit
-          !       write(LuInput,'(A)') Line
-          !     end do
-          
-          !     close(LuSpool2)
-          
-          !   else
-          
-          !     write(*,'(A)') "this cannot happen, ig"
-          !     call abend()
-          
-          !   end if
-
-          !   FileName = 'MCLRINP'
-          !   call f_inquire(Filename,Exists)
-          !   write (*,*) "exists?",exists
-          
-          !   if (Exists) then
-          !     LuSpool2 = 77
-          !     LuSpool2 = IsFreeUnit(LuSpool2)
-          !     call Molcas_Open(LuSpool2,Filename)
-          
-          !     do
-          !       read(LuSpool2,'(A)',iostat=istatus) Line
-          !       write (*,'(a)') line
-          !       if (istatus > 0) call Abend()
-          !       if (istatus < 0) exit
-          !       write(LuInput,'(A)') Line
-          !     end do
-          
-          !     close(LuSpool2)
-          
-          !   else
-          
-          !     write(LuInput,'(A)') ' &Mclr &End'
-          !     write(LuInput,'(A)') 'End of Input'
-          
-          !   end if
-
-          !   FileName = 'ALASKINP'
-          !   call f_inquire(Filename,Exists)
-          !   write (*,*) "exists?",exists
-          
-          !   if (Exists) then
-          !     LuSpool2 = 77
-          !     LuSpool2 = IsFreeUnit(LuSpool2)
-          !     call Molcas_Open(LuSpool2,Filename)
-          
-          !     do
-          !       read(LuSpool2,'(A)',iostat=istatus) Line
-          !       write (*,'(a)') line
-          !       if (istatus > 0) call Abend()
-          !       if (istatus < 0) exit
-          !       write(LuInput,'(A)') Line
-          !     end do
-          
-          !     close(LuSpool2)
-          
-          !   else
-          
-          !     write(LuInput,'(A)') ' &Mclr &End'
-          !     write(LuInput,'(A)') 'End of Input'
-          
-          !   end if
-          
-C         !   write(LuInput,'(A)') '>RM -FORCE $Project.MckInt'
-          !   write(LuInput,'(A)') '>export MOLCAS_TRAP=$MCLR_OLD_TRAP'
-          !   write(LuInput,'(A)') '>ECHO ON'
-
-C         !   FileName = 'ALASKINP'
-C         !   call f_inquire(Filename,Exists)
-C         !   write (*,*) "exists?",exists
-
-          !   close(LuInput)
-
-          !   call Finish(_RC_INVOKED_OTHER_MODULE_)
-          ! End If
             Found=.true.
             If (override) Then
                If (isNAC) Then

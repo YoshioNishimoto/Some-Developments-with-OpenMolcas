@@ -11,6 +11,7 @@
 #include "macros.fh"
       SUBROUTINE PRPROP(PROP,USOR,USOI,ENSOR,NSS,OVLP,ENERGY,JBNUM,
      &                  EigVec)
+      use rassi_aux, only: ipglob
       use rassi_global_arrays, only: SODYSAMPS
       USE kVectors
 #ifdef _HDF5_
@@ -18,9 +19,6 @@
 #endif
       IMPLICIT REAL*8 (A-H,O-Z)
       DIMENSION USOR(NSS,NSS),USOI(NSS,NSS),ENSOR(NSS)
-#include "prgm.fh"
-      CHARACTER*16 ROUTINE
-      PARAMETER (ROUTINE='PRPROP')
       parameter (THRSH=1.0D-10)
       parameter (ZERO=0.0D0)
 #include "symmul.fh"
@@ -52,8 +50,6 @@
        !REAL*8  DIMSOIJ(3,3,NSS)
       REAL*8 GTOTAL(9),ANGMOME(3,NSTATE,NSTATE),ESO(NSS)
       REAL*8 EDIP1MOM(3,NSTATE,NSTATE),AMFIINT(3,NSTATE,NSTATE)
-      REAL*8 TMPL(NSTATE,NSTATE,3),TMPE(NSTATE,NSTATE,3)
-      REAL*8 TMPA(NSTATE,NSTATE,3)
       Dimension TMPm(NTS)!,TMPf(NTP)
 *     Dimension TMPm(NTS),TMPf(NTP),TMFC(NTF)
       Dimension c_1(3,3),c_2(3,3)!,Zstat1m(NTS),Zstat1f(NTP)
@@ -75,6 +71,10 @@
       REAL*8 COMPARE
       REAL*8 Rtensor(6)
       REAL*8, Allocatable:: SOPRR(:,:), SOPRI(:,:)
+#ifdef _HDF5_
+      REAL*8 TMPL(NSTATE,NSTATE,3),TMPE(NSTATE,NSTATE,3)
+      REAL*8 TMPA(NSTATE,NSTATE,3)
+#endif
 
 
 
@@ -106,7 +106,7 @@
 * printout of properties over the spin-free states
 ******************************************************
 
-      IF(IPGLOB.LE.SILENT) GOTO 400
+      IF(IPGLOB.LE.0) GOTO 400
 
       IF( PRXVE.OR.PRMEE ) THEN
       WRITE(6,*)
@@ -231,8 +231,10 @@ C Addition of ANGMOM to Runfile.
                DO J=1,NSTATE
                   ANGMOME(ICOMP(IPROP),I,J)=0.0D0
                   ANGMOME(ICOMP(IPROP),I,J)=PROP(I,J,IPROP)
+#ifdef _HDF5_
                   TMPL(I,J,ICOMP(IPROP))=0.0D0
                   TMPL(I,J,ICOMP(IPROP))=PROP(I,J,IPROP)
+#endif
                ENDDO
             ENDDO
          ENDIF
@@ -244,8 +246,10 @@ c add dipole moment integrals:
                DO J=1,NSTATE
                   EDIP1MOM(ICOMP(IPROP),I,J)=0.0D0
                   EDIP1MOM(ICOMP(IPROP),I,J)=PROP(I,J,IPROP)
+#ifdef _HDF5_
                   TMPE(I,J,ICOMP(IPROP))=0.0D0
                   TMPE(I,J,ICOMP(IPROP))=PROP(I,J,IPROP)
+#endif
                ENDDO
             ENDDO
          ENDIF
@@ -256,8 +260,10 @@ c add spin-orbit AMFI integrals:
                DO J=1,NSTATE
                   AMFIINT(ICOMP(IPROP),I,J)=0.0D0
                   AMFIINT(ICOMP(IPROP),I,J)=PROP(I,J,IPROP)
+#ifdef _HDF5_
                   TMPA(I,J,ICOMP(IPROP))=0.0D0
                   TMPA(I,J,ICOMP(IPROP))=PROP(I,J,IPROP)
+#endif
                ENDDO
             ENDDO
          ENDIF
@@ -287,19 +293,29 @@ c add spin-orbit AMFI integrals:
 * printout of properties over the spin-orbit states
 *******************************************************
 c If PRPR requested, print the spin matrices
+#ifdef _HDF5_
+      IF (LPRPR.OR.PRMES) THEN
+#else
       IF (LPRPR) THEN
-         Call mma_Allocate(SOPRR,NSS**2,NSOPR,Label='SOPRR')
-         Call mma_Allocate(SOPRI,NSS**2,NSOPR,Label='SOPRI')
+#endif
+         Call mma_Allocate(SOPRR,NSS,NSS,Label='SOPRR')
+         Call mma_Allocate(SOPRI,NSS,NSS,Label='SOPRI')
          DO ICMP=1,3
-            SOPRR(:,1)=0.0D0
-            SOPRI(:,1)=0.0D0
+            SOPRR(:,:)=0.0D0
+            SOPRI(:,:)=0.0D0
             IF (ICMP.EQ.2) THEN
               CALL SMMAT(PROP,SOPRI,NSS,0,ICMP)
             ELSE
               CALL SMMAT(PROP,SOPRR,NSS,0,ICMP)
             END IF
             CALL ZTRNSF(NSS,USOR,USOI,SOPRR,SOPRI)
-            CALL PRCMAT3(NSS,SOPRR,SOPRI,ICMP)
+#ifdef _HDF5_
+            Call mh5_put_dset(wfn_sos_spinr,
+     &                        SOPRR,[NSS,NSS,1],[0,0,ICMP-1])
+            Call mh5_put_dset(wfn_sos_spini,
+     &                        SOPRI,[NSS,NSS,1],[0,0,ICMP-1])
+#endif
+            IF (LPRPR) CALL PRCMAT3(NSS,SOPRR,SOPRI,ICMP)
          END DO
          Call mma_deallocate(SOPRR)
          Call mma_deallocate(SOPRI)
@@ -381,6 +397,8 @@ C Remove zeroes to make SOPRNM and ISOCMP lists contiguous. New NSOPR.
        CALL GETMEM('PMAP','FREE','INTE',LPMAP,NPMSIZ)
        NSOPR=ISOPR
 
+       Call mma_Allocate(SOPRR,NSS,NSS,Label='SOPRR')
+       Call mma_Allocate(SOPRI,NSS,NSS,Label='SOPRI')
 C Print out the matrix elements:
        NCOL=4
        DO ISOPR=1,NSOPR
@@ -388,10 +406,8 @@ C Print out the matrix elements:
         WRITE(6,'(1X,A,A8,A,I4)')
      &  'PROPERTY: ',SOPRNM(ISOPR),'   COMPONENT:',ISOCMP(ISOPR)
 CIFG  should print the origin, but where is it stored (for SO properties)?
-        Call mma_Allocate(SOPRR,NSS**2,NSOPR,Label='SOPRR')
-        Call mma_Allocate(SOPRI,NSS**2,NSOPR,Label='SOPRI')
-        SOPRR(:,1)=0.0D0
-        SOPRI(:,1)=0.0D0
+        SOPRR(:,:)=0.0D0
+        SOPRI(:,:)=0.0D0
 
         CALL SMMAT(PROP,SOPRR,NSS,ISOPR,0)
         CALL ZTRNSF(NSS,USOR,USOI,SOPRR,SOPRI)
@@ -416,43 +432,26 @@ C prpr keyword: Print selected spin-orbit properties to ext. data files
 ! prpr end
         ENDIF
 
-        IF( SOPRNM(ISOPR)(1:6) .EQ.'ANGMOM') THEN
-           CALL Put_dArray('ANGMR_NSS',SOPRR,3*NSS*NSS)
-           CALL Put_dArray('ANGMI_NSS',SOPRI,3*NSS*NSS)
 #ifdef _HDF5_
+        IF( SOPRNM(ISOPR)(1:6) .EQ.'ANGMOM') THEN
            Call mh5_put_dset(wfn_sos_angmomr,
      $                SOPRR,[NSS,NSS,1],[0,0,ISOCMP(ISOPR)-1])
            Call mh5_put_dset(wfn_sos_angmomi,
      $                SOPRI,[NSS,NSS,1],[0,0,ISOCMP(ISOPR)-1])
-#endif
         ENDIF
 
         IF( (SOPRNM(ISOPR)(1:8) .EQ.'MLTPL  1').AND.
      &      (SOPRTP(ISOPR).EQ.'HERMSING') ) THEN
-
-           CALL Put_dArray('EDIPR_NSS',SOPRR,NSS**2*3)
-           CALL Put_dArray('EDIPI_NSS',SOPRI,NSS**2*3)
-#ifdef _HDF5_
            Call mh5_put_dset(wfn_sos_edipmomr,
      $                SOPRR,[NSS,NSS,1],[0,0,ISOCMP(ISOPR)-1])
            Call mh5_put_dset(wfn_sos_edipmomi,
      $                SOPRI,[NSS,NSS,1],[0,0,ISOCMP(ISOPR)-1])
-#endif
         ENDIF
+#endif
 
-        IF( SOPRNM(ISOPR)(1:4) .EQ.'SPIN') THEN
-           CALL Put_dArray('SPINR_NSS',SOPRR,3*NSS*NSS)
-           CALL Put_dArray('SPINI_NSS',SOPRI,3*NSS*NSS)
-#ifdef _HDF5_
-           Call mh5_put_dset(wfn_sos_spinr,
-     $                 SOPRR,[NSS,NSS,1],[0,0,ISOCMP(ISOPR)-1])
-           Call mh5_put_dset(wfn_sos_spini,
-     $                 SOPRI,[NSS,NSS,1],[0,0,ISOCMP(ISOPR)-1])
-#endif
-        ENDIF
-        Call mma_deallocate(SOPRR)
-        Call mma_deallocate(SOPRI)
        END DO
+       Call mma_deallocate(SOPRR)
+       Call mma_deallocate(SOPRI)
        Call CollapseOutput(0,'Matrix elements over SO states')
        WRITE(6,*)
 
@@ -471,7 +470,7 @@ C prpr keyword: Print selected spin-orbit properties to ext. data files
        AFACTOR = 2.0D0/CONST_C_IN_AU_**3
      &           /CONST_AU_TIME_IN_SI_
 
-      IF (IPGLOB.GE.USUAL) THEN
+      IF (IPGLOB.GE.2) THEN
         WRITE(6,*)
         WRITE(6,*)
         WRITE(6,'(6X,100A1)') ('*',i=1,100)
@@ -490,10 +489,10 @@ C Compute transition strengths for spin-orbit states:
 * Initial setup for both dipole, quadrupole etc. and exact operator
 *
 C printing threshold
-!     IF(IPGLOB.eq.USUAL) OSTHR=1.0D-8 ! first order
-!     IF(IPGLOB.eq.USUAL) OSTHR2=1.0D-12 ! second order (weaker)
-!     IF(IPGLOB.gt.USUAL) OSTHR=0.0D0
-!     IF(IPGLOB.gt.USUAL) OSTHR2=0.0D0
+!     IF(IPGLOB.eq.2) OSTHR=1.0D-8 ! first order
+!     IF(IPGLOB.eq.2) OSTHR2=1.0D-12 ! second order (weaker)
+!     IF(IPGLOB.gt.2) OSTHR=0.0D0
+!     IF(IPGLOB.gt.2) OSTHR2=0.0D0
       OSTHR=1.0D-5
       OSTHR2=1.0D-5
       IF(DIPR) OSTHR = OSTHR_DIPR
@@ -529,7 +528,7 @@ C printing threshold
         JSTART = 1
       END IF
 !
-      IF (IPGLOB.GE.TERSE) THEN
+      IF (IPGLOB.GE.1) THEN
 !
 !     Initialize arrays for indentifying problematic transitions
 !     These stores all dipole oscillator strengths in
@@ -675,8 +674,8 @@ C printing threshold
 
 ! Print full COMPLEX transition dipole moment vectors?
 137      IF(PRDIPCOM) THEN
-             WRITE(6,'(5X,I5,I5,A,A,E12.3,A,E12.3,A,E12.3,A,E12.3,A,
-     &       E12.3,A,E12.3)')
+             WRITE(6,'(5X,I5,I5,A,A,ES12.3,A,ES12.3,A,ES12.3,A,ES12.3,A,
+     &       ES12.3,A,ES12.3)')
      &       ISS,JSS,'   ',
      &       ' ',REAL(T0(1)),' ',AIMAG(T0(1)),
      &       ' ',REAL(T0(2)),' ',AIMAG(T0(2)),
@@ -2830,12 +2829,15 @@ C printing threshold
           EDIFF=AU2EV*(ENSOR(J)-ENSOR(I))
           IF (F.GT.0.00001) THEN
            IF (EDIFF.GT.0.0D0) THEN
-            WRITE(6,'(A,I8,I8,F15.3,E22.5)') '    ',I,J,EDIFF,F
+            WRITE(6,'(A,I8,I8,F15.3,ES22.5)') '    ',I,J,EDIFF,F
            END IF
           END IF
          END DO ! J
         END DO ! I
         WRITE(6,*)
+        WRITE(6,*)
+        CALL CollapseOutput(0,'Dyson amplitudes '//
+     &                        '(SO states):')
         WRITE(6,*)
 ! VKochetov 2021 put SO Dyson amplitudes to hdf5
 #ifdef _HDF5_
@@ -3064,7 +3066,7 @@ C start loop over the states ISTATE:
       END IF
 
 C print seperate contributions if verbose
-      IF (IPGLOB.GE.VERBOSE) THEN
+      IF (IPGLOB.GE.3) THEN
        WRITE(6,*)
        WRITE(6,*) 'contributions from the SOS expansion'//
      &            ' to delta(g_pq) in *ppt* (p,q=x,y,z)'
@@ -3759,7 +3761,7 @@ C     & '(2,2)','(2,3)','(3,1)','(3,2)','(3,3)'
           GOTO 780
       ENDIF
 
-      IF ((ISS.EQ.1).AND.(KDGN.EQ.2).AND.(IPGLOB.GE.VERBOSE)) THEN
+      IF ((ISS.EQ.1).AND.(KDGN.EQ.2).AND.(IPGLOB.GE.3)) THEN
        WRITE(6,*) 'Experimental: SFS contributions to G=gg+'
        WRITE(6,*)
        WRITE(6,'(a6,9(5x,a2,5x))')
@@ -3795,7 +3797,7 @@ C     & '(2,2)','(2,3)','(3,1)','(3,2)','(3,3)'
        END DO
       END DO
 
-      IF(IPGLOB.GT.VERBOSE) THEN
+      IF(IPGLOB.GT.3) THEN
        WRITE(6,*) 'G tensor = gg+'
        WRITE(6,*)
        WRITE(6,'(6x,3(6x,a2,4x))')
@@ -4045,7 +4047,7 @@ C initialization same as G-tensor, construct L+gS matrix elements
          RMAGM(2)=0.0D0
          RMAGM(3)=0.0D0
          RPART=0.0D0
-         IF(IPGLOB.GT.USUAL) THEN
+         IF(IPGLOB.GT.2) THEN
           WRITE(6,*)
           WRITE(6,'(2x,a14,3(4x,a4,4x),2x,a6)') "Energy (cm^-1)",
      &     "mu_x", "mu_y", "mu_z","weight"
@@ -4059,14 +4061,14 @@ C initialization same as G-tensor, construct L+gS matrix elements
           RMAGM(2)=RMAGM(2)+WORK(IZMR(2)-1+IISS)*FACT
           RMAGM(3)=RMAGM(3)+WORK(IZMR(3)-1+IISS)*FACT
           RPART=RPART+FACT
-          IF(IPGLOB.GT.USUAL) THEN
+          IF(IPGLOB.GT.2) THEN
            WRITE(6,'(2x,f14.3,3(1x,f10.6,1x),2x,f6.3)')
      &      (WORK(LZR-1+IISS)-WORK(LZR))*AU2CM,
      &      WORK(IZMR(1)-1+IISS),WORK(IZMR(2)-1+IISS),
      &      WORK(IZMR(3)-1+IISS),FACT
           ENDIF
          ENDDO
-         IF(IPGLOB.GT.USUAL) THEN
+         IF(IPGLOB.GT.2) THEN
           WRITE(6,*)
          ENDIF
          RMAGM(1)=(RMAGM(1)/RPART)*AU2JTM
@@ -4083,10 +4085,10 @@ C initialization same as G-tensor, construct L+gS matrix elements
           ENDIF
          ENDDO
           IF(IBSTEP.EQ.1) THEN
-         WRITE(6,'(1x,f6.2,5(1x,e12.5,1x))')
+         WRITE(6,'(1x,f6.2,5(1x,es12.5,1x))')
      &    T,B,RMAGMO,RMAGM(1),RMAGM(2),RMAGM(3)
           ELSE
-         WRITE(6,'(1x,f6.2,8(1x,e12.5,1x))')
+         WRITE(6,'(1x,f6.2,8(1x,es12.5,1x))')
      &    T,B,RMAGMO,RMAGM(1),RMAGM(2),RMAGM(3),Chi(1),Chi(2),Chi(3)
           ENDIF
         ENDDO
@@ -4181,7 +4183,7 @@ C scale number of points on phi via sin(theta)
          RMAGM(1)=(RMAGM(1)/RPART)*AU2JTM
          RMAGM(2)=(RMAGM(2)/RPART)*AU2JTM
          RMAGM(3)=(RMAGM(3)/RPART)*AU2JTM
-*        WRITE(6,'(6(1x,e12.5,1x))')
+*        WRITE(6,'(6(1x,es12.5,1x))')
 *    &    B,THE,PHI,RMAGM(1),RMAGM(2),RMAGM(3)
 C backtransformation in two steps, -phi and -theta
          A=RMAGM(1)
@@ -4214,7 +4216,7 @@ C backtransformation in two steps, -phi and -theta
         ENDDO
         RMAGM2=RMAGM(1)*RMAGM(1)+RMAGM(2)*RMAGM(2)+RMAGM(3)*RMAGM(3)
         RMAGMO=SQRT(RMAGM2)
-        WRITE(6,'(1x,f6.2,5(1x,e12.5,1x))')
+        WRITE(6,'(1x,f6.2,5(1x,es12.5,1x))')
      &   T,B,RMAGMO,RMAGM(1),RMAGM(2),RMAGM(3)
        ENDDO
       ENDDO
@@ -4260,8 +4262,7 @@ C backtransformation in two steps, -phi and -theta
 44    FORMAT (20X,6(1X,A15))
 49    FORMAT (5X,A,1X,ES15.8,1X,A)
 
-      RETURN
-      END
+      END SUBROUTINE PRPROP
 
       SUBROUTINE SINANI(KDGN,IFUNCT,NSS,DIPSOm,SPNSFS,DIPSOm_SA)
 !      IMPLICIT NONE
@@ -4449,11 +4450,9 @@ C backtransformation in two steps, -phi and -theta
        !!enddo
       !!enddo
 
-
-      RETURN
 c Avoid unused argument warnings
       unused_var(DIPSOm_SA)
-      END
+      END SUBROUTINE SINANI
 
       SUBROUTINE ADARASSI(N,A,D,DROT)
 
@@ -4475,8 +4474,7 @@ C actual multiplication
       call ZGEMM('N','N',N,N,N,(1.0D0,0.0D0),TEMP,N,A,N,(0.0D0,0.0D0),
      &DROT,N)
 
-      RETURN
-      END
+      END SUBROUTINE ADARASSI
 
       SUBROUTINE ZECON(NSTATE,N,UR,UI,AR,AI,ZEKL,IXYZ,ISTATE,ISS,JSS)
       IMPLICIT REAL*8 (A-H,O-Z)
@@ -4502,5 +4500,4 @@ C actual multiplication
      $     CMPLX(UR(ISS,2)*TMPR2+UI(ISS,2)*TMPI2,
      $     UR(ISS,2)*TMPI2-UI(ISS,2)*TMPR2,kind=8)
 
-      RETURN
-      END
+      END SUBROUTINE ZECON

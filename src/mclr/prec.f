@@ -64,7 +64,7 @@
       Call mma_allocate(JA,n2,Label='JA')
       Call mma_allocate(KA,n2,Label='KA')
       Call mma_allocate(Scr,n2,Label='Scr')
-      If (nRs1(iDSym).ne.0.or.nRs3(iDSym).ne.0) Then
+      If (ActRot.or.nRs1(iDSym).ne.0.or.nRs3(iDSym).ne.0) Then
         Call mma_allocate(ActInt,ntAsh**4,Label='ActInt')
         Call Precaaa_Pre(ActInt,JA,Scr)
       End If
@@ -207,9 +207,13 @@
             If (ib.le.nRs1(iS)+nRs2(is)+nRs3(is)) iR=3
             If (ib.le.nRs1(iS)+nRs2(is)) iR=2
             If (ib.le.nRs1(iS)) iR=1
-            If (ir.eq.1) nD=nOrb(js)-nRs1(js)
-            If (ir.eq.2) nD=nOrb(js)-nRs2(js)
-            If (ir.eq.3) nD=nOrb(js)-nRs3(js)
+            If (ActRot) Then
+               nD=nOrb(js)
+            Else
+               If (ir.eq.1) nD=nOrb(js)-nRs1(js)
+               If (ir.eq.2) nD=nOrb(js)-nRs2(js)
+               If (ir.eq.3) nD=nOrb(js)-nRs3(js)
+            End If
             If (nd.eq.0) Goto 110
             call dcopy_(nD**2,[0.0d0],0,Temp3,1)
 *
@@ -274,7 +278,7 @@
 *
             !! symmetry not yet
             !! Eq. (C.12e)
-            If (nRs1(iS).ne.0.or.nRs3(iS).ne.0)
+            If (ActRot.or.nRs1(iS).ne.0.or.nRs3(iS).ne.0)
      &         Call Precaaa(ib,is,js,nd,ir,Temp3,
      &                      nOrb(is),nOrb(js),
      &                      FIMO(ipCM(js)),
@@ -308,7 +312,7 @@
 *                                                                      *
 ************************************************************************
 *                                                                      *
-      If (nRs1(iDSym).ne.0.or.nRs3(iDSym).ne.0) Then
+      If (ActRot.or.nRs1(iDSym).ne.0.or.nRs3(iDSym).ne.0) Then
         Call mma_deallocate(ActInt)
       End If
       Call mma_deallocate(Scr)

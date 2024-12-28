@@ -34,6 +34,9 @@ C At position IVEC=IVECW, the RHS array, in contravariant repr.
 #include "SysDef.fh"
 #include "chocaspt2.fh"
 
+      INTEGER Cho_X_GetTol
+      EXTERNAL Cho_X_GetTol
+
 
       If (iStpGrd.EQ.1) Then
         IF (IPRGLB.GE.VERBOSE) THEN
@@ -101,21 +104,21 @@ C However, if only BMATRIX is 'YES     ', then the values
 C are the diagonal values of B divided by diagonal values
 C of S.
 
-        CALL GASync
-        CALL TIMING(CPU0,CPU,TIO0,TIO)
+      CALL GASync
+      CALL TIMING(CPU0,CPU,TIO0,TIO)
 C Non-active part of diagonal elements of H0 are computed
 C and written to LUSBT:
-        CALL NADIAG
+      CALL NADIAG
 C Modify diagonal elements, if requested:
-        IF(HZERO.EQ.'CUSTOM') THEN
-          CALL NEWDIA
-        END IF
+      IF(HZERO.EQ.'CUSTOM') THEN
+        CALL NEWDIA
+      END IF
 C A second set of energy parameters may now have been
 C computed and written to LUSBT.
-        CALL GASync
-        CALL TIMING(CPU1,CPU,TIO1,TIO)
-        CPUNAD=CPU1-CPU0
-        TIONAD=TIO1-TIO0
+      CALL GASync
+      CALL TIMING(CPU1,CPU,TIO1,TIO)
+      CPUNAD=CPU1-CPU0
+      TIONAD=TIO1-TIO0
 
       IF (IPRGLB.GE.VERBOSE) THEN
         WRITE(6,'(1X,A)')
@@ -187,8 +190,11 @@ C Transform RHS of CASPT2 equations to eigenbasis for H0:
       If (iStpGrd.EQ.2) Then
         CALL RHS_ZERO(IVECR)
         ICONV = 0
+        !! Just for verification
+        LAXITY=8
+        IF(IfChol) LAXITY=Cho_X_GetTol(LAXITY)
+        Call Add_Info('E_CASPT2',[E2TOT],1,LAXITY)
       End If
-C     CALL PCG(ICONV)
 
       ! IF (ICONV .NE. 0) GOTO 100
       CALL PTRTOC(0,IVECX,IVECC)

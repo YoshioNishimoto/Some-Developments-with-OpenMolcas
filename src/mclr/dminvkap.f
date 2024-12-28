@@ -70,6 +70,7 @@
             nD=nOrb(is)-nIsh(is)
             If (nd.ne.0) Then
                ip2=ipMat(is,js)+nOrb(is)*(iI-1)
+               if (actrot) ip2 = ip2 + nIsh(iS) !! jS?
                irc=0
                call c_f_pointer(c_loc(rMFact(ip1+nd**2)),iMFact,[ND])
                call dgetrs_('N',ND,1,rMFact(ip1),nd,
@@ -92,8 +93,10 @@
 ************************************************************************
 *                                                                      *
          Do iI=1,nAsh(js)
-            nD=nOrb(is)-nAsh(is)
-            If (SA.or.PT2) Then
+            If (ActRot) Then
+               nD=nOrb(is)
+            Else
+C              nD=nOrb(is)-nAsh(is)
                If (iI.le.nRs1(jS)) THen
                  nD=nOrb(is)-nRs1(js)
                Else If (iI.le.nRs1(jS)+nRs2(jS)) Then

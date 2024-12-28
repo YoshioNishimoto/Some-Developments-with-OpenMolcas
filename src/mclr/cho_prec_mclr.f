@@ -25,8 +25,7 @@
 *           the full list of integrals!                                *
 *                                                                      *
 ************************************************************************
-      use ChoArr, only: nDimRS
-      use ChoSwp, only: InfVec
+      use Cholesky, only: InfVec, nBas, nDimRS, nSym, NumCho
       use Data_structures, only: DSBA_Type, Allocate_DT
       use Data_structures, only: Deallocate_DT
       use Data_structures, only: SBA_Type
@@ -43,8 +42,6 @@
      &                            tforma(2),tforma2(2),tMO(2)
       Logical timings
 #include "real.fh"
-#include "cholesky.fh"
-#include "choorb.fh"
 #include "WrkSpc.fh"
 #include "stdalloc.fh"
       Character*50 CFmt
@@ -373,7 +370,7 @@ c         !set index arrays at iLoc
             IVEC2 = JVEC - 1 + JNUM
 
             iSwap = 1 ! Lqi,J are returned
-            Call Allocate_DT(Lpq(1),nIshe,nBas,nVec,JSYM,nSym,iSwap)
+            Call Allocate_DT(Lpq(1),nIshe,nBas,JNUM,JSYM,nSym,iSwap)
             Call mma_allocate(Lii,ntotie*nVec,Label='Lii')
 ************************************************************************
 ************************************************************************
@@ -490,7 +487,7 @@ c         !set index arrays at iLoc
 **          Read half-transformed active vectors
 *
             iSwap = 0 ! Lvb,J
-            Call Allocate_DT(Lpq(1),nAsh,nBas,nVec,JSYM,nSym,iSwap)
+            Call Allocate_DT(Lpq(1),nAsh,nBas,JNUM,JSYM,nSym,iSwap)
 
             Call mma_allocate(Lij,ntue*nVec,Label='Lij')
 

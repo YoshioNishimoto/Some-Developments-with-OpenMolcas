@@ -21,21 +21,32 @@
 *     history: none                                                    *
 *                                                                      *
 ************************************************************************
+      use definitions, only: u6
       use OneDat, only: sNoNuc, sNoOri
-      use Arrays, only: CMO_Inv, CMO
+      use Arrays, only: CMO_Inv, CMO, INT1
+      use pcm_grad, only: do_RF, PCM_grad_init, PrepPCM, PCM_mod_ERASSCF
+      use rctfld_module, only: iCharge_Ref, NonEQ_Ref, PCM
       Implicit real*8 (a-h,o-z)
 
 #include "Input.fh"
+#include "warnings.h"
 #include "Pointers.fh"
 #include "Files_mclr.fh"
 #include "stdalloc.fh"
+#include "detdim.fh"
+#include "cicisp_mclr.fh"
+#include "sa.fh"
       character(len=8) :: Label
       Character(LEN=5) Fname
       Real*8, Allocatable:: STmat(:), Smat(:)
+      logical, external :: RF_On
 *----------------------------------------------------------------------*
 *     start                                                            *
 *----------------------------------------------------------------------*
 *
+*                                                                      *
+************************************************************************
+*                                                                      *
       call setup_MCLR(1)
 *
       If ((StepType.ne.'RUN2').and.(iAnd(kPrint,4).eq.4))
@@ -158,6 +169,39 @@
       Call DaClos(LuTri2)
       Call DaClos(LuHlf2)
       Call DaClos(LuHlf3)
+*
+      if (RF_On()) then
+        if (NonEq_Ref) then
+          call WarningMessage(2,'Error in MCLR')
+          write(u6,*) 'NonEq=.True., invalid option'
+          call Abend()
+        end if
+        call Init_RctFld(.false.,iCharge_Ref)
+C       if (.not.PCM) then ! only for PCM
+C         call WarningMessage(2,'Error in MCLR')
+C         write(u6,*) 'PCM-Model is required in RF-Input'
+C         call Abend()
+C       end if
+        if (.not.SA .and. .not.PT2) then ! only for SA-CASSCF grad
+          call WarningMessage(2,'Error in MCLR')
+          write(u6,*)
+     *      'PCM can be combined with SA-CASSCF or CASPT2 gradient only'
+          call Abend()
+        end if
+        call PCM_grad_init(isNAC,iCharge_Ref,ipCI,iRlxRoot,iSpin,
+     *                     NSSA,nconf,ncsf,nRoots,nSym,ntAsh,
+     *                     ntBsqr,ntBtri,State_Sym,LUJOB,
+     *                     nFro,nIsh,nAsh,nA,nBas,nOrb,ipCM,ipMat,iToc,
+     *                     xispsm,ERASSCF,weight)
+        !! Construct INT1 with the correct PCM contributions
+        call mma_deallocate(Int1)
+        call PrepPCM()
+        call InpOne()
+        !! Modify ERASSCF
+        if (do_RF) call PCM_mod_ERASSCF(ERASSCF)
+C     Call FckMat
+C     Call StPert
+      end if
 *
       Call FckMat
       Call StPert

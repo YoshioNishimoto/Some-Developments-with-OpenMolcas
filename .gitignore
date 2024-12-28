@@ -1,0 +1,35 @@
+## GENERAL
+# backup files
+*.orig
+*.bak
+*~
+*.swp
+# leftovers
+CMakeCache.txt
+CMakeFiles
+# tags files
+tags
+TAGS
+GPATH
+GRTAGS
+GTAGS
+
+#IDEs
+.vscode
+.idea
+
+## SPECIFIC
+# data
+data/basis.db
+data/find.db
+# documentation
+doc/doxygen/*.log
+doc/doxygen/*tmp
+doc/doxygen/html
+# tinker
+/tinker-*.tar.gz
+/tinker-*.tar
+/tinker
+/tinker*/
+#Python
+*__pycache__*

@@ -96,8 +96,8 @@
       Call mma_allocate(DRT0,NDRT0,Label='DRT0')
       Call mma_allocate(DOWN0,NDOWN0,Label='DOWN0')
       Call mma_allocate(TMP,NTMP,Label='TMP')
-      Call DRT0_MCLR (A0,B0,C0,NVERT0,DRT0,DOWN0,NTMP,TMP)
-      If ( iPrint.ge.5 ) Call PRDRT_MCLR(NVERT0,DRT0,DOWN0)
+      Call mkDRT0 (A0,B0,C0,NVERT0,DRT0,DOWN0,NTMP,TMP)
+      If ( iPrint.ge.5 ) Call PRDRT(NVERT0,DRT0,DOWN0)
       Call mma_deallocate(TMP)
 *
       LV1RAS=ntRas1
@@ -105,14 +105,14 @@
       LM1RAS=2*LV1RAS-nHole1
       LM3RAS=nActEl-nElec3
       Call mma_allocate(V11,NVERT0,Label='V11')
-      Call RESTR_MCLR(NVERT0,DRT0,DOWN0,V11,LV1RAS,LV3RAS,LM1RAS,
+      Call RESTR(NVERT0,DRT0,DOWN0,V11,LV1RAS,LV3RAS,LM1RAS,
      &                LM3RAS,NVERT)
 *
       NDRT=5*NVERT
       NDOWN=4*NVERT
       Call mma_allocate(DRT,NDRT,Label='DRT')
       Call mma_allocate(DOWN,NDOWN,Label='DOWN')
-      Call DRT_MCLR(NVERT0,NVERT,DRT0,DOWN0,V11,DRT,DOWN)
+      Call mkDRT(NVERT0,NVERT,DRT0,DOWN0,V11,DRT,DOWN)
       If ( iPrint.ge.5 ) Call PRDRT_MCLR(NVERT,DRT,DOWN)
       Call mma_deallocate(V11)
       Call mma_deallocate(DRT0)
@@ -120,18 +120,18 @@
 *
       NDAW=5*NVERT
       Call mma_allocate(DAW,NDAW,Label='DAW')
-      Call MKDAW_MCLR(NVERT,DOWN,DAW,iPrint)
+      Call MKDAW(NVERT,DOWN,DAW)
 *
       NUP=4*NVERT
       NRAW=5*NVERT
       Call mma_allocate(UP,NUP,Label='UP')
       Call mma_allocate(RAW,NRAW,Label='RAW')
-      Call MKRAW_MCLR(NVERT,DOWN,DAW,UP,RAW,iPrint)
+      Call MKRAW(NVERT,DOWN,UP,RAW)
 *
       NLTV=NLEV+2
       Call mma_allocate(LTV,NLTV,Label='LTV')
-      Call MKMID_MCLR(NVERT,NLEV,DRT,DOWN,DAW,UP,RAW,LTV,
-     &                MIDLEV,NMIDV,MIDV1,MIDV2,MXUP,MXDWN,iPrint)
+      Call MKMID(NVERT,NLEV,DRT,DAW,RAW,LTV,
+     &                MIDLEV,NMIDV,MIDV1,MIDV2,MXUP,MXDWN)
       Call mma_deallocate(LTV)
 *
       NIPWLK=1+(MIDLEV-1)/15
@@ -146,9 +146,9 @@
       Call mma_allocate(NOCSF,NNOCSF,Label='NOCSF')
       Call mma_allocate(IOCSF,NIOCSF,Label='IOCSF')
       Call mma_allocate(SCR,NSCR,Label='SCR')
-      Call MKCOT_MCLR(nSym,NLEV,NVERT,MIDLEV,NMIDV,MIDV1,MIDV2,NWALK,
+      Call MKCOT(nSym,NLEV,NVERT,MIDLEV,NMIDV,MIDV1,MIDV2,NWALK,
      &                NIPWLK,OrbSym,DOWN,NOW,IOW,NCSF,IOCSF,NOCSF,
-     &                SCR,iPrint)
+     &                SCR)
 *
 *     If ( nConf.ne.NCSF(state_sym) ) then
 *        Write (*,*)
@@ -162,17 +162,17 @@
 *
       NICASE=NWALK*NIPWLK
       Call mma_allocate(ICASE,NICASE,Label='ICASE')
-      Call MKCLIST_MCLR(nSym,NLEV,NVERT,MIDLEV,MIDV1,MIDV2,NMIDV,NICASE,
-     &                  NIPWLK,OrbSym,DOWN,NOW,IOW,ICASE,SCR,iPrint)
+      Call MKCLIST(nSym,NLEV,NVERT,MIDLEV,MIDV1,MIDV2,NMIDV,NICASE,
+     &             NIPWLK,OrbSym,DOWN,NOW,IOW,ICASE,SCR)
       Call mma_deallocate(SCR)
 *
       NUSGN=MXUP*NMIDV
       NLSGN=MXDWN*NMIDV
       Call mma_allocate(USGN,NUSGN,Label='USGN')
       Call mma_allocate(LSGN,NLSGN,Label='LSGN')
-      Call MKSGNUM_MCLR(ksym,nSym,NLEV,NVERT,MIDLEV,NMIDV,MXUP,MXDWN,
-     &                  NICASE,NIPWLK,DOWN,UP,DAW,RAW,NOW,IOW,USGN,LSGN,
-     &                  ICASE,iPrint)
+      Call MKSGNUM(ksym,nSym,NLEV,NVERT,MIDLEV,NMIDV,MXUP,MXDWN,
+     &             NICASE,NIPWLK,DOWN,UP,DAW,RAW,NOW,IOW,USGN,LSGN,
+     &             ICASE)
 *
       If (iPrint.ge.5) Then
       If (imode.eq.0.and.iAnd(kprint,8).eq.8) Then

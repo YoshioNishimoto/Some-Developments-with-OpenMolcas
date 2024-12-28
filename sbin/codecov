@@ -1,0 +1,129 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+#***********************************************************************
+# This file is part of OpenMolcas.                                     *
+#                                                                      *
+# OpenMolcas is free software; you can redistribute it and/or modify   *
+# it under the terms of the GNU Lesser General Public License, v. 2.1. *
+# OpenMolcas is distributed in the hope that it will be useful, but it *
+# is provided "as is" and without any express or implied warranties.   *
+# For more details see the full text of the license in the file        *
+# LICENSE or in <http://www.gnu.org/licenses/>.                        *
+#                                                                      *
+# Copyright (C) 2016, Steven Vancoillie                                *
+#               2020, Ignacio Fdez. Galván                             *
+#***********************************************************************
+#
+# codecov
+#
+# Front-end for lcov/gcov code coverage of OpenMolcas.
+# For usage documentation read the help subroutines.
+#
+# Steven Vancoillie, beginning of 2016
+#
+# Ignacio Fdez. Galván, 2020: Translated from Perl to Python
+
+import sys
+import os
+import subprocess as sp
+
+import signal
+import argparse
+import shutil
+
+def print_stdout(text):
+  sys.stdout.write(text.encode())
+
+def msg(text):
+  if not opt['quiet']:
+    print_stdout(text)
+
+def error(text):
+  if not opt['quiet']:
+    print('Error: {}'.format(text), file=sys.stderr)
+  sys.exit(1)
+
+# disable stdout buffering
+# (note that we should use print_stdout instead of print)
+sys.stdout = os.fdopen(sys.stdout.fileno(), 'wb', 0)
+
+# my name
+thisfile = os.path.basename(__file__)
+
+# trap interrupt
+signal.signal(signal.SIGINT, lambda *args: error('\nSTOP: user has terminated {}'.format(thisfile)))
+
+# command-line options
+try:
+  parser = argparse.ArgumentParser(add_help=False, usage='{} [options]'.format(thisfile))
+  parser.add_argument('-h', '--help', action='store_true', help='print the help (you\'re reading it)')
+  parser.add_argument('-q', '--quiet', action='store_true', help='do not print any output (useful in script)')
+  parser.add_argument('--name', default='test', help='choose a custom string NAME for the output directory (default: test)')
+  parser.add_argument('--start', action='store_true', help=argparse.SUPPRESS)
+  parser.add_argument('--prep', action='store_true', help=argparse.SUPPRESS)
+  parser.add_argument('--measure', action='store_true', help=argparse.SUPPRESS)
+  parser.add_argument('--html', action='store_true', help=argparse.SUPPRESS)
+  parser.add_argument('--summary', action='store_true', help=argparse.SUPPRESS)
+  opt = vars(parser.parse_args(sys.argv[1:]))
+except:
+  parser.print_help()
+  sys.exit(1)
+
+# do we need help?
+if opt['help']:
+  parser.print_help()
+  sys.exit(0)
+
+#-------------------------------------------------
+# set up global Molcas settings used for each test
+#-------------------------------------------------
+MOLCAS_DRIVER = os.environ.get('MOLCAS_DRIVER', 'pymolcas')
+DRIVER_base = os.path.basename(MOLCAS_DRIVER)
+
+try:
+  MOLCAS = os.environ['MOLCAS']
+except KeyError:
+  sys.exit('MOLCAS not set, use {} {}'.format(DRIVER_base, thisfile))
+
+# defaults
+covdir = os.path.join(MOLCAS, 'code_coverage')
+bascov = os.path.join(covdir, 'base.cov')
+totcov = os.path.join(covdir, 'total.cov')
+netcov = os.path.join(covdir, 'net.cov')
+testcov = os.path.join(covdir, '{}.cov'.format(opt['name']))
+htmldir = os.path.join(covdir, 'html')
+
+if opt['start']:
+  if os.path.isdir(covdir):
+    shutil.rmtree(covdir)
+  os.mkdir(covdir)
+  os.mkdir(htmldir)
+  msg('{}: running lcov to establish a baseline... '.format(thisfile))
+  sp.call(['lcov', '--quiet', '--capture', '--initial', '--base-directory', MOLCAS, '--directory', MOLCAS, '-o', bascov])
+  sp.call(['lcov', '--quiet', '-a', bascov, '-o', totcov])
+  msg('done\n')
+
+if opt['prep']:
+  msg('{}: running lcov to reset counters... '.format(thisfile))
+  sp.call(['lcov', '--quiet', '--zerocounters', '--base-directory', MOLCAS, '--directory', MOLCAS])
+  msg('done\n')
+  sys.exit(0)
+
+if opt['measure']:
+  msg('{}: running lcov to obtain code coverage... '.format(thisfile))
+  sp.call(['lcov', '--quiet', '--capture', '--base-directory', MOLCAS, '--directory', MOLCAS, '-o', testcov, '--test-name', opt['name']])
+  sp.call(['lcov', '--quiet', '-a', testcov, '-a', totcov, '-o', totcov])
+  msg('done\n')
+
+if opt['html']:
+  msg('{}: generating html pages for analysis... '.format(thisfile))
+  sp.call(['lcov', '--quiet', '-a', bascov, '-a', totcov, '-o', netcov, '--test-name', 'molcas_verify'])
+  sp.call(['genhtml', '--quiet', '--show-details', '-o', htmldir, netcov])
+  msg('done\n')
+  msg('point your browser to the following URL:\n{}/index.html\n'.format(htmldir))
+  sys.exit(0)
+
+if opt['summary']:
+  sp.call(['lcov', '--summary', netcov])
+  pass

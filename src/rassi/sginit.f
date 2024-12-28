@@ -10,18 +10,12 @@
 ************************************************************************
       Subroutine SGInit(nSym,nActEl,iSpin,nRasPrt,nRas,nRasEl,
      &                  iSGStruct)
+      use Struct, only: LEVEL, nSGSize
       IMPLICIT REAL*8 (A-H,O-Z)
 #include "rassi.fh"
-#include "prgm.fh"
-      CHARACTER*16 ROUTINE
-      PARAMETER (ROUTINE='SGINIT')
       dimension nRas(8,nRasPrt),nRasEl(nRasPrt)
-#include "Struct.fh"
       Dimension iSGStruct(nSGSize)
 #include "WrkSpc.fh"
-
-
-
 
       NLEV=NASHT
 C Allocate Level to Symmetry table ISm:
@@ -69,7 +63,7 @@ C Compute unrestricted DRT tables:
       CALL GETMEM('DOWN0 ','ALLO','INTEGER',LDOWN0,NDOWN0)
       NTMP=((NLEV+1)*(NLEV+2))/2
       CALL GETMEM('TMP   ','ALLO','INTEGER',LTMP,NTMP)
-      CALL DRT0_RASSI (IA0,IB0,IC0,NVERT0,IWORK(LDRT0),IWORK(LDOWN0),
+      CALL mkDRT0 (IA0,IB0,IC0,NVERT0,IWORK(LDRT0),IWORK(LDOWN0),
      &           NTMP,IWORK(LTMP))
 CTEST      write(*,*)' SGINIT: Back from DRT0'
 
@@ -98,8 +92,8 @@ CTEST      write(*,*)' Back from RMVERT'
       Call GetMem('Lim  ','Free','Inte',lLim,nLev)
       Call GetMem('DRT','Allo','Inte',lDRT,5*nVert)
       Call GetMem('Down','Allo','Inte',lDown,4*nVert)
-      Call DRT_RASSI(nVert0,IWork(lDRT0),IWork(lDown0),IWork(lNWV),
-     &         nVert,IWork(lDRT),IWork(lDown))
+      Call mkDRT(nVert0,nVert,IWork(lDRT0),IWork(lDown0),IWORK(lNWV),
+     &                        IWork(lDRT),IWork(lDown))
 CTEST      write(*,*)' Back from DRT. NVERT=',NVERT
       Call GetMem('NwVer ','Free','Inte',lNWV,NVERT0)
       CALL GETMEM('      ','FREE','Inte',LDRT0,NDRT0)
@@ -140,5 +134,4 @@ C Put sizes and addresses in structure iSGStruct:
       iSGStruct(11)=lMAW
       iSGStruct(12)=lLTV
 
-      return
       end

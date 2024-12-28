@@ -38,6 +38,8 @@
       use Fock_util_global, only: DoLocK
       use Functionals, only: Init_Funcs, Print_Info
       use KSDFT_Info, only: CoefR, CoefX
+      use rctfld_module
+      use DWSol, only: DWSol_fixed,DWType,DWZeta
 
       Implicit Real*8 (A-H,O-Z)
 #include "rasdim.fh"
@@ -46,7 +48,6 @@
 #include "gas.fh"
 #include "output_ras.fh"
 #include "ciinfo.fh"
-#include "rctfld.fh"
 #include "WrkSpc.fh"
 #include "splitcas.fh"
 #include "lucia_ini.fh"
@@ -222,7 +223,7 @@ C.. for GAS
       Call CollapseOutput(0,'Orbital specifications:')
       Write(LF,*)
 
-#if defined _ENABLE_BLOCK_DMRG_ || defined _ENABLE_CHEMPS2_DMRG_ || defined _ENABLE_DICE_SHCI_
+#if defined (_ENABLE_BLOCK_DMRG_) || defined (_ENABLE_CHEMPS2_DMRG_) || defined (_ENABLE_DICE_SHCI_)
       If(.Not.DoBlockDMRG) GoTo 113
 
 #ifdef _ENABLE_DICE_SHCI_
@@ -236,9 +237,9 @@ C.. for GAS
       Write(LF,Fmt2//'A,T45,L6)')'Semistochastic algorithm',Dice_stoc
       Write(LF,Fmt2//'A,T45,L6)')'Full restart',dice_restart
       Write(LF,Fmt2//'A,T45,I6)')'Max iterations',dice_iter
-      Write(LF,Fmt2//'A,T45,E10.3)')'Epsilon1',
+      Write(LF,Fmt2//'A,T45,ES10.3)')'Epsilon1',
      &                           dice_eps1
-      Write(LF,Fmt2//'A,T45,E10.3)')'Epsilon2',
+      Write(LF,Fmt2//'A,T45,ES10.3)')'Epsilon2',
      &                           dice_eps2
       Write(LF,Fmt2//'A,T45,I6)')'SampleN',
      &                           dice_sampleN
@@ -267,13 +268,13 @@ C.. for GAS
      &                           max_sweep
       Write(LF,Fmt2//'A,T45,I6)')'Maximum number of sweeps in RDM',
      &                           max_canonical
-      Write(LF,Fmt2//'A,T45,E10.3)')'Threshold for restarting',
+      Write(LF,Fmt2//'A,T45,ES10.3)')'Threshold for restarting',
      &                           chemps2_blb
-      Write(LF,Fmt2//'A,T45,E10.3)')'Minimum Davidson tolerance',
+      Write(LF,Fmt2//'A,T45,ES10.3)')'Minimum Davidson tolerance',
      &                           davidson_tol
-      Write(LF,Fmt2//'A,T45,E10.3)')'DMRG convergence threshold',
+      Write(LF,Fmt2//'A,T45,ES10.3)')'DMRG convergence threshold',
      &                           THRE/2.0
-      Write(LF,Fmt2//'A,T45,E10.3)')'Noise prefactor',
+      Write(LF,Fmt2//'A,T45,ES10.3)')'Noise prefactor',
      &                           chemps2_noise
       Write(LF,Fmt2//'A,T45,L6)')'Restart from previous calculation',
      &                           chemps2_restart
@@ -397,7 +398,7 @@ C.. for GAS
         if (PerSplit)
      &  write(LF,Fmt2//'A,T44,F7.1)')'Percentage sought '//
      &                            'in SplitCAS',PercSpli
-        Write(LF,Fmt2//'A,T45,E10.3)')'Threshold for SplitCAS',
+        Write(LF,Fmt2//'A,T45,ES10.3)')'Threshold for SplitCAS',
      &                              ThrSplit
 *       write(LF,Fmt2//'A,T49,G10.3)')'Thrs over the root to be '//
 *     &                        'opt in SplitCAS', ThrSplit
@@ -411,7 +412,7 @@ C.. for GAS
       end if
       Call CollapseOutput(0,'CI expansion specifications:')
 
-#if defined _ENABLE_BLOCK_DMRG_ || defined _ENABLE_CHEMPS2_DMRG_ || defined _ENABLE_DICE_SHCI_
+#if defined (_ENABLE_BLOCK_DMRG_) || defined (_ENABLE_CHEMPS2_DMRG_) || defined (_ENABLE_DICE_SHCI_)
  114  Continue
 #endif
 
@@ -521,8 +522,8 @@ C.. for GAS
           KSDFT2 = KSDFT(index(KSDFT,'T:')+2:)
           Write(LF,Fmt2//'A)') 'This is a MC-PDFT calculation '//
      &                         'with functional: '//KSDFT
-          Write(LF,Fmt2//'A,T45,E10.3)')'Exchange scaling factor',CoefX
-          Write(LF,Fmt2//'A,T45,E10.3)')'Correlation scaling factor',
+          Write(LF,Fmt2//'A,T45,ES10.3)')'Exchange scaling factor',CoefX
+          Write(LF,Fmt2//'A,T45,ES10.3)')'Correlation scaling factor',
      &                                 CoefR
        end if
 ************************************************************************
@@ -531,14 +532,14 @@ C.. for GAS
      &                           MAXIT
        Write(LF,Fmt2//'A,T45,I6)')'Maximum number of SX iterations',
      &                           ITMAX
-       Write(LF,Fmt2//'A,T45,E10.3)')'Threshold for RASSCF energy',
+       Write(LF,Fmt2//'A,T45,ES10.3)')'Threshold for RASSCF energy',
      &                              THRE
        Call Put_dScalar('EThr',ThrE)
-       Write(LF,Fmt2//'A,T45,E10.3)')'Threshold for max MO rotation',
+       Write(LF,Fmt2//'A,T45,ES10.3)')'Threshold for max MO rotation',
      &                              THRTE
-       Write(LF,Fmt2//'A,T45,E10.3)')'Threshold for max BLB element',
+       Write(LF,Fmt2//'A,T45,ES10.3)')'Threshold for max BLB element',
      &                              THRSX
-       Write(LF,Fmt2//'A,T45,E10.3)')'Level shift parameter',
+       Write(LF,Fmt2//'A,T45,ES10.3)')'Level shift parameter',
      &                              LVSHFT
        If ( NQUNE.ne.0 ) THEN
         Write(LF,Fmt1)'Make Quasi-Newton update'
@@ -586,8 +587,41 @@ C.. for GAS
          Tot_Charge=Tot_Nuc_Charge+Tot_El_Charge
          iCharge=Int(Tot_Charge)
          Call PrRF(.False.,NonEq,iCharge,2)
-         Write(LF,Fmt2//'A,T45,I2)')' Reaction field from state:',
-     &                              IPCMROOT
+
+         if (DWZeta < 0.0d+00) then
+           Call DWSol_fixed(i,j)
+           if (i==0 .and. j==0) then
+             Write(LF,Fmt2//'A)') 'Unrecognized negative DWZeta (DWSOl)'
+             Write(LF,Fmt2//'A,T51,A)')
+     &         'Dynamically weighted solvation is ',
+     &         'automatically turned off!'
+           else
+             Write(LF,Fmt2//'A,T45,I2,X,I2)')
+     &         'Reaction field from states:', i, j
+             if (max(i,j) > nRoots) then
+               Write(LF,Fmt2//'A)')
+     &           'The specified state is too high! Cannot proceed...'
+               Call Quit_OnUserError()
+             end if
+           end if
+         else if (IPCMROOT <= 0) then
+           Write(LF,Fmt2//'A,T44,A)')'Reaction field from state:',
+     &                               ' State-Averaged'
+           if (DWZeta /= 0.0d+00) then
+             Write(LF,Fmt2//'A,T51,A)')
+     &         'Dynamically weighted solvation is ',
+     &         'automatically turned off!'
+             DWZeta = 0.0d+00
+           end if
+         else
+           Write(LF,Fmt2//'A,T44,I2)')'Reaction field from state:',
+     &                                IPCMROOT
+           if (DWZeta > 0.0d+00) then
+             Write(LF,Fmt2//'A,ES10.3,A,I1,A)')
+     &         'Dynamically weighted solvation is used with DWSOlv = ',
+     &         DWZeta," (DWTYpe = ",DWType,")"
+           end if
+         end if
        End If
        Call CollapseOutput(0,'Optimization specifications:')
        If ( RFpert ) then

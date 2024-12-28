@@ -11,6 +11,7 @@
 * Copyright (C) 2020, Jie J. Bao                                       *
 ************************************************************************
       Subroutine RotState()
+      use rctfld_module
 * ****************************************************************
 * history:                                                       *
 * Jie J. Bao, on Mar. 13, 2020, created this file.               *
@@ -21,14 +22,9 @@
 #include "general.fh"
 #include "gas.fh"
 #include "output_ras.fh"
-#include "gugx.fh"
 #include "WrkSpc.fh"
 #include "SysDef.fh"
-#include "rctfld.fh"
 #include "timers.fh"
-#include "casvb.fh"
-#include "wadr.fh"
-#include "rasscf_lucia.fh"
 #include "pamint.fh"
 #include "input_ras.fh"
 #include "stdalloc.fh"

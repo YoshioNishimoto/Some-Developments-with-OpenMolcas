@@ -22,6 +22,8 @@
 ********************************************************************
       use Arrays, only: W_CMO=>CMO, W_CMO_Inv=>CMO_Inv, Int1, G1t, G2t
       use Data_Structures, only: Allocate_DT, Deallocate_DT, DSBA_Type
+      use rctfld_module, only: lRf
+*     use PCM_grad, only: def_solv,PCMSCFMO,PCMSSMO
       Implicit Real*8(a-h,o-z)
 #include "real.fh"
 #include "Pointers.fh"
@@ -34,7 +36,7 @@
      &       MO1(*), Scr(*)
       Logical Fake_CMO2,DoAct
       Real*8, Allocatable:: G2x(:)
-      Type (DSBA_Type) CVa(2), DLT, DI, DA, Kappa, JI(1), KI, JA, KA,
+      Type (DSBA_Type) CVa(2), DLT(1), DI, DA, Kappa, JI(1), KI, JA, KA,
      &                 FkI, FkA, QVec, CMO, CMO_Inv
 *                                                                      *
 ************************************************************************
@@ -299,8 +301,8 @@
            EndIf
         End Do
 *
-        Call Allocate_DT(DLT,nBas,nBas,nSym,aCase='TRI')
-        call Fold_Mat(nSym,nOrb,Temp2,DLT%A0)
+        Call Allocate_DT(DLT(1),nBas,nBas,nSym,aCase='TRI')
+        call Fold_Mat(nSym,nOrb,Temp2,DLT(1)%A0)
 *
 **      Form active CMO and density
 *
@@ -421,7 +423,7 @@
         Call Deallocate_DT(DI)
         Call Deallocate_DT(JA)
         Call Deallocate_DT(KA)
-        Call deallocate_DT(DLT)
+        Call deallocate_DT(DLT(1))
         Call mma_deallocate(G2x)
         Call Deallocate_DT(CVa(2))
         Call Deallocate_DT(CVa(1))
@@ -496,11 +498,28 @@
       rcorei=0.0d0
       rcorea=0.0d0
       rcor=0.0d0
+C        corrpcm = 0.0d+00
       Do iS=1,nSym
        iptmp=ipCM(iS)
        Do iB=1,nIsh(is)
        rcorei=rcorei+2.0d0*Int1(iptmp)
        rcor=rcor+2.0d0*Focki(iptmp)
+C      write (*,*) ib,int1(iptmp),focki(iptmp)
+       if (lRF) then
+        !! some corrections are needed
+C       if (def_solv.eq.1) then
+C         rcor = rcor - 2.0d+00*pcmscfmo(iptmp,3)
+C       else if (def_solv.eq.2) then
+C         rcor = rcor - 2.0d+00*pcmscfmo(iptmp,1)
+C    *                + 2.0d+00*pcmssmo(iptmp,2)
+C       else if (def_solv.eq.3) then
+C         rcor = rcor - 2.0d+00*pcmscfmo(iptmp,3)
+C         write (*,*) -2.0d+00*pcmscfmo(iptmp,3),pcmscfmo(iptmp,3)
+C         corrpcm = corrpcm -2.0d+00*pcmscfmo(iptmp,3)
+C       else if (def_solv.eq.4) then
+C         rcor = rcor - 2.0d+00*pcmscfmo(iptmp,3)
+C       end if
+       end if
        iptmp=iptmp+nOrb(iS)+1
        End Do
 
@@ -514,11 +533,15 @@
          rcorea=rcorea+G1t(iij)*Int1(ipCM(is)-1+nOrb(is)*(iib-1)+ijB)
 
          rcora=rcora+G1t(iij)*Focki(ipCM(is)+nOrb(is)*(iib-1)+ijB-1)
+         !! no corrections due to RF is needed, because rcorea and rcora
+         !! are not used elsewhere
         End Do
        End Do
       End Do
       rin_ene=0.5d0*(rcor+rcorei)
+C     write (*,*) "pcm corre = ", 0.5d+00*corrpcm
       rcore=rCorei+rcoreA
+C     write (*,*) "rcore2i,rcorea= ", rcorei,rcorea
       If (debug) Then
          Write(6,*) 'Checking energy',0.5d0*renergy+potnuc+half*rcore
          Write(6,*) 'Checking energy',0.5d0*renergy,potnuc,half*rcore

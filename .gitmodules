@@ -1,0 +1,15 @@
+[submodule "External/libmsym"]
+	path = External/libmsym
+	url = https://github.com/mcodev31/libmsym.git
+[submodule "External/NECI"]
+	path = External/NECI
+	url = https://bitbucket.org/neci_developers/neci.git
+[submodule "External/libwfa"]
+	path = External/libwfa
+	url = https://github.com/libwfa/libwfa.git
+[submodule "External/efp"]
+	path = External/efp
+	url = https://github.com/ilyak/libefp.git
+[submodule "External/lapack"]
+	path = External/lapack
+	url = https://github.com/Reference-LAPACK/lapack.git

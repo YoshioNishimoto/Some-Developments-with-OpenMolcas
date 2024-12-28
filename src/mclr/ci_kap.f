@@ -10,6 +10,7 @@
 ************************************************************************
       Subroutine CI_KAP(ipcid,fock,fockOut,isym)
 *     use ipPage, only: W
+C     use PCM_grad, only: do_RF,DZACTMO
       Implicit Real*8(a-h,o-z)
 
 #include "Input.fh"
@@ -30,6 +31,7 @@
       Call mma_allocate(Pe,n2dens,Label='Pe')
 
       Call CIDens_SA(.true.,ipCI,ipCid,State_sym,State_Sym,Pe,De)
+C     if (do_RF) call dcopy_(ntash**2,De,1,DZACTMO,1)
 
 ! ====================================================================
       If(doDMRG)then

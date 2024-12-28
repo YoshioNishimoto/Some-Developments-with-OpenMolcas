@@ -1,0 +1,132 @@
+> export MOLCAS_MEM=7000
+
+> copy $CurrDir/initial.JobIph  $Project.JobIph
+> copy $CurrDir/initial.RunFile $Project.RunFile
+
+&GATEWAY
+  coord = $CurrDir/initial.xyz
+  basis = ANO-RCC-VTZP
+  RICD
+  Group = C1
+  RF-Input
+    PCM-Model
+    Solvent = cyclohexane
+    cond
+    pauling
+  End of RF-Input
+
+* Beginning of the equilibrium S0 optimization
+ 
+> do while
+
+&SEWARD
+
+&RASSCF
+  nActEl      = 16
+  Ras2        = 12
+  Inactive    = 28
+  CIROot      = 5 5 1
+  RLXROOT     = 1
+  RFROOT      = 1
+  CIRESTART
+  JOBIPH
+
+&CASPT2
+  THRE = 1.0D-10 1.0D-07
+  IPEA = 0.00
+  IMAG = 0.20
+  XMULT = ALL
+  DORT
+  RFPERT
+
+&MCLR
+
+&ALASKA
+
+&SLAPAF
+
+> end do
+
+> rm PT2GRD
+
+* End of equilibrium S0 optimization
+* S0 energy = -491.53453004 hartree
+
+* Beginning of non-equilibrium excited state SP energy
+
+&RASSCF
+  nActEl      = 16
+  Ras2        = 12
+  Inactive    = 28
+  CIROot      = 5 5 1
+  RFROOT      = 5
+  NONEQ
+  CIRESTART
+  JOBIPH
+  CIRF = 5
+  CISE
+  1
+  1
+  0.91106
+  1
+  391
+  0.85757
+  1
+  811
+  0.84361
+  2
+  2 8
+  0.63781 0.36794
+  1
+  51
+  0.84212
+
+&CASPT2
+  THRE = 1.0D-10 1.0D-07
+  IPEA = 0.00
+  IMAG = 0.20
+  XMULT = ALL
+  DORT
+  RFPERT
+
+* End of non-equilibrium excited state SP energy
+* Non-Eq S1 (CT) energy = -491.40301941 hartree
+
+* Beginning of equilibrium excited state SP energy
+* (The rest is not used in the paper)
+
+&RASSCF
+  nActEl      = 16
+  Ras2        = 12
+  Inactive    = 28
+  CIROot      = 5 5 1
+  RFROOT      = 5
+  CIRESTART
+  JOBIPH
+  CIRF = 5
+  CISE
+  1
+  1
+  0.91106
+  1
+  391
+  0.85757
+  1
+  811
+  0.84361
+  2
+  2 8
+  0.63781 0.36794
+  1
+  51
+  0.84212
+
+&CASPT2
+  THRE = 1.0D-10 1.0D-07
+  IPEA = 0.00
+  IMAG = 0.20
+  XMULT = ALL
+  DORT
+  RFPERT
+
+* End of equilibrium excited state SP energy

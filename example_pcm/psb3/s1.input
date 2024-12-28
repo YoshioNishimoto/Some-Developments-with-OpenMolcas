@@ -1,0 +1,42 @@
+&GATEWAY
+  coord = $CurrDir/s1_input.xyz
+  basis = 6-31G*
+  RICD
+  Group = C1
+  RF-Input
+    PCM-Model
+    Solvent = methanol
+    cond
+    pauling
+  End of RF-Input
+
+> copy $CurrDir/s1_input.RasOrb INPORB
+
+> do while
+ 
+&SEWARD
+
+&RASSCF
+  nActEl      = 6
+  Ras2        = 6
+  Inactive    = 19
+  CIROot      = 3 3 1
+  RLXROOT     = 2
+  RFROOT      = 2
+  LUMORB
+
+&CASPT2
+  THRE = 1.0D-10 1.0D-07
+  IPEA = 0.00
+  SHIF = 0.30
+  MULT = ALL
+  DORT
+  RFPERT
+
+&MCLR
+
+&ALASKA
+
+&SLAPAF
+
+> end do

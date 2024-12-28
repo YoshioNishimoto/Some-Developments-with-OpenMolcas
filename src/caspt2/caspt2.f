@@ -15,6 +15,7 @@
       USE SUPERINDEX
       USE INPUTDATA, ONLY: INPUT
       USE PT2WFN
+      use fciqmc_interface, only: DoFCIQMC
       use caspt2_output, only: iPrGlb, terse, usual, verbose
       use caspt2_gradient, only: do_grad, nStpGrd, iStpGrd, IDSAVGRD
 #ifdef _MOLCAS_MPP_
@@ -78,7 +79,6 @@ C
 #include "chocaspt2.fh"
 #include "stdalloc.fh"
 #include "caspt2_grad.fh"
-#include "warnings.h"
       CHARACTER(len=60) STLNE2
 * Timers
       REAL*8  CPTF0, CPTF10, CPTF11, CPTF12, CPTF13, CPTF14,
@@ -191,19 +191,22 @@ C
         !! avoid doing a lot of calculations in dens.f in the first loop
         do_grad = .false.
         CALL MMA_ALLOCATE(ESav,Nstate)
+        CALL MMA_ALLOCATE(H0Sav,Nstate,Nstate)
         If ((IFXMS.and.IFDW) .or. IFRMS) Then
-          CALL MMA_ALLOCATE(H0Sav,Nstate,Nstate)
           ! at this stage, H0 is just a zero matrix
           Call DCopy_(Nstate*Nstate,H0,1,H0Sav,1)
         End IF
       End If
 
-      If (iStpGrd==0) Then
+      !! iStpGrd = 0 means PT2GRD is found and program requests gradient
+      !! for the second root or NAC vectors. Skip the energy calculation
+      !! and directly goes to the gradient part
+      If (iStpGrd == 0) Then
         Call SavGradParams2(2,UEFF,U0,H0)
         Call DCopy_(Nstate,ENERGY,1,Esav,1)
         Call DCopy_(Nstate*Nstate,UEFF,1,UEFFSav,1)
         Call DCopy_(Nstate*Nstate,U0,1,U0Sav,1)
-        If ((IFXMS.and.IFDW) .or. IFRMS)
+        If ((IFXMS .and. IFDW) .or. IFRMS)
      *    Call DCopy_(Nstate*Nstate,H0,1,H0Sav,1)
         iStpGrd = 2
 C       Call EQCTL2(ICONV)
@@ -294,11 +297,7 @@ C       Call EQCTL2(ICONV)
              WRITE(6,'(20A4)')('****',I=1,20)
              WRITE(6,*)' CASPT2 PROPERTY SECTION'
            END IF
-           CALL PRPCTL(UEFF,U0)
-         ELSE IF (nStpGrd == 2) THEN
-           ! don't say anything, it will be clear it's in
-           ! the second run that we compute the properties
-           Call SavGradParams(1,IDSAVGRD)
+           CALL PRPCTL(0,UEFF,U0)
          ELSE
            IF (IPRGLB.GE.USUAL) THEN
              WRITE(6,*)
@@ -306,42 +305,46 @@ C       Call EQCTL2(ICONV)
              WRITE(6,*)'   use PROP keyword to activate)'
            END IF
          END IF
+         !! Save many quantities needed for gradient calculations
+         If (nStpGrd == 2) Call SavGradParams(1,IDSAVGRD)
 
          CALL TIMING(CPTF13,CPE,TIOTF13,TIOE)
          CPUPRP=CPTF13-CPTF12
          TIOPRP=TIOTF13-TIOTF12
 
+        if (.not. DoFCIQMC) then
 * Gradients.
 * Note: Quantities computed in gradients section can also
 * be used efficiently for computing Multi-State HEFF.
 * NOTE: atm the MS-CASPT2 couplings computed here are wrong!
-         IF (IFDENS.AND..NOT.IFGRDT0) THEN
-           IF (IPRGLB.GE.VERBOSE) THEN
-              WRITE(6,*)
-              WRITE(6,'(20A4)')('****',I=1,20)
-              IF(NSTATE.GT.1) THEN
-              WRITE(6,*)' CASPT2 GRADIENT/MULTI-STATE COUPLINGS SECTION'
-              ELSE
-                 WRITE(6,*)' CASPT2 GRADIENT SECTION'
-              END IF
-           END IF
-           Call StatusLine('CASPT2:','Multi-State couplings')
+        !IF (IFDENS.AND..NOT.IFGRDT0) THEN
+        !  IF (IPRGLB.GE.VERBOSE) THEN
+        !     WRITE(6,*)
+        !     WRITE(6,'(20A4)')('****',I=1,20)
+        !     IF(NSTATE.GT.1) THEN
+        !     WRITE(6,*)' CASPT2 GRADIENT/MULTI-STATE COUPLINGS SECTION'
+        !     ELSE
+        !        WRITE(6,*)' CASPT2 GRADIENT SECTION'
+        !     END IF
+        !  END IF
+        !  Call StatusLine('CASPT2:','Multi-State couplings')
 * SVC: for now, this part is only performed on the master node
-#ifdef _MOLCAS_MPP_
-           IF (Is_Real_Par()) THEN
-             Call Set_Do_Parallel(.False.)
-             IF (KING()) CALL GRDCTL(HEFF)
-             Call Set_Do_Parallel(.True.)
-             CALL GASync
-           ELSE
-             CALL GRDCTL(HEFF)
-           END IF
-#else
-           CALL GRDCTL(HEFF)
-#endif
-         END IF
+!#ifdef _MOLCAS_MPP_
+        !  IF (Is_Real_Par()) THEN
+        !    Call Set_Do_Parallel(.False.)
+        !    IF (KING()) CALL GRDCTL(HEFF)
+        !    Call Set_Do_Parallel(.True.)
+        !    CALL GASync
+        !  ELSE
+        !    CALL GRDCTL(HEFF)
+        !  END IF
+!#else
+        !  CALL GRDCTL(HEFF)
+!#endif
+        !END IF
 
          IF ((.NOT.IFDENS.OR.IFGRDT0).AND.IFMSCOUP) THEN
+         !IF (.NOT.IFGRDT0.AND.IFMSCOUP) THEN
 C     If this was NOT a gradient, calculation, then the multi-state
 C     couplings are more efficiently computed via three-body
 C     transition density matrices.
@@ -371,6 +374,7 @@ C     transition density matrices.
            CPUINT=0.0D0
            TIOINT=0.0D0
          END IF
+        end if
 
         IF (IPRGLB.GE.VERBOSE) THEN
           WRITE(6,*)
@@ -402,7 +406,9 @@ C     transition density matrices.
           WRITE(6,'(A,2F14.2)')'    - sigma routines    ',CPUSGM,TIOSGM
           WRITE(6,'(A,2F14.2)')'  - array collection    ',CPUSER,TIOSER
           WRITE(6,'(A,2F14.2)')'  Properties            ',CPUPRP,TIOPRP
-          WRITE(6,'(A,2F14.2)')'  MS coupling           ',CPUGRD,TIOGRD
+          if (.not. DoFCIQMC) then ! MS-CASPT2 currently not possible
+           WRITE(6,'(A,2F14.2)')'  MS coupling           ',CPUGRD,TIOGRD
+          end if
           WRITE(6,'(A,2F14.2)')' Total time             ',CPUTOT,TIOTOT
           WRITE(6,*)
         END IF
@@ -456,83 +462,85 @@ C     transition density matrices.
        WRITE(6,*)
       END IF
 
-      IF (NLYROOT.NE.0) IFMSCOUP=.FALSE.
-      IF (IFMSCOUP) THEN
-        Call StatusLine('CASPT2:','Effective Hamiltonian')
-        CALL MLTCTL(HEFF,UEFF,U0)
+ 8999 Continue
 
-        IF (IPRGLB.GE.VERBOSE.AND.(NLYROOT.EQ.0)) THEN
-         WRITE(6,*)' Relative (X)MS-CASPT2 energies:'
-         WRITE(6,'(1X,A4,4X,A12,1X,A10,1X,A10,1X,A10)')
-     &     'Root', '(a.u.)', '(eV)', '(cm^-1)', '(kJ/mol)'
-         DO I=1,NSTATE
-          RELAU = ENERGY(I)-ENERGY(1)
-          RELEV = RELAU * CONV_AU_TO_EV_
-          RELCM = RELAU * CONV_AU_TO_CM1_
-          RELKJ = RELAU * CONV_AU_TO_KJ_PER_MOLE_
-          WRITE(6,'(1X,I4,4X,F12.8,1X,F10.2,1X,F10.1,1X,F10.2)')
-     &     I, RELAU, RELEV, RELCM, RELKJ
-         END DO
-         WRITE(6,*)
-        END IF
-      END IF
+      if (.not. doFCIQMC) then
+        if (iStpGrd.ne.2) then
+          IF (NLYROOT.NE.0) IFMSCOUP=.FALSE.
+          IF (IFMSCOUP) THEN
+            Call StatusLine('CASPT2:','Effective Hamiltonian')
+            CALL MLTCTL(HEFF,UEFF,U0)
+
+            IF (IPRGLB.GE.VERBOSE.AND.(NLYROOT.EQ.0)) THEN
+             WRITE(6,*)' Relative (X)MS-CASPT2 energies:'
+             WRITE(6,'(1X,A4,4X,A12,1X,A10,1X,A10,1X,A10)')
+     &         'Root', '(a.u.)', '(eV)', '(cm^-1)', '(kJ/mol)'
+             DO I=1,NSTATE
+              RELAU = ENERGY(I)-ENERGY(1)
+              RELEV = RELAU * CONV_AU_TO_EV_
+              RELCM = RELAU * CONV_AU_TO_CM1_
+              RELKJ = RELAU * CONV_AU_TO_KJ_PER_MOLE_
+              WRITE(6,'(1X,I4,4X,F12.8,1X,F10.2,1X,F10.1,1X,F10.2)')
+     &         I, RELAU, RELEV, RELCM, RELKJ
+             END DO
+             WRITE(6,*)
+            END IF
+          END IF
+        end if
 
 ! Beginning of second step, in case gradient of (X)MS
 
- 8999 Continue
-      If (nStpGrd.eq.2) Then
-        Call SavGradParams2(1,UEFF,U0,H0)
-        IF (IPRGLB.GE.TERSE) THEN
-          WRITE(6,'(20A4)')('****',I=1,20)
-          WRITE(6,'(A)')
-     &    ' SECOND RUN to compute analytical gradients/NAC quantities'
-          WRITE(6,'(20A4)')('----',I=1,20)
-          WRITE(6,*)
-          CALL XFlush(6)
-        END IF
-      ! IF (do_grad.AND.IFMSCOUP) Then
-        do_grad = .true.
-        Call DCopy_(nState,ENERGY,1,Esav,1)
-        Call DCopy_(nState**2,Ueff,1,UeffSav,1)
-        If (IFXMS .or. IFRMS) Call DCopy_(nState**2,U0,1,U0Sav,1)
+        If (nStpGrd == 2) Then
+          IF (IPRGLB.GE.TERSE) THEN
+            WRITE(6,'(20A4)')('****',I=1,20)
+            WRITE(6,'(A)')
+     &      ' SECOND RUN to compute analytical gradients/NAC quantities'
+            WRITE(6,'(20A4)')('----',I=1,20)
+            WRITE(6,*)
+            CALL XFlush(6)
+          END IF
+          do_grad = .true.
+          Call DCopy_(nState,ENERGY,1,Esav,1)
+          Call DCopy_(nState**2,Ueff,1,UeffSav,1)
+          If (IFXMS .or. IFRMS) Call DCopy_(nState**2,U0,1,U0Sav,1)
 !
-        !!Somehow H0 is wrong for XDW-CASPT2
-        !!Maybe, H0(1,1) is computed with rotated basis with DW-density,
-        !!while the true value is computed with SA-density
-        If (do_grad.AND.IFMSCOUP) Then
-          If ((IFXMS.and.IFDW) .or. IFRMS) Then
-            Call DCopy_(nState*nState,H0Sav,1,H0,1)
+          !!Somehow H0 is wrong for XDW-CASPT2
+          !!Maybe, H0(1,1) is computed with rotated basis with
+          !!DW-density, while the true value is computed with SA-density
+          If (do_grad .AND. IFMSCOUP) Then
+            If ((IFXMS .and. IFDW) .or. IFRMS) Then
+              Call DCopy_(nState*nState,H0Sav,1,H0,1)
+            End If
           End If
+          Call SavGradParams2(1,UEFF,U0,H0)
+!
+          Call GradLoop(Heff,Ueff,H0,U0,H0Sav)
         End If
-!
-        Call GradLoop(IRETURN,Heff,Ueff,H0,U0,H0Sav)
-!
-        IF (IRETURN.NE.0) GOTO 9000
-      End If
 
 * Back-transform the effective Hamiltonian and the transformation matrix
 * to the basis of original CASSCF states
-      If (nStpGrd.eq.2) Then
-        CALL Backtransform(Heff,UeffSav,U0sav)
-        Call DCopy_(nState*nState,UeffSav,1,Ueff,1)
-        Call DCopy_(nState,ESav,1,ENERGY,1)
-      Else
-        CALL Backtransform(Heff,Ueff,U0)
-      End If
+        If (nStpGrd == 2) Then
+          CALL Backtransform(Heff,UeffSav,U0sav)
+          Call DCopy_(nState*nState,UeffSav,1,Ueff,1)
+          Call DCopy_(nState,ESav,1,ENERGY,1)
+        Else
+          CALL Backtransform(Heff,Ueff,U0)
+        End If
 
 * create a JobMix file
 * (note that when using HDF5 for the PT2 wavefunction, IFMIX is false)
-      CALL CREIPH_CASPT2(Heff,Ueff,U0)
+        CALL CREIPH_CASPT2(Heff,Ueff,U0)
 
 * Store the PT2 energy and effective Hamiltonian on the wavefunction file
-      CALL PT2WFN_ESTORE(HEFF)
+        CALL PT2WFN_ESTORE(HEFF)
 
 * Store rotated states if XMUL + NOMUL
-      IF ((IFXMS.or.IFRMS).AND.(.NOT.IFMSCOUP)) CALL PT2WFN_DATA
+        IF ((IFXMS .or. IFRMS) .AND. (.NOT.IFMSCOUP)) CALL PT2WFN_DATA
 
 * store information on runfile for geometry optimizations
-      Call Put_iScalar('NumGradRoot',iRlxRoot)
-      Call Store_Energies(NSTATE,ENERGY,iRlxRoot)
+        Call Put_iScalar('NumGradRoot',iRlxRoot)
+        Call Store_Energies(NSTATE,ENERGY,iRlxRoot)
+      end if
 
 
 9000  CONTINUE
@@ -544,7 +552,7 @@ C     transition density matrices.
         CALL MMA_DEALLOCATE(U0Sav)
         IF (IFMSCOUP) Then
           CALL MMA_DEALLOCATE(ESav)
-          If ((IFXMS.AND.IFDW) .or. IFRMS) CALL MMA_DEALLOCATE(H0Sav)
+          CALL MMA_DEALLOCATE(H0Sav)
         End If
       End If
 C Free resources, close files

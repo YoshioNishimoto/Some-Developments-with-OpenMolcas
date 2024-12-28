@@ -12,9 +12,6 @@
       use rassi_global_arrays, only : JBNUM
       use RASSI_AUX
       IMPLICIT REAL*8 (A-H,O-Z)
-#include "prgm.fh"
-      CHARACTER*16 ROUTINE
-      PARAMETER (ROUTINE='PROPER')
 #include "Molcas.fh"
 #include "cntrl.fh"
 #include "rassi.fh"
@@ -84,7 +81,7 @@ C-------------------------------------------
         Endif
         If (iState.lt.jState) Then
 *
-*          For the rest of the code to work this can not be violated.
+*          For the rest of the code to work this cannot be violated.
 *
            Write (6,*) 'Proper: iState.lt.jState'
            Call Abend()
@@ -149,5 +146,5 @@ c O for old
       END DO
       Call mma_deallocate(SCR)
       CALL GETMEM('      ','FREE','REAL',LIP,NIP)
-      RETURN
-      END
+
+      END SUBROUTINE PROPER

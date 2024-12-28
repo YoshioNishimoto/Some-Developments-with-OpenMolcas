@@ -10,6 +10,7 @@
 ************************************************************************
       Subroutine Make_Conn(F,Kappa,P,D)
       use Arrays, only: F0SQMO
+      use PCM_grad, only: do_RF,PCM_grad_TimesE2
 c
 c kappa=\bar{kappa}
 c P = \bar{d}
@@ -34,6 +35,12 @@ c F = Ftilde, the active part.
 c T1 = Dtilde
 c
       Call Rint_generic(kappa,T1,dum,T2,T3,T4,F,1,-1.0d0,0)
+      if (do_RF) then
+        idSym = 1
+        ipdum = 1
+        !! consider both MO and CI parts
+        call PCM_grad_TimesE2(2,idSym,Kappa,F,ipdum)
+      end if
       Call DSCAL_(ndens2,0.50d0,f,1)
 c
 c T2 = Fbar The ci part or the active Fock matrix

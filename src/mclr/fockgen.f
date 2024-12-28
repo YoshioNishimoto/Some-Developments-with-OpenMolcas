@@ -24,6 +24,10 @@
 ************************************************************************
       use Arrays, only: CMO, FIMO
       use Data_structures, Only: Allocate_DT, Deallocate_DT, DSBA_Type
+C     use rctfld_module, only: lRf
+      use pcm_grad, only: do_RF,DSCFMO,PCMSSMO,DSSMO,PCMSCFMO,
+     *                    PCM_grad_D2V,def_solv,iStpPCM,DZMO,PCMSSMOori,
+     *                    DSSMOori,PT2_solv,PCMPT2MO
       Implicit Real*8(a-h,o-z)
 #include "Pointers.fh"
 #include "standard_iounits.fh"
@@ -33,7 +37,8 @@
 #include "sa.fh"
 #include "dmrginfo_mclr.fh"
       Real*8 Fock(nDens2),FockOut(*), rDens2(*),rDens1(nna,nna)
-      Real*8, Allocatable:: MO(:), Scr(:), G2x(:), Scr1(:,:)
+      Real*8, Allocatable:: MO(:), Scr(:), G2x(:), Scr1(:,:), PCMint(:)
+      Logical Do_ESPF,First,Dff,Do_DFT,NonEq
 
       Type (DSBA_type) :: CVa
 *                                                                      *
@@ -223,6 +228,7 @@ c                     iij =itri(iAsh+nA(is),jAsh+nA(jS))
 *       Common part                                                    *
 ************************************************************************
 *
+C      call dcopy_(norb(1)**2,[0.0d+00],0,fock,1)
       Do iS=1,nSym
          If (nBas(iS).gt.0) Then
             jS=iEOr(is-1,iDSym-1)+1
@@ -246,6 +252,195 @@ c                     iij =itri(iAsh+nA(is),jAsh+nA(jS))
      &                    Fock(ipMat(is,is)),1)
          End Do
       End If
+*
+      !! PCM contributions
+      !! The contribution to the free energy is kind of D1*K*D2/2
+      !! (usually D1 \neq D2), so each contribution is separately
+      !! evaluated and halved.
+
+      !! No additional contributions during and after Z-vector here
+      !! the implicit contributions are added in PCM_grad_TimesE2
+      !! iStpPCM = 1   : derivative of the energy
+      !! iStpPCM = 2,3 : derivative of the eigenstate (eigenenergy)
+      if (do_RF .and. iStpPCM==1) then
+C       call dcopy_(nDens2,Fock,1,DZMO,1)
+C       call dscal_(nDens2,-1.0d+00,DZMO,1)
+        if (PT2_solv) then
+          call daxpy_(ntBsqr,+1.0d+00,PCMPT2MO(1,3),1,PCMSSMO(1,3),1)
+        end if
+
+        !! Compute V(rDens1) -> PCMRESMO
+        !! rDens1 (MO) -> rDens1 (AO)
+        Do iS=1,nSym
+          If (nBas(iS).gt.0) Then
+            jS=iEOr(is-1,iDSym-1)+1
+            Do iA=1,nAsh(is)
+              Do jA=1,nAsh(js)
+                ip1=nBas(iS)*(nIsh(is)+iA-1)+ipCM(is)
+                ip2=nBas(iS)*(nIsh(js)+jA-1) +ipmat(is,js)
+                if (def_solv.eq.1) then
+                 !! implicit D^SS*V(e,SCF)
+                 rd=DSCFMO(iA+nA(iS),jA+nA(js))
+                 Call DaXpY_(nBas(iS),+Rd,PCMSSMO(ip1,3),1,Fock(ip2),1)
+                 !! explicit and implicit D^SA*V(e,SA)/2
+                 if (.not.isNAC) then
+                 rd=DSCFMO(iA+nA(iS),jA+nA(js))
+                 Call DaXpY_(nBas(iS),-Rd,PCMSCFMO(ip1,3),1,Fock(ip2),1)
+                 end if
+                else if (def_solv.eq.2) then
+                 !! compensate explicit D^SS*(V(N,SA)+V(e,SA))
+                 rd=DSSMO(iA+nA(iS),jA+nA(js))*0.5d+00
+                 Call DaXpY_(nBas(iS),-Rd,PCMSCFMO(ip1,1),1,Fock(ip2),1)
+                 !! explicit D^SA*V(N,SS)/2 and implicit D^SS*V(e,SA)/2
+                 rd=DSCFMO(iA+nA(iS),jA+nA(js))*0.5d+00
+                 Call DaXpY_(nBas(iS),+Rd,PCMSSMO(ip1,1),1,Fock(ip2),1)
+                else if (def_solv.eq.3) then
+                 !! implicit D^SS*V(e,SA) in FIMO
+                 rd=DSCFMO(iA+nA(iS),jA+nA(js))
+                 Call DaXpY_(nBas(iS),+Rd,PCMSSMO(ip1,3),1,Fock(ip2),1)
+                 !! explicit and implicit erfx
+                 if (.not.isNAC) then
+                 Call DaXpY_(nBas(iS),-Rd,PCMSCFMO(ip1,3),1,Fock(ip2),1)
+                 end if
+                else if (def_solv.eq.4) then
+                 !! implicit D^SS*V(e,SA) in FIMO
+                 rd=DSCFMO(iA+nA(iS),jA+nA(js))
+                 Call DaXpY_(nBas(iS),+Rd,PCMSSMO(ip1,3),1,Fock(ip2),1)
+                 !! explicit and implicit erfx
+C                Call DaXpY_(nBas(iS),-Rd,PCMSCFMO(ip1,3),1,Fock(ip2),1)
+                 !! explicit correction term (1)
+                 rd = rd*0.5d+00
+C                Call DaXpY_(nBas(iS),+Rd,PCMSCFMO(ip1,3),1,Fock(ip2),1)
+                 !! implicit correction term
+C                Call DaXpY_(nBas(iS),+Rd,PCMSCFMO(ip1,3),1,Fock(ip2),1)
+               Call DaXpY_(nBas(iS),-Rd,PCMSSMOori(ip1,3),1,Fock(ip2),1)
+                 !! explicit correction term (1)
+                 rd=DSSMOori(iA+nA(iS),jA+nA(js))*0.5d+00
+                 Call DaXpY_(nBas(iS),-Rd,PCMSCFMO(ip1,3),1,Fock(ip2),1)
+                else if (def_solv.eq.5) then
+                 !! implicit D^SS*V(e,SA) in FIMO
+                 rd=DSCFMO(iA+nA(iS),jA+nA(js))
+                 Call DaXpY_(nBas(iS),+Rd,PCMSSMO(ip1,3),1,Fock(ip2),1)
+                 !! explicit and implicit erfx
+                 Call DaXpY_(nBas(iS),-Rd,PCMSCFMO(ip1,3),1,Fock(ip2),1)
+                 !! explicit correction term (1)
+C                rd = rd*0.5d+00
+                 Call DaXpY_(nBas(iS),+Rd,PCMSCFMO(ip1,1),1,Fock(ip2),1)
+                 !! implicit correction term
+                 Call DaXpY_(nBas(iS),+Rd,PCMSCFMO(ip1,3),1,Fock(ip2),1)
+                 Call DaXpY_(nBas(iS),-Rd,PCMSSMO(ip1,3),1,Fock(ip2),1)
+                 !! explicit correction term (1)
+                 rd=DSSMO(iA+nA(iS),jA+nA(js))!*0.5d+00
+                 Call DaXpY_(nBas(iS),-Rd,PCMSCFMO(ip1,1),1,Fock(ip2),1)
+                else if (def_solv.eq.6) then
+                 !! implicit D^SS*V(e,SA) in FIMO
+                 rd=DSCFMO(iA+nA(iS),jA+nA(js))
+                 Call DaXpY_(nBas(iS),+Rd,PCMSSMO(ip1,3),1,Fock(ip2),1)
+                 !! explicit and implicit erfx
+                 Call DaXpY_(nBas(iS),-Rd,PCMSCFMO(ip1,3),1,Fock(ip2),1)
+                 !! explicit correction term
+                 Call DaXpY_(nBas(iS),+Rd,PCMSCFMO(ip1,2),1,Fock(ip2),1)
+                 !! explicit correction term
+                 rd=DSSMO(iA+nA(iS),jA+nA(js))!*0.5d+00
+                 Call DaXpY_(nBas(iS),-Rd,PCMSCFMO(ip1,2),1,Fock(ip2),1)
+                End If
+              End Do
+            End Do
+          End If
+        End Do
+*
+        !! inactive
+        !! explicit derivative for NAC should be with d_0,
+        !! but implicit contributions should not be scaled
+        If (iDsym.eq.1) Then
+          Do iS=1,nSym
+            If (nBas(iS)*nIsh(iS).gt.0) then
+              if (def_solv.eq.1) then
+                !! implicit D^SS*V(e,SCF)
+                Call DaXpY_(nBas(iS)*nIsh(is),+Two,
+     &                     PCMSSMO(ipMat(is,is),3),1,
+     &                     Fock(ipMat(is,is)),1)
+                !! explicit + implicit erfx
+                Call DaXpY_(nBas(iS)*nIsh(is),-Two*d_0,
+     &                     PCMSCFMO(ipMat(is,is),3),1,
+     &                     Fock(ipMat(is,is)),1)
+              else if (def_solv.eq.2) then
+                !! compensate explicit D^SS*(V(N,SA)+V(e,SA))/2
+                Call DaXpY_(nBas(iS)*nIsh(is),-One*d_0,
+     &                     PCMSCFMO(ipMat(is,is),1),1,
+     &                     Fock(ipMat(is,is)),1)
+                !! explicit D^SA*V(N,SS)/2 and implicit D^SS*V(N,SA)/2
+                !! The former is D^SA*\partial PCMSSMO(:,2), whereas
+                !! the latter is D^SA*\partial PCMSSMO(:,3)
+                Call DaXpY_(nBas(iS)*nIsh(is),+One*d_0,
+     &                     PCMSSMO(ipMat(is,is),1),1,
+     &                     Fock(ipMat(is,is)),1)
+              else if (def_solv.eq.3) then
+                !! implicit V(e) in FIMO
+                Call DaXpY_(nBas(iS)*nIsh(is),+Two,
+     &                     PCMSSMO(ipMat(is,is),3),1,
+     &                     Fock(ipMat(is,is)),1)
+                !! explicit + implicit erfx
+                Call DaXpY_(nBas(iS)*nIsh(is),-Two*d_0,
+     &                     PCMSCFMO(ipMat(is,is),3),1,
+     &                     Fock(ipMat(is,is)),1)
+              else if (def_solv.eq.4) then
+                !! implicit V(e) in FIMO
+                Call DaXpY_(nBas(iS)*nIsh(is),+Two,
+     &                     PCMSSMO(ipMat(is,is),3),1,
+     &                     Fock(ipMat(is,is)),1)
+                !! explicit + implicit erfx
+C               Call DaXpY_(nBas(iS)*nIsh(is),-Two*d_0,
+C    &                     PCMSCFMO(ipMat(is,is),3),1,
+C    &                     Fock(ipMat(is,is)),1)
+                !! explicit correction term is zero
+                !! implicit correction term
+                Call DaXpY_(nBas(iS)*nIsh(is),-One*d_0,
+     &                     PCMSCFMO(ipMat(is,is),3),1,
+     &                     Fock(ipMat(is,is)),1)
+                Call DaXpY_(nBas(iS)*nIsh(is),-One*d_0,
+     &                     PCMSSMOori(ipMat(is,is),3),1,
+     &                     Fock(ipMat(is,is)),1)
+              else if (def_solv.eq.5) then
+                !! implicit V(e) in FIMO
+                Call DaXpY_(nBas(iS)*nIsh(is),+Two*d_0,
+     &                     PCMSSMO(ipMat(is,is),3),1,
+     &                     Fock(ipMat(is,is)),1)
+                !! explicit + implicit erfx
+                Call DaXpY_(nBas(iS)*nIsh(is),-Two*d_0,
+     &                     PCMSCFMO(ipMat(is,is),3),1,
+     &                     Fock(ipMat(is,is)),1)
+                !! explicit correction term is zero
+                !! implicit correction term
+                Call DaXpY_(nBas(iS)*nIsh(is),+Two*d_0,
+     &                     PCMSCFMO(ipMat(is,is),3),1,
+     &                     Fock(ipMat(is,is)),1)
+                Call DaXpY_(nBas(iS)*nIsh(is),-Two*d_0,
+     &                     PCMSSMO(ipMat(is,is),3),1,
+     &                     Fock(ipMat(is,is)),1)
+              else if (def_solv.eq.6) then
+                !! implicit V(e) in FIMO
+                Call DaXpY_(nBas(iS)*nIsh(is),+Two*d_0,
+     &                     PCMSSMO(ipMat(is,is),3),1,
+     &                     Fock(ipMat(is,is)),1)
+                !! explicit + implicit erfx
+                Call DaXpY_(nBas(iS)*nIsh(is),-Two*d_0,
+     &                     PCMSCFMO(ipMat(is,is),3),1,
+     &                     Fock(ipMat(is,is)),1)
+              end if
+            End If
+          End Do
+        End If
+        if (PT2_solv) then
+          call daxpy_(ntBsqr,-1.0d+00,PCMPT2MO(1,3),1,PCMSSMO(1,3),1)
+        end if
+
+C       call daxpy_(nDens,1.0d+00,Fock,1,DZMO,1)
+      end if
+C     call dscal_(nbas(1)**2,2.0d+00,fock,1)
+C     write (*,*) "orbital lagrangian"
+C     call sqprt(fock,nbas(1))
+C     call dscal_(nbas(1)**2,0.5d+00,fock,1)
 *
       Do iS=1,nSym
          jS=iEOR(iS-1,idSym-1)+1

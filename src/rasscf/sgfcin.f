@@ -61,15 +61,16 @@
      &    nBas, nIsh, nAsh, nFro
       use OFEmbed, only: Do_OFemb, OFE_first, FMaux
       use OFEmbed, only: Rep_EN
+      use rctfld_module, only:  lRF
 
       implicit none
 #include "rasdim.fh"
+C#include "rasscf.fh"
 #include "output_ras.fh"
       Character*16 ROUTINE
       Parameter (ROUTINE='SGFCIN  ')
 #include "WrkSpc.fh"
 #include "stdalloc.fh"
-#include "rctfld.fh"
 #include "pamint.fh"
 #include "timers.fh"
 #include "SysDef.fh"
@@ -82,7 +83,7 @@
       Logical Do_ESPF
 *
       real*8, parameter ::  Zero=0.0d0, One=1.0d0
-      real*8 :: CASDFT_Funct, dumm(1), Emyn, Eone,
+      real*8 :: CASDFT_Funct, dum1, dum2, dum3, dumm(1), Emyn, Eone,
      &  Erf1, Erf2, Erfx, Etwo,  potnuc_ref, dDot_
       integer :: i, iadd, ibas, icharge, iComp,
      &  ioff, iopt,
@@ -93,6 +94,7 @@
      &  mxna, mxnb, nAt, nst, nt, ntu, nu, nvxc
       real*8, allocatable :: TmpFckI(:), Tmpx(:)
       integer, external :: ip_of_Work
+      real*8 eonesav
 
 C Local print level (if any)
       IPRLEV=IPRLOC(3)
@@ -214,6 +216,10 @@ C Local print level (if any)
       Call Fold(nSym,nBas,D1A,Work(iTmp4))
       Call Daxpy_(nTot1,1.0D0,Work(iTmp4),1,Work(iTmp3),1)
       Call Put_dArray('D1ao',Work(iTmp3),nTot1)
+C       write (*,*) "D1ao in sgfcin"
+C        do i = 1, ntot1
+C          write (*,'(i3,f20.10)') i,work(itmp3+i-1)
+C        end do
 *     Write(LF,*)
 *     Write(LF,*) ' D1ao in AO basis in SGFCIN'
 *     Write(LF,*) ' ---------------------'
@@ -236,8 +242,8 @@ C Local print level (if any)
         Call Put_iArray('nIsh',nIsh,nSym)
       End If
 
-      If ( Do_ESPF .or. lRF .or. KSDFT.ne.'SCF'
-     &                      .or. Do_OFemb ) Then
+      If ((Do_ESPF .or. lRF .or. KSDFT.ne.'SCF'
+     &                      .or. Do_OFemb) .and. .not.RFPERT) Then
 *
 *------ Scratch for one- and two-electron type contributions
 *
@@ -245,13 +251,22 @@ C Local print level (if any)
         Call GetMem('gtmp','Allo','Real',iTmp6,nTot1)
         Call dCopy_(nTot1,[Zero],0,Work(iTmp5),1)
         Call dCopy_(nTot1,[Zero],0,Work(iTmp6),1)
+C       if (IPCMROOT==0) then
+C         !! need state-averaged density
+C       end if
 *
         First=.True.
         Dff=.False.
         Do_DFT=.True.
 
-        Call Timing(Rado_1,Swatch,Swatch,Swatch)
+        Call Timing(Rado_1,dum1,dum2,dum3)
 
+C       write (6,*) "final drvxv?"
+        !! iTmp5: nuc cont
+        !! iTmp6: ele cont
+C       if (IPCMROOT==0) then
+C         !! Polarize with state-averaged density if IPCMROOT = 0
+C       end if
         Call DrvXV(Work(iTmp5),Work(iTmp6),Work(iTmp3),
      &             PotNuc,nTot1,First,Dff,NonEq,lRF,
      &             KSDFT,ExFac,iCharge,iSpin,D1I,D1A,
@@ -268,14 +283,17 @@ C Local print level (if any)
             iOff = iOff + (iBas*iBas+iBas)/2
           End Do
         End If
-        Call Timing(Rado_2,Swatch,Swatch,Swatch)
+        Call Timing(Rado_2,dum1,dum2,dum3)
         Rado_2 = Rado_2 - Rado_1
         Rado_3 = Rado_3 + Rado_2
 
 
         ERF1=Zero
+        ! itmp6: PCM electron
+        ! itmp4: D1A = active AO density
         ERF2=dDot_(nTot1,Work(iTmp6),1,Work(iTmp4),1)
         ERFX= ERF1-0.5d0*ERF2
+C       write (*,*) "erf2, erfx = ", erf2, erfx
         Call Daxpy_(nTot1,1.0d0,Work(iTmp5),1,Work(iTmp1),1)
 
         Call Daxpy_(nTot1,1.0d0,Work(iTmp6),1,FI,1)
@@ -357,12 +375,17 @@ C Local print level (if any)
 *
 *     Compute energy contributions
       Eone = dDot_(nTot1,Work(iTmp2),1,Work(iTmp1),1)
+      eonesav = eone
+C     write (*,*) "eone wo nuclear = ", eone
 *     Call Get_PotNuc(PotNuc_Ref)
       Call Get_dScalar('PotNuc',PotNuc_Ref)
       Eone = Eone + (PotNuc-PotNuc_Ref)
+C     write (*,*) "potnuc,potnuc_ref= ", potnuc,potnuc_ref
       Etwo = dDot_(nTot1,Work(iTmp2),1,FI,1)
+C     write (*,*) "e12 = ", eonesav+0.5d+00*etwo, eonesav+etwo
       Call GetMem('DoneI','Free','Real',iTmp2,nTot1)
       EMY  = PotNuc_Ref+Eone+0.5d0*Etwo+ERFX
+C     write (*,*) "emy = ",emy,potnuc_ref, eone, 0.5d+00*etwo,erfx
       CASDFT_Funct = Zero
       If(KSDFT(1:3).ne.'SCF'.and.KSDFT(1:3).ne.'PAM')
      &      Call Get_dScalar('CASDFT energy',CASDFT_Funct)
@@ -462,6 +485,8 @@ C Local print level (if any)
          iOff = iOff + (iBas*iBas+iBas)/2
        End Do
       End If
+C     write (*,*) "CMO"
+C     call sqprt(cmo,12)
       CALL MOTRAC(CMO,WORK(LX1),WORK(LX2),WORK(LX3))
       CALL GETMEM('XXX3','FREE','REAL',LX3,MXNB*MXNA)
       CALL GETMEM('XXX2','FREE','REAL',LX2,MXNB*MXNB)

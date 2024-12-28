@@ -239,10 +239,10 @@ C DIAGONALIZE THE SCALED S MATRIX:
       CALL TIMING(CPU2,CPUE,TIO,TIOE)
       CPU=CPU+CPU2-CPU1
       ! fingerprint eigenvalues
-      IF (IPRGLB.GE.INSANE) THEN
-        FP=DNRM2_(NAS,WORK(LEIG),1)
-        WRITE(6,'("DEBUG> ",A,ES21.14)') 'SMAT EIGENVALUE NORM: ', FP
-      END IF
+      if (iprglb >= insane) then
+        fp = dnrm2_(nas,work(leig),1)
+        write(6,'("DEBUG> ",A,ES21.14)') 'Smat eigval norm: ', fp
+      end if
 
 C Form orthonormal vectors by scaling eigenvectors
       NIN=0
@@ -266,6 +266,7 @@ C Addition, for the scaled symmetric ON.
         SCA=WORK(LSCA-1+I)
         CALL DSCAL_(NIN,SCA,WORK(LVEC-1+I),NAS)
       END DO
+
       CALL GETMEM('LSCA','FREE','REAL',LSCA,NAS)
 C The condition number, after scaling, disregarding linear dep.
       IF(NIN.GE.2) THEN
@@ -522,6 +523,8 @@ C divided over processors.
 #ifdef _MOLCAS_MPP_
       SUBROUTINE SBDIAG_MPP(ISYM,ICASE,CONDNR,CPU)
       use caspt2_output, only:iPrGlb,insane
+      use caspt2_gradient, only: do_grad, do_lindep, nStpGrd, LUSTD,
+     *                           idBoriMat
 #ifdef _MOLCAS_MPP_
       USE Para_Info, ONLY: King
 #endif
@@ -623,10 +626,14 @@ C Calculate the scaling factors and store them in array LSCA.
       CALL GETMEM('SCA','ALLO','REAL',LSCA,NAS)
       DO I=1,NAS
         SD=WORK(LSD+I-1)
-        IF(SD.GT.THRSHN) THEN
-          WORK(LSCA-1+I)=(1.0D00+DBLE(I)*3.0D-6)/SQRT(SD)
+        IF (IFDORTHO) THEN
+          WORK(LSCA-1+I)=1.0D+00
         ELSE
-          WORK(LSCA-1+I)=0.0D0
+          IF(SD.GT.THRSHN) THEN
+            WORK(LSCA-1+I)=(1.0D00+DBLE(I)*3.0D-6)/SQRT(SD)
+          ELSE
+            WORK(LSCA-1+I)=0.0D0
+          END IF
         END IF
       END DO
 
@@ -841,6 +848,15 @@ C TRANSFORM B MATRIX TO O-N BASIS. BUT FIRST, SAVE O-N VECTORS.
 
       CALL PSBMAT_GETMEM ('B',lg_B,NAS)
       CALL PSBMAT_READ ('B',iCase,iSym,lg_B,NAS)
+
+      If ((do_grad.or.nStpGrd.eq.2).and.do_lindep) Then
+        !! The original B matrix is needed in the LinDepLag subroutine
+        IDB2 = idBoriMat(ISYM,ICASE)
+        call GA_Distribution (lg_B, myRank, iLo, iHi, jLo, jHi)
+        call GA_Access (lg_B, iLo, iHi, jLo, jHi, mB, LDB)
+        CALL DDAFILE(LUSTD,1,DBL_MB(mB),(iHi-iLo+1)*(jHi-jLo+1),IDB2)
+        call GA_Release (lg_B, iLo, iHi, jLo, jHi)
+      End If
 
       IF (IPRGLB.GE.INSANE) THEN
         FP=PSBMAT_FPRINT(lg_B,NAS)

@@ -34,4 +34,3 @@
  (file)  AMP2V         "$WorkDir/$Project".AMP2V     rw*
  (file)  BMP2V         "$WorkDir/$Project".BMP2V     rw*
  (file)  LUCMOPT2     "$WorkDir/"CMOPT2                        ro
- (file)  CASPTINP     "$WorkDir/$Project."Caspt2.Input      rwi

@@ -14,6 +14,7 @@
      &                        idsym,reco,jspin)
       use Arrays, only: W_CMO_Inv=>CMO_Inv, W_CMO=>CMO, G1t, G2t, FAMO,
      &                  FIMO
+      use PCM_grad, only: do_RF
 *
 *                              ~
 *     Constructs  F  = <0|[E  ,H]|0> ( + <0|[[E  , Kappa],H]|0> )
@@ -32,7 +33,7 @@
       Logical Fake_CMO2,DoAct
       Real*8, Allocatable:: MT1(:), MT2(:), MT3(:), QTemp(:),
      &                      Dens2(:),  G2x(:)
-      Type (DSBA_Type) CVa(2), DLT, DI, DA, Kappa, JI(1), KI, JA, KA,
+      Type (DSBA_Type) CVa(2), DLT(1), DI, DA, Kappa, JI(1), KI, JA, KA,
      &                 FkI, FkA, QVec, CMO, CMO_Inv
 *                                                                      *
 ************************************************************************
@@ -54,6 +55,25 @@
 *
       Fact=-One
       call dcopy_(ndens2,[0.0d0],0,Fock,1)
+      If (ActRot) Then
+        Call GetMem('DAct','ALLO','REAL',ipDAct,ntash*ntash)
+        Call GetMem('DAct','ALLO','REAL',ipFAct,nmba)
+C       Call DCopy_(ntash*ntash,0.0d+00,0,Work(ipDAct),1)
+C       do iash = 1, nash(idsym)
+C         iorb = nish(idsym)+iash
+C         do jash = 1, iash-1 !! nash(idsym)
+C           jorb = nish(idsym)+jash
+C           Work(ipDAct+iAsh-1+nAsh(idSym)*(jAsh-1))
+C    *        = rkappa(iorb+nOrb(idSym)*(jorb-1))*0.5d+00
+C           Work(ipDAct+jAsh-1+nAsh(idSym)*(iAsh-1))
+C    *        = rkappa(iorb+nOrb(idSym)*(jorb-1))*0.5d+00
+C           rkappa(iorb+nOrb(idSym)*(jorb-1)) = 0.0D+00
+C         end do
+C       end do
+        !! F(D)pq = ((pq|tu)-(pt|qu)/2)*Dtu, then
+        !! Fpq = F(D)pr*Drq(SA)
+C       Call DActTrf(Work(ipDAct),Work(ipFAct),Fock,idSym)
+      End If
 *                                                                      *
 ************************************************************************
 *                                                                      *
@@ -119,8 +139,8 @@
 *
         Call mma_allocate(Dens2,nDens2,Label='Dens2')
         Dens2(:)=Zero
-        Call Allocate_DT(DLT,nOrb,nOrb,nSym) ! Note SQ format
-        DLT%A0(:)=Zero
+        Call Allocate_DT(DLT(1),nOrb,nOrb,nSym) ! Note SQ format
+        DLT(1)%A0(:)=Zero
 
         If (idSym/=1) Then
            Write (6,*) 'idSym/=1, idSym=',idsym
@@ -139,18 +159,18 @@
                    Call DGEMM_('T','T',nOrb(jS),nOrb(iS),nOrb(iS),
      &                         One,Dens2(ipMat(iS,jS)),nOrb(iS),
      &                             W_CMO(ipCM(is)),nOrb(iS),
-     &                         Zero,DLT%SB(iS)%A2,nOrb(jS))
+     &                         Zero,DLT(1)%SB(iS)%A2,nOrb(jS))
                    Call DGEMM_('T','T',nOrb(jS),nOrb(jS),nOrb(iS),
-     &                         One,DLT%SB(iS)%A2,nOrb(iS),
+     &                         One,DLT(1)%SB(iS)%A2,nOrb(iS),
      &                             W_CMO(ipCM(js)),nOrb(jS),
      &                         Zero,Dens2(ipMat(iS,jS)),nOrb(jS))
 
                    Call DGEMM_('T','T',nOrb(jS),nOrb(iS),nOrb(iS),
      &                         One,DI%SB(js)%A2,nOrb(iS),
      &                             W_CMO(ipCM(is)),nOrb(iS),
-     &                         Zero,DLT%SB(iS)%A2,nOrb(jS))
+     &                         Zero,DLT(1)%SB(iS)%A2,nOrb(jS))
                    Call DGEMM_('T','T',nOrb(jS),nOrb(jS),nOrb(iS),
-     &                         One, DLT%SB(iS)%A2,nOrb(iS),
+     &                         One, DLT(1)%SB(iS)%A2,nOrb(iS),
      &                              W_CMO(ipCM(js)),nOrb(jS),
      &                         Zero,DI%SB(js)%A2,nOrb(jS))
               EndIf
@@ -158,11 +178,11 @@
           EndIf
         End Do
         ! Release and allocate again in LT format
-        Call Deallocate_DT(DLT)
-        Call Allocate_DT(DLT,nOrb,nOrb,nSym,aCase='TRI')
+        Call Deallocate_DT(DLT(1))
+        Call Allocate_DT(DLT(1),nOrb,nOrb,nSym,aCase='TRI')
 
-        call Fold_Mat(nSym,nOrb,Dens2,DLT%A0)
-        DLT%A0(:) = ReCo * DLT%A0(:)
+        call Fold_Mat(nSym,nOrb,Dens2,DLT(1)%A0)
+        DLT(1)%A0(:) = ReCo * DLT(1)%A0(:)
 *
 **      Form active density and MO coefficients
 *
@@ -241,7 +261,7 @@
         call dcopy_(nATri,[0.0d0],0,rMOs,1)
 *#define _DEBUGPRINT_
 #ifdef _DEBUGPRINT_
-        Call RecPrt('DLT',' ',DLT%A0,1,SIZE(DLT%A0))
+        Call RecPrt('DLT',' ',DLT(1)%A0,1,SIZE(DLT(1)%A0))
         Call RecPrt('DI ',' ',DI%A0 ,1,SIZE(DI%A0 ))
         Call RecPrt('DA ',' ',DA%A0 ,1,SIZE(DA%A0 ))
         Call RecPrt('G2x',' ',G2x,1,SIZE(G2x))
@@ -340,7 +360,7 @@
           Call deallocate_DT(DA)
         EndIf
 
-        Call deallocate_DT(DLT)
+        Call deallocate_DT(DLT(1))
         Call deallocate_DT(DI)
 
         Call GADSum(    Q,nDens2)
@@ -370,7 +390,47 @@
       Call abend()
       End If
 #endif
+*
+      !! Compute the PCM electrostatic integrals induced by the response
+      !! density
+      if (do_RF) then
+      ! !! First, compute the response density in the MO basis
+      ! Do iS=1,nSym
+      !   If (nOrb(iS).ne.0) Then
+      !     Do jS=1,nSym
+      !       If (iEOr(iS-1,jS-1)+1.eq.idsym.and.nOrb(jS).ne.0) Then
+      !            Call DGEMM_('N','N',
+     &!                        nOrb(iS),nOrb(jS),nOrb(jS),
+     &!                        One,rkappa(ipMat(is,js)),nOrb(iS),
+     &!                            DI%SB(js)%A2,nOrb(jS),
+     &!                        Zero,Dens2(ipMat(iS,jS)),nOrb(iS))
+      !            Call DGEMM_('T','T',nOrb(jS),nOrb(iS),nOrb(iS),
+     &!                        One,Dens2(ipMat(iS,jS)),nOrb(iS),
+     &!                            W_CMO(ipCM(is)),nOrb(iS),
+     &!                        Zero,DLT(1)%SB(iS)%A2,nOrb(jS))
+      !            Call DGEMM_('T','T',nOrb(jS),nOrb(jS),nOrb(iS),
+     &!                        One,DLT(1)%SB(iS)%A2,nOrb(iS),
+     &!                            W_CMO(ipCM(js)),nOrb(jS),
+     &!                        Zero,Dens2(ipMat(iS,jS)),nOrb(jS))
 
+      !            Call DGEMM_('T','T',nOrb(jS),nOrb(iS),nOrb(iS),
+     &!                        One,DI%SB(js)%A2,nOrb(iS),
+     &!                            W_CMO(ipCM(is)),nOrb(iS),
+     &!                        Zero,DLT(1)%SB(iS)%A2,nOrb(jS))
+      !            Call DGEMM_('T','T',nOrb(jS),nOrb(jS),nOrb(iS),
+     &!                        One, DLT(1)%SB(iS)%A2,nOrb(iS),
+     &!                             W_CMO(ipCM(js)),nOrb(jS),
+     &!                        Zero,DI%SB(js)%A2,nOrb(jS))
+      !       EndIf
+      !     End Do
+      !   EndIf
+      ! End Do
+      ! !! D(MO) -> D(AO)
+      ! call PCM_grad_D2V(dens,vint,.false.,.false.,.false.)
+      ! call square(TwoHam,PCMZMO,1,nBas(1),nBas(1))
+      ! call tcmo(PCMZMO,1,1)
+      end if
+*
       Do iS=1,nSym
          jS=iEOr(iS-1,idsym-1)+1
 *
@@ -458,6 +518,10 @@
         Call mma_deallocate(MT2)
         Call mma_deallocate(MT1)
       EndIf
+      If (ActRot) Then
+        Call GetMem('DAct','FREE','REAL',ipDAct,ntash*ntash)
+        Call GetMem('DAct','FREE','REAL',ipFAct,norb(1)*norb(1))
+      End If
 #ifdef _DEBUGPRINT_
       Write (LuWr,*) 'Exit RInt_Generic'
 #endif

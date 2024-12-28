@@ -1,0 +1,45 @@
+&GATEWAY
+  coord = $CurrDir/initial.xyz
+  basis = cc-pVDZ
+  RICD
+  Group = C1
+  RF-Input
+    PCM-Model
+    Solvent = Water
+    cond
+    pauling
+  End of RF-Input
+ 
+&SEWARD
+  PKTHRE      = 0.0D+00
+  THRESHOLD   = 0.0D+00
+  CUTOFF      = 0.0D+00
+
+&RASSCF
+  Title       = H2CO
+  nActEl      = 6
+  Ras2        = 5
+  Inactive    = 12
+  THRS        = 1.0d-10, 1.0d-07, 1.0d-07
+  TIGHT       = 1.0d-08, 1.0d-07
+  FILEORB     = $CurrDir/initial.RasOrb
+  CIROot      = 3 3 1
+  RLXROOT     = 1
+  RFROOT      = 1
+
+&CASPT2
+  THRE = 1.0D-10 1.0D-07
+  CONV = 1.0D-09
+  IPEA = 0.00
+  IMAG = 0.20
+  XMULT = ALL
+  DORT
+  GRDT
+  RFPERT
+
+&MCLR
+  RESI = 1.0D-07
+  CGS
+
+&ALASKA
+  CUTOFF = 1.0D-16

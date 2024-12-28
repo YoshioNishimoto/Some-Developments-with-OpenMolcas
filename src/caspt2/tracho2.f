@@ -12,8 +12,7 @@
 ************************************************************************
       SUBROUTINE TRACHO2(CMO,DREF,FFAO,FIAO,FAAO,IF_TRNSF)
       USE CHOVEC_IO
-      use ChoArr, only: nDimRS
-      use ChoSwp, only: InfVec
+      use Cholesky, only: InfVec, nDimRS
       IMPLICIT NONE
 * ----------------------------------------------------------------
 #include "rasdim.fh"
@@ -21,7 +20,6 @@
 #include "caspt2.fh"
 #include "eqsolv.fh"
 #include "chocaspt2.fh"
-#include "choglob.fh"
 #include "WrkSpc.fh"
 ************************************************************************
 *  Author : P. A. Malmqvist
@@ -552,10 +550,10 @@ c (It is in fact an effective one-electron Hamiltonian).
       ECORE=POTNUC+ECORE1+ECORE2
 
 #ifdef _DEBUGPRINT_
-       WRITE(6,'(6X,A,E20.10)') 'NUCLEAR REPULSION ENERGY:',POTNUC
-       WRITE(6,'(6X,A,E20.10)') 'ONE-ELECTRON CORE ENERGY:',ECORE1
-       WRITE(6,'(6X,A,E20.10)') 'TWO-ELECTRON CORE ENERGY:',ECORE2
-       WRITE(6,'(6X,A,E20.10)') '       TOTAL CORE ENERGY:',ECORE
+       WRITE(6,'(6X,A,ES20.10)') 'NUCLEAR REPULSION ENERGY:',POTNUC
+       WRITE(6,'(6X,A,ES20.10)') 'ONE-ELECTRON CORE ENERGY:',ECORE1
+       WRITE(6,'(6X,A,ES20.10)') 'TWO-ELECTRON CORE ENERGY:',ECORE2
+       WRITE(6,'(6X,A,ES20.10)') '       TOTAL CORE ENERGY:',ECORE
 #endif
 
       Call Getmem('OCC','FREE','REAL',LOCC,NBasT)

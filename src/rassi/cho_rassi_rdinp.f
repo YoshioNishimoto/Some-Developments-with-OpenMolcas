@@ -17,6 +17,7 @@
 *
 ************************************************************************
       Use Fock_util_global, only: Deco, Estimate, PseudoChoMOs, Update
+      Use Cholesky, only: timings
       Implicit Real*8 (A-H,O-Z)
 #include "rassi.fh"
 #include "print.fh"
@@ -25,7 +26,6 @@
       Logical  DFonly
 *
 #include "chorassi.fh"
-#include "chotime.fh"
 *
       iRout=1
       iPrint=nPrint(iRout)
@@ -47,7 +47,7 @@
 ************************************************************************
 *                                                                      *
 *     Default  parameters
-#if defined (_MOLCAS_MPP_)
+#ifdef _MOLCAS_MPP_
       ChFracMem=0.3d0
 #else
       ChFracMem=0.0d0

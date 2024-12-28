@@ -18,10 +18,10 @@
 *--------------------------------------------*
       SUBROUTINE DENS(IVEC,DMAT,UEFF,U0)
       USE CHOVEC_IO
-      use caspt2_output, only: iPrGlb, verbose, debug
-      use caspt2_global, only: real_shift, imag_shift
-      use caspt2_gradient, only: do_grad, do_csf, if_invar, iRoot1, 
-     *                           iRoot2
+      use caspt2_output, only: iPrGlb, verbose
+      use caspt2_global, only: real_shift, imag_shift, sigma_p_epsilon
+      use caspt2_gradient, only: do_grad, do_csf, if_invar, iRoot1,
+     *                           iRoot2, if_invaria, if_ssdm
 #ifdef _MOLCAS_MPP_
       USE Para_Info, ONLY: Is_Real_Par, King
 #endif
@@ -42,8 +42,8 @@ C
 
       IF (do_grad) THEN
         !! Print out some information for the first time only
-    !       If (.not.IFMSCOUP.or.(IFMSCOUP.and.jState.eq.1))
-    !  *      Call GradStart
+!           If (.not.IFMSCOUP.or.(IFMSCOUP.and.jState.eq.1))
+!      *      Call GradStart
         !! Set indices for densities and partial derivatives
         Call GradPrep(UEFF,VECROT)
 C
@@ -122,6 +122,14 @@ C
         CALL TIMING(CPTF0,CPE,TIOTF0,TIOE)
         !! Diagonal part
         CALL TRDNS2D(iVecX,iVecR,WORK(LDPT),NDPT,VECROT(JSTATE))
+        if (.not.if_invaria) then
+          do i = 1, norb(1)
+            do j = i+1, norb(1)
+              work(ldpt+i-1+norb(1)*(j-1)) = 0.0d+00
+              work(ldpt+j-1+norb(1)*(i-1)) = 0.0d+00
+            end do
+          end do
+        end if
         CALL DAXPY_(NDPT,1.0D00,WORK(LDPT),1,WORK(LDSUM),1)
 *       write(6,*)' DPT after TRDNS2D.'
 *       WRITE(*,'(1x,8f16.8)')(work(ldpt-1+i),i=1,ndpt)
@@ -194,14 +202,19 @@ C
         Call DCopy_(nCLag,[0.0D+00],0,Work(ipCLag),1)
         Call DCopy_(nOLag,[0.0D+00],0,Work(ipOLag),1)
 C
-        If (nFroT.ne.0) Then
+        If (nFroT.ne.0 .or. .not.if_invaria) Then
           CALL GETMEM('DIA   ','ALLO','REAL',ipDIA ,nBsqT)
           CALL GETMEM('DI    ','ALLO','REAL',ipDI  ,nBsqT)
+        Else
+          ipDIA = 1
+          ipDI  = 1
         End If
 C
         If (do_csf) Then
           CALL GETMEM('DPTCanti','ALLO','REAL',ipDPTCanti,nDPTAO)
           Call DCopy_(nDPTAO,[0.0d+00],0,Work(ipDPTCanti),1)
+        Else
+          ipDPTCanti = ipDPTC !! not used
         End If
 C
         !! Work(LDPT) -> Work(ipDPT2)
@@ -209,7 +222,7 @@ C
         !! Note also that unrelaxed (w/o Z-vector) dipole moments with
         !! frozen orbitals must be wrong.
 C       call dcopy_(ndpt,[0.0d+00],0,work(ldpt),1)
-        If (nFroT.eq.0) Then
+        If (nFroT.eq.0 .and. if_invaria) Then
           Call DCopy_(nOsqT,Work(LDSUM),1,Work(ipDPT),1)
         Else
           Call OLagFro0(Work(LDSUM),Work(ipDPT))
@@ -250,9 +263,27 @@ C
         CALL GETMEM('DEPSA ','ALLO','REAL',ipDEPSA,nAshT*nAshT)
         Call DCopy_(nAshT*nAshT,[0.0D+00],0,Work(ipDEPSA),1)
         !! Derivative of off-diagonal H0 of <Psi1|H0|Psi1>
-        IF (MAXIT.NE.0) Call SIGDER(iVecX,iVecR,VECROT(jState))
+        IF (MAXIT.NE.0) then
+          CALL TIMING(CPTF0,CPE,TIOTF0,TIOE)
+          Call SIGDER(iVecX,iVecR,VECROT(jState))
+          CALL TIMING(CPTF10,CPE,TIOTF10,TIOE)
+          IF (IPRGLB.GE.verbose) THEN
+            CPUT =CPTF10-CPTF0
+            WALLT=TIOTF10-TIOTF0
+            write(6,'(a,2f10.2)')" SIGDER  : CPU/WALL TIME=", cput,wallt
+          END IF
+        end if
         Call CLagX(1,Work(ipCLag),Work(ipDEPSA),VECROT)
-C       call test3_dens(work(ipclag))
+#ifdef _MOLCAS_MPP_
+        If (Is_Real_Par()) CALL GADSUM (Work(ipDEPSA),nAshT**2)
+#endif
+#ifdef _MOLCAS_MPP_
+C       If (Is_Real_Par()) CALL GADSUM (Work(ipCLag),nCLag)
+#endif
+C       write (*,*) "CLag"
+C       do i = 1, nclag
+C         write (*,'(i4,f20.10)') i,work(ipclag+i-1)
+C       end do
 C       write(6,*) "original depsa"
 C       call sqprt(work(ipdepsa),nasht)
 C       write(6,*) "original depsa (sym)"
@@ -287,10 +318,10 @@ C         call sqprt(work(ipdepsa),nasht)
             End Do
 C         write(6,*) "after"
 C         call sqprt(work(ipdepsa),nasht)
-          IF (IPRGLB.GE.debug)
+          IF (IPRGLB.GE.verbose)
      *      write(6,*) "depsa (sym) after removing off-diagonal blocks"
         Else
-          IF (IPRGLB.GE.debug)
+          IF (IPRGLB.GE.verbose)
      *      write(6,*) "depsa (sym)"
         End If
         IF (IPRGLB.GE.verbose) call sqprt(work(ipdepsa),nasht)
@@ -333,7 +364,7 @@ C
         !! Note that the contribution is multiplied by two
         !! somewhere else (maybe in olagns?)
         If (real_shift .ne. 0.0D+00 .or. imag_shift .ne. 0.0D+00
-     &      .OR. IFMSCOUP) Then
+     &      .OR. sigma_p_epsilon .ne. 0.0D+00 .OR. IFMSCOUP) Then
           !! Have to weight the T-amplitude for MS-CASPT2
           IF (IFMSCOUP) THEN
             !! add lambda
@@ -388,7 +419,7 @@ C       CALL GETMEM('DEPSA ','FREE','REAL',ipDEPSA,nAshT)
 C
 C       ----- Construct orbital Lagrangian -----
 C
-        If (nFroT.ne.0) Then
+        If (nFroT.ne.0 .or. .not.if_invaria) Then
           !! If frozen orbitals exist, we need to obtain
           !! electron-repulsion integrals with frozen orbitals to
           !! construct the orbital Lagrangian.
@@ -406,16 +437,18 @@ C
         !! Construct orbital Lagrangian that comes from the derivative
         !! of ERIs. Also, do the Fock transformation of the DPT2 and
         !! DPT2C densities.
+        ipA_PT2 = 1
+        NumChoTot = 0
         If (IfChol) Then
-          NumChoTot = 0
           Do iSym = 1, nSym
             NumChoTot = NumChoTot + NumCho_PT2(iSym)
           End Do
-          Call GetMem('A_PT2 ','ALLO','REAL',ipA_PT2,NumChoTot**2)
-          Call dcopy_(NumChoTot**2,[0.0D+00],0,Work(ipA_PT2),1)
+          Call GetMem('A_PT2 ','ALLO','REAL',ipA_PT2,MaxVec_PT2**2)
+          Call dcopy_(MaxVec_PT2**2,[0.0D+00],0,Work(ipA_PT2),1)
         End If
         Do iSym = 1, nSym
           nOcc  = nIsh(iSym)+nAsh(iSym)
+          ipT2AO = 1
           If (.not.IfChol.or.iALGO.ne.1) Then
             lT2AO = nOcc*nOcc*nBasT*nBasT
             Call GetMem('T2AO','Allo','Real',ipT2AO,lT2AO)
@@ -428,7 +461,7 @@ C         write(6,*) "ialgo = ", ialgo
           CALL TIMING(CPTF0,CPE,TIOTF0,TIOE)
           If (IfChol.and.iALGO.eq.1) Then
             CALL OLagNS_RI(iSym,Work(ipDPTC),Work(ipDPTCanti),
-     *                     Work(ipA_PT2),NumChoTot)
+     *                     Work(ipA_PT2))
           Else
             CALL OLagNS2(iSym,Work(ipDPTC),Work(ipT2AO))
           End If
@@ -442,7 +475,8 @@ C         write(6,*) "DPT2C"
 C         call sqprt(work(ipdptc),nbast)
 C
           !! MO -> AO transformations for DPT2 and DPT2C
-          If ((.not.IfChol.or.iALGO.ne.1).or.nFroT.eq.0) Then
+          If ((.not.IfChol.or.iALGO.ne.1)
+     *       .or.(nFroT.eq.0.and.if_invaria)) Then
             Call OLagTrf(1,iSym,Work(LCMOPT2),Work(ipDPT),
      *                   Work(ipDPTAO),Work(ipWRK1))
             Call OLagTrf(1,iSym,Work(LCMOPT2),Work(ipDPTC),
@@ -467,7 +501,7 @@ C
           CALL OLagVVVO(iSym,Work(ipDPTAO),Work(ipDPTCAO),
      *                  Work(ipFPTAO),Work(ipFPTCAO),Work(ipT2AO),
      *                  Work(ipDIA),Work(ipDI),Work(ipFIFA),
-     *                  Work(ipFIMO),Work(ipA_PT2),NumChoTot)
+     *                  Work(ipFIMO),Work(ipA_PT2),MaxVec_PT2)
         !   write(6,*) "olag after vvvo"
         !   call sqprt(work(ipolag),nbast)
           CALL TIMING(CPTF10,CPE,TIOTF10,TIOE)
@@ -485,7 +519,8 @@ C     call sqprt(work(ipfptao),12)
 C     call abend
 C
           !! AO -> MO transformations for FPT2AO and FPT2CAO
-          If ((.not.IfChol.or.iALGO.ne.1).or.nFroT.eq.0) Then
+          If ((.not.IfChol.or.iALGO.ne.1)
+     *        .or.(nFroT.eq.0.and.if_invaria)) Then
             Call OLagTrf(2,iSym,Work(LCMOPT2),Work(ipFPT),
      *                   Work(ipFPTAO),Work(ipWRK1))
             Call OLagTrf(2,iSym,Work(LCMOPT2),Work(ipFPTC),
@@ -497,7 +532,7 @@ C
           End If
         End Do
         If (IfChol) Then
-          Call GetMem('A_PT2 ','FREE','REAL',ipA_PT2,NumChoTot**2)
+          Call GetMem('A_PT2 ','FREE','REAL',ipA_PT2,MaxVec_PT2**2)
         End If
         !! Add DPTC to DSUM for the correct unrelaxed density
         !! Also, symmetrize DSUM
@@ -524,7 +559,7 @@ C
         !! unrelaxed PT2 density matrix is computed using the orbital
         !! Lagrangian. Additionally, Fock transformation is also
         !! required.
-        If (nFroT.ne.0) Then
+        If (nFroT.ne.0 .or. .not.if_invaria) Then
           !! Compute DPT2 density for frozen-inactive
 C         write(6,*) "dpt before frozen"
 C         call sqprt(work(ipdpt),nbast)
@@ -532,7 +567,11 @@ C         call sqprt(work(ipdpt),nbast)
             !! Construct FIFA and FIMO
             Call OLagFro3(Work(ipFIFA),Work(ipFIMO),Work(ipWRK1),
      *                    Work(ipWRK2))
+            !! if possible, canonicalize frozen orbitals, and update
+            !! FIMO and Trf
           end if
+          !! Save DPT in order to subtract later
+          Call DCopy_(nDPTAO,Work(ipDPT),1,Work(ipWRK1),1)
           !! Add explicit FIMO and FIFA contributions. Implicit
           !! contributions are all symmetric in frozen + inactive
           !! orbitals, so they do not contribute to frozen density
@@ -548,11 +587,29 @@ C         call sqprt(work(ipdpt),nbast)
           CALL DGEMM_('T','N',nBasT,nBasT,nBasT,
      *                1.0D+00,Work(ipFIFA),nBasT,Work(ipDPT),nBasT,
      *                1.0D+00,Work(ipOLAG),nBasT)
-          !! Save DPT in order to subtract later
-          Call DCopy_(nDPTAO,Work(ipDPT),1,Work(ipWRK1),1)
 C
+          !! non-invariant in inactive and secondary
+          if(.not.if_invaria) then
+            !! Construct the density from orbital Lagrangian
+            call caspt2_grad_invaria2(Work(ipDPT),Work(ipOLag))
+            !! FIFA contributions from the non-invariant density
+            call DaXpY_(nDPTAO,-1.0D+00,Work(ipWRK1),1,Work(ipDPT),1)
+            !! Add the non-invariant contribution to unrelaxed density
+            Call AddDPTC(Work(ipDPT),Work(LDSUM))
+            CALL DGEMM_('N','T',nBasT,nBasT,nBasT,
+     *                  1.0D+00,Work(ipFIFA),nBasT,Work(ipDPT),nBasT,
+     *                  1.0D+00,Work(ipOLAG),nBasT)
+            CALL DGEMM_('T','N',nBasT,nBasT,nBasT,
+     *                  1.0D+00,Work(ipFIFA),nBasT,Work(ipDPT),nBasT,
+     *                  1.0D+00,Work(ipOLAG),nBasT)
+            !! Restore the second-order correlated density
+            call DaXpY_(nDPTAO,+1.0D+00,Work(ipWRK1),1,Work(ipDPT),1)
+            Call DCopy_(nDPTAO,Work(ipDPT),1,Work(ipWRK1),1)
+          end if
           !! Now, compute pseudo-density using orbital Lagrangian
-          Call OLagFro1(Work(ipDPT),Work(ipOLag))
+          !! LDSUM does not contain frozen orbitals,
+          !! so the properties using this density may be inaccurate
+          If(nFroT.ne.0) Call OLagFro1(Work(ipDPT),Work(ipOLag))
 C
           !! Subtract the orbital Lagrangian added above.
           !! It is computed again in EigDer
@@ -584,6 +641,8 @@ C
             !! It seems that it is not possible to do this
             !! transformation in OLagVVVO, because the frozen-part of
             !! the DPT2 is obtained after OLagVVVO.
+            Call DCopy_(nDPTAO,[0.0D+00],0,Work(ipFPTAO),1)
+            Call DCopy_(nDPTAO,[0.0D+00],0,Work(ipFPTCAO),1)
             Call OLagFro4(1,1,1,1,1,
      *                    Work(ipDPTAO),Work(ipDPTCAO),Work(ipFPTAO),
      *                    Work(ipFPTCAO),Work(ipWRK1))
@@ -672,7 +731,7 @@ C    *              0.0D+00,Work(ipRDMEIG),nAshT)
           CALL GETMEM('EigT ','ALLO','REAL',ipEigT ,nAshT**2)
           Call DCopy_(nConf*nState,Work(ipCLag),1,Work(ipCLagT),1)
           Call DCopy_(nAshT**2,Work(ipRDMEIG),1,Work(ipEigT),1)
-          If (IFDW .and .zeta >= 0.0d+00) then
+          If (IFDW .and. zeta >= 0.0d+00) then
             CALL GETMEM('OMGT ','ALLO','REAL',ipOMGT ,nState*nState)
             Call DCopy_(nState**2,Work(ipOMGDER),1,Work(ipOMGT),1)
           end if
@@ -681,7 +740,10 @@ C    *              0.0D+00,Work(ipRDMEIG),nAshT)
         ISAV = IDCIEX
         IDCIEX = IDTCEX
         !! Now, compute the configuration Lagrangian
-        Call CLagEig(IFSSDM,Work(ipCLag),Work(ipRDMEIG))
+        Call CLagEig(if_ssdm,Work(ipCLag),Work(ipRDMEIG))
+#ifdef _MOLCAS_MPP_
+        If (Is_Real_Par()) CALL GADSUM (Work(ipCLag),nCLag)
+#endif
 C
         !! Now, here is the best place to compute the true off-diagonal
         !! active density for non-invariant CASPT2
@@ -724,7 +786,7 @@ C
      *                  Work(LCMOPT2),Work(ipDEPSA),
      *                  Work(LDSUM))
           !! For IPEA shift with state-dependent density
-          If (IFSSDM.and.(jState.eq.iRlxRoot.or.nStLag.gt.1)) Then
+          If (if_ssdm.and.(jState.eq.iRlxRoot.or.nStLag.gt.1)) Then
             iSym = 1
             Call OLagTrf(1,iSym,Work(LCMOPT2),Work(ipDPT),
      *                   Work(ipDPTAO),Work(ipWRK1))
@@ -740,21 +802,25 @@ C
           call DCopy_(nState*nState,[0.0D+00],0,Work(ipSLag),1)
           CALL GETMEM('CLagT','FREE','REAL',ipCLagT,nConf*nState)
           CALL GETMEM('EigT ','FREE','REAL',ipEigT ,nAshT**2)
-          if (IFDW .and .zeta >= 0.0d+00) then
+          if (IFDW .and. zeta >= 0.0d+00) then
             Call DCopy_(nState*nState,Work(ipOMGT),1,Work(ipOMGDER),1)
             CALL GETMEM('OMGT ','FREE','REAL',ipOMGT ,nState*nState)
           end if
           !! RDMEIG contributions
           !! Use canonical CSFs rather than natural CSFs
           !! Now, compute the configuration Lagrangian
-          Call CLagEig(IFSSDM,Work(ipCLag),Work(ipRDMEIG))
+          Call CLagEig(if_ssdm,Work(ipCLag),Work(ipRDMEIG))
+#ifdef _MOLCAS_MPP_
+          If (Is_Real_Par()) CALL GADSUM (Work(ipCLag),nCLag)
+#endif
           !! Now, compute the state Lagrangian and do some projections
 C         Call CLagFinal(Work(ipCLag),Work(ipSLag))
         End If
 C
         !! Restore integrals without frozen orbitals, although not sure
         !! this operation is required.
-        If (nFroT.ne.0.and..not.IfChol) Call TRAFRO(2)
+        If ((nFroT.ne.0.or..not.if_invaria).and..not.IfChol)
+     *    Call TRAFRO(2)
 C
         IDCIEX = ISAV
         !! Canonical -> natural transformation
@@ -858,7 +924,7 @@ C
         !! SA density-contribution will be added and should be
         !! subtracted
         ! This should be done only for iRlxRoot
-        If (IFSSDM.and.(jState.eq.iRlxRoot.or.nStLag.gt.1)) Then
+        If (if_ssdm.and.(jState.eq.iRlxRoot.or.nStLag.gt.1)) Then
           CALL TIMING(CPTF0,CPE,TIOTF0,TIOE)
 !         If (.not.if_invar) Then
 !           write(6,*) "SS density matrix with IPEA not implemented"
@@ -875,6 +941,7 @@ C
 C           Call DaXpY_(nDRef,Wgt,Work(LDMix+nDRef*(iState-1)),1,
 C    *                  Work(ipWRK1),1)
             Call LoadCI_XMS('N',1,WORK(LCI),iState,U0)
+C           Call LoadCI(WORK(LCI),iState)
             call POLY1(WORK(LCI))
             call GETDREF(WORK(ipWRK2))
             Call DaXpY_(nDRef,Wgt,Work(ipWRK2),1,Work(ipWRK1),1)
@@ -1045,6 +1112,7 @@ C
         CALL GETMEM('WRK2  ','FREE','REAL',ipWRK2,nBasT*nBasT)
         CALL GETMEM('RDMSA ','FREE','REAL',ipRDMSA ,nAshT*nAshT)
         CALL GETMEM('RDMEIG','FREE','REAL',ipRDMEIG,nAshT*nAshT)
+        DENORM = 1.0D+00
         !! end of with gradient
       ELSE
         !! without gradient
@@ -1153,6 +1221,8 @@ C-----------------------------------------------------------------------
 C
       Subroutine CnstTrf(Trf0,Trf)
 C
+      use caspt2_gradient, only: TraFro
+C
       Implicit Real*8 (A-H,O-Z)
 C
 #include "rasdim.fh"
@@ -1191,9 +1261,18 @@ C       Do iIsh = 1, nFroI + nIshI
 C         Trf(ipTrfL+iIsh+nBasI*(iIsh-1)) = 1.0D+00
 C       End Do
         !! frozen
-        Do iIsh = 1, nFroI
-          Trf(ipTrfL+iIsh+nBasI*(iIsh-1)) = 1.0D+00
-        End Do
+        If (IfChol) Then
+          Do I = 1, nFroI
+            Do J = 1, nFroI
+              Trf(ipTrfL+I+nBasI*(J-1))
+     *          = TraFro(I+nFroI*(J-1))
+            End Do
+          End Do
+        else
+          Do iIsh = 1, nFroI
+            Trf(ipTrfL+iIsh+nBasI*(iIsh-1)) = 1.0D+00
+          End Do
+        End If
         !! inactive
         Do I = 1, nIshI
           iIsh = nFroI + I
@@ -1929,25 +2008,35 @@ C
       Subroutine CnstAB_SSDM(DPT2AO,SSDM)
 C
       use ChoVec_io
-      use ChoSwp, only: InfVec
-      use ChoArr, only: nDimRS
+      use Cholesky, only: InfVec, nDimRS
+      use caspt2_gradient, only: LuGAMMA,LuAPT2
+#ifdef _MOLCAS_MPP_
+      USE Para_Info, ONLY: Is_Real_Par
+#endif
 C
       Implicit Real*8 (A-H,O-Z)
 C
 #include "rasdim.fh"
 #include "caspt2.fh"
 #include "WrkSpc.fh"
-#include "caspt2_grad.fh"
 C
 #include "warnings.h"
 #include "chocaspt2.fh"
-#include "choglob.fh"
+#ifdef _MOLCAS_MPP_
+#include "global.fh"
+#include "mafdecls.fh"
+      LOGICAL bStat
+#endif
 C
       Dimension DPT2AO(*),SSDM(*)
-      Character*4096 RealName
       Integer iSkip(8),ipWRK(8)
       integer nnbstr(8,3)
+      Character*4096 RealName
       Logical is_error
+C
+#ifdef _MOLCAS_MPP_
+      integer, allocatable :: map2(:)
+#endif
 C
       ! INFVEC(I,J,K)=IWORK(ip_INFVEC-1+MAXVEC*N2*(K-1)+MAXVEC*(J-1)+I)
       call getritrfinfo(nnbstr,maxvec,n2)
@@ -1964,23 +2053,17 @@ C
 C
       nBasI  = nBas(iSym)
 C
-      Call GetMem('A_PT2 ','ALLO','REAL',ipA_PT2,NumChoTot**2)
-      !! Read A_PT2
-    !   Call PrgmTranslate('CMOPT2',RealName,lRealName)
-    !   Call MOLCAS_Open_Ext2(LuCMOPT2,RealName(1:lRealName),
-    !  &                      'DIRECT','UNFORMATTED',
-    !  &                      iost,.FALSE.,
-    !  &                        1,'OLD',is_error)
-    !   Read (LuCMOPT2) Work(ipA_PT2:ipA_PT2+NumChoTot**2-1)
+      Call GetMem('A_PT2 ','ALLO','REAL',ipA_PT2,MaxVec_PT2**2)
 
       ! Read A_PT2 from LUAPT2
       id = 0
-      call ddafile(LUAPT2, 2, work(ipA_PT2), numChoTot**2, id)
+      call ddafile(LUAPT2, 2, work(ipA_PT2), MaxVec_PT2**2, id)
 
       !! Open B_PT2
       Call PrgmTranslate('GAMMA',RealName,lRealName)
+      LuGAMMA = isFreeUnit(LuGAMMA)
       Call MOLCAS_Open_Ext2(LuGamma,RealName(1:lRealName),
-     &                      'DIRECT','UNFORMATTED',
+     &                     'DIRECT','UNFORMATTED',
      &                      iost,.TRUE.,
      &                      nBas(iSym)**2*8,'OLD',is_error)
 C
@@ -1988,15 +2071,12 @@ C
       CALL GETMEM('HTVEC','ALLO','REAL',ipHTVec,nBasT*nBasT)
       CALL GETMEM('WRK  ','ALLO','REAL',ipWRK(iSym),nBasT*nBasT)
       !! V(P) = (mu nu|P)*D_{mu nu}
-      CALL GETMEM('V1   ','ALLO','REAL',ipV1,NumCho)
-      CALL GETMEM('V2   ','ALLO','REAL',ipV2,NumCho)
+      CALL GETMEM('V1   ','ALLO','REAL',ipV1_,MaxVec_PT2*2)
+C     CALL GETMEM('V2   ','ALLO','REAL',ipV2_,MaxVec_PT2)
+      ipV2_ = ipV1_ + MaxVec_PT2
       !! B_SSDM(mu,nu,P) = D_{mu rho}*D_{nu sigma}*(rho sigma|P)
-      Call GetMem('B_SSDM','ALLO','REAL',ipB_SSDM,NCHSPC)
-C
-      !! Prepare density matrix
-      !! subtract the state-averaged density matrix
-C
-      IBATCH_TOT=NBTCHES(iSym)
+      !! Add one more vector
+      Call GetMem('B_SSDM','ALLO','REAL',ipB_SSDM,NCHSPC+nBasT**2)
 
       IF(NUMCHO_PT2(iSym).EQ.0) Return
 
@@ -2005,7 +2085,45 @@ C
       ! JRED2=iWork(ipnt-1+NumCho_PT2(iSym))
       JRED1=InfVec(1,2,iSym)
       JRED2=InfVec(NumCho_PT2(iSym),2,iSym)
+C
+#ifdef _MOLCAS_MPP_
+      If (is_real_par()) then
 
+        myRank = GA_NodeID()
+        NPROCS = GA_nNodes()
+
+        Allocate (MAP2(NPROCS))
+        MAP2(:) = 0
+        MAP2(myRank+1) = NumChoTot ! MJRED2-JRED1+1
+        call GAIGOP(MAP2,NPROCS,'+')
+C       ndim2 = sum(map2)
+
+        do i = nprocs, 2, -1
+          map2(i) = sum(map2(1:i-1))+1
+        end do
+        map2(1) = 1
+        ipV1 = ipV1_ + map2(myRank+1) - 1
+        ipV2 = ipV2_ + map2(myRank+1) - 1
+        Call DCopy_(MaxVec_PT2*2,[0.0d+00],0,Work(ipV1_),1)
+
+        bStat = GA_CREATE_IRREG(MT_DBL,nBasT**2,MaxVec_PT2,'WRK',
+     *                          1,1,MAP2,NPROCS,lg_V1)
+        CALL GA_DISTRIBUTION(LG_V1,MYRANK,ILOV1,IHIV1,JLOV1,JHIV1)
+        CALL GA_ACCESS(LG_V1,ILOV1,IHIV1,JLOV1,JHIV1,MV1,NDIM1)
+      else
+        ipV1 = ipV1_
+        ipV2 = ipV2_
+      end if
+#else
+      ipV1 = ipV1_
+      ipV2 = ipV2_
+#endif
+C
+      !! Prepare density matrix
+      !! subtract the state-averaged density matrix
+C
+      IBATCH_TOT=NBTCHES(iSym)
+C
 * Loop over JRED
       DO JRED=JRED1,JRED2
 
@@ -2067,7 +2185,7 @@ C
             End If
             Call DCopy_(nBasI**2,[0.0D+00],0,Work(ipWRK(iSym)),1)
             Call Cho_ReOrdr(irc,Work(ipVecL),lscr,1,
-     *                      1,1,1,iSym,JREDC,2,ipWRK,
+     *                      1,1,1,iSym,JREDC,2,ipWRK,Work,
      *                      iSkip)
             ipVecL = ipVecL + lscr
 C
@@ -2085,29 +2203,43 @@ C
           End Do
           NUMVI = NUMV
 C
-          KV1=JSTART
-          JBATCH_TOT=NBTCHES(iSym)
-          DO JBATCH=1,NBATCH
-            JBATCH_TOT=JBATCH_TOT+1
+#ifdef _MOLCAS_MPP_
+          If (is_real_par()) then
+C           IV1 = MAP2(myRank+1) - 1 + JV1
+C           IV2 = MAP2(myRank+1) - 1 + JV2
+            Call DCopy_(nBasT**2*NUMV,Work(ipB_SSDM),1,
+     *                  DBL_MB(mV1+NDIM1*(JV1-1)),1)
+C           CALL GA_Put (lg_V1,1,nBasT**2,IV1,IV2,
+C    *                   Work(ipB_SSDM),nBasT**2)
+          else
+#endif
+            KV1=JSTART
+            JBATCH_TOT=NBTCHES(iSym)
+            DO JBATCH=1,NBATCH
+              JBATCH_TOT=JBATCH_TOT+1
 
-            KNUM=NVLOC_CHOBATCH(JBATCH_TOT)
-            KV2=KV1+KNUM-1
+              KNUM=NVLOC_CHOBATCH(JBATCH_TOT)
+              KV2=KV1+KNUM-1
 
-            JREDC=JRED
-            CALL CHO_VECRD(WORK(IP_CHSPC),NCHSPC,KV1,KV2,iSym,
-     &                              NUMV,JREDC,MUSED)
-           Call R2FIP(Work(ip_CHSPC),Work(ipWRK(iSym)),ipWRK(iSym),NUMV,
-     *                size(nDimRS),infVec,nDimRS,
-     *                nBasT,nSym,iSym,iSkip,irc,JREDC)
+              JREDC=JRED
+              CALL CHO_VECRD(WORK(IP_CHSPC),NCHSPC,KV1,KV2,iSym,
+     &                                NUMV,JREDC,MUSED)
+              Call R2FIP(Work(ip_CHSPC),Work(ipWRK(iSym)),ipWRK(iSym),
+     *                   NUMV,size(nDimRS),infVec,nDimRS,
+     *                   nBasT,nSym,iSym,iSkip,irc,JREDC)
 C
-            !! Exchange part of A_PT2
-            NUMVJ = NUMV
-            CALL DGEMM_('T','N',NUMVI,NUMVJ,nBasT**2,
-     *                 -1.0D+00,Work(ipB_SSDM),nBasT**2,
-     *                          Work(ip_CHSPC),nBasT**2,
-     *                1.0D+00,Work(ipA_PT2+JV1-1+NumCho*(KV1-1)),NumCho)
-            KV1=KV1+KNUM
-          END DO
+              !! Exchange part of A_PT2
+              NUMVJ = NUMV
+              CALL DGEMM_('T','N',NUMVI,NUMVJ,nBasT**2,
+     *                   -1.0D+00,Work(ipB_SSDM),nBasT**2,
+     *                            Work(ip_CHSPC),nBasT**2,
+     *                   1.0D+00,Work(ipA_PT2+JV1-1+MaxVec_PT2*(KV1-1)),
+     *                            MaxVec_PT2)
+              KV1=KV1+KNUM
+            END DO
+#ifdef _MOLCAS_MPP_
+          end if
+#endif
 C
           !! Read, add, and save the B_PT2 contribution
           Do iVec = 1, NUMVI
@@ -2131,30 +2263,81 @@ C
         End Do
       End Do
 C
-      Close (LuGamma)
+#ifdef _MOLCAS_MPP_
+      If (is_real_par()) then
+      ! CALL GA_RELEASE_UPDATE(LG_V1,ILOV1,IHIV1,JLOV1,JHIV1)
+C
+        !! Parallel for the exchange part of A_PT2
+        Call DScal_(MaxVec_PT2**2,1.0D+00/DBLE(NPROCS),Work(ipA_PT2),1)
+        IBATCH_TOT=NBTCHES(iSym)
+        DO JRED=JRED1,JRED2
+          CALL Cho_X_nVecRS(JRED,iSym,JSTART,NVECS_RED)
+          IF(NVECS_RED.EQ.0) Cycle
+          ILOC=3
+          CALL CHO_X_SETRED(IRC,ILOC,JRED)
+          NBATCH=1+(NVECS_RED-1)/MXNVC
+* Loop over IBATCH
+          JV1=JSTART
+          DO IBATCH=1,NBATCH
+C           write(6,*) "ibatch,nbatch = ", ibatch,nbatch
+            IBATCH_TOT=IBATCH_TOT+1
+
+            JNUM=NVLOC_CHOBATCH(IBATCH_TOT)
+            JV2=JV1+JNUM-1
+
+            JREDC=JRED
+* Read a batch of reduced vectors
+            CALL CHO_VECRD(WORK(IP_CHSPC),NCHSPC,JV1,JV2,iSym,
+     &                              NUMV,JREDC,MUSED)
+            Call R2FIP(Work(ip_CHSPC),Work(ipWRK(iSym)),ipWRK(iSym),
+     *                 NUMV,size(nDimRS),infVec,nDimRS,
+     *                 nBasT,nSym,iSym,iSkip,irc,JREDC)
+            NUMVJ = NUMV
+C
+            !! Exchange part of A_PT2
+            JVG   = JV1+MAP2(myRank+1)-1
+            Do iRank = 0, NPROCS-1
+            CALL GA_DISTRIBUTION(LG_V1,iRank,ILOV1,IHIV1,JLOV1,JHIV1)
+            CALL GA_GET(LG_V1,ILOV1,IHIV1,JLOV1,JHIV1,WORK(ipB_SSDM),
+     *                  NDIM1)
+            NUMVI = JHIV1-JLOV1+1
+            CALL DGEMM_('T','N',NUMVI,NUMVJ,nBasT**2,
+     *                 -1.0D+00,Work(ipB_SSDM),nBasT**2,
+     *                          Work(ip_CHSPC),nBasT**2,
+     *                 1.0D+00,Work(ipA_PT2+JLOV1-1+MaxVec_PT2*(JVG-1)),
+     *                          MaxVec_PT2)
+            end do
+            JV1=JV1+JNUM
+          End Do
+        End Do
+        CALL GADSUM (Work(ipA_PT2),MaxVec_PT2**2)
+        bStat = GA_Destroy(lg_V1)
+C
+        CALL GADSUM (Work(ipV1_),MaxVec_PT2*2)
+        Deallocate (MAP2)
+      end if
+#endif
 C
       !! Coulomb for A_PT2
       !! Consider using DGER?
-      Call DGEMM_('N','T',NumCho,NumCho,1,
-     *            2.0D+00,Work(ipV1),NumCho,Work(ipV2),NumCho,
-     *            1.0D+00,Work(ipA_PT2),NumCho)
+      Call DGEMM_('N','T',MaxVec_PT2,MaxVec_PT2,1,
+     *            2.0D+00,Work(ipV1_),MaxVec_PT2,Work(ipV2_),MaxVec_PT2,
+     *            1.0D+00,Work(ipA_PT2),MaxVec_PT2)
 C
-      !! Write A_PT2
-      ! REWIND LuCMOPT2
-      ! Write (LuCMOPT2) Work(ipA_PT2:ipA_PT2+NumChoTot**2-1)
-      ! Close (LuCMOPT2)
-
       ! write to A_PT2 in LUAPT2
       id = 0
-      call ddafile(LUAPT2, 1, Work(ipA_PT2), NumChoTot**2, id)
+      call ddafile(LUAPT2, 1, Work(ipA_PT2), MaxVec_PT2**2, id)
+C
+      !! close B_PT2
+      Close (LuGAMMA)
 
-      Call GetMem('A_PT2 ','FREE','REAL',ipA_PT2,NumChoTot**2)
+      Call GetMem('A_PT2 ','FREE','REAL',ipA_PT2,MaxVec_PT2**2)
 C
       CALL GETMEM('CHSPC','FREE','REAL',IP_CHSPC,NCHSPC)
       CALL GETMEM('HTVEC','FREE','REAL',ipHTVec,nBasT*nBasT)
       CALL GETMEM('WRK  ','FREE','REAL',ipWRK(iSym),nBasT*nBasT)
-      CALL GETMEM('V1   ','FREE','REAL',ipV1,NumCho)
-      CALL GETMEM('V2   ','FREE','REAL',ipV2,NumCho)
+      CALL GETMEM('V1   ','FREE','REAL',ipV1_,MaxVec_PT2*2)
+C     CALL GETMEM('V2   ','FREE','REAL',ipV2_,MaxVec_PT2)
       Call GetMem('B_SSDM','FREE','REAL',ipB_SSDM,NCHSPC)
 C     call abend
 C

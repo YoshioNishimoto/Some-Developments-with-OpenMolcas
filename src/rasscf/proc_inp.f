@@ -25,30 +25,36 @@
       use Para_Info, Only: mpp_procid, mpp_nprocs
 #endif
 #endif
-      use csfbas, only: CONF, KCFTP
+      use csfbas, only: CONF
+      use glbbas, only: CFTP
       use Fock_util_global, only: DoCholesky
+      use Cholesky, only: ChFracMem
       use write_orbital_files, only: OrbFiles, write_orb_per_iter
       use fcidump, only: DumpOnly
       use fcidump_reorder, only: ReOrInp, ReOrFlag
       use fciqmc, only: DoEmbdNECI, DoNECI, tGUGA_in
       use fciqmc_read_RDM, only: MCM7, WRMA
       use CC_CI_mod, only: Do_CC_CI
-      use spin_correlation, only: orb_range_p, orb_range_q, same_orbs
+      use spin_correlation, only: orb_range_p, orb_range_q, same_orbs,
+     &  tRootGrad
       use orthonormalization, only : ON_scheme, ON_scheme_values
       use fciqmc_make_inp, only : trial_wavefunction, pops_trial,
      &  t_RDMsampling, RDMsampling,
      &  totalwalkers, Time, nmCyc, memoryfacspawn,
      &  realspawncutoff, diagshift, definedet, semi_stochastic
+      use casvb_global, only: ifvb
 #ifdef _HDF5_
       use mh5, only: mh5_is_hdf5, mh5_open_file_r, mh5_exists_attr,
      &               mh5_exists_dset, mh5_fetch_attr, mh5_fetch_dset,
      &               mh5_close_file
 #endif
+      use fciqmc, only:  tPrepStochCASPT2, tNonDiagStochPT2
       use KSDFT_Info, only: CoefR, CoefX
       use OFembed, only: Do_OFemb,KEonly, OFE_KSDFT,
      &                   ThrFThaw, Xsigma, dFMD
       use CMS, only: iCMSOpt,CMSGiveOpt,CMSGuessFile
       use UnixInfo, only: SuperName
+      use Lucia_Interface, only: Lucia_Util
       Implicit Real*8 (A-H,O-Z)
 #include "SysDef.fh"
 #include "rasdim.fh"
@@ -62,14 +68,11 @@
 #include "general_mul.fh"
 #include "output_ras.fh"
 #include "orthonormalize.fh"
-#include "casvb.fh"
 #include "pamint.fh"
 * Lucia-stuff:
 #include "ciinfo.fh"
 #include "spinfo.fh"
 #include "lucia_ini.fh"
-#include "rasscf_lucia.fh"
-*^ needed for passing kint1_pointer
 *
 *
       Character*180  Line
@@ -91,9 +94,6 @@
 #include "nevptp.fh"
 #endif
       Logical DBG, exist
-
-#include "chotime.fh"
-#include "chopar.fh"
 
       Integer IScratch(10)
 * Label informing on what type of data is available on an INPORB file.
@@ -859,7 +859,7 @@ C   No changing about read in orbital information from INPORB yet.
       CMSStartMat='XMS'
       If (KeyCMSS.and.(iCMSP.eq.1)) Then
        If (DBG) Then
-         Write(6,*)' Reading CMS inital rotation matrix'
+         Write(6,*)' Reading CMS initial rotation matrix'
        End If
        Call SetPos(LUInput,'CMSS',Line,iRc)
        Line=Get_Ln(LUInput)
@@ -1025,6 +1025,61 @@ C         call fileorb(Line,CMSStartMat)
         Write(6,*) ' Response field will follow CISE root: ',ICIRFROOT
        End If
       End If
+*----------------------------------------------------------------------------------------
+      if (KeyMCM7) then
+#ifndef _HDF5_
+          call WarningMessage(2, 'MCM7 is given in the input, '//
+     &    'please make sure to compile Molcas with HDF5 support.')
+          GoTo 9930
+#endif
+            MCM7 = .true.
+            DoNECI = .true.  ! needed to initialise FCIQMC
+            totalwalkers = 20000
+            RDMsampling%start = 20000
+            RDMsampling%n_samples = 10000
+            RDMsampling%step = 100
+            if(DBG) write(6, *) 'M7 CASSCF activated.'
+            if(DBG) write(6, *) 'Decoupled mode not implemented.'
+            if(DBG) write(6, *) 'Ignore automatically generated FciInp!'
+      end if
+*----------------------------------------------------------------------------------------
+      if (KeyNDPT) then
+          tNonDiagStochPT2 = .true.
+          IPT2 = 1     ! flag for SXCTL
+          if (KeySUPS) then
+            write(6,*) 'SUPSymmetry incompatible with NDPT.'
+            Call Abend()
+          endif
+          if (KeyPPT2) then
+            write(6,*) 'Non-diagonal PT2 incompatible with PPT2.'
+            Call Abend()
+          endif
+          if (DBG) write(6,*)
+     &      'stoch.-PT2 will be prepared in the current basis.'
+          if(DBG) write(6, *) 'Act. Space Fock matrix will be dumped.'
+      end if
+*----------------------------------------------------------------------------------------
+      if (KeyPPT2) then
+          tPrepStochCASPT2 = .true.
+          iOrbTyp = 2  ! pseudo-canonical orbitals
+          IPT2 = 1     ! flag for SXCTL
+          if (KeySUPS) then
+            write(6,*) 'SUPSymmetry incompatible with PPT2.'
+            Call Abend()
+          endif
+          if (KeyNDPT) then
+            write(6,*) 'Non-diagonal PT2 incompatible with PPT2.'
+            Call Abend()
+          endif
+          if (DBG) write(6,*)
+     &        'Transforming final orbitals into pseudo-canonical.'
+          if(DBG) write(6, *) 'Act. Space Fock matrix will be dumped.'
+      end if
+*----------------------------------------------------------------------------------------
+      if (KeyRGRA) then
+        tRootGrad = .true.
+        if(DBG) write(6, *) 'Orbital gradient for each root is printed.'
+      end if
 *---  Process SSCR command --------------------------------------------*
       if (KeySSCR) then
         if (DBG) write(6,*) ' SSCR command was given.'
@@ -1091,6 +1146,39 @@ C         call fileorb(Line,CMSStartMat)
         end if
       call ChkIfKey()
       end if
+*---  Process STAV command --------------------------------------------*
+      If(KeySTAV.and.KeyCIRO) Then
+        call WarningMessage(1,
+     &    'STAVERAGE and CIROOT are incompatible.;'//
+     &    'The STAVERAGE command will be ignored.')
+        KeySTAV=.false.
+      End If
+      If(KeySTAV) Then
+       If (DBG) Write(6,*) ' STAVERAGE command was given.'
+       Call SetPos(LUInput,'STAV',Line,iRc)
+       If(iRc.ne._RC_ALL_IS_WELL_) GoTo 9810
+       Line=Get_Ln(LUInput)
+       ReadStatus=' Failure reading spin after STAVERAGE keyword.'
+       Read(Line,*,Err=9920) NROOTS
+       If (NROOTS.GT.MXROOT) Then
+         WRITE(6,*) "Error: number of roots exceeds maximum"
+         WRITE(6,*) "NROOTS = ", NROOTS
+         WRITE(6,*) "MXROOT = ", MXROOT
+         CALL AbEnd()
+       End If
+       ReadStatus=' O.K. reading spin after STAVERAGE keyword.'
+       LROOTS=NROOTS
+       Do i=1,NROOTS
+        iroot(i)=i
+        WEIGHT(i)=1.d0/DBLE(NROOTS)
+       END DO
+       If (DBG) Then
+        Write(6,*) ' Nr of roots in CI: LROOTS=',LROOTS
+        Write(6,*) ' Nr of roots optimized by super-CI: NROOTS=',NROOTS
+        Write(6,*) ' (Equal-weighted)'
+       End If
+       Call ChkIfKey()
+      End If
 *---  Process CIRO command --------------------------------------------*
       If (DBG) Write(6,*) ' Check for CIROOTS command.'
       IF(KeyCIRO) Then
@@ -2094,19 +2182,6 @@ C orbitals accordingly
             if(DBG) write(6, *) 'DMAT/PSMAT/PAMAT will be dumped.'
         end if
 *----------------------------------------------------------------------------------------
-        if (KeyMCM7) then
-#ifndef _HDF5_
-          call WarningMessage(2, 'MCM7 is given in the input, '//
-     &    'please make sure to compile Molcas with HDF5 support.')
-#endif
-            MCM7 = .true.
-            if (.not. DoNECI) then
-                call WarningMessage(2, 'MCM7 needs the NECI keyword!')
-                GoTo 9930
-            end if
-            if(DBG) write(6, *) 'M7 CASSCF activated.'
-        end if
-*----------------------------------------------------------------------------------------
         if (KeyGUGA) then
             tGUGA_in = .true.
             if(DBG) write(6, *) 'spin-free GUGA-NECI RDMs are actived'
@@ -2855,7 +2930,7 @@ c       write(6,*)          '  --------------------------------------'
        Call SetPos(LUInput,'FCID',Line,iRc)
        Call ChkIfKey()
       End If
-#if !defined _ENABLE_BLOCK_DMRG_ && !defined _ENABLE_CHEMPS2_DMRG_
+#if ! defined (_ENABLE_BLOCK_DMRG_) && ! defined (_ENABLE_CHEMPS2_DMRG_)
 *
 * ======================================================================
 *          start of QCMaquis DMRG input section
@@ -3011,7 +3086,7 @@ c       write(6,*)          '  --------------------------------------'
       End If
 *
 *---  Process DMRG command --------------------------------------------*
-#if defined _ENABLE_BLOCK_DMRG_ || defined _ENABLE_CHEMPS2_DMRG_
+#if defined (_ENABLE_BLOCK_DMRG_) || defined (_ENABLE_CHEMPS2_DMRG_)
       If (KeyDMRG) Then
 * NN.14 FIXME: When DMRG option is disabled at compilation,
 *       this should give an error, but just ignored for the time.
@@ -3464,10 +3539,10 @@ C Test read failed. JOBOLD cannot be used.
             GoTo 9000
           else
 #endif
-            Call Timing(Eterna_1,Swatch,Swatch,Swatch)
+            Call Timing(Eterna_1,dum1,dum2,dum3)
             If (DBG) Write(6,*)' Call GugaCtl'
             Call GugaCtl
-            Call Timing(Eterna_2,Swatch,Swatch,Swatch)
+            Call Timing(Eterna_2,dum1,dum2,dum3)
 #ifdef _DMRG_
           end if
 #endif
@@ -3520,7 +3595,7 @@ C Test read failed. JOBOLD cannot be used.
 #endif
 * Initialize LUCIA and determinant control
           Call StatusLine('RASSCF:','Initializing Lucia...')
-          CALL Lucia_Util('Ini',iDummy,iDummy,Dummy)
+          CALL Lucia_Util('Ini')
 * to get number of CSFs for GAS
 * and number of determinants to store
           nconf=0
@@ -3550,7 +3625,7 @@ C Test read failed. JOBOLD cannot be used.
       IF (ICICH.EQ.1) THEN
         CALL GETMEM('UG2SG','ALLO','INTE',LUG2SG,NCONF)
         CALL UG2SG(NROOTS,NCONF,NAC,NACTEL,STSYM,IPR,
-     *             CONF,IWORK(KCFTP),IWORK(LUG2SG),
+     *             CONF,CFTP,IWORK(LUG2SG),
      *             ICI,JCJ,CCI,MXROOT)
         CALL GETMEM('UG2SG','FREE','INTE',LUG2SG,NCONF)
       END IF

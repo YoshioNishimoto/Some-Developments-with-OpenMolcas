@@ -121,7 +121,7 @@ contains
     type(OrbitalTable), intent(in) :: table
     integer :: i
     do i = 1, length(table)
-      write(6, '(E15.7, I7)') table%values(i), table%index(i)
+      write(6, '(ES15.7, I7)') table%values(i), table%index(i)
     end do
   end subroutine OrbitalTable_print
 
@@ -166,7 +166,8 @@ contains
     integer :: i, n
     real*8 :: cutoff_
 
-    cutoff_ = merge(cutoff, cutoff_default, present(cutoff))
+    cutoff_ = cutoff_default
+    if (present(cutoff)) cutoff_ = cutoff
 
     n = 0
     do i = 1, size(Fock)
@@ -190,7 +191,7 @@ contains
     type(FockTable), intent(in) :: table
     integer :: i, j
     do j = 1, length(table)
-      write(6, '(E15.7, I7, I7)') table%values(j), (table%index(i, j), i=1, 2)
+      write(6, '(ES15.7, I7, I7)') table%values(j), (table%index(i, j), i=1, 2)
     end do
   end subroutine FockTable_print
 
@@ -236,7 +237,8 @@ contains
     integer, parameter :: max_test = 20
     integer :: l_twoel_test
 
-    cutoff_ = merge(cutoff, cutoff_default, present(cutoff))
+    cutoff_ = cutoff_default
+    if (present(cutoff)) cutoff_ = cutoff
 
     n = 0
     do i = 1, size(TUVX)
@@ -265,7 +267,7 @@ contains
     type(TwoElIntTable), intent(in) :: table
     integer :: i, j
     do j = 1, length(table)
-      write(6, '(E15.7, I7, I7, I7, I7)') &
+      write(6, '(ES15.7, I7, I7, I7, I7)') &
         table%values(j), (table%index(i, j), i=1, 4)
     end do
   end subroutine TwoElIntTable_print
