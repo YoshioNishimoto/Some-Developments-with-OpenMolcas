@@ -1,10 +1,10 @@
 # Some-Developments-with-OpenMolcas
 
-I'm developing analytic derivatives of CASPT2 and RASPT2 in OpenMolcas. Some ongoing and incomplete developments may be pushed here. Note that this repository is just a development snapshot. Some debug print may be shown, and the actual code is still messy (including this README). This code is based on OpenMolcas v23.10.
+I'm developing analytic derivatives of CASPT2 and RASPT2 in OpenMolcas. Some ongoing and incomplete developments may be pushed here. Note that this repository is just a development snapshot. Some debug print may be shown, and the code is still messy (including this README). This code is based on OpenMolcas v23.10.
 
-At present, analytic first-order derivatives (gradient and derivative coupling vectors) for single-state and all multistate variants ([X]MS, XDW, and RMS) CASPT2 and RASPT2 can be computed. Most functions have to be combined with the density-fitting or Cholesky decomposition approximation. Either real or imaginary level shift may be used. The IPEA shift can also be used, but note that CASPT2/RASPT2 with the IPEA shift is not invariant with respect to rotations among active orbitals. The performance is still poor, in particular with a large number of atomic orbitals. No symmetry constraints can be employed. MPI-like parallel calculations are now supported, I think.
+At present, analytic first-order derivatives (gradient and derivative coupling vectors) for single-state and all multistate variants ([X]MS, XDW, and RMS) CASPT2 and RASPT2 can be computed. Most functions have to be combined with the density-fitting or Cholesky decomposition approximation. Either real or imaginary level shift may be used. The IPEA shift can also be used, but note that CASPT2/RASPT2 with the IPEA shift is not invariant with respect to rotations among active orbitals. The performance is still poor, in particular with a large number of atomic orbitals. No symmetry constraints can be employed. MPI-like (GA) parallel calculations are now supported, I think.
 
-2023 codes are already publicly available as a part of OpenMolcas
+2023 codes (up to IPEA shift) are already publicly available as a part of OpenMolcas. I hope GA parallelization and PCM-related things are merged into the offical OpenMolcas in the near future.
 
 Reference:
 
@@ -16,6 +16,8 @@ Reference:
 ***
 
 Some history:
+
+December 28, 2024: Added examples_pcm directory that includes a few examples of CASPT2/PCM calculations
 
 December 24, 2024: SA-CASSCF/PCM and parallel CASPT2/PCM gradient, hopefully
 
