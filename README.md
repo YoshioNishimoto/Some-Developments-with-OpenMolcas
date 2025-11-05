@@ -4,18 +4,20 @@ I'm developing analytic derivatives of CASPT2 and RASPT2 in OpenMolcas. Some ong
 
 At present, analytic first-order derivatives (gradient and derivative coupling vectors) for single-state and all multistate variants ([X]MS, XDW, and RMS) CASPT2 and RASPT2 can be computed. Most functions have to be combined with the density-fitting or Cholesky decomposition approximation. Either real or imaginary level shift may be used. The IPEA shift can also be used, but note that CASPT2/RASPT2 with the IPEA shift is not invariant with respect to rotations among active orbitals. The performance is still poor, in particular with a large number of atomic orbitals. No symmetry constraints can be employed. MPI-like (GA) parallel calculations are now supported, I think.
 
-2023 codes (up to IPEA shift) are already publicly available as a part of OpenMolcas. I hope GA parallelization and PCM-related things are merged into the offical OpenMolcas in the near future.
+2024 code (2025?; up to PCM) has been included in the master branch of OpenMolcas.
 
-Reference:
+References:
 
 - Nishimoto, Y. "Analytic Gradients for Restricted Active Space Second-order Perturbation Theory (RASPT2)" The Journal of Chemical Physics 2021, 154, 194103. DOI: 10.1063/5.0050074
 - Nishimoto, Y.; Battaglia, S.; Lind, R. "Analytic First-Order Derivatives of (X)MS, XDW, and RMS Variants of the CASPT2 and RASPT2 Methods" Journal of Chemical Theory and Computation 2022, 18, 4269--4281. DOI: 10.1021/acs.jctc.2c00301
 - Nishimoto, Y. "Analytic first-order derivatives of CASPT2 with IPEA shift" The Journal of Chemical Physics 2023, 158, 174112. DOI: 10.1063/5.0147611
-- Nishimoto, Y. "Analytic First-Order Derivatives of CASPT2 combined with the Polarizable Continuum Model" ChemRxiv DOI: 10.26434/chemrxiv-2024-05mq8
+- Nishimoto, Y. "Analytic First-Order Derivatives of CASPT2 combined with the Polarizable Continuum Model" Journal of Chemical Theory and Computation 2025, 21, 730--746. DOI: 10.1021/acs.jctc.4c01473
 
 ***
 
 Some history:
+
+November 5, 2025: Update README.md; (almost?) all my developments at this moment are available as a part of OpenMolcas
 
 December 28, 2024: Added examples_pcm directory that includes a few examples of CASPT2/PCM calculations
 
